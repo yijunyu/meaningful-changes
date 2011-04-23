@@ -3,22 +3,21 @@ bin=bin.$(shell uname)
 txl=$(bin)/txl
 txlc=$(bin)/txlc
 #==== T A R G E T S ====
-grammars=$(wildcard grammar/*.grammar)
-extensions=$(grammars:grammar/%.grammar=%)
+norm=$(wildcard norm/*.norm)
+extensions+=$(norm:norm/%.norm=%)
+languages+=$(wildcard Txl/*.Txl)
+extensions+=$(languages:Txl/%.Txl=%)
 program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard $(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:%=result/%)
 example+=$(results)
-program+=$(bin)/java5c
 target+=$(program) $(results)
+package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
-JUNK+=${target}
-
 .PHONEY: all clean install
 all: $(target)
 	@if [ -f error.log ]; then cat error.log; fi
-JUNK+=error.log
 
 define example
 result/$(1)/%.$(1): $(bin)/$(1)c $(1)/%.$(1)
@@ -32,17 +31,19 @@ $(bin)/%c: Txl/%.Txl
 	mv $*.x $@
 
 # normalise 
-Txl/%.Txl: $(bin)/grammarc grammar/%.grammar
+Txl/%.Txl: $(bin)/normc norm/%.norm
 	$^ -o t.t
 	sed -e 's/\/\*//' t.t | sed -e 's/*\//\/* *\//g' > $@
 	rm -f t.t
 
-install: mct.tar.gz
-mct.tar.gz: README doc Makefile $(source) $(target)
+install: $(package)
+$(package): README $(program) $(norm) $(source) $(target)
+	rm -rf $(dir $(package))
+	mkdir -p  $(dir $(package))
 	tar cfz $@ $^
+	tar xfz $@ -C $(dir $(package))
 
 clean:
 	rm -rf ${target}
-	rm -f *~ ${JUNK}
 	rm -rf result
 	git clean -X -f
