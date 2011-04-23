@@ -52,11 +52,11 @@ end rule
 %   Rules [statement*]  %% The rules for normalising the id's
 %   RuleIDs [id*]	%% The name of the normalisation rules
 %
-function typeSpec_repeat DS [defineStatement] T [typeSpec]
+function typeSpec_repeat DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'define TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered 
  construct StrID [id] _ [quote TID]
@@ -77,11 +77,11 @@ function typeSpec_repeat DS [defineStatement] T [typeSpec]
  export RuleIDs RuleIDs [. ruleID]
  by S
 end function
-function typeSpec_repeat_byField DS [defineStatement] T [typeSpec]
+function typeSpec_repeat_byField DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'define TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered B [opt byField]
  deconstruct B 'by F [id]
@@ -109,11 +109,11 @@ end function
 %   Rules [statement*]  %% The rules for normalising the id's
 %   RuleIDs [id*]	%% The name of the normalisation rules
 %
-function typeSpec_list DS [defineStatement] T [typeSpec]
+function typeSpec_list DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'define TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered
  construct StrID [id] _ [quote TID]
@@ -134,11 +134,11 @@ function typeSpec_list DS [defineStatement] T [typeSpec]
  export RuleIDs RuleIDs [. ruleID]
  by S
 end function
-function typeSpec_list_byField DS [defineStatement] T [typeSpec]
+function typeSpec_list_byField DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'define TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered B [byField]
  deconstruct B 'by F [id]
@@ -159,11 +159,11 @@ function typeSpec_list_byField DS [defineStatement] T [typeSpec]
  by S
 end function
 
-function typeSpec_ignore DS [defineStatement] T [typeSpec]
+function typeSpec_ignore DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'define TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
  deconstruct Ig 'ignored
  construct StrID [id] _ [quote TID]
@@ -181,11 +181,11 @@ function typeSpec_ignore DS [defineStatement] T [typeSpec]
  export RuleIDs RuleIDs [. ruleID]
  by S
 end function
-function typeSpec_ignore_byField DS [defineStatement] T [typeSpec]
+function typeSpec_ignore_byField DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'define TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
  deconstruct Ig 'ignored B [byField]
  deconstruct B 'by F [id]
@@ -217,9 +217,9 @@ function typeSpec_ignore_byField DS [defineStatement] T [typeSpec]
 end function
 
 %
-% Process all the [list Foo] or [repeat Foo] in the define statements
+% Process all the [list Foo] or [repeat Foo] in the redefine statements
 %
-function DS_replace DS [defineStatement]
+function DS_replace DS [redefineStatement]
  replace [statement*] S0 [statement*]
  construct T [typeSpec*] _ [^ DS]
  construct S1 [statement*] _ [typeSpec_repeat DS each T]
@@ -246,7 +246,7 @@ end function
 %
 % When the following example definition is encountered,
 %
-%   define X
+%   redefine X
 %   ... [list Foo ordered by Bar] ...
 %   end define
 %
@@ -258,7 +258,7 @@ end function
 % After the generation of the normalisation rules, the TXL grammar is restored
 % (by replacing the above rule with the following one).
 %
-%   define X
+%   redefine X
 %   ... [list Foo] ...
 %   end define
 % 
@@ -275,12 +275,12 @@ function main
  replace [program] P [program]
  export Rules [statement*] _
  export RuleIDs [id*] _
- construct DS [defineStatement*] _ [^ P]
+ construct DS [redefineStatement*] _ [^ P]
  construct S [statement*] _ [DS_replace each DS]
  import Rules 
  import RuleIDs 
  deconstruct P S0 [statement*]
- construct ID [id*] RuleIDs [print]
+  % construct ID [id*] RuleIDs [print]
  construct PL [literalOrExpression*] 'Prg
  construct PL2 [literalOrExpression*] _ [id_to_type each RuleIDs]
  construct L [literalOrExpression*] _ [. PL] [. PL2]
