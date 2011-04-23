@@ -6,6 +6,7 @@ txlc=$(bin)/txlc
 norm=$(wildcard norm/*.norm)
 extensions+=$(norm:norm/%.norm=%)
 languages+=$(wildcard Txl/*.Txl)
+generated_language=$(norm:norm/%.norm=Txl/%.Txl)
 extensions+=$(languages:Txl/%.Txl=%)
 program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard $(ext)/*.$(ext)))
@@ -44,6 +45,6 @@ $(package): README $(program) $(norm) $(source) $(target)
 	tar xfz $@ -C $(dir $(package))
 
 clean:
-	rm -rf ${target}
+	rm -rf ${target} $(generated_language)
 	rm -rf result
 	git clean -X -f
