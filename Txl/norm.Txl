@@ -56,7 +56,7 @@ function typeSpec_repeat DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered 
  construct StrID [id] _ [quote TID]
@@ -81,7 +81,7 @@ function typeSpec_repeat_byField DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered B [opt byField]
  deconstruct B 'by F [id]
@@ -113,7 +113,7 @@ function typeSpec_list DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered
  construct StrID [id] _ [quote TID]
@@ -138,7 +138,7 @@ function typeSpec_list_byField DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered B [byField]
  deconstruct B 'by F [id]
@@ -163,7 +163,7 @@ function typeSpec_ignore DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
  deconstruct Ig 'ignored
  construct StrID [id] _ [quote TID]
@@ -171,48 +171,44 @@ function typeSpec_ignore DS [redefineStatement] T [typeSpec]
  construct ID [id] 'normalise_ignore
  construct ruleID [id] ID [_ StrID] [_ TypeID]
  construct S [statement*]
-    'rule ruleID
-	'replace '[ TM I R '] 
-	   'N1 '[ I '] 
-	'by 
-	   _
-    'end 'rule
+    'function ruleID
+	'replace '[ TM I R '] 'N1 '[ TM I R '] 
+	'by _
+    'end 'function
  export Rules Rules [. S]
  export RuleIDs RuleIDs [. ruleID]
  by S
 end function
+
+%
+% Use the byField to select elements
+%
 function typeSpec_ignore_byField DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
  deconstruct Ig 'ignored B [byField]
  deconstruct B 'by F [id]
  construct StrID [id] _ [quote TID]
  deconstruct I TypeID [id] 
  construct ID1 [id] 'normalise_ignore_by
- construct ID2 [id] 'normalise_ignore_by_not
  construct ruleID1 [id] ID1 [_ F] [_ StrID] [_ TypeID] 
- construct ruleID2 [id] ID2 [_ F] [_ StrID] [_ TypeID] 
+ construct pID [id] TypeID [_ StrID]
  construct S1 [statement*]
-    'rule ruleID1
-	'replace '[ TM I R '] 
-	   'N1 '[ I '] 
-	'where 'N1 '[ F ']
-	'by 
-	   _
-    'end 'rule
- construct S2 [statement*]
-    'rule ruleID2
-	'replace '[ TM I R '] 
-	   'N1 '[ I '] 
-	'where 'not 'N1 '[ F ']
-	'by 
-	   'N1
-    'end 'rule
- export Rules Rules [. S1] [. S2]
- export RuleIDs RuleIDs [. ruleID1] [. ruleID2]
+    'function ruleID1
+        'replace '[ 'program '] 'P '[ 'program ']
+	'construct 'List '[ TID '* '] '_ '[ '^ 'P ']
+	'deconstruct 'List 'E1 '[ TID '] 'RestE '[ TID '* ']
+	'where 'E1 '[ F ']
+	'deconstruct '* '[ TM I R '] 'E1 'N1 '[ TM I R ']
+	'construct 'N2 '[ TM I R ']
+	'construct 'E2 '[ TID '] 'E1 '[ '$ 'N1 'N2 ']
+        'by 'P '[ '$ 'E1 'E2 '] 
+    'end 'function
+ export Rules Rules [. S1] 
+ export RuleIDs RuleIDs [. ruleID1] 
  by S1 
 end function
 
