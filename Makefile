@@ -44,6 +44,11 @@ $(package): README $(program) $(norm) $(source) $(target)
 	tar cfz $@ $^
 	tar xfz $@ -C $(dir $(package))
 
+norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm
+	touch -f $@
+norm/problem.norm : Txl/problem.grm
+	touch -f $@
+
 clean:
 	rm -rf ${target} $(generated_language)
 	rm -rf result
