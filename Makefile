@@ -18,7 +18,7 @@ package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
 .PHONEY: all clean install
 all: $(target)
-	echo $(target)
+#	echo $(target)
 	@if [ -f error.log ]; then cat error.log; fi
 
 define example

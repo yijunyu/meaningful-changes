@@ -12,4 +12,4 @@ if [ ! -e "next_file" -o ! -e "java_file" ]; then
 	fi 
 	mv $file $next_file
 fi
-$checker.sh $java_file $next_file
+./$checker.sh $java_file $next_file
