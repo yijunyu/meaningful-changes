@@ -1,5 +1,5 @@
 #==== P R O G R A M S ====
-bin=bin.$(shell uname -s -m | sed -s 's/ /_/')
+bin=bin.$(shell uname -s -m | sed 's/ /_/')
 txl=$(bin)/txl
 txlc=$(bin)/txlc
 #==== T A R G E T S ====
@@ -13,7 +13,7 @@ source+=$(foreach ext,$(extensions),$(wildcard $(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:%=result/%)
 example+=$(results)
-target+=$(bin)/normc $(program) $(results)
+target+=$(bin)/normc $(bin)/java5cc $(program) $(results)
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
 .PHONEY: all clean install
@@ -32,6 +32,10 @@ $(bin)/%c: Txl/%.Txl
 	$(txlc) Txl/$*.Txl 
 	mv $*.x $@
 
+$(bin)/%cc: Txl/%.Txl
+	$(txlc) -d COMMENTS Txl/$*.Txl 
+	mv $*.x $@
+
 # normalise 
 Txl/%.Txl: $(bin)/normc norm/%.norm
 	$^ -o t.t
@@ -39,7 +43,7 @@ Txl/%.Txl: $(bin)/normc norm/%.norm
 	rm -f t.t
 
 install: $(package)
-$(package): README $(program) $(norm) $(source) $(target)
+$(package): README $(program) $(norm) $(source) $(target) cvs
 	rm -rf $(dir $(package))
 	mkdir -p  $(dir $(package))
 	tar cfz $@ $^

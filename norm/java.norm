@@ -1,5 +1,4 @@
 include "java.grm"
-include "javaCommentOverridesNorm.grm"
 
 % Yijun Yu, April, 2011
 % The rules are redefined to include annotations
@@ -33,7 +32,7 @@ end define
 
 redefine class_or_interface_body
     '{                                    [NL][IN]
-       [repeat class_body_declaration ordered]    [EX]
+       [repeat class_body_declaration ignored by Private]    [EX]
     '} [opt ';]                           [NL][NL]
 end define
 
@@ -92,3 +91,14 @@ redefine catch_clause
     'catch '( [repeat modifier ordered] [type_specifier] [variable_name] ') [block]  % July 15
 end define
 
+function contains Object [any] 
+    match * [any] Object
+end function
+
+function Private A  [class_body_declaration]
+    match  [class_or_interface_body]
+        B  [class_or_interface_body] 
+    construct M  [modifier *] _  [^ A] 
+    construct PublicModifiers [modifier*] 'public 'protected 
+    where not M [contains each PublicModifiers]
+end function
