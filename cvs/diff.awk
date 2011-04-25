@@ -61,7 +61,7 @@ END {
         java_file = file 
 	gsub(/.java/, "-" r ".java", java_file)
 	system("./co.sh diff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
-	system("./co.sh ldiff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
+#	system("./co.sh ldiff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
 	system("./co.sh java5 " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
 	system("./co.sh norm " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
    }

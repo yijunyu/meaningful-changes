@@ -12,4 +12,6 @@ if [ ! -e "next_file" -o ! -e "java_file" ]; then
 	fi 
 	mv $file $next_file
 fi
-./$checker.sh $java_file $next_file
+if [ ! "$revision" == "2" ]; then
+	./$checker.sh $java_file $next_file
+fi
