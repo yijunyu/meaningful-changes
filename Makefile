@@ -1,5 +1,5 @@
 #==== P R O G R A M S ====
-bin=bin.$(shell uname)
+bin=bin.$(shell uname -s -m | sed -s 's/ /_/')
 txl=$(bin)/txl
 txlc=$(bin)/txlc
 #==== T A R G E T S ====
@@ -13,11 +13,12 @@ source+=$(foreach ext,$(extensions),$(wildcard $(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:%=result/%)
 example+=$(results)
-target+=$(program) $(results)
+target+=$(bin)/normc $(program) $(results)
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
 .PHONEY: all clean install
 all: $(target)
+	echo $(target)
 	@if [ -f error.log ]; then cat error.log; fi
 
 define example
