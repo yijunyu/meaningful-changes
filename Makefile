@@ -25,6 +25,7 @@ define example
 result/$(1)/%.$(1): $(bin)/$(1)c $(1)/%.$(1)
 	@mkdir -p result/$(1)
 	$$^ -o $$@
+	if [ -e test/$(1)/$$*.$(1) ]; then diff $$@ test/$(1)/$$*.$(1); fi
 endef
 $(foreach ext,$(extensions),$(eval $(call example,$(ext))))
 

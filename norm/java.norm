@@ -3,11 +3,21 @@ include "java.grm"
 % Yijun Yu, April, 2011
 % The rules are redefined to include annotations
 
-redefine block
-    '{                                        [NL][IN] 
-        [repeat declaration_or_statement ignored]     [EX]
-    '}
+%redefine block
+%     '{                                        [NL][IN] 
+%         [repeat declaration_or_statement ignored]     [EX]
+%     '}
+%end define
+
+redefine method_body
+        [repeat block ignored] 
+    |  [opt annotation_default] ';             % T.D. Oct 2007
 end define
+
+redefine constructor_body
+    [repeat block ignored]
+end define
+
 
 redefine program
     [package_declaration*]
@@ -15,15 +25,20 @@ end define
 
 redefine type_declaration
         [class_declaration meaningful]      [NL][NL]
-    |   [interface_declaration meaningful]  [NL][NL]
+    |   [interface_declaration meaningful ordered]  [NL][NL]
     |   [enum_declaration meaningful]	    [NL] % T.D. Oct 2007
 end define
 
 redefine enum_body
     '{                                    [IN]
        [list enum_element] [opt ',]
-       [repeat class_body_declaration meaningful]    [EX]
+       [repeat class_body_declaration meaningful ordered]    [EX]
     '} [opt ';]                           [NL][NL]
+end define
+
+redefine import_declaration
+	'import [opt 'static] [imported_name] '; [NL]
+    | 	'; [NL] 	% JRC Apr 08
 end define
 
 
@@ -56,7 +71,7 @@ end define
 
 redefine class_or_interface_body
     '{                                    [NL][IN]
-       [repeat class_body_declaration meaningful ignored by Private]    [EX]
+       [repeat class_body_declaration meaningful ordered ignored when Private]    [EX] [NL]
     '} [opt ';]                           [NL][NL]
 end define
 
@@ -81,16 +96,11 @@ end define
 
 % generic method declaration (to match generic types used only in a method's declaration and body)
 redefine method_declaration
-    [NL] [repeat modifier ordered] [opt generic_parameter] [type_specifier] [method_declarator] [opt throws] [method_body ignored]
+    [NL] [repeat modifier ordered] [opt generic_parameter] [type_specifier] [method_declarator] [opt throws] [method_body]
 end define
 
 redefine throws
     'throws [list qualified_name+ ordered]
-end define
-
-redefine method_body
-        [block]        [NL][NL]
-    |  [opt annotation_default] ';             [NL][NL]		% T.D. Oct 2007
 end define
 
 redefine annotation_value_list
@@ -105,7 +115,6 @@ redefine single_annotation_value
 end define
 
 redefine catch_clause
-%    'catch '( [type_specifier] [reference] ') [block] 
     'catch '( [repeat modifier ordered] [type_specifier] [variable_name] ') [block]  % July 15
 end define
 

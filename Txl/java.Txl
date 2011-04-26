@@ -1,8 +1,11 @@
 include "java.grm"
-redefine block
-        '{ [NL] [IN]
-            [repeat declaration_or_statement]  [EX]
-        '} 
+redefine method_body
+        [repeat block] 
+    |    [opt annotation_default]  '; 
+end define
+
+redefine constructor_body
+        [repeat block] 
 end define
 
 redefine program
@@ -19,6 +22,11 @@ redefine enum_body
         '{ [IN]
             [list enum_element]  [opt  ',]  [repeat class_body_declaration]  [EX]
         '}  [opt  ';]  [NL] [NL] 
+end define
+
+redefine import_declaration
+        'import  [opt  'static]  [imported_name]  ';  [NL] 
+    |    ';  [NL] 
 end define
 
 redefine package_declaration
@@ -47,7 +55,7 @@ end define
 
 redefine class_or_interface_body
         '{ [NL] [IN]
-            [repeat class_body_declaration]  [EX]
+            [repeat class_body_declaration]  [EX] [NL]
         '}  [opt  ';]  [NL] [NL] 
 end define
 
@@ -71,11 +79,6 @@ end define
 
 redefine throws
         'throws  [list qualified_name +] 
-end define
-
-redefine method_body
-        [block]  [NL] [NL] 
-    |    [opt annotation_default]  ';  [NL] [NL] 
 end define
 
 redefine annotation_value_list
@@ -304,34 +307,32 @@ function add_if_clones_class_body_declaration SS  [class_body_declaration *] Stm
         StructuredClones  [ . Stmt ] 
 end function
 
-function normalise_ignore_by2_block_declaration_or_statement1 E1  [block] N1  [declaration_or_statement]
-    replace  [declaration_or_statement *]
-        Seq  [declaration_or_statement *] 
+function normalise_ignore_by2_method_body_block1 N1  [block]
+    replace  [method_body]
+        N1 
     by
-        Seq 
+	'{ '}
 end function
 
-function normalise_ignore_by3_block_declaration_or_statement1 E1  [block]
-    replace  [block *]
-        Seq  [block *] 
-    construct N1  [declaration_or_statement *]
+function normalise_ignore_by3_method_body_block1 E1  [method_body]
+    replace  [method_body *]
+        Seq  [method_body *] 
+    construct N1  [block *]
         _  [ ^  E1 ] 
-    construct N2  [declaration_or_statement *]
-        _  [normalise_ignore_by2_block_declaration_or_statement1  E1  each  N1]
+    construct E2  [method_body]
+        E1  [normalise_ignore_by2_method_body_block1  each  N1]
  
-    construct E2  [block]
-        E1  [ $  N1  N2 ] 
     by
         Seq  [ . E2 ] 
 end function
 
-function normalise_ignore_by4_block_declaration_or_statement1
+function normalise_ignore_by4_method_body_block1
     replace  [program]
         P1  [ program ] 
-    construct List1  [block *]
+    construct List1  [method_body *]
         _  [ ^  P1 ] 
-    construct List2  [block *]
-        _  [normalise_ignore_by3_block_declaration_or_statement1  each  List1]
+    construct List2  [method_body *]
+        _  [normalise_ignore_by3_method_body_block1  each  List1]
  
     construct P2  [program]
         P1  [$  each  List1  List2]
@@ -339,6 +340,53 @@ function normalise_ignore_by4_block_declaration_or_statement1
     by
         P2 
 end function
+
+function normalise_ignore_by2_constructor_body_block1 N1  [block]
+    replace  [constructor_body]
+        N1 
+    by
+	'{ '}
+end function
+
+function normalise_ignore_by3_constructor_body_block1 E1  [constructor_body]
+    replace  [constructor_body *]
+        Seq  [constructor_body *] 
+    construct N1  [block *]
+        _  [ ^  E1 ] 
+    construct E2  [constructor_body]
+        E1  [normalise_ignore_by2_constructor_body_block1  each  N1]
+ 
+    by
+        Seq  [ . E2 ] 
+end function
+
+function normalise_ignore_by4_constructor_body_block1
+    replace  [program]
+        P1  [ program ] 
+    construct List1  [constructor_body *]
+        _  [ ^  P1 ] 
+    construct List2  [constructor_body *]
+        _  [normalise_ignore_by3_constructor_body_block1  each  List1]
+ 
+    construct P2  [program]
+        P1  [$  each  List1  List2]
+ 
+    by
+        P2 
+end function
+
+rule normalise_list_enum_body_class_body_declaration
+    replace  [repeat class_body_declaration]
+        N1  [class_body_declaration]  N2  [class_body_declaration]  Rest  [repeat class_body_declaration] 
+    construct T1  [stringlit]
+        _  [ quote  N1 ] 
+    construct T2  [stringlit]
+        _  [ quote  N2 ] 
+    where
+        T1  [>  T2]
+    by
+        N2  N1  Rest 
+end rule
 
 rule normalise_list_package_declaration_import_declaration
     replace  [repeat import_declaration]
@@ -579,8 +627,9 @@ function main
     export CloneNumber [number]
         0 
     by
-        Prg  [ normalise_ignore_by4_block_declaration_or_statement1 ]  [ normalise_list_package_declaration_import_declaration 
-          ]  [ normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
+        Prg  [ normalise_ignore_by4_method_body_block1 ]  [ normalise_ignore_by4_constructor_body_block1 ]  [ 
+          normalise_list_enum_body_class_body_declaration ]  [ normalise_list_package_declaration_import_declaration ]  [ 
+          normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
           normalise_list_enum_header_modifier ]  [ normalise_list_extends_clause_type_name ]  [ 
           normalise_list_implements_clause_qualified_name ]  [ 
           normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 

@@ -5,7 +5,7 @@ include "txl.grm"
 % or 'repeat: 'ordered ['by '[ name '] ]
 %
 keys
-  'ordered 'ignored 'by 'meaningful
+  'ordered 'by 'ignored 'when 'meaningful
 end keys
 
 redefine typeSpec
@@ -13,11 +13,15 @@ redefine typeSpec
 end define
 
 define ignoredBy
-	'ignored [opt byField]
+	'ignored [opt whenField] [opt byField]
 end define
 
 define orderedBy
 	'ordered [opt byField]
+end define
+
+define whenField
+       'when [id]
 end define
 
 define byField
@@ -43,7 +47,7 @@ end rule
 rule typeSpec_eliminateIgnoredBy
  replace * [typeSpec] T [typeSpec] 
  deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
- deconstruct Ig 'ignored B [opt byField]
+ deconstruct Ig 'ignored W [opt whenField] B [opt byField]
  construct T1 [typeSpec] M I R
  by T1
 end rule
@@ -254,16 +258,13 @@ function typeSpec_ignore DS [redefineStatement] T [typeSpec]
  construct ruleID4 [id] ID4 [_ StrID] [_ TypeID] [!]
  construct pID [id] TypeID [_ StrID]
  construct S1 [statement*]
-    'function ruleID2 'E1 '[ TID '] 'N1 '[ I ']
-    	'replace '[ I '* '] 'Seq '[ I '* ']
-     	'by 'Seq 
+    'function ruleID2 'N1 '[ I ']
+    	'replace '[ TID '] 'N1 'by 
     'end 'function
     'function ruleID3 'E1 '[ TID ']
     	'replace '[ TID '* '] 'Seq '[ TID '* ']
         'construct 'N1 '[ I '* '] '_ '[ '^ 'E1 ']
-	'construct 'N2 '[ I '*' ] 
-		'_ '[ ruleID2 'E1 'each 'N1 ']
-        'construct 'E2  '[ TID '] 'E1  '[ '$ 'N1 'N2 '] 
+        'construct 'E2  '[ TID '] 'E1  '[ ruleID2 each 'N1 '] 
      	'by 'Seq '[ '. 'E2 '] 
     'end 'function
     'function ruleID4
@@ -280,21 +281,21 @@ function typeSpec_ignore DS [redefineStatement] T [typeSpec]
 end function
 
 %
-% Use the byField 'ignored 'by F where F is a user-defined function. In the
+% Use the byField 'ignored 'when F where F is a user-defined function. In the
 % transformed rule, it will be used by the 'where E1 '[ F E2 '] clause to
 % select the elements that matches to be ignored, where E1 is the scope of the
 % ignored non-terminal and E2 is the ignored non-terminal
 %
 % typeRepeater R is *
 %
-function typeSpec_ignore_byField_R DS [redefineStatement] T [typeSpec]
+function typeSpec_ignore_whenField_R DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
- deconstruct Ig 'ignored B [byField]
- deconstruct B 'by F [id]
+ deconstruct Ig 'ignored W [whenField]
+ deconstruct W 'when F [id]
  construct StrID [id] _ [quote TID]
  deconstruct I TypeID [id] 
  construct ID1 [id] 'normalise_ignore_by1
@@ -350,7 +351,7 @@ function DS_replace DS [redefineStatement]
  construct S2 [statement*] _ [typeSpec_repeat_byField DS each T]
  construct S3 [statement*] _ [typeSpec_list_byField DS each T]
  construct S4 [statement*] _ [typeSpec_list DS each T]
- construct S5 [statement*] _ [typeSpec_ignore_byField_R DS each T]
+ construct S5 [statement*] _ [typeSpec_ignore_whenField_R DS each T]
  construct S6 [statement*] _ [typeSpec_ignore DS each T]
  construct S [statement*] S0 [. S1] [. S2] [. S3] [. S4] [. S5] [. S6] 
  by S
