@@ -1,4 +1,14 @@
 include "java.grm"
+redefine block
+        '{ [NL] [IN]
+            [repeat declaration_or_statement]  [EX]
+        '} 
+end define
+
+redefine program
+        [package_declaration *] 
+end define
+
 redefine type_declaration
         [class_declaration]  [NL] [NL] 
     |    [interface_declaration]  [NL] [NL] 
@@ -77,12 +87,6 @@ redefine single_annotation_value
         [expression] 
     |    [nested_annotation] 
     |    { [list expression_or_nested_annotation] } 
-end define
-
-redefine block
-        '{ [NL] [IN]
-            [repeat declaration_or_statement]  [EX]
-        '} 
 end define
 
 redefine catch_clause
@@ -298,6 +302,42 @@ function add_if_clones_class_body_declaration SS  [class_body_declaration *] Stm
         Stmt 
     by
         StructuredClones  [ . Stmt ] 
+end function
+
+function normalise_ignore_by2_block_declaration_or_statement1 E1  [block] N1  [declaration_or_statement]
+    replace  [declaration_or_statement *]
+        Seq  [declaration_or_statement *] 
+    by
+        Seq 
+end function
+
+function normalise_ignore_by3_block_declaration_or_statement1 E1  [block]
+    replace  [block *]
+        Seq  [block *] 
+    construct N1  [declaration_or_statement *]
+        _  [ ^  E1 ] 
+    construct N2  [declaration_or_statement *]
+        _  [normalise_ignore_by2_block_declaration_or_statement1  E1  each  N1]
+ 
+    construct E2  [block]
+        E1  [ $  N1  N2 ] 
+    by
+        Seq  [ . E2 ] 
+end function
+
+function normalise_ignore_by4_block_declaration_or_statement1
+    replace  [program]
+        P1  [ program ] 
+    construct List1  [block *]
+        _  [ ^  P1 ] 
+    construct List2  [block *]
+        _  [normalise_ignore_by3_block_declaration_or_statement1  each  List1]
+ 
+    construct P2  [program]
+        P1  [$  each  List1  List2]
+ 
+    by
+        P2 
 end function
 
 rule normalise_list_package_declaration_import_declaration
@@ -520,42 +560,6 @@ rule normalise_list_single_annotation_value_expression_or_nested_annotation
         N2 ,  N1 ,  Rest 
 end rule
 
-function normalise_ignore_by2_block_declaration_or_statement1 E1  [block] N1  [declaration_or_statement]
-    replace  [declaration_or_statement *]
-        Seq  [declaration_or_statement *] 
-    by
-        Seq 
-end function
-
-function normalise_ignore_by3_block_declaration_or_statement1 E1  [block]
-    replace  [block *]
-        Seq  [block *] 
-    construct N1  [declaration_or_statement *]
-        _  [ ^  E1 ] 
-    construct N2  [declaration_or_statement *]
-        _  [normalise_ignore_by2_block_declaration_or_statement1  E1  each  N1]
- 
-    construct E2  [block]
-        E1  [ $  N1  N2 ] 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_block_declaration_or_statement1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [block *]
-        _  [ ^  P1 ] 
-    construct List2  [block *]
-        _  [normalise_ignore_by3_block_declaration_or_statement1  each  List1]
- 
-    construct P2  [program]
-        P1  [$  each  List1  List2]
- 
-    by
-        P2 
-end function
-
 rule normalise_list_catch_clause_modifier
     replace  [repeat modifier]
         N1  [modifier]  N2  [modifier]  Rest  [repeat modifier] 
@@ -575,15 +579,15 @@ function main
     export CloneNumber [number]
         0 
     by
-        Prg  [ normalise_list_package_declaration_import_declaration ]  [ normalise_list_class_header_modifier ]  [ 
-          normalise_list_interface_header_modifier ]  [ normalise_list_enum_header_modifier ]  [ 
-          normalise_list_extends_clause_type_name ]  [ normalise_list_implements_clause_qualified_name ]  [ 
+        Prg  [ normalise_ignore_by4_block_declaration_or_statement1 ]  [ normalise_list_package_declaration_import_declaration 
+          ]  [ normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
+          normalise_list_enum_header_modifier ]  [ normalise_list_extends_clause_type_name ]  [ 
+          normalise_list_implements_clause_qualified_name ]  [ 
           normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 
           normalise_list_constructor_declaration_modifier ]  [ normalise_list_variable_declaration_modifier ]  [ 
           normalise_list_variable_declarators_variable_declarator ]  [ normalise_list_method_declaration_modifier ]  [ 
           normalise_list_throws_qualified_name ]  [ normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
-          normalise_list_single_annotation_value_expression_or_nested_annotation ]  [ 
-          normalise_ignore_by4_block_declaration_or_statement1 ]  [ normalise_list_catch_clause_modifier ]  [ 
+          normalise_list_single_annotation_value_expression_or_nested_annotation ]  [ normalise_list_catch_clause_modifier ]  [ 
           find_replace_class_declaration ]  [ find_replace_interface_declaration ]  [ find_replace_enum_declaration ]  [ 
           find_replace_class_body_declaration ] 
 end function
