@@ -4,111 +4,104 @@ include "java.grm"
 redefine class_body_declaration
     ... | [empty]
 end define
+function find_replace_class_body_declaration
+    replace [program] P [program]
+    construct StructuredClones [repeat class_body_declaration] _ [findStructuredStatementClones_class_body_declaration  P]
+    by P  [markCloneInstances_class_body_declaration each StructuredClones]
+end function
+rule markCloneInstances_class_body_declaration StructuredClone [class_body_declaration]
+    import CloneNumber [number]
+    export CloneNumber CloneNumber [+ 1]
+    replace [class_body_declaration] StructuredClone by
+end rule
+function findStructuredStatementClones_class_body_declaration P [program] 
+    construct Structured_class_body_declaration [repeat class_body_declaration] _ [^ P]
+    replace [repeat class_body_declaration] by _ 
+	[addIfClone_class_body_declaration Structured_class_body_declaration each Structured_class_body_declaration] 
+end function
+function addIfClone_class_body_declaration Structured [repeat class_body_declaration] Stmt [class_body_declaration]
+    deconstruct * Structured
+        Stmt
+        Rest [repeat class_body_declaration]
+    deconstruct * [class_body_declaration] Rest
+        Stmt
+    replace [repeat class_body_declaration]
+        StructuredClones [repeat class_body_declaration]
+    deconstruct not * [class_body_declaration] StructuredClones
+        Stmt
+    by
+        StructuredClones [. Stmt]
+end function
+
+redefine program
+    ... | [empty]
+end define
+function find_replace_program
+    replace [program] P [program]
+    construct StructuredClones [repeat program] _ [findStructuredStatementClones_program  P]
+    by P  [markCloneInstances_program each StructuredClones]
+end function
+rule markCloneInstances_program StructuredClone [program]
+    import CloneNumber [number]
+    export CloneNumber CloneNumber [+ 1]
+    replace [program] StructuredClone by
+end rule
+function findStructuredStatementClones_program P [program] 
+    construct Structured_program [repeat program] _ [^ P]
+    replace [repeat program] by _ 
+	[addIfClone_program Structured_program each Structured_program] 
+end function
+function addIfClone_program Structured [repeat program] Stmt [program]
+    deconstruct * Structured
+        Stmt
+        Rest [repeat program]
+    deconstruct * [program] Rest
+        Stmt
+    replace [repeat program]
+        StructuredClones [repeat program]
+    deconstruct not * [program] StructuredClones
+        Stmt
+    by
+        StructuredClones [. Stmt]
+end function
 
 redefine class_declaration
     ... | [empty]
 end define
-
-redefine program
-    ... | [empty]
-end define
-
-define structured_entity
-    [class_body_declaration]
-  | [class_declaration]
-  | [program]
-end define
-
-redefine program
-  ... | [structured_entity]
-end define
-
-function main
+function find_replace_class_declaration
     replace [program] P [program]
-    construct StructuredClones [repeat structured_entity] _ [findStructuredStatementClones P]
-    export CloneNumber [number] 0
-    by P  % bigger clone first
-	[markCloneInstances_program each StructuredClones]
-        [markCloneInstances_class_declaration each StructuredClones]
-	[markCloneInstances_class_body_declaration each StructuredClones]
+    construct StructuredClones [repeat class_declaration] _ [findStructuredStatementClones_class_declaration  P]
+    by P  [markCloneInstances_class_declaration each StructuredClones]
 end function
-
-function main1
-    replace [program] P [program]
-    construct StructuredClones [repeat structured_entity] _ [findStructuredStatementClones P]
-    export CloneNumber [number] 0
-    by P  % bigger clone first
-	[markCloneInstances_program each StructuredClones]
-        [markCloneInstances_class_declaration each StructuredClones]
-	[markCloneInstances_class_body_declaration each StructuredClones]
-end function
-
-function append_class_body_declaration A [class_body_declaration]
-    replace [structured_entity*] Seq [structured_entity*]
-    construct A1 [structured_entity]  A
-    by Seq [. A1] 
-end function
-rule markCloneInstances_class_body_declaration StructuredClone [structured_entity]
+rule markCloneInstances_class_declaration StructuredClone [class_declaration]
     import CloneNumber [number]
     export CloneNumber CloneNumber [+ 1]
-    deconstruct StructuredClone Structured_class_body_declaration [class_body_declaration]
-    % construct debug_SC [class_body_declaration] Structured_class_body_declaration [print]
-    replace [class_body_declaration] Structured_class_body_declaration by
+    replace [class_declaration] StructuredClone by
 end rule
-
-function append_program A [program]
-    replace [structured_entity*] Seq [structured_entity*]
-    construct A1 [structured_entity]  A
-    by Seq [. A1] 
-end function
-rule markCloneInstances_program StructuredClone [structured_entity]
-    import CloneNumber [number]
-    export CloneNumber CloneNumber [+ 1]
-    deconstruct StructuredClone Structured_program [program]
-    replace [program] Structured_program by
-end rule
-
-function append_class_declaration A [class_declaration]
-    replace [structured_entity*] Seq [structured_entity*]
-    construct A1 [structured_entity]  A
-    by Seq [. A1] 
-end function
-rule markCloneInstances_class_declaration StructuredClone [structured_entity]
-    import CloneNumber [number]
-    export CloneNumber CloneNumber [+ 1]
-    deconstruct StructuredClone Structured_class_declaration [class_declaration]
-    replace [class_declaration] Structured_class_declaration by %
-end rule
-
-function findStructuredStatementClones P [program] 
-    construct Structured_class_body_declaration [repeat class_body_declaration] _ [^ P]
-    construct StructuredEntities_class_body_declaration [structured_entity*] 
-	_ [append_class_body_declaration each Structured_class_body_declaration] 
-
-    construct Structured_program [repeat program] _ [^ P]
-    construct StructuredEntities_program [structured_entity*] 
-	_ [append_program each Structured_program] 
-
+function findStructuredStatementClones_class_declaration P [program] 
     construct Structured_class_declaration [repeat class_declaration] _ [^ P]
-    construct StructuredEntities_class_declaration [structured_entity*] 
-	_ [append_class_declaration each Structured_class_declaration]
-
-    replace [repeat structured_entity] by _ 
-	[addIfClone StructuredEntities_class_body_declaration each StructuredEntities_class_body_declaration] 
-	[addIfClone StructuredEntities_program each StructuredEntities_program] 
-	[addIfClone StructuredEntities_class_declaration each StructuredEntities_class_declaration] 
+    replace [repeat class_declaration] by _ 
+	[addIfClone_class_declaration Structured_class_declaration each Structured_class_declaration] 
 end function
-
-function addIfClone StructuredEntities [repeat structured_entity] Stmt [structured_entity]
-    deconstruct * StructuredEntities
+function addIfClone_class_declaration Structured [repeat class_declaration] Stmt [class_declaration]
+    deconstruct * Structured
         Stmt
-        Rest [repeat structured_entity]
-    deconstruct * [structured_entity] Rest
+        Rest [repeat class_declaration]
+    deconstruct * [class_declaration] Rest
         Stmt
-    replace [repeat structured_entity]
-        StructuredClones [repeat structured_entity]
-    deconstruct not * [structured_entity] StructuredClones
+    replace [repeat class_declaration]
+        StructuredClones [repeat class_declaration]
+    deconstruct not * [class_declaration] StructuredClones
         Stmt
     by
         StructuredClones [. Stmt]
+end function
+
+
+function main
+    replace [program] P [program]
+    export CloneNumber [number] 0
+    by P  [find_replace_program]
+          [find_replace_class_declaration]
+	  [find_replace_class_body_declaration]
 end function
