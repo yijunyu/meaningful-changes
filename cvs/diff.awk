@@ -63,7 +63,8 @@ END {
 	system("./co.sh diff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
 #	system("./co.sh ldiff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
 	system("./co.sh java5 " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
-	system("./co.sh norm " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
+#	system("./co.sh norm " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
+	system("./co.sh clone " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
    }
    system("rm -f " next_file);
 }
