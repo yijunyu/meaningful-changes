@@ -97,7 +97,6 @@ function addIfClone_class_declaration Structured [repeat class_declaration] Stmt
         StructuredClones [. Stmt]
 end function
 
-
 function main
     replace [program] P [program]
     export CloneNumber [number] 0

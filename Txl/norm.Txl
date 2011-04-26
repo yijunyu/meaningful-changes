@@ -5,11 +5,11 @@ include "txl.grm"
 % or 'repeat: 'ordered ['by '[ name '] ]
 %
 keys
-  'ordered 'ignored 'by 
+  'ordered 'ignored 'by 'meaningful
 end keys
 
 redefine typeSpec
-	... [opt orderedBy] [opt ignoredBy]
+	... [opt meaningful] [opt orderedBy] [opt ignoredBy]
 end define
 
 define ignoredBy
@@ -23,6 +23,10 @@ end define
 define byField
        'by [id]
      | 'by [typeModifier]
+end define
+
+define meaningful
+   'meaningful
 end define
 
 %
@@ -44,6 +48,75 @@ rule typeSpec_eliminateIgnoredBy
  by T1
 end rule
 
+%
+% Auxiliary function
+%
+function contains Object  [any]
+    match  *  [any]
+        Object 
+end function
+%
+% Construct rules to eliminate all clones in type T 
+%
+rule typeSpec_removeClones
+ replace * [typeSpec] T [typeSpec] 
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] 'meaningful O [opt orderedBy] Ig [opt ignoredBy]
+ construct T1 [typeSpec] M I R O Ig
+ construct update_id_T1 [typeSpec] T1 [update_id I]
+ by T1 
+end rule
+%
+% Update ID is a subroutine with no effect on the typeSpec transformation itself, but will introduce new 
+% rules into the program
+%
+% Check the TypeIDs to avoid creating duplicate type rules
+%
+function update_id I [typeid]
+ import Rules [statement*]
+ import RuleIDs2 [id*]
+ import TypeIDs [id*]
+ match [typeSpec] T [typeSpec]
+ deconstruct I TypeID [id] 
+ where not TypeIDs [contains TypeID]
+ construct find_replace [id] 'find_replace
+ construct mark_clones [id] 'mark_clones
+ construct find_clones [id] 'find_clones
+ construct add_if_clones [id] 'add_if_clones
+ construct find_replace_I [id] find_replace [_ TypeID]
+ construct mark_clones_I [id] mark_clones [_ TypeID]
+ construct find_clones_I [id] find_clones [_ TypeID]
+ construct add_if_clones_I [id] add_if_clones [_ TypeID]
+ construct S1 [statement*]
+     'redefine TypeID 
+         '... 
+      '| '[ 'empty '] 
+     'end 'define
+     'function find_replace_I 
+	    'replace '[ 'program '] 'P '[ 'program ']
+	    'construct 'S '[ TypeID '* '] '_ '[ find_clones_I 'P ']
+	    'by 'P '[ mark_clones_I 'each 'S ']
+     'end 'function
+     'rule mark_clones_I 'S '[ TypeID ']
+	    'import 'CloneNumber '['number']
+	    'export 'CloneNumber 'CloneNumber '['+ '1']
+	    'replace '[ TypeID '] 'S 'by
+     'end 'rule
+     'function find_clones_I 'P '[ 'program '] 
+	    'construct 'S '[ TypeID '* '] '_ '[ '^ 'P ']
+	    'replace '[ TypeID '* '] 'by '_ 
+	    '[ add_if_clones_I 'S 'each 'S '] 
+     'end 'function
+     'function add_if_clones_I 'SS '[ TypeID '* '] 'Stmt '[ TypeID ']
+	    'deconstruct '* 'SS 'Stmt 'Rest '[ TypeID '* ']
+	    'deconstruct '* '[ TypeID '] 'Rest 'Stmt
+	    'replace '[ TypeID '* '] 'StructuredClones '[ TypeID '* ']
+	    'deconstruct 'not '* '[ TypeID '] 'StructuredClones 'Stmt
+	    'by 'StructuredClones '[ '. 'Stmt ']
+     'end 'function
+ export Rules Rules [. S1] 
+ export RuleIDs2 RuleIDs2 [. find_replace_I] 
+ export TypeIDs TypeIDs [. TypeID] 
+end function
 
 %
 % Process [repeat Foo ordered by Bar]
@@ -326,20 +399,28 @@ function main
  replace [program] P [program]
  export Rules [statement*] _
  export RuleIDs [id*] _
- construct DS [redefineStatement*] _ [^ P]
+ export RuleIDs2 [id*] _
+ export TypeIDs [id*] _
+ construct P0 [program] P [typeSpec_removeClones]
+ import Rules
+ import RuleIDs
+ import RuleIDs2
+ import TypeIDs
+ construct DS [redefineStatement*] _ [^ P0]
  construct S [statement*] _ [DS_replace each DS]
- import Rules 
- import RuleIDs 
- deconstruct P S0 [statement*]
-  % construct ID [id*] RuleIDs [print]
  construct PL [literalOrExpression*] 'Prg
- construct PL2 [literalOrExpression*] _ [id_to_type each RuleIDs]
+ import RuleIDs
+ construct PL2 [literalOrExpression*] _ [id_to_type each RuleIDs] [id_to_type each RuleIDs2]
  construct L [literalOrExpression*] _ [. PL] [. PL2]
  construct R [replacement] L
  construct RULE [statement]
- 	'function 'main 'replace '[ 'program '] 'Prg '[ 'program '] 'by R
+ 	'function 'main 'replace '[ 'program '] 'Prg '[ 'program '] 
+    	'export 'CloneNumber '['number'] '0
+	'by R
 	'end 'function
+ deconstruct P0 S0 [statement*]
+ import Rules
  construct P1 [program] S0 [. Rules] [. RULE ]
  by P1 [typeSpec_eliminateOrderedBy]
- 	[typeSpec_eliminateIgnoredBy]
+       [typeSpec_eliminateIgnoredBy]
 end function
