@@ -307,11 +307,109 @@ function add_if_clones_class_body_declaration SS  [class_body_declaration *] Stm
         StructuredClones  [ . Stmt ] 
 end function
 
+redefine package_header
+        ...
+    |    [empty] 
+end define
+
+function find_replace_package_header
+    replace  [program]
+        P  [ program ] 
+    construct S  [package_header *]
+        _  [ find_clones_package_header  P ] 
+    by
+        P  [mark_clones_package_header  each  S]
+ 
+end function
+
+rule mark_clones_package_header S  [package_header]
+    import CloneNumber [number]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    replace  [package_header]
+        S 
+    by
+
+end rule
+
+function find_clones_package_header P  [program]
+    construct S  [package_header *]
+        _  [ ^  P ] 
+    replace  [package_header *]
+
+    by
+        _  [add_if_clones_package_header  S  each  S]
+ 
+end function
+
+function add_if_clones_package_header SS  [package_header *] Stmt  [package_header]
+    deconstruct * SS
+        Stmt  Rest  [ package_header  * ] 
+    deconstruct * [package_header] Rest
+        Stmt 
+    replace  [package_header *]
+        StructuredClones  [ package_header  * ] 
+    deconstruct not * [package_header] StructuredClones
+        Stmt 
+    by
+        StructuredClones  [ . Stmt ] 
+end function
+
+redefine import_declaration
+        ...
+    |    [empty] 
+end define
+
+function find_replace_import_declaration
+    replace  [program]
+        P  [ program ] 
+    construct S  [import_declaration *]
+        _  [ find_clones_import_declaration  P ] 
+    by
+        P  [mark_clones_import_declaration  each  S]
+ 
+end function
+
+rule mark_clones_import_declaration S  [import_declaration]
+    import CloneNumber [number]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    replace  [import_declaration]
+        S 
+    by
+
+end rule
+
+function find_clones_import_declaration P  [program]
+    construct S  [import_declaration *]
+        _  [ ^  P ] 
+    replace  [import_declaration *]
+
+    by
+        _  [add_if_clones_import_declaration  S  each  S]
+ 
+end function
+
+function add_if_clones_import_declaration SS  [import_declaration *] Stmt  [import_declaration]
+    deconstruct * SS
+        Stmt  Rest  [ import_declaration  * ] 
+    deconstruct * [import_declaration] Rest
+        Stmt 
+    replace  [import_declaration *]
+        StructuredClones  [ import_declaration  * ] 
+    deconstruct not * [import_declaration] StructuredClones
+        Stmt 
+    by
+        StructuredClones  [ . Stmt ] 
+end function
+
 function normalise_ignore_by2_method_body_block1 N1  [block]
     replace  [method_body]
         N1 
     by
-	'{ '}
+
 end function
 
 function normalise_ignore_by3_method_body_block1 E1  [method_body]
@@ -345,7 +443,7 @@ function normalise_ignore_by2_constructor_body_block1 N1  [block]
     replace  [constructor_body]
         N1 
     by
-	'{ '}
+
 end function
 
 function normalise_ignore_by3_constructor_body_block1 E1  [constructor_body]
@@ -638,6 +736,6 @@ function main
           normalise_list_throws_qualified_name ]  [ normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
           normalise_list_single_annotation_value_expression_or_nested_annotation ]  [ normalise_list_catch_clause_modifier ]  [ 
           find_replace_class_declaration ]  [ find_replace_interface_declaration ]  [ find_replace_enum_declaration ]  [ 
-          find_replace_class_body_declaration ] 
+          find_replace_class_body_declaration ]  [ find_replace_package_header ]  [ find_replace_import_declaration ] 
 end function
 
