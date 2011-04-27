@@ -9,9 +9,9 @@ languages+=$(wildcard Txl/*.Txl)
 generated_language=$(norm:norm/%.norm=Txl/%.Txl)
 extensions+=$(languages:Txl/%.Txl=%)
 program+=$(extensions:%=$(bin)/%c)
-source+=$(foreach ext,$(extensions),$(wildcard $(ext)/*.$(ext)))
+source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
 example+=$(source)
-results+=$(source:%=result/%)
+results+=$(source:source/%=result/%)
 example+=$(results)
 target+=$(bin)/normc $(bin)/java5cc $(program) $(results)
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
@@ -22,7 +22,7 @@ all: $(target)
 	@if [ -f error.log ]; then cat error.log; fi
 
 define example
-result/$(1)/%.$(1): $(bin)/$(1)c $(1)/%.$(1)
+result/$(1)/%.$(1): $(bin)/$(1)c source/$(1)/%.$(1)
 	@mkdir -p result/$(1)
 	$$^ -o $$@
 	if [ -e test/$(1)/$$*.$(1) ]; then diff $$@ test/$(1)/$$*.$(1); fi
