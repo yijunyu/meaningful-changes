@@ -78,6 +78,7 @@ end rule
 function update_id I [typeid]
  import Rules [statement*]
  import RuleIDs2 [id*]
+ import IgnoreRuleIDs [id*]
  import TypeIDs [id*]
  match [typeSpec] T [typeSpec]
  deconstruct I TypeID [id] 
@@ -241,7 +242,7 @@ end function
 %
 function typeSpec_ignore DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
- import RuleIDs [id*]
+ import IgnoreRuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
@@ -276,7 +277,7 @@ function typeSpec_ignore DS [redefineStatement] T [typeSpec]
        'by 'P2
     'end 'function
  export Rules Rules [. S1] 
- export RuleIDs RuleIDs [. ruleID4]
+ export IgnoreRuleIDs IgnoreRuleIDs [. ruleID4]
  by S1 
 end function
 
@@ -290,7 +291,7 @@ end function
 %
 function typeSpec_ignore_whenField_R DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
- import RuleIDs [id*]
+ import IgnoreRuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
@@ -336,7 +337,7 @@ function typeSpec_ignore_whenField_R DS [redefineStatement] T [typeSpec]
        'by 'P2
     'end 'function
  export Rules Rules [. S1] 
- export RuleIDs RuleIDs [. ruleID4]
+ export IgnoreRuleIDs IgnoreRuleIDs [. ruleID4]
  by S1 
 end function
 
@@ -400,18 +401,21 @@ function main
  replace [program] P [program]
  export Rules [statement*] _
  export RuleIDs [id*] _
+ export IgnoreRuleIDs [id*] _
  export RuleIDs2 [id*] _
  export TypeIDs [id*] _
  construct P0 [program] P [typeSpec_removeClones]
  import Rules
  import RuleIDs
+ import IgnoreRuleIDs
  import RuleIDs2
  import TypeIDs
  construct DS [redefineStatement*] _ [^ P0]
  construct S [statement*] _ [DS_replace each DS]
  construct PL [literalOrExpression*] 'Prg
  import RuleIDs
- construct PL2 [literalOrExpression*] _ [id_to_type each RuleIDs] [id_to_type each RuleIDs2]
+ import IgnoreRuleIDs
+ construct PL2 [literalOrExpression*] _ [id_to_type each IgnoreRuleIDs] [id_to_type each RuleIDs] [id_to_type each RuleIDs2]
  construct L [literalOrExpression*] _ [. PL] [. PL2]
  construct R [replacement] L
  construct RULE [statement]
