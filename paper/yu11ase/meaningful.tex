@@ -1,5 +1,10 @@
-\documentclass{acm_proc_article-sp}
+%\documentclass{acm_proc_article-sp}
+\documentclass[10pt, conference, compsocconf]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{graphicx}
 \usepackage{color}
+\usepackage{balance}
+\usepackage{multirow}
 \usepackage{listings}
 \lstset{breaklines=true, basicstyle=\scriptsize, frame=single, 
   keywordstyle=\color{blue}, commentstyle=\color{green},
@@ -7,37 +12,51 @@
   stringstyle=\ttfamily\color{red}, showstringspaces=false,
   language=Java, numberfirstline=true,
   frameround=true, frame=trBL}
-\title{Specifying and Detecting Meaningful Changes in Programs}
-\author{
-   \begin{tabular}{c}
-   Yijun Yu \\
-   Computing Department, The Open University, United Kingdom
-   \end{tabular}
-}
+\title{Specifying and Detecting Meaningful Changes}
+\author{\IEEEauthorblockN{
+Yijun Yu\IEEEauthorrefmark{1},
+Thein Than Tun\IEEEauthorrefmark{1} and
+Bashar Nuseibeh\IEEEauthorrefmark{1} \IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}
+The Open University\\
+Milton Keynes, UK\\
+Email: \{t.t.tun, y.yu, b.nuseibeh\}@open.ac.uk}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}
+Lero,  Irish Software Engineering Research Centre\\
+Limerick, Ireland\\
+Email: bashar.nuseibeh@lero.ie}}
 \newtheorem{definition}{Definition}
 \begin{document}
 \maketitle
 \begin{abstract}
-Not all changes kept in software repositories are essential. In this work we devise an automated technique to specify, for programs of domain-specific languages, which kinds of changes are considered meaningful to the detectives. Such specifications are lightweight extension of existing grammars to enable an efficient implementation of change detections with a small effort. Our technique has been evaluated with respect to performance and scalability, on a benchmark of programs in comparison to similar techniques. 
+Software developers are primarily interested in the changes that are relevant to their current tasks, therefore not all changes to an evolving software are of the same importance. However, most existing {\tt diff} tools notify developers more changes than they wish to see.  In this paper, we propose an automated technique to specify and detect meaningful changes in programs. 
+Using our elementary extensions to program language grammars, developers can specify, with limited effort, what types of changes are meaningful. The algorithms for generating the normalisation and clone detection transformations distill the meaningful differences automatically. Our tool has been evaluated on a benchmark of programs to compare with similar techniques.
 \end{abstract}
 \section{Introduction}
 
-``Nothing endures but change.'' -- Heraclitus (c.535 BC - 475 BC). This philosophy is largely true in any software development project.
-However, not all changes are equally meaningful to different people. For example, the activities of changing the indentations of statements do not necessarily change the meanings or semantics expressed by the program. Nonetheless they could cause false alarms by any revision control system through text-based difference comparison algorithms (e.g., the {\bf diff} utility in Unix). Although such indentations are not meaningful to the executation of C/Java programs, they can be meaningful to programs in other programming languages such as Python, and can also be meaningful to C/Java developers who care about pretty prints for the maintenance. Similarly, graphs used in requirements/design modeling activities typically allow moving nodes around in order to present the model in a different physical layout, whilst the topology is preserved. Often such layout changes are saved through the serialisation, leading to false alerts that the software design has changed. 
+``Nothing endures but change.'' -- Heraclitus (c.535 BC - 475 BC). This philosophy is largely true in most software development projects. However, not all changes are equally meaningful to different purposes. For example, changing the indentations of statements does not necessarily alter the meanings or semantics expressed by a program. Nonetheless it could lead to false alarms to any revision control system as text-based difference comparison algorithms are typically used (e.g., the {\bf diff} utility in Unix). Although an indentation is not meaningful to the executation semantics of C/Java programs, it can be very important to other programming languages such as Python. Still can it be meaningful to C/Java developers who care about pretty-prints for the sake of code reviews. Another example is the API evolution: thanks to the widely adopted information hiding principle, users of object-oriented programming libraries are encouraged to neglect any changes behind the API. Therefore detecting changes to the API of software components becomes meaningful. On the other hand, providers of the API need to pay attention to most changes inside the API implementation. 
+%Similarly, graphs used in requirements/design modeling activities typically allow moving nodes around in order to present the model in a different physical layout, whilst the topology is preserved. Often such layout changes are saved through the serialisation, leading to false alerts that the software design has changed. 
+%These are just a few examples of how important and challenging it is to detect meaningful changes. The general problem remains the same. 
 
-These are just a few examples of how important and challenging it is to detect meaningful changes. The general problem remains the same. Given that a change considered meaningful to someone may be meaningless to others, and vice versa, how can people or software engineering tools be informed appropriately to ignore or detect such a change? Some difference comparison tools can be {\em customized} to detect different kinds of changes, e.g., {\tt diff} either accepts or rejects whitespace differences depending on whether or not a command line switch {\tt -w} has been used. Such choices, however, can be misused easily by programmers who, for example, accept whitespaces changes in Python programs, or reject those in Java programs. Specific to the needs of programmers, it is often the case that whitespaces within one region of the program require attention while those within another are irrelevant. A global choice made for the {\tt diff} command is inappropriate in such cases. 
+Given that a change considered as meaningful for one purpose may be meaningless to another, how can one specify the types of changes that need to be detected for this given purpose? Furthermore, how can such a specification be used for an automatic detection? Most change detection tools are good at either reporting {\em all} changes in programs through general purpose diff algorithms, or at finding out certain or all changes that are {\em specific} to one particular programming or modeling language. However, few aims to provide a generic solution that can also be customised to the specific language and the specific needs of the developers.
 
-In this paper, we propose a new way to specify meaningful changes as materialised views to various artifacts including requirements models, UML diagrams and programming languages. Such specific views are defined declaratively as a lightweight extension to the grammar of the subject languages. We design the extension as a few generic modifications to the meta-grammar\footnote{The grammar of a TXL grammar is expressed in TXL too.} of TXL~\cite{txl} such that it is applicable to any language specifiable by TXL, which includes general-purpose programming languages (e.g., C/Java/Python) as well as graphical modeling languages (e.g., EMF, XMI, GXL). The extended grammar is {\em bootstrapped} into an on-the-fly {\em normalisation} transformation that removes meaningless differences from the concrete programs. These outputs of normalised programs are pretty-printed automatically for other text-based difference detection tool, as simple as {\tt diff}, to detect the meaningful differences.
+%{\em customized} to detect different kinds of changes, e.g., {\tt diff} either accepts or rejects whitespace differences depending on whether or not a command line switch {\tt -w} has been used. Such choices, however, can be misused easily by programmers who, for example, accept whitespaces changes in Python programs, or reject those in Java programs. Specific to the needs of programmers, it is often the case that whitespaces within one region of the program require attention while those within another are irrelevant. A global choice made for the {\tt diff}   is inappropriate in such cases. 
 
-To evaluate the versatility and efficiency of our meaningful changes extension to TXL (hereafter {\tt mct}), we show the results of two sets of experiments. The first set of experiments demonstrate how much changes are required to specify meaningful changes on different programming languages, ranging from i*/{\em Problem Frames} for requirements models, UML class diagrams for designs and C/Java/Python programming languages. The second set of experiments compare its efficiency with related {\tt diff} tools in detecting changes in the evolution of the {\tt JHotDraw} project.  
+In this paper, we propose a new way to specify meaningful changes as the composition of elementary changes that are defined on a ``normalisation'' of the grammatically correct source programs. The normalised results are always valid in language for the specific purpose, possibly refined from the source language. We show that such normalisations can be specified as as simple as annotations on the original grammar rules, while specific needs of the normalisation can be further accommodated by user-defined transformations. Each type of elementary normalisation corresponds to an elementary kind of production rules in the grammars. Once such annotations are specified, a fully automated meta-transformation can turn them into a composition of transformations that operate directly on the source programs. The composed transformation separates meaningful changes from the meaningless ones.
+%
+%materialised views to various artifacts including requirements models, UML diagrams and programming languages. Such specific views are defined declaratively as a lightweight extension to the grammar of the subject languages. 
+
+These specifications, including the meta-transformations, are all written as a few generic modifications to the meta-grammar\footnote{The grammar of a TXL grammar is expressed in TXL too.} of the TXL transformation systems~\cite{txl}. Therefore it is applicable to any source language specifiable by TXL, which currently supports several general-purpose programming languages (C/Java/CSharp/Python), as well as several graphical modeling languages (e.g., XML, XMI, GXL). 
+
+To evaluate our meaningful change tool  (hereafter {\tt mct}), we show how few changes are required to be added to the grammars for a few typical programming tasks. Also we applied {\tt mct} to detect these meaningful changes in the CVS repository of two medium-sized open-source projects.  
    
-The remainder of the paper is organised as follows: Section~\ref{sec:background} introduces two small examples as running examples to illustrate the problem and the requirements for specifying and detecting meaningful changes. Section~\ref{sec:approach} explains the approach we adopt to bootstrap the normalisation transformations needed in the implementation of the tool. %, which is illustrated by the running example in Section~\ref{sec:example}.
-Section~\ref{sec:experiment} presents the results of a number of experiments in using the tool, and comparing them with existing {\tt diff} tools for versatility and efficiency. Section~\ref{related} brings up the comparision of the conceptual differences in the design of the different approaches, and indicates some limitations of our approach. Section~\ref{conclude} concludes the findings in this work.
+The remainder of the paper is organised as follows: Section~\ref{sec:background} introduces a small running example to illustrate the problem and the requirements for specifying and detecting meaningful changes. Section~\ref{sec:approach} explains the approach we adopt to bootstrap the normalisation transformations needed in the implementation of the tool. 
+Section~\ref{sec:experiment} presents the results of a number of experiments in using the tool, and comparing the performance with existing {\tt diff} tools. Section~\ref{related} compares the conceptual differences in the design of existing approaches, and indicates some limitations of our approach. Section~\ref{conclude} concludes the findings.
 
 \section{Motivating Examples}\label{sec:background}
-A program is considered meaningfully different from another only when it has non-trivial changes; otherwise it is considered meaningfully the same even after introducing trivial changes by, e.g., adding or deleting whitespaces, or by reordering the type modifiers in method declarations, etc. 
-\subsection{Programs and {\tt diff / ldiff}}
-The essence can be illustrated using a simple Java program in Listing~\ref{listing:1}.
+%A program is considered meaningfully different from another only when it has non-trivial changes; otherwise it is considered meaningfully the same even after introducing trivial changes by, e.g., adding or deleting whitespaces, or by reordering the type modifiers in method declarations, etc. 
+%\subsection{Programs and {\tt diff / ldiff}}
+The essence of meaningful change can be illustrated using a simple Java program in Listing~\ref{listing:1}.
 \lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld.java},label=listing:1]{code/HelloWorld.java}
 
 It is still the same program even after a programmer modifies it into Listing~\ref{listing:2}.
@@ -263,165 +282,11 @@ Loh and Kim~\cite{Loh:2010:LPD:1810295.1810348,Kim:2009:DRS:1555001.1555046} pre
 \cite{brunet06gamma}
 \cite{degenais08icse}
 \cite{canfora09software}
-%   http://rcost.unisannio.it/cerulo/tools.html
-\bibliographystyle{plain}
+%\bibliographystyle{plain}
+%\balancecolumns
+\begin{small}
+\balance
+\bibliographystyle{IEEEtran}
 \bibliography{meaningful}
-\balancecolumns
+\end{small}
 \end{document}
-
-
-%\subsection{Arguments}
-
-%\subsubsection{syntax vs semantics of a language}
-%
-%   * syntax: representation that one can parse 
-%   *	<+ SE: Compiler: 
-%   * <+ text in a textual syntax (e.g., LR, LL, LALR)
-%   * <+ programs in languages (PL's, DSL's)
-%   *	<+ ER: 
-%   * <+ graphs in a graphical syntax
-%   * <+ models in a meta-model
-%   *	<+ AI: 
-%   * <+ logic rules
-%   *	<+ DB: 
-%   * <+ database schema
-%   * <+ tables in schema
-%   * semantics: information to interpret the meaning of the syntax
-%   *	<+ FM (formal methods)
-%   * <+ automata
-%   * <+ state machine
-%   *	<+ SE (software engineering)
-%   * <+ flow
-%   * <+ PDG
-%   *  <+ ER (entity-relation, object-orientation)
-%   * <+ object models
-%   * <+ ontology
-%   *  <+ DB (databases)
-%   * <+ views
-%   *	<+ AI (artificial intelligence): 
-%   * <+ logic (FOL, LTL, HOL)
-%   * <+ degree of satisfaction 
-%   * <+ Baysian Network
-%   * <+ Neural Network
-   
-%\subsubsection{syntax and semantics are one- to- one}
-%
-%   * <- One syntax may be interpreted in multiple ways
-%   * <+ multiple views of a single model 
-%   * <+ viewpoints
-%   * <- One semantics may be expressed in more than one ways
-%   * <+ Turing machine execution semantics
-%   
-%\subsubsection{abstract vs concrete syntax}
-%
-%   * a target structure can be considered abstract
-%   * <- The target structure is also concrete
-%   * <- The target structure may contain more information
-%   * one can lose information when transforming certain concrete structures
-%   into more abstract ones
-%   * <+ That's the exact purpose of an abstrac syntax, i.e.,
-%   to hide the details that users do not need to see.
-%   * <+ If a transformation adds information, the target structure is 
-%   getting more concrete.
-%   <+ Compiler-compilers
-%   <+ Model-driven transformations
-%   * <- If the abstract syntax cannot be used to regenerate the program, 
-%   then it does no longer "preserve" the syntax.
-%   * => What information is lost, what is kept?
-%   
-%\subsubsection{To communicate the meaning,  semantics has to be expressed in a concrete syntax}
-%
-%   * <- By default, the semantics can be conveyed using the syntax of exactly
-%   the same language!
-%   * <- Some information in the concrete syntax is not meaningful in 
-%   a particular perspective
-%   * <+ information hiding
-%   * <+ design recovery in terms of software architecture 
-%   * +> One has to represent the semantics as the syntax of 
-%   another language 
-%   If A is semantically the same as B, how to make sure the
-%   expression differences are removed?
-%   Normalisation (A) = Normalisation (B)
-%   iff
-%   Semantics (A) = Semantics (B)
-%   * +> Let's call the normalisation operation as a transformation 
-%   from one language to another!
-%   * +> A change can be classified as the following four types:
-%    
-%   syntax semantic syntactical semantical
-%   ====== ======== =========== ==========
-%   x      
-%   x
-%   x
-%   x
-%   x      x        x            x          hybrid
-%    
-%   Typical program changes are:
-%   * <+ syntax-only
-%   * <+ Java => Python
-%   * <+ Java language 1.4 => Java language 1.5
-%   * <+ SQL'92 => SQL'2K
-%   * +> Often changes with consequences
-%   * +> Occasionally no changes required if backward
-%   compatible
-%   * <+ semantics-only 
-%   * <+ Use of a new JVM
-%   * <+ Use of a new DBMS
-%   * <+ A bug fix in library implementation
-%   * +> Often are external changes
-%   * <+ syntatical-only
-%   * <+ performance
-%   * <+ compiler optimizations
-%   * <+ security and privacy
-%   * <+ obfuscations
-%   * <+ visibility
-%   * <+ understandability 
-%   * <+ code refactoring
-%   * <+ code indentation, coding styles
-%   * <+ code comments, documentations
-%   * <+ visualisations
-%   * <+ correctness
-%   * <+ (unit) test cases
-%   * <+ semantical-only
-%   * <+ add/remove a feature (user- perceived functionality)
-%   * <+ a bug fix
-%   * <- Many changes kept in software repository are hybrid of the 
-%   above types. 	
-%   <+ Bugzilla, CVS
-%   * +> It is important to separate the oils (islands) from waters
-%   * +> Identifying the changes
-%   * <+ For generic changes
-%   * <+ model comparing
-%   * <+ diff
-%   * <+ xmldiff
-%   * <+ model matching
-%   * <+ Mehradad
-%   * <+ model merging
-%   * <+ Shiva
-%   * <+ model versioning
-%   * <+ Molhado
-%   * <+ identifying syntax/semantics changes
-%   * <+ SemDiff
-%   * <+ identifying syntactical changes
-%   * <+ RefactoringCrawler
-%   * <+ identifying semantical changes
-%   * <+ UMLDiff
-%   * <+ CILDiff
-%   * <- Most of these work are isolated for programming
-%   tasks such as Java/CSharp/UML, not general enough 
-%   for all structural languages
-%   * <+ many languages other than PL are used in
-%   * <+ Requirements
-%   * <+ Goals
-%   * <+ Problem Frames
-%   * <+ Use cases/Scenarios
-%   * <+ Restricted natural languages
-%   * <+ Privacy rules
-%   * <+ Design
-%   * <+ DSL
-%   * <+ Ecore
-%   * +> It requires a theory to define the general
-%   mechanism for any structural language
-%   * +> General approach
-%   
-%\subsection{Invariant traceability}
