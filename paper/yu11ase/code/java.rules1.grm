@@ -1,0 +1,34 @@
+include "java.grm"
+redefine program
+    [package_declaration] [opt package_declaration]
+end define
+redefine package_declaration
+    [opt package_header kept]
+    [repeat import_declaration ignored] 
+    [repeat type_declaration kept ordered]
+end define
+define class_or_interface_body
+    '{ [NL][IN]
+       [repeat class_body_declaration kept ordered ignored when Private] [EX]
+    '} [opt ';] [NL][NL]
+end define
+redefine method_declaration
+    [NL] [repeat modifier ordered by Descending] [opt generic_parameter] [type_specifier] [method_declarator] [opt throws] [method_body preferred]
+end define
+redefine method_body
+       [opt annotation_default] '; [NL][NL] 
+    |  [block]        [NL][NL]
+end define
+...
+function Private A  [class_body_declaration]
+    match  [class_or_interface_body] B  [class_or_interface_body] 
+    construct M  [modifier *] _  [^ A] 
+    construct PublicModifiers [modifier*] 'public 'protected 
+    where not M [contains each PublicModifiers]
+end function
+rule Descending B [modifier]
+ match [modifier] A [modifier]
+ construct SA [stringlit] _ [quote A]
+ construct SB [stringlit] _ [quote B]
+ where SA [< SB] 
+end rule

@@ -62,7 +62,7 @@ Unix {\tt diff} utility reports these changes as 1 deletion and 1 modification o
 \includegraphics[width=\columnwidth]{code/emfcompare.png}
 \caption{The differences found by the EMFCompare on the two EMF models}\label{fig:1}
 \end{figure}
-Applying a structured diff algorithm~\footnote{EMFCompare, www.eclipse.org/emf/compare} to the EMF models corresponding to the abstract syntax structures of the two example Java programs\footnote{DBLP:conf/sle/HeidenreichJSW09}), it reports 3 changes: one concerns the renamed compilation units, one concerns the class HelloWorld that about ``the order of the reference members'', and the final one concerns the method ``main'' about ``the order of reference annotationsAndModifiers values''. 
+Applying a structured diff algorithm~\footnote{EMFCompare, www.eclipse.org/emf/compare} to the EMF models corresponding to the abstract syntax structures of the two example Java programs\cite{DBLP:conf/sle/HeidenreichJSW09}), it reports 3 changes: one concerns the renamed compilation units, one concerns the class HelloWorld that about ``the order of the reference members'', and the final one concerns the method ``main'' about ``the order of reference annotationsAndModifiers values''. 
 
 In fact, none of the changes identified in this example is meaningful if the programmer only wants to see non-trivial
 changes: just as adding a newline or some whitespaces would not change the syntax of the program, nor would swapping the keywords {\tt public} and {\tt static} in the declaration of the {\tt main} method make any semantic differences.
@@ -106,10 +106,10 @@ Also it is found that the elementary normalisations can be further customized. T
 
 The following property guarantees that a functional composition of the three basic normalisation transformations still satisfy the requirements of terminable normalisation.
 \begin{property}
-If two basic normalisations $N_1$ and $N_2$ satisfy the terminable normalisation requirements in Definitions~\ref{defn:1} and~\ref{defn:2}, then the functional composition $N_1 \oplus N_2 (P) = N_1 (N_2(P))$ also satisfies the terminable normalisation requirements.
+If two basic normalisations $N_1$ and $N_2$ satisfy the terminable normalisation requirements in Definitions~\ref{defn:norm} and~\ref{defn:norm2}, then the functional composition $N_1 \oplus N_2 (P) = N_1 (N_2(P))$ also satisfies the terminable normalisation requirements.
 \end{property}
 
-After each program revision is normalised, the next task is to detect the meaningful changes. One extreme of  the methods is to apply an existing {\tt diff} algorithm, which in fact may or may not detect the exact differences.  Another extreme of the methods is to apply clone detection~\ref{NiCAD}. The benefit of applying clone detection is that one could take advantage of knowning the meaningful structures. Therefore, if the ordering is not imporant and as long as the normalised entities are the same, the clone detector could find them. On  the other hand, if the two entities are similar but not exactly the same, a meaningful context of the difference can be shown.
+After each program revision is normalised, the next task is to detect the meaningful changes. One extreme of  the methods is to apply an existing {\tt diff} algorithm, which in fact may or may not detect the exact differences.  Another extreme of the methods is to apply clone detection~\cite{NiCAD}. The benefit of applying clone detection is that one could take advantage of knowning the meaningful structures. Therefore, if the ordering is not imporant and as long as the normalised entities are the same, the clone detector could find them. On  the other hand, if the two entities are similar but not exactly the same, a meaningful context of the difference can be shown.
 Not all language constructs should be considered as clones. E.g., the index variables of a for-loop are apparently not the best candidate to tell meaningful changes. It makes little sense to keep the for-loop structure while remove all the index variables.
 To be able to specify which part of the language construct needs to be considered as clones to removal, another kind of annotation to the non-terminals are introduced as the following rule. 
 
@@ -119,23 +119,40 @@ To be able to specify which part of the language construct needs to be considere
 
 In principle any parameterised AST-based clone detector could be used for this purpose. To illustrate in this paper we show the simpliest exact clones.
 
-Table~\ref{table:rule} summarises the four elementary annotations to the meta-grammar for the normalisation/clone removals. Although they are by no means complete, we found that they are sufficient for many practical meaningful change detection tasks. where the 
+Table~\ref{table:rule} summarises the four elementary annotations to the meta-grammar for the normalisation/clone removals. Although they are by no means complete, we found that they are sufficient for many practical meaningful change detection tasks.
 \begin{table*}\centering
-\caption{Basic normalisation rules in TXL}\label{table:rule}
+\caption{Basic annotation rules to the TXL grammar}\label{table:rule}
 \begin{tabular}{|c|c|c|c|}\hline
-Transformation & Application scope & TXL annotation & Example \\\hline\hline
-Ignored & Repeat/List ($*$), Optional ($|$) & [\ldots ignored when X] & [repeat member\_declaration ignored when Private]\\\hline\hline 
-Ordered & Repeat/List ($*$) & [\ldots ordered by F] & [member\_declaration ordered by Descending] \\\hline\hline
-Altered & Phi ($|$) & [\ldots altered to F ] & [method\_body altered to Comma] \\\hline\hline
+Transformation & Application scope & TXL annotations & Example \\\hline\hline
+Ignore & Repeat/List ($*$), Optional ($|$) & [\ldots ignored when F] & [repeat member\_declaration \emph{ignored when Private}]\\\hline\hline 
+Order & Repeat/List ($*$) & [\ldots ordered by F] & [member\_declaration \emph{ordered by Ascending}] \\\hline\hline
+Prefer & Alternative ($|$) & [\ldots preferred ] & [method\_body \emph{preferred}] \\\hline\hline
+Keep & Any non-terminal term & [\ldots kept ] & [class\_body\_declaration \emph{kept}] \\\hline
 \hline\end{tabular}
 \end{table*}
 
 \subsection{A Running Example}\label{sec:example}
-To illustrate the application of the approach laid out in the previous section, here we use the example of the problem frames syntax to illustrate the point. Listing~\ref{listing:problem0} selects to show three production rules of the original problem frames grammar. Lines 1-3 define a {\tt problem\_description} as an array of elements ({\tt E}); Lines 5-7 define each element to have an optional description of {\tt details}; and Lines 9-13 define the details by a list of comma separated {\tt phenomena} inside curly braces. 
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n problem.rules0.grm},label=listing:problem0]{code/problem.rules0.grm}
-Since one does not care whether an element is before another element or not, the array of {\tt E}  is unordered. Similarly, the ordering of the phenomena list is unimportant to the meaning of the problem frames language. To specify the normalisation, one only has to insert the \underbar{ordered} at the end of the {\tt [repeat E+]} and {\tt [list phenomena]} respectively, as shown in Listing~\ref{listing:problem1}.
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n problem.rules1.grammar},label=listing:problem1]{code/problem.rules1.grm}
-Furthermore, if one would like to normalise the elements by the descending order, a user-defined rule {\tt Small} can be added in Listing~\ref{listing:problem2}. This is just to illustrate how easy it is to customize the comparison function, in case one would like to define a different key or ordering for the structure to be normalised.
+To illustrate the features of our method, here we use the example of the Java 5 grammar provided by the TXL site, with 970 lines of code. Listing~\ref{listing:java0} selects a few production rules, with line numbers of the original Java5 grammar. In the conventions of TXL meta-grammar, a non-terminal is enbraced by square brackets, and a production rule is defined by the `define...end define' blocks.
+
+Lines 151-153 define a {\tt program} as a single instance of package declaration; Lines 158-162 define each package declaration to have an optional description of the package header, zero to many import declaration(s), before zero to many type declaration(s). Lines 197-201 define a type declaration as either one of three alternatives for, namely a class, an interface or an enum type. In these lines, [NL], [IN] or [EX] are predefined indentation tokens which will be ignored by the parser, but will be inserted by the unparser to pretty print the transformed code.  NL, IN or EX are respectively for new line, increasing and decreasing indention levels. Therefore the output has two lines per import declaration. 
+
+Lines 377-379 define the method declaration as zero to many modifiers (as listed in Lines 254-267), plus an optional generic parameter, a type specifier, a method declarator, optional throws exception declarations and the method body. 
+It is also notable that the method body is defined in Lines 407-410, which refers the block, defined in Lines 486-490, as a curly brace encloded array of zero to many declarations or statements.
+\lstinputlisting[language=,identifierstyle=,caption={\tt cat -n java.grm},label=listing:java0]{code/java.rules0.grm}
+\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n java.annotated.grm},label=listing:java1]{code/java.rules1.grm}
+
+It is possible to redefine the grammar of Java5 in TXL in many ways without necessarily changing the validity of a Java 5 program. For example, by replacing the two [NL] [NL] to a single [NL], one can already remove all the empty lines following the import statements. In the remainder of the section, we explain how normalisation is done by using these grammar rules as the input.
+
+Comparing the annotated Java 5 grammar as shown in Listing~\ref{listing:java1} with the original in Listing~\ref{listing:java0}, it is clear that one only needs to ``redefine'' existing production rules while leaving other rules intact by simply including them (e.g., Line 1).
+
+The redefined rules in Table~\ref{table:rule} are used or composed in some of the term extensions. Here we explain the rationale behind these extensions. First of all, the top level rule is modified from a singleton to one or optionally two instances of the programs (Lines 2-4). The reason for this is to allow the clone detection to work on the concatenated programs being compared to remove those inter-program clones such that the kept elements are all about different elements. The annotations ``kept'' are appended to the terms such as ``package\_header'' (Line 6), ``type\_declaration'' (Line 8), ``class\_body\_declaration'' (Line 12). These instruct a clone detector to compare these three types of entities for possible clones. Although the technique is similar, there is also a fundamental difference between general-purpose clone detection and cross-program clone-removal here. The purpose is not to show the clones, instead the opposite: those non-clones are the differences to be detected.
+When a single program is provided as the source, of course, the transformations will then degenerate into just selecting the  parts of the program in which changes are embedded.
+
+However, the ordering of elements or appearance of ignoreable details can get in the way of meaingful change detections. Therefore the normalisation transformations are required to be applied before the change detection step. 
+
+Since one does not care whether a modifier is before another one or not (e.g., 'private static' is the same as 'static private'), the ordering of the elements in the array of {\tt repeat modifier}  (Line 378) is unimportant to the Java semantics. However, the default behaviour of TXL parser preserves the ordering of the modifiers in the parsing tree as they occur in the source program. To specify the ``Order'' normalisation, one only needs to insert the \underbar{ordered} at the end of the {\tt [repeat modifier]} term.
+
+Furthermore, if one would like to normalise the elements by the descending order, a user-defined rule {\tt Descending} (Lines 29-34) can be added in Listing~\ref{listing:problem2}. This is just to illustrate how easy it is to customize the comparison function, in case one would like to define a different key or ordering for the structure to be normalised.
 \lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n problem.rules2.grammar},label=listing:problem2]{code/problem.rules2.grm}
 Of course, the user may choose to ignore certain information to further abstract the normalised structure, e.g., as indicated in Listing~\ref{listing:problem3}, the {\tt details} can be ignored by using {\tt ignore} at the end of the optional part {\tt [opt details]}. 
 \lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n problem.rules3.grammar},label=listing:problem3]{code/problem.rules3.grm}
