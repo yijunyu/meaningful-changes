@@ -1,8 +1,8 @@
 public class HelloWorld 
 {
- static String world = "world"; // ending
+ private static String world = "world";
 
- static String hello = "Hello"; // beginning
+ static private String hello = "Hello";
  public  static void main(String args[]) {
   System.out.println  (hello + ", " 
      + world + "!");

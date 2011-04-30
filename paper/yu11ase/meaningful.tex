@@ -1,4 +1,3 @@
-%\documentclass{acm_proc_article-sp}
 \documentclass[10pt, conference, compsocconf]{IEEEtran}
 \IEEEoverridecommandlockouts
 \usepackage{graphicx}
@@ -6,12 +5,14 @@
 \usepackage{balance}
 \usepackage{multirow}
 \usepackage{listings}
-\lstset{breaklines=true, basicstyle=\scriptsize, frame=single, 
+\newtheorem{property}{Property}
+\lstset{breaklines=true, basicstyle=\scriptsize, %frame=single, 
   keywordstyle=\color{blue}, commentstyle=\color{green},
   identifierstyle=\color{cyan},
   stringstyle=\ttfamily\color{red}, showstringspaces=false,
   language=Java, numberfirstline=true,
-  frameround=true, frame=trBL}
+%  frameround=false, frame=trBL
+}
 \title{Specifying and Detecting Meaningful Changes}
 \author{\IEEEauthorblockN{
 Yijun Yu\IEEEauthorrefmark{1},
@@ -35,16 +36,10 @@ Using our elementary extensions to program language grammars, developers can spe
 \section{Introduction}
 
 ``Nothing endures but change.'' -- Heraclitus (c.535 BC - 475 BC). This philosophy is largely true in most software development projects. However, not all changes are equally meaningful to different purposes. For example, changing the indentations of statements does not necessarily alter the meanings or semantics expressed by a program. Nonetheless it could lead to false alarms to any revision control system as text-based difference comparison algorithms are typically used (e.g., the {\bf diff} utility in Unix). Although an indentation is not meaningful to the executation semantics of C/Java programs, it can be very important to other programming languages such as Python. Still can it be meaningful to C/Java developers who care about pretty-prints for the sake of code reviews. Another example is the API evolution: thanks to the widely adopted information hiding principle, users of object-oriented programming libraries are encouraged to neglect any changes behind the API. Therefore detecting changes to the API of software components becomes meaningful. On the other hand, providers of the API need to pay attention to most changes inside the API implementation. 
-%Similarly, graphs used in requirements/design modeling activities typically allow moving nodes around in order to present the model in a different physical layout, whilst the topology is preserved. Often such layout changes are saved through the serialisation, leading to false alerts that the software design has changed. 
-%These are just a few examples of how important and challenging it is to detect meaningful changes. The general problem remains the same. 
 
 Given that a change considered as meaningful for one purpose may be meaningless to another, how can one specify the types of changes that need to be detected for this given purpose? Furthermore, how can such a specification be used for an automatic detection? Most change detection tools are good at either reporting {\em all} changes in programs through general purpose diff algorithms, or at finding out certain or all changes that are {\em specific} to one particular programming or modeling language. However, few aims to provide a generic solution that can also be customised to the specific language and the specific needs of the developers.
 
-%{\em customized} to detect different kinds of changes, e.g., {\tt diff} either accepts or rejects whitespace differences depending on whether or not a command line switch {\tt -w} has been used. Such choices, however, can be misused easily by programmers who, for example, accept whitespaces changes in Python programs, or reject those in Java programs. Specific to the needs of programmers, it is often the case that whitespaces within one region of the program require attention while those within another are irrelevant. A global choice made for the {\tt diff}   is inappropriate in such cases. 
-
 In this paper, we propose a new way to specify meaningful changes as the composition of elementary changes that are defined on a ``normalisation'' of the grammatically correct source programs. The normalised results are always valid in language for the specific purpose, possibly refined from the source language. We show that such normalisations can be specified as as simple as annotations on the original grammar rules, while specific needs of the normalisation can be further accommodated by user-defined transformations. Each type of elementary normalisation corresponds to an elementary kind of production rules in the grammars. Once such annotations are specified, a fully automated meta-transformation can turn them into a composition of transformations that operate directly on the source programs. The composed transformation separates meaningful changes from the meaningless ones.
-%
-%materialised views to various artifacts including requirements models, UML diagrams and programming languages. Such specific views are defined declaratively as a lightweight extension to the grammar of the subject languages. 
 
 These specifications, including the meta-transformations, are all written as a few generic modifications to the meta-grammar\footnote{The grammar of a TXL grammar is expressed in TXL too.} of the TXL transformation systems~\cite{txl}. Therefore it is applicable to any source language specifiable by TXL, which currently supports several general-purpose programming languages (C/Java/CSharp/Python), as well as several graphical modeling languages (e.g., XML, XMI, GXL). 
 
@@ -54,73 +49,86 @@ The remainder of the paper is organised as follows: Section~\ref{sec:background}
 Section~\ref{sec:experiment} presents the results of a number of experiments in using the tool, and comparing the performance with existing {\tt diff} tools. Section~\ref{related} compares the conceptual differences in the design of existing approaches, and indicates some limitations of our approach. Section~\ref{conclude} concludes the findings.
 
 \section{Motivating Examples}\label{sec:background}
-%A program is considered meaningfully different from another only when it has non-trivial changes; otherwise it is considered meaningfully the same even after introducing trivial changes by, e.g., adding or deleting whitespaces, or by reordering the type modifiers in method declarations, etc. 
-%\subsection{Programs and {\tt diff / ldiff}}
 The essence of meaningful change can be illustrated using a simple Java program in Listing~\ref{listing:1}.
-\lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld.java},label=listing:1]{code/HelloWorld.java}
+After some trivial changes, it is still the same program shown in Listing~\ref{listing:2}.
+Unix {\tt diff} utility reports these changes as 1 deletion and 1 modification of a big chuck in Listing~\ref{listing:3}. Applying a more advanced algorithm {\tt ldiff}~\cite{canfora09software} to this example, line-based changes are reported as 2 insertions, 1 deletion and 2 modifications. Each of the 5 changes is at most two lines for programmers to check. Note that we have applied both diff algorithm to ignore the whitespaces. 
 
-It is still the same program even after a programmer modifies it into Listing~\ref{listing:2}.
-\lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld2.java},label=listing:2]{code/HelloWorld2.java}
-Traditional comparison tool such as the Unix {\tt diff} utility reports a number of trivial changes (Listing~\ref{listing:3}), e.g.,
-an insertion of the declaration of the {\tt world} string (the Lines 3-4 chunk of HelloWorld2.java) and the replacement of the chunk of HelloWorld.java (Lines 4-6) with the chunk of HelloWorld2.java (Lines 6-8).
-%\lstinputlisting[caption={diff HelloWorld2.java HelloWorld.java},label=listing:3]{code/HelloWorld2.diff}
-\lstinputlisting[language=,identifierstyle=,caption={\tt diff -w HelloWorld2.java HelloWorld.java},label=listing:3]{code/HelloWorld2-w.diff}
-Applying a more advanced line-diffing algorithm {\tt ldiff}~\cite{canfora09software} to this example, one can see that 5 smaller hunks of changes are still reported as 2 insertions, 1 deletions and 2 modifications, even though they are now smaller for programmers to check.
-\lstinputlisting[language=,identifierstyle=,caption={\tt ldiff.pl -w -o diff HelloWorld2.java HelloWorld.java},label=listing:ldiff]{code/HelloWorld3-w.diff}
+\lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld-1.java},label=listing:1]{code/HelloWorld-1.java}
+\lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld-2.java},label=listing:2]{code/HelloWorld-2.java}
+\lstinputlisting[language=,identifierstyle=,caption={\tt diff -w HelloWorld.java HelloWorld2.java},label=listing:3]{code/HelloWorld-2.diff}
+\lstinputlisting[language=,identifierstyle=,caption={\tt ldiff.pl -w -o diff HelloWorld-1.java HelloWorld-2.java},label=listing:ldiff]{code/HelloWorld-2.ldiff}
+
+\begin{figure}\centering
+\includegraphics[width=\columnwidth]{code/emfcompare.png}
+\caption{The differences found by the EMFCompare on the two EMF models}\label{fig:1}
+\end{figure}
+Applying a structured diff algorithm~\footnote{EMFCompare, www.eclipse.org/emf/compare} to the EMF models corresponding to the abstract syntax structures of the two example Java programs\footnote{DBLP:conf/sle/HeidenreichJSW09}), it reports 3 changes: one concerns the renamed compilation units, one concerns the class HelloWorld that about ``the order of the reference members'', and the final one concerns the method ``main'' about ``the order of reference annotationsAndModifiers values''. 
 
 In fact, none of the changes identified in this example is meaningful if the programmer only wants to see non-trivial
 changes: just as adding a newline or some whitespaces would not change the syntax of the program, nor would swapping the keywords {\tt public} and {\tt static} in the declaration of the {\tt main} method make any semantic differences.
 
-\subsection{Graphs and serialisation/abstraction}
-Graph models have similar problems, if not worse. To illustrate this point, consider the two simple diagrams drawn by an Eclipse-based graphical modeling tool in Figure~\ref{fig:1}\footnote{Most UML modeling tools based on Eclipse also use the same underlying model-driven technology to create the editor plugins for editing and saving EMF/GMF models such as class diagrams.}.
-Although the diagram below has changed the diagram above it by placing the ellipse node (Requirement) on the left rather than on the right, and by filling different colors into the shapes, the topology of the graph and the content of the corresponding EMF model remain the same, according to the domain-specific language defined in Problem Frames~\cite{jackson01}.
-\begin{figure}
-\includegraphics[width=\columnwidth]{code/CommandedBehaviour1}
-\includegraphics[width=\columnwidth]{code/CommandedBehaviour2}
-\caption{Equivalent problem frame diagrams: commanded behaviour}\label{fig:1}
+To detect a meaningful change between two versions of a program, our proposed solution includes two major steps. {\em Step 1. Specification}: the programmer defines a number of annotations to the given grammar of the programs; {\em Step 2. Transformation}: the tool generates two sets of transformations (normalisation, clone-removal) from the specification in Step 1 and apply these transformations to the two source programs to report the meaningful changes. Figure~\ref{fig:overview} illustrates the workflow of a typical use case where the thin arrow indicates the manual specification step for the developer to annotate the given grammar; and the thick arrows indicate the automated transformation steps, for the mct system to generate the grammar refinement and transformation rules to detect meaningful changes from the programs in the CVS repository. 
+\begin{figure}\centering
+\includegraphics[width=\columnwidth]{code/overview}
+\caption{Specifying and detecting meaningful changes, an overview}\label{fig:overview}
 \end{figure}
 
-The underlying {\tt HashMap} in the modeling tool, however, could serialise the modeling elements by different (and rather random) orderings, making it more difficult for a simple diff tool to detect meaningful changes to their EMF models. The EMF model can be saved as an equivalent model in corresponding domain-specific (textual modeling) language (DSL) such as those specified using the Eclipse Xtext framework~\footnote{http://eclipse.org/xtext} (e.g., List~\ref{listing:xtext}). 
- \lstinputlisting[language=,identifierstyle=,numbers=left,emph={problem,event},stringstyle=\color{red},caption={\tt cat -n CommandedBehaviour.problem},label=listing:xtext] {code/CommandedBehaviour1.problem}
-Besides the whitespace problems, in this example, the phenomena are not alphabetically ordered, nor do the domain nodes. 
-One can imagine easily that swapping two nodes or two phenomena in this serialised model could lead to false alarms which in fact do not require attention by the designers. Comparing two models at the EMF level using a tool such as {\tt EMFcompare}~\footnote{http://eclipse.org/emfcompare}, one could avoid such false alarms\footnote{TO CHECK}.
+\section{Bootstrapping Transformations}\label{sec:approach}
 
-Moreover, analysts/designers do not always want to view every detail of the modeling elements. For example, the phenomena of the domain nodes in a problem diagram, or the exact declaration of the class methods in a class diagram, are not viewed when the analyst/designers is concentrating on the structural relationship between the larger entities (domain interfaces or class hiearchies). As such, an abstraction transformation is often required before one compare meaningful structures rather than the meaningless details that should be hidden from the view. Of course, programmers may sometimes want to compare the details of the exact declarations of method, while still would wish to ignore the detail implementation of the method bodies. Therefore for the same model (e.g., graph) it is helpful to allow an abstraction as the preprocessing step for a meaningful comparison.
-
-\section{Bootstrapping Normalisation}\label{sec:approach}
-
-Before explaining the theory and the implemenations of our transformations, we first define {\em normalisation transformations} and their rationale.
+Before specifying our tool, we first define a few requirements for detecting {\em meaningful changes} through normalisation transformations.
 \begin{definition}
-{\bf Normalisation (normalising transformation).\label{defn:norm}} A program $P$ is said to be {\tt normalised} into a program $N(P)$ if any program $P'$ such that $P'\neq P \wedge N(P') = N(P)$ is {\em meaningfully equivalent} to $P$. In other words, $N(P)$ is the representative element of the equivalent class to which $P$ belongs, and $P'$ has no meaningful changes to $P$.
-\end{definition}
-As discussed earlier, the exact meaning for `meaningful equivalent' in  the Definition~\ref{defn:norm} is intentionally left open or undefined because it depends on the purpose of the analysis. Even so, the definition is still useful because it provides the general criteria for determining whether a transformation is a suitable normalisation once it is clear what is meaningfully equivalent to the users. Once the normalisation transformation is defined, the detection of the meaningful changes becomes comparing the two normalised programs. However, in principle there are infinite possible normalisation transformations for some equivalent classes. For example, adding any number of whitespaces can be regarded as normalisation transformations. 
-According to Definition~\ref{defn:norm2}, it is not possible to have infinite number of normalisations because the programs are of finite size.
-\begin{definition}
-{\bf Terminable Normalisation.\label{defn:norm2}} A normalisation $N$ is terminable if $N(P)$ is strictly smaller than $P$ in size.
+{\bf Normalise into equivalence classes}.\label{defn:norm} A program $P$ is said to be {\em meaningfully equivalent} to program $P'$ if and only if $(P'=P) \vee (N(P') = N(P))$ where $N(P)$ is the normalisation transformation of $P$. In other words, $P'$ introduces no meaningful changes to $P$. Typically $N(P)$ is a many-to-one transformation.
 \end{definition}
 
-Although not mandatory, for pragmatic reasons it is preferable to have the outputs of normalisation readily compared by reusing line-based diff tools. 
+As discussed earlier, the exact meaning for `meaningful equivalent' in  the Definition~\ref{defn:norm} is intentionally left open for user to define by the normalisation function, because it depends on the purpose of the analysis. The definition provides the general criteria for determining whether a transformation is a suitable normalisation once it is clear what is meaningfully equivalent to the users: any trivial or irrelevant changes should be normalised to the same value. After the normalisation transformation is defined, the detection of the meaningful changes becomes comparing the two normalised programs. 
+
+In principle, however, there can be infinite possible normalisations for defining an equivalent class. For example, adding any number of whitespaces can be regarded as normalisation transformations as opposed to removing the whitespaces. 
+Therefore, such a normalisation transformation needs to be {\em terminable} by restricting the size of the targets.
 \begin{definition}
-{\bf Diff-friendly Normalisation.\label{defn:norm3}} A normalisation $N$ is diff-friendly, if any line in the normalised program $N(P)$ has at most one meaningful changes.
+{\bf Terminable normalisation.\label{defn:norm2}} A normalisation $N$ is {\em terminable} if $N(P)$ is smaller than $P$ in size.
+\end{definition}
+The {\em identity} transformation which preserves everything in the source is a normalisation, however it is trivial that all changes are meaningful if the identity is used as normalisation. According to Definition~\ref{defn:norm2}, we only consider the transformations that indeed make the output smaller than the input.
+
+In the remainder of the paper, we focus on generating normalisation transformations based on elementary composable normalisations that can be derived from the language grammars. Since the language grammar is made of production rules,
+one can start with the basic types of structural terms on each production rule, mandatory, optional, repeat and alternatives. For the optional/repeat terms, if one modifies it into the mandatory terms the transformation can violate the Definition~\ref{defn:norm2}. Similarly modifying optional to repeat could also introduce non-terminations. Therefore this leave us with three basic types of normalisations.
+\begin{definition}
+{\bf Elementary structural normalisations.\label{defn:norm3}} Let a production rule be $N \leftarrow (T_1? \ldots T_n*) [| \ldots] $ where $A$ is a non-terminal, and $T_i$ is the $i$-th term (which could be either terminal or non-terminal), and optionally the rule could contain more than one alternative sequence patterns. Every optional (denoted by `?') term can be {\em ignored} if with or without the value makes no difference to the developer; elements of the repeated (denoted by `*') term can be {\em ordered} if the ordering of the values are not important to the developer; and the whole element that matches with one mandatory alternative ( `$|$' )  can be {\em preferred} to a simpler values if a difference between the alternative rules are not significant to the developers.
 \end{definition}
 
-Given that a program is expressed in programming languages consist of production rules~\cite{aho79}, our normalisation tool {\tt mct} needs to satisfy the following requirements, in order to handle those examples motivated in the previous section:
-\begin{enumerate}
-\item [R1] Ignore the trivial differences in optional or repetitive {\em terminals} in the production rules;
-\item [R2] Ignore certain non-terminals in the rules according to the needs of further abstraction;
-\item [R3] Ignore the ordering of the unordered collections by ordering them sequentially, such that two collections of the same set of elements are the same sequences;
-\item [R4] Carry out the normalisation transformations on the fly, without any user intervention once the grammar rules are extended using the annotations for [R1], [R2] and [R3].
-\item [R5] (optional) Occupy at east one line per non-terminal;
-\item [R6] (optional) Make sure the normalised program is still a valid program in the original grammar.
-\end{enumerate}
+The three elementory structural normalisations preserve the validty of the normalised program in terms of the source programming language.
+\begin{property}
+{\bf Syntax validty of normalised programs.\label{defn:norm4}} The normalised program by the three elementary transformations are valid programs in the original programming language.
+\end{property}
 
-The requirement [R1] is sufficient to ignore all unnecessary non-terminals in the output program. Such normalisations help focus the comparison more on the abstract syntax rather than on the concrete syntax, because it is the abstract syntax that carries the meaning of the representation while the concrete syntax (reflected by the non-terminals) are merely the auxiliary tokens to parse. The default {\em unparse} functionality of TXL~\cite{txl} can already satisfy the requirement of removing extra whitespaces. To remove the extra non-terminals, we must introduce the ``ignore'' attribute to the type specification, such as {\tt [opt 'terminal \underbar{'ignore}] }. Requirement [R2] is similar to that of [R1], but now it is the non-terminals that are to be ignored for the abstraction purpose. 
+Of course, sometimes the validity of the normalised programs is not a concern if the purpose of checking meaningful changes is not to obtain a compilable program. In those cases, one can relax the requirement about the preferred rule for alternative sequences `$|$'. 
 
-Requirement [R3] is useful especially when users knows when a list or an array of literals (tokens and non-terminals) is in fact unordered (e.g., the type modifiers in Java, the phenomena in problem frames), therefore combinatory numbers of possible differences can be removed by ordering the elements in the same way. By default, we can use the serialised string of the literal and sort them in ascending ordering. Of course, such ordering can be made more flexible by allowing users to specify the appropriate ordering key/transformations. Examples of this extension are {\tt [ repeat X \underbar{ordered} ] } where the non-terminal X will be ordered in the normalised program; or {\tt [list X \underbar{ordered by Y}] } where the non-terminal X will be ordered by the comparison rule specified by {\tt Y(X)}. In other words, users can choose to order the elements in descending order, or by the ordering of a particular key field. 
+Also it is found that the elementary normalisations can be further customized. The unconditional ignored rule for an optional term `?' can be associated with a conditional check, for example in the API extraction example, one would remove the declaration if and only if it does not have a `public' or `protected' modifiers. Similarly, the ordered rule for repeating terms `*' can be customized to ascending or descending orders, and the ordering criteria can be associated with certain key' substructures.
 
-Satisfying the requirement [R4] would allow the transformation from the program to a `simplified' grammar to be generated on the fly, appending additional transformation rules by either ignoring or ordering the literals that have been extended.  The implementation of [R4] is done through the technique of {\em bootstrapping}, that is, to reflectively annotate certain literals in the TXL meta-grammar using the {\tt ignore} and {\tt ordered by} extensions given that the TXL grammar itself is expressed in TXL as a meta-grammar. By processing each annotation in the context of the production rules, it produces a context-aware rule for the transformation on-the-fly. Then the annotations are stripped off by default, which produces a pure-TXL grammar without the annotations, while additional rules based on those removed annotations are combined together. This combined grammar specification is then used to parse the programs in the original language and produces the normalised programs. 
+The following property guarantees that a functional composition of the three basic normalisation transformations still satisfy the requirements of terminable normalisation.
+\begin{property}
+If two basic normalisations $N_1$ and $N_2$ satisfy the terminable normalisation requirements in Definitions~\ref{defn:1} and~\ref{defn:2}, then the functional composition $N_1 \oplus N_2 (P) = N_1 (N_2(P))$ also satisfies the terminable normalisation requirements.
+\end{property}
 
-Optionally, requirement [R5] can be  enforced by inserting a new line directive  {\tt \underbar {[NL]}} to the end of each non-terminal literal in the production rules. Sometimes the normalised program does not have to be a valid program in the same grammar because removing the details may make the output no longer a valid program, therefore [R6] is the default preference applied if the user would like to preserve the program syntax as well. For example, the abstracted program is still in valid Java syntax by retaining the \{ \} braces while hiding the body of a Java method.
+After each program revision is normalised, the next task is to detect the meaningful changes. One extreme of  the methods is to apply an existing {\tt diff} algorithm, which in fact may or may not detect the exact differences.  Another extreme of the methods is to apply clone detection~\ref{NiCAD}. The benefit of applying clone detection is that one could take advantage of knowning the meaningful structures. Therefore, if the ordering is not imporant and as long as the normalised entities are the same, the clone detector could find them. On  the other hand, if the two entities are similar but not exactly the same, a meaningful context of the difference can be shown.
+Not all language constructs should be considered as clones. E.g., the index variables of a for-loop are apparently not the best candidate to tell meaningful changes. It makes little sense to keep the for-loop structure while remove all the index variables.
+To be able to specify which part of the language construct needs to be considered as clones to removal, another kind of annotation to the non-terminals are introduced as the following rule. 
+
+\begin{definition}
+{\bf Elementary structural clone removals.\label{defn:norm5}} Any entity in the grammar can be marked as possible clones such that a clone removal transformation can remove any duplicated occurrance. 
+\end{definition}
+
+In principle any parameterised AST-based clone detector could be used for this purpose. To illustrate in this paper we show the simpliest exact clones.
+
+Table~\ref{table:rule} summarises the four elementary annotations to the meta-grammar for the normalisation/clone removals. Although they are by no means complete, we found that they are sufficient for many practical meaningful change detection tasks. where the 
+\begin{table*}\centering
+\caption{Basic normalisation rules in TXL}\label{table:rule}
+\begin{tabular}{|c|c|c|c|}\hline
+Transformation & Application scope & TXL annotation & Example \\\hline\hline
+Ignored & Repeat/List ($*$), Optional ($|$) & [\ldots ignored when X] & [repeat member\_declaration ignored when Private]\\\hline\hline 
+Ordered & Repeat/List ($*$) & [\ldots ordered by F] & [member\_declaration ordered by Descending] \\\hline\hline
+Altered & Phi ($|$) & [\ldots altered to F ] & [method\_body altered to Comma] \\\hline\hline
+\hline\end{tabular}
+\end{table*}
 
 \subsection{A Running Example}\label{sec:example}
 To illustrate the application of the approach laid out in the previous section, here we use the example of the problem frames syntax to illustrate the point. Listing~\ref{listing:problem0} selects to show three production rules of the original problem frames grammar. Lines 1-3 define a {\tt problem\_description} as an array of elements ({\tt E}); Lines 5-7 define each element to have an optional description of {\tt details}; and Lines 9-13 define the details by a list of comma separated {\tt phenomena} inside curly braces. 
@@ -290,3 +298,56 @@ Loh and Kim~\cite{Loh:2010:LPD:1810295.1810348,Kim:2009:DRS:1555001.1555046} pre
 \bibliography{meaningful}
 \end{small}
 \end{document}
+
+%Similarly, graphs used in requirements/design modeling activities typically allow moving nodes around in order to present the model in a different physical layout, whilst the topology is preserved. Often such layout changes are saved through the serialisation, leading to false alerts that the software design has changed. 
+%These are just a few examples of how important and challenging it is to detect meaningful changes. The general problem remains the same. 
+
+%{\em customized} to detect different kinds of changes, e.g., {\tt diff} either accepts or rejects whitespace differences depending on whether or not a command line switch {\tt -w} has been used. Such choices, however, can be misused easily by programmers who, for example, accept whitespaces changes in Python programs, or reject those in Java programs. Specific to the needs of programmers, it is often the case that whitespaces within one region of the program require attention while those within another are irrelevant. A global choice made for the {\tt diff}   is inappropriate in such cases. 
+
+%
+%materialised views to various artifacts including requirements models, UML diagrams and programming languages. Such specific views are defined declaratively as a lightweight extension to the grammar of the subject languages. 
+
+%A program is considered meaningfully different from another only when it has non-trivial changes; otherwise it is considered meaningfully the same even after introducing trivial changes by, e.g., adding or deleting whitespaces, or by reordering the type modifiers in method declarations, etc. 
+%\subsection{Programs and {\tt diff / ldiff}}
+%
+%\subsection{Graphs and serialisation/abstraction}
+%Graph models have similar problems, if not worse. To illustrate this point, consider the two simple diagrams drawn by an Eclipse-based graphical modeling tool in Figure~\ref{fig:1}\footnote{Most UML modeling tools based on Eclipse also use the same underlying model-driven technology to create the editor plugins for editing and saving EMF/GMF models such as class diagrams.}.
+%Although the diagram below has changed the diagram above it by placing the ellipse node (Requirement) on the left rather than on the right, and by filling different colors into the shapes, the topology of the graph and the content of the corresponding EMF model remain the same, according to the domain-specific language defined in Problem Frames~\cite{jackson01}.
+%\begin{figure}
+%\includegraphics[width=\columnwidth]{code/CommandedBehaviour1}
+%\includegraphics[width=\columnwidth]{code/CommandedBehaviour2}
+%\caption{Equivalent problem frame diagrams: commanded behaviour}\label{fig:1}
+%\end{figure}
+%
+%The underlying {\tt HashMap} in the modeling tool, however, could serialise the modeling elements by different (and rather random) orderings, making it more difficult for a simple diff tool to detect meaningful changes to their EMF models. The EMF model can be saved as an equivalent model in corresponding domain-specific (textual modeling) language (DSL) such as those specified using the Eclipse Xtext framework~\footnote{http://eclipse.org/xtext} (e.g., List~\ref{listing:xtext}). 
+% \lstinputlisting[language=,identifierstyle=,numbers=left,emph={problem,event},stringstyle=\color{red},caption={\tt cat -n CommandedBehaviour.problem},label=listing:xtext] {code/CommandedBehaviour1.problem}
+%Besides the whitespace problems, in this example, the phenomena are not alphabetically ordered, nor do the domain nodes. 
+%One can imagine easily that swapping two nodes or two phenomena in this serialised model could lead to false alarms which in fact do not require attention by the designers. Comparing two models at the EMF level using a tool such as {\tt EMFcompare}~\footnote{http://eclipse.org/emfcompare}, one could avoid such false alarms\footnote{TO CHECK}.
+%
+%Moreover, analysts/designers do not always want to view every detail of the modeling elements. For example, the phenomena of the domain nodes in a problem diagram, or the exact declaration of the class methods in a class diagram, are not viewed when the analyst/designers is concentrating on the structural relationship between the larger entities (domain interfaces or class hiearchies). As such, an abstraction transformation is often required before one compare meaningful structures rather than the meaningless details that should be hidden from the view. Of course, programmers may sometimes want to compare the details of the exact declarations of method, while still would wish to ignore the detail implementation of the method bodies. Therefore for the same model (e.g., graph) it is helpful to allow an abstraction as the preprocessing step for a meaningful comparison.
+%
+%Although not mandatory, for pragmatic reasons it is preferable to have the outputs of normalisation readily compared by reusing line-based diff tools. 
+%\begin{definition}
+%{\bf Diff-friendly Normalisation.\label{defn:norm3}} A normalisation $N$ is diff-friendly, if any line in the normalised program $N(P)$ has at most one meaningful changes.
+%\end{definition}
+
+
+%Given that a program is expressed in programming languages consist of production rules~\cite{aho79}, our normalisation tool {\tt mct} needs to satisfy the following requirements, in order to handle those examples motivated in the previous section:
+%\begin{enumerate}
+%\item [R1] Ignore the trivial differences in optional or repetitive {\em terminals} in the production rules;
+%\item [R2] Ignore certain non-terminals in the rules according to the needs of further abstraction;
+%\item [R3] Ignore the ordering of the unordered collections by ordering them sequentially, such that two collections of the same set of elements are the same sequences;
+%\item [R4] Carry out the normalisation transformations on the fly, without any user intervention once the grammar rules are extended using the annotations for [R1], [R2] and [R3].
+%\item [R5] (optional) Occupy at east one line per non-terminal;
+%\item [R6] (optional) Make sure the normalised program is still a valid program in the original grammar.
+%\end{enumerate}
+
+
+%The requirement [R1] is sufficient to ignore all unnecessary non-terminals in the output program. Such normalisations help focus the comparison more on the abstract syntax rather than on the concrete syntax, because it is the abstract syntax that carries the meaning of the representation while the concrete syntax (reflected by the non-terminals) are merely the auxiliary tokens to parse. The default {\em unparse} functionality of TXL~\cite{txl} can already satisfy the requirement of removing extra whitespaces. To remove the extra non-terminals, we must introduce the ``ignore'' attribute to the type specification, such as {\tt [opt 'terminal \underbar{'ignore}] }. Requirement [R2] is similar to that of [R1], but now it is the non-terminals that are to be ignored for the abstraction purpose. 
+%
+%Requirement [R3] is useful especially when users knows when a list or an array of literals (tokens and non-terminals) is in fact unordered (e.g., the type modifiers in Java, the phenomena in problem frames), therefore combinatory numbers of possible differences can be removed by ordering the elements in the same way. By default, we can use the serialised string of the literal and sort them in ascending ordering. Of course, such ordering can be made more flexible by allowing users to specify the appropriate ordering key/transformations. Examples of this extension are {\tt [ repeat X \underbar{ordered} ] } where the non-terminal X will be ordered in the normalised program; or {\tt [list X \underbar{ordered by Y}] } where the non-terminal X will be ordered by the comparison rule specified by {\tt Y(X)}. In other words, users can choose to order the elements in descending order, or by the ordering of a particular key field. 
+%
+%Satisfying the requirement [R4] would allow the transformation from the program to a `simplified' grammar to be generated on the fly, appending additional transformation rules by either ignoring or ordering the literals that have been extended.  The implementation of [R4] is done through the technique of {\em bootstrapping}, that is, to reflectively annotate certain literals in the TXL meta-grammar using the {\tt ignore} and {\tt ordered by} extensions given that the TXL grammar itself is expressed in TXL as a meta-grammar. By processing each annotation in the context of the production rules, it produces a context-aware rule for the transformation on-the-fly. Then the annotations are stripped off by default, which produces a pure-TXL grammar without the annotations, while additional rules based on those removed annotations are combined together. This combined grammar specification is then used to parse the programs in the original language and produces the normalised programs. 
+%
+%Optionally, requirement [R5] can be  enforced by inserting a new line directive  {\tt \underbar {[NL]}} to the end of each non-terminal literal in the production rules. Sometimes the normalised program does not have to be a valid program in the same grammar because removing the details may make the output no longer a valid program, therefore [R6] is the default preference applied if the user would like to preserve the program syntax as well. For example, the abstracted program is still in valid Java syntax by retaining the \{ \} braces while hiding the body of a Java method.
+
