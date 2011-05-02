@@ -13,7 +13,7 @@
   language=Java, numberfirstline=true,
 %  frameround=false, frame=trBL
 }
-\title{Specifying and Detecting Meaningful Changes}
+\title{Specifying and Detecting Relevant Changes in Programs}
 \author{\IEEEauthorblockN{
 Yijun Yu\IEEEauthorrefmark{1},
 Thein Than Tun\IEEEauthorrefmark{1} and
@@ -30,8 +30,19 @@ Email: bashar.nuseibeh@lero.ie}}
 \begin{document}
 \maketitle
 \begin{abstract}
-Software developers are primarily interested in the changes that are relevant to their current tasks, therefore not all changes to an evolving software are of the same importance. However, most existing {\tt diff} tools notify developers more changes than they wish to see.  In this paper, we propose an automated technique to specify and detect meaningful changes in programs. 
-Using four elementary extensions to program language grammars (Ignore, Order, Prefer and Keep), developers can specify, with limited effort, what types of changes are {\em meaningful}, or relevant to their tasks. The algorithms for generating the normalisation and clone removal transformations distill the meaningful differences automatically. Our tool has been evaluated on a benchmark of programs to compare with similar techniques.
+Software developers are primarily interested in the changes in code that are
+relevant to their current tasks, therefore not all changes to evolving software
+are of the same importance. However, most existing {\tt diff} tools notify
+developers more changes than they wish to see.  In this paper, we propose an
+automated technique to specify and detect only those relevant changes in
+programs in order to avoid looking at other trivial changes.  Using four
+elementary extensions to program language grammars (Ignore, Order, Prefer and
+Keep), developers can specify, with limited effort, what types of changes are
+relevant to their programming tasks. The algorithms for generating the
+normalisation and clone removal transformations distill the non-trivial or
+meaningful differences automatically.  Our tool has been evaluated on a
+benchmark of programs to demonstrate its improved precision comparing with
+other {\tt diff} techniques.  
 \end{abstract}
 \section{Introduction}
 
@@ -53,21 +64,21 @@ The essence of meaningful change can be illustrated using a simple Java program 
 After some trivial changes, it is still the same program shown in Listing~\ref{listing:2}.
 Unix {\tt diff} utility reports these changes as 1 deletion and 1 modification of a big chuck in Listing~\ref{listing:3}. Applying a more advanced algorithm {\tt ldiff}~\cite{canfora09software} to this example, line-based changes are reported as 2 insertions, 1 deletion and 2 modifications. Each of the 5 changes is at most two lines for programmers to check. Note that we have applied both diff algorithm to ignore the whitespaces. 
 
-\lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld-1.java},label=listing:1]{code/HelloWorld-1.java}
+\lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld.java},label=listing:1]{code/HelloWorld-1.java}
 \lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld-2.java},label=listing:2]{code/HelloWorld-2.java}
-\lstinputlisting[language=,identifierstyle=,caption={\tt diff -w HelloWorld.java HelloWorld2.java},label=listing:3]{code/HelloWorld-2.diff}
-\lstinputlisting[language=,identifierstyle=,caption={\tt ldiff.pl -w -o diff HelloWorld-1.java HelloWorld-2.java},label=listing:ldiff]{code/HelloWorld-2.ldiff}
+\lstinputlisting[language=,identifierstyle=,caption={\tt diff -w HelloWorld.java HelloWorld-2.java},label=listing:3]{code/HelloWorld-2.diff}
+\lstinputlisting[language=,identifierstyle=,caption={\tt ldiff.pl -w -o diff HelloWorld.java HelloWorld-2.java},label=listing:ldiff]{code/HelloWorld-2.ldiff}
 
 \begin{figure}\centering
 \includegraphics[width=\columnwidth]{code/emfcompare.png}
-\caption{The differences found by the EMFCompare on the two EMF models}\label{fig:1}
+\caption{The differences found by EMFCompare on the two EMF models}\label{fig:1}
 \end{figure}
-Applying a structured diff algorithm~\footnote{EMFCompare, www.eclipse.org/emf/compare} to the EMF models corresponding to the abstract syntax structures of the two example Java programs\cite{DBLP:conf/sle/HeidenreichJSW09}), it reports 3 changes: one concerns the renamed compilation units, one concerns the class HelloWorld that about ``the order of the reference members'', and the final one concerns the method ``main'' about ``the order of reference annotationsAndModifiers values''. 
+Applying a structured diff algorithm~\footnote{EMFCompare, www.eclipse.org/emf/compare} to the EMF models corresponding to the abstract syntax structure of the two example Java programs\cite{DBLP:conf/sle/HeidenreichJSW09}), 3 changes are reported: one concerns the renamed compilation units, one concerns the class {\tt HelloWorld} for ``{\em the order of the reference members}'', and the final one concerns the method ``{\tt main}'' for ``{\em the order of reference annotationsAndModifiers values}''. 
 
 In fact, none of the changes identified in this example is meaningful if the programmer only wants to see non-trivial
 changes: just as adding a newline or some whitespaces would not change the syntax of the program, nor would swapping the keywords {\tt public} and {\tt static} in the declaration of the {\tt main} method make any semantic differences.
 
-To detect a meaningful change between two versions of a program, our proposed solution includes two major steps. {\em Step 1. Specification}: the programmer defines a number of annotations to the given grammar of the programs; {\em Step 2. Transformation}: the tool generates two sets of transformations (normalisation, clone-removal) from the specification in Step 1 and apply these transformations to the two source programs to report the meaningful changes. Figure~\ref{fig:overview} illustrates the workflow of a typical use case where the thin arrow indicates the manual specification step for the developer to annotate the given grammar; and the thick arrows indicate the automated transformation steps, for the mct system to generate the grammar refinement and transformation rules to detect meaningful changes from the programs in the CVS repository. 
+To detect a meaningful change between two versions of a program, our proposed solution includes two major steps. {\em Step 1. Specification}: the programmer defines a number of annotations to the given grammar of the programs; {\em Step 2. Transformation}: the tool generates two sets of transformations (normalisation, clone-removal) from the specification in Step 1 and applies these transformations to the two source programs to report the meaningful changes. Figure~\ref{fig:overview} illustrates the workflow of a typical use case where the thin arrow indicates the manual specification step for the developer to annotate the given grammar; and the thick arrows indicate the automated transformation steps, for the mct system to generate the grammar refinement and transformation rules to detect meaningful changes from the programs in the CVS repository. 
 \begin{figure}\centering
 \includegraphics[width=\columnwidth]{code/overview}
 \caption{Specifying and detecting meaningful changes, an overview}\label{fig:overview}
@@ -95,7 +106,8 @@ one can start with the basic types of structural terms on each production rule, 
 {\bf Elementary structural normalisations.\label{defn:norm3}} Let a production rule be $N \leftarrow (T_1? \ldots T_n*) [| \ldots] $ where $A$ is a non-terminal, and $T_i$ is the $i$-th term (which could be either terminal or non-terminal), and optionally the rule could contain more than one alternative sequence patterns. Every optional (denoted by `?') term can be {\em ignored} if with or without the value makes no difference to the developer; elements of the repeated (denoted by `*') term can be {\em ordered} if the ordering of the values are not important to the developer; and the whole element that matches with one mandatory alternative ( `$|$' )  can be {\em preferred} to a simpler values if a difference between the alternative rules are not significant to the developers.
 \end{definition}
 
-The three elementory structural normalisations preserve the validty of the normalised program in terms of the source programming language.
+The three elementory structural normalisations preserve the validty of the normalised program in terms of the source programming language. %Based on the BNF, the production rules of programming languages are typically of three types,
+%mandatory, optional, or repeat. 
 \begin{property}
 {\bf Syntax validty of normalised programs.\label{defn:norm4}} The normalised program by the three elementary transformations are valid programs in the original programming language.
 \end{property}
@@ -134,12 +146,13 @@ Keep & Any non-terminal term & [\ldots kept ] & [class\_body\_declaration \emph{
 \subsection{A Running Example}\label{sec:example}
 To illustrate the features of our method, here we use the example of the Java 5 grammar provided by the TXL site, with 970 lines of code. Listing~\ref{listing:java0} selects a few production rules, with line numbers of the original Java5 grammar. In the conventions of TXL meta-grammar, a non-terminal is enbraced by square brackets, and a production rule is defined by the `define...end define' blocks.
 
+\lstinputlisting[language=,identifierstyle=,caption={\tt cat -n java.grm},label=listing:java0]{code/java.rules0.grm}
+\lstinputlisting[language=,identifierstyle=,numbers=left,numbersep=3pt,caption={\tt cat -n java.annotated.grm},label=listing:java1]{code/java.rules1.grm}
+
 Lines 151-153 define a {\tt program} as a single instance of package declaration; Lines 158-162 define each package declaration to have an optional description of the package header, zero to many import declaration(s), before zero to many type declaration(s). Lines 197-201 define a type declaration as either one of three alternatives for, namely a class, an interface or an enum type. In these lines, [NL], [IN] or [EX] are predefined indentation tokens which will be ignored by the parser, but will be inserted by the unparser to pretty print the transformed code.  NL, IN or EX are respectively for new line, increasing and decreasing indention levels. Therefore the output has two lines per import declaration. 
 
 Lines 377-379 define the method declaration as zero to many modifiers (as listed in Lines 254-267), plus an optional generic parameter, a type specifier, a method declarator, optional throws exception declarations and the method body. 
 It is also notable that the method body is defined in Lines 407-410, which refers the block, defined in Lines 486-490, as a curly brace encloded array of zero to many declarations or statements.
-\lstinputlisting[language=,identifierstyle=,caption={\tt cat -n java.grm},label=listing:java0]{code/java.rules0.grm}
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n java.annotated.grm},label=listing:java1]{code/java.rules1.grm}
 
 It is possible to redefine the grammar of Java5 in TXL in many ways without necessarily changing the validity of a Java 5 program. For example, by replacing the two [NL] [NL] to a single [NL], one can already remove all the empty lines following the import statements. In the remainder of the section, we explain how normalisation is done by using these grammar rules as the input.
 
@@ -152,53 +165,61 @@ However, the ordering of elements or appearance of ignoreable details can get in
 
 Since one does not care whether a modifier is before another one or not (e.g., 'private static' is the same as 'static private'), the ordering of the elements in the array of {\tt repeat modifier}  (Line 378) is unimportant to the Java semantics. However, the default behaviour of TXL parser preserves the ordering of the modifiers in the parsing tree as they occur in the source program. To specify the ``Order'' normalisation, one only needs to insert the \underbar{ordered} at the end of the {\tt [repeat modifier]} term.
 
-Furthermore, if one would like to normalise the elements by the descending order, a user-defined rule {\tt Descending} (Lines 29-34) can be added in Listing~\ref{listing:problem2}. This is just to illustrate how easy it is to customize the comparison function, in case one would like to define a different key or ordering for the structure to be normalised.
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n problem.rules2.grammar},label=listing:problem2]{code/problem.rules2.grm}
-Of course, the user may choose to ignore certain information to further abstract the normalised structure, e.g., as indicated in Listing~\ref{listing:problem3}, the {\tt details} can be ignored by using {\tt ignore} at the end of the optional part {\tt [opt details]}. 
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n problem.rules3.grammar},label=listing:problem3]{code/problem.rules3.grm}
-Note that using the above extensions after {\tt opt}, {\tt repeat} and {\tt list} parts, the normalised programs will still be valid for the original syntax.
+Furthermore, if one would like to normalise the elements by the descending order, a user-defined rule {\tt Descending} (Lines 29-34) can be added in Listing~\ref{listing:java1}. This is just to illustrate how easy it is to customize the comparison function, in case one would like to define a different key or ordering for the structure to be normalised. For the sake of identifying meaningful changes in this particular case, ordering the members ascendingly is the same as descendingly as long as the same criterion is applied to all source programs.
 
-\subsection{The implementation}
-The meaningful change detection tool {\tt mct} is implemented completely as a TXL program. The first part of the implementation is an extension to the TXL's metagrammar {\tt txl.grm}. Listing~\ref{listing:extend} shows the extension to the existing {\tt typeSpec} rule and the addition of rules {\tt orderedBy} and {\tt ignored}.
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n grm1.grm},label=listing:extend]{code/grm1.grm}
+The Ignore annotation (\underbar{ignored}), on the other hand, will replace the optional or repeated terms by empty. The terms {\tt import\_declaration} at Line 7, {\tt class\_body\_declaration} at Line 12, are examples. In particular, the Ignore annotation to {\tt class\_body\_declaration} is conditional, it uses a user-defined function from Lines 23-28 to check when the term has not used the {\tt public} or {\tt protected} modifiers. As a result, it will achieve the effect of extracting API methods from all members. 
+
+Without specifying such user-defined functions, the default behaviour of Ignore extension would simply ignore the term, just as what {\tt import\_declaration}. Because such terms are unconditionally ignored, therefore it is unnecessary to compose it with the Keep annotation as other sibling do. As a result, this will ignore the import statements in the API regardless, so any difference in such statements will not be considered as meaningful.
+
+Finally, the Prefer annotation ({\underbar{preferred}) are appended to the terms that have more than one alternative expansions.
+Our default implementation will transform any occurrence of other alternatives into the first one listed by the production rule.
+For example, when the {\tt method\_body} at Line 16 is annotated by preferred, the production rule from Lines 18-21 are used to transform any block into a semicolon because it is the preferred alternative. Note that for this to work, users need to modify
+the production rule of {\tt method\_body} in the original grammar Lines 407-410 to swap the two alternatives, which is perfectly doable without modifying the semantics of the Java5 grammar.
+
+\subsection{Brief discussion about the implementation}
+The meaningful change detection tool {\tt mct} is implemented completely as a TXL program. The first part of the implementation is an extension to the TXL's metagrammar {\tt txl.grm}. Listing~\ref{listing:extend} shows the extension to the existing {\tt typeSpec} rule and the addition of four annotation rules {\tt orderedBy}, {\tt ignoredWhen}, {\tt preferred} and {\tt kept}.
+\lstinputlisting[language=,identifierstyle=,numbers=left,numbersep=2pt,caption={\tt cat -n norm.grm},label=listing:extend]{code/norm.grm}
  
-The second part of the implementation is a specification of the normalisation transformations, simplified in Listing~\ref{listing:normalise}: we removed the very similar rules for eliminating {\tt ignore} annotations, and for producing rules from the {\tt [list X orderedBy]} annotations because they are very similar to that of eliminating the {\tt orderedBy} annotations, and to that of producting rules for the {\tt [repeat X orderedBy]}, respectively. 
+The second part of the implementation is a specification of the normalisation transformations. Limited by space, here we only show a simplified Listing~\ref{listing:normalise} for the Order extension. It generates rules for eliminating {\tt ordered} annotations for the generated grammar to be recognizable by TXL at runtime, and for producing rules for ordering the
+terms parsed as {\tt [repeat X]}. 
 
-TXL programs can be understood top-down from the back. Lines 50-71 specify how to generate the transformation rules {\tt Rules} on the fly by checking every {\tt defineStatement} in the TXL grammar such as those definitions in Listings~\ref{listing:problem1} to~\ref{listing:problem3}.  For each occurrence of {\tt [repeat X ordered by F]}, the transformation in Lines 12-35 is invoked to generate a rule such as those instantiated in Lines 26-31. These rules have unique name because there names are constructed uniquely from the names of the {\tt defineStatement} and {\tt X}. By the end of the main transformation, the rule in Lines 2-10 are applied to eliminate the extended annotations introduced earlier by the rules in the Listing~\ref{listing:extend}. 
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n grm.Txl},label=listing:normalise]{code/grm2.grm}
+A TXL program can be understood top-down from the back. Lines 44-64 specify how to generate the transformation rules {\tt Rules} on the fly by checking every {\tt redefineStatement} in the TXL grammar such as those in Listings~\ref{listing:java1}.  For each occurrence of {\tt [repeat X ordered by F]}, the transformation in Lines 9-31 is invoked to generate a rule such as those instantiated in Lines 22-27. These rules have unique names constructed from the names of the {\tt redefineStatement} and the term {\tt X}. By the end of the main transformation, the rule in Lines 2-8 are applied to eliminate the Order annotations from the extended grammar.
+\lstinputlisting[language=,identifierstyle=,numbers=left,numbersep=2pt,caption={\tt cat -n norm.Txl},label=listing:normalise]{code/norm.Txl}
 \subsection{Generated normalisation transformation}
-The above generic implementation is done on the meta-grammar of TXL. When it is applied to a concrete TXL grammar, such as the one specified by Listings~\ref{listing:problem1} to~\ref{listing:problem3}, a concrete normalisation transformation is produced in the original syntax of TXL, as shown in Listing~\ref{listing:output}. Lines 1-10 are the same as the original rules in the Listing~\ref{listing:problem0} because of the elimination rules. The user-defined comparison rule is retained as lines 11-16. 
-The lines 17-21 and lines 22-28 are respectively generated from the context of the two {\tt orderedBy} annotations from Listing~\ref{listing:problem1}. Lines 17-21 uses the user-defined comparison rule because the {\tt orderedBy} has explicited specified the name of the rule {\tt Small}, lines 22-28 on the other hands use the default string comparison rule using the TXL's builtin rule {\tt $>$}. Another minor difference is that Lines 17-21 are for arrays {\tt repeat} whilst Lines 22-28 are for comma separated lists. Both of these generated rules {\tt normalise\_repeat\_problem\_description\_E} and {\tt normalise\_list\_details\_phenomena} are used by the generated {\tt main} rule to produce the normalised program {\tt Prg}. 
+The above generic implementation is done on the meta-grammar of TXL. When it is applied to a concrete TXL grammar, such as the one specified in Listing~\ref{listing:java1}, a concrete normalisation transformation is produced in the original syntax of TXL, as shown in Listing~\ref{listing:output}. Lines 1-9 are the same as the original rules in the Listing~\ref{listing:java0} because of the elimination rule. Lines 10-17 are generated from the {\tt [repeat method\_declaration]} of the {\tt orderedBy} annotations from Listing~\ref{listing:java1}, using the user-defined comparison function {\tt Descending}, which was listed in Lines 29-34 in Listing~\ref{listing:java1}. 
+\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n java.Txl},label=listing:output]{code/java.Txl}
 
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n problem.Txl},label=listing:output]{code/problem.Txl}
+In brief, the above extension of Java5 grammar has 8 annotations added by the user, plus 1 user-defined string comparison rule for sorting the nodes in inverse alphabatical order and 1 user-defined function for selecting non-API members to be removed.
+\subsection{The normalised programs and meaningful changes}
+We have implemented the processor of all the four types of elementary annotations using TXL, which generates all transformation rules per annotated term. Applying the composed {\tt mct}  transformation to the two Java programs in Listings~\ref{listing:1} and~\ref{listing:2}, separately, the same result is obtained, as shown in in Listing~\ref{listing:result5}. Both {\tt hello} and {\tt world} members are removed because they are not public nor protected members of the class. The {\tt main} method has the modifiers ordered ascendingly as {\tt public static}, whilst its method body is replaced by the preferred simplification semicolon alternative. 
 
-In brief, the problem frames grammar has got 3 annotations inserted by the user, plus 1 additional user-defined string comparison rule for sorting the nodes in inverse alphabatical order. Similarly, we have annotated 11 repeat/list patterns in
-the Java5 TXL grammar {\tt java.grammar} without introducing any user-defined ordering rules to accept the ascending alphabatical order by default. These 11 {\tt ordered} annotations already make a big difference for detecting meaningful changes.
-\subsection{The normalised programs}
-From Listing~\ref{listing:xtext}, applying the transformation in Listing~\ref{listing:output}, the normalised program is shown in Listing~\ref{listing:result} where the elements are descending alphabetically, while the phenomena are ascending alphabetically.
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n CommandedBehaviour.n1.problem},label=listing:result]{code/CommandedBehaviour.normalised.problem}
-Alternatively when the {\tt [opt details ignored]} is specified, Listing~\ref{listing:result2} shows the resulting abstraction where the details are ommitted.
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n CommandedBehaviour.n2.problem},label=listing:result2]{code/CommandedBehaviour2.normalised.problem}
-As long as the same normalisation is used, two programs with meaningfully changes will be detected while the opposite will not.
+When the same transformation is applied to the concatenated inputs of both programs, the clone removal step runs to correctly remove all the clones according to the terms annotated by ``kept''. As a result, their is no longer anything left after the clone removal, leaving the output is empty as shown in Listing~\ref{listing:result4}.
+\lstinputlisting[numbers=left,caption={\tt mct HelloWorld.java},label=listing:result5]{code/HelloWorld-2.norm}
+\lstinputlisting[numbers=left,caption={\tt cat HelloWorld.java HelloWorld-2.java > HelloWorld-2.pair \\ mct HelloWorld-2.pair java.Txl},label=listing:result4]{code/HelloWorld-2.mct}
 
-Applying the same generic {\tt mct} transformation to the two Java programs in Listings~\ref{listing:1} and~\ref{listing:3} are now normalised into the same program in Listing~\ref{listing:result3}. Both {\tt hello} and {\tt world} members are ordered after the {\tt main} method by the alphabetical ordering;  {\tt public} and {\tt static} are also ordered in the same way. These normalisation would no longer differentiate the variations in the Listings~\ref{listing:1} and~\ref{listing:3}.
-\lstinputlisting[numbers=left,caption={\tt txl HelloWorld.java java.grammar\\txl HelloWorld2.java java.grammar },label=listing:result3]{code/HelloWorld3.java}
-
-\section{Evaluation}
-In this section, we aim to evaluate the proposed {\tt mct} tool for the efficiency and scalability to normalise programs.
+\section{Performance evaluation}\label{sect:experiment}
+%In this section, we aim to evaluate the proposed {\tt mct} tool for the efficiency and scalability to normalise programs.
 %\subsection{Versatility: The annotations on TXL grammars}
 %Out of the default TXL installation~\cite{txl}, there are about a dozen grammars for various programming languages.
 %As we are learning TXL, several of our own TXL languages are developed as well. 
-Table~\ref{table:2} lists the grammars with the number of meaningful annotations as well.
+In order to evaluate the performance of {\tt mct} tool, we conducted an experiment on the benchmark of several evolving programs, on several configurations of {\em meaningful changes}. 
+
+To make the results accessible, we selected the benchmark programs using two criteria: (1) they are in the public domain; (2) they were reported earlier by other researchers to demonstrate the effectiveness of related techniques.
+
+The benchmark consists of two case studies: {\tt JHotDraw} has been studied for the API evolution and refactoring opportunities~\cite{dig06ecoop}; {\tt GMF} has been studied for the evolution of the model/code co-evolution~\cite{GMF}.
+To effectively check every changes in the evolution history, we first developed a set of script to check out every revision of
+the Java programs from the CVS repository. Then, for every pair of consequent revisions, we check whether the changes on
+the program is meaningful, comparing our {\tt mct} tool with other existing {\tt diff} utilities.
+
+Comparing with other {\tt diff} Table~\ref{table:2} lists the grammars with the number of meaningful annotations as well.
 
 \begin{table}
 \caption{Size of the full grammar extended\label{table:2}}
 \begin{tabular}{| r || r | r | r | r | }\hline
 {\bf Grammar} & description & LOC & +LOC \\  \hline\hline
-txl.grm & TXL meta-grammar & 408 & 15 \\ \hline
-java.grm & Java 5 &  979 &  11 \\ \hline
-%pyindent.grm & Python & 228 & \\ \hline
-problem.grm &  problem frames & 82 & 5 \\ \hline
+txl.grm & TXL meta-grammar & 408 &  \\ \hline
+java.grm & Java 5 &  979 &   \\ \hline
+%problem.grm &  problem frames & 82 & 5 \\ \hline
 %json.grm & JSON format for Javascript & 36 & \\ \hline
 %yaml.grm & YAML serialisation format & 94 & \\ \hline
 %uncal.grm & UNQL+ format & 111  & \\\hline
@@ -349,7 +370,7 @@ Loh and Kim~\cite{Loh:2010:LPD:1810295.1810348,Kim:2009:DRS:1555001.1555046} pre
 %\end{definition}
 
 
-%Given that a program is expressed in programming languages consist of production rules~\cite{aho79}, our normalisation tool {\tt mct} needs to satisfy the following requirements, in order to handle those examples motivated in the previous section:
+%Given that a program is expressed in programming languages consist of production rules~\cite{Aho:1986:CPT:6448}, our normalisation tool {\tt mct} needs to satisfy the following requirements, in order to handle those examples motivated in the previous section:
 %\begin{enumerate}
 %\item [R1] Ignore the trivial differences in optional or repetitive {\em terminals} in the production rules;
 %\item [R2] Ignore certain non-terminals in the rules according to the needs of further abstraction;
@@ -368,3 +389,13 @@ Loh and Kim~\cite{Loh:2010:LPD:1810295.1810348,Kim:2009:DRS:1555001.1555046} pre
 %
 %Optionally, requirement [R5] can be  enforced by inserting a new line directive  {\tt \underbar {[NL]}} to the end of each non-terminal literal in the production rules. Sometimes the normalised program does not have to be a valid program in the same grammar because removing the details may make the output no longer a valid program, therefore [R6] is the default preference applied if the user would like to preserve the program syntax as well. For example, the abstracted program is still in valid Java syntax by retaining the \{ \} braces while hiding the body of a Java method.
 
+%\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n problem.rules2.grammar},label=listing:problem2]{code/problem.rules2.grm}
+%Of course, the user may choose to ignore certain information to further abstract the normalised structure, e.g., as indicated in Listing~\ref{listing:problem3}, the {\tt details} can be ignored by using {\tt ignore} at the end of the optional part {\tt [opt details]}. 
+%\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n problem.rules3.grammar},label=listing:problem3]{code/problem.rules3.grm}
+%Note that using the above extensions after {\tt opt}, {\tt repeat} and {\tt list} parts, the normalised programs will still be valid for the original syntax.
+
+%From Listing~\ref{listing:xtext}, applying the transformation in Listing~\ref{listing:output}, the normalised program is shown in Listing~\ref{listing:result} where the elements are descending alphabetically, while the phenomena are ascending alphabetically.
+%\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n CommandedBehaviour.n1.problem},label=listing:result]{code/CommandedBehaviour.normalised.problem}
+%Alternatively when the {\tt [opt details ignored]} is specified, Listing~\ref{listing:result2} shows the resulting abstraction where the details are ommitted.
+%\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n CommandedBehaviour.n2.problem},label=listing:result2]{code/CommandedBehaviour2.normalised.problem}
+%As long as the same normalisation is used, two programs with meaningfully changes will be detected while the opposite will not.

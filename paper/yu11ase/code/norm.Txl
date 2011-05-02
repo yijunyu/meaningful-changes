@@ -1,20 +1,16 @@
-include "grm1.grm"
+include "norm.grm"
 rule typeSpec_eliminateOrderedBy 
  replace * [typeSpec] T [typeSpec] 
- deconstruct T 
-   M [opt typeModifier] I [typeid] 
-   R [opt typeRepeater] O [orderedBy]
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [orderedBy]
  deconstruct O 'ordered B [opt byField]
  construct T1 [typeSpec] M I R
  by T1
 end rule
-% similar rule of typeSpec_eliminateIgnored 
-function typeSpec_repeat_byField DS [defineStatement] T [typeSpec]
+function typeSpec_repeat_byField DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import RuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'define TID [typeid] TYPE [literalOrType*] 
-   REST [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] TYPE [literalOrType*] REST [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered B [opt byField]
  deconstruct B 'by F [id]
@@ -33,12 +29,10 @@ function typeSpec_repeat_byField DS [defineStatement] T [typeSpec]
  export RuleIDs RuleIDs [. ruleID]
  by S
 end function
-function DS_replace DS [defineStatement]
+function DS_replace DS [redefineStatement]
  replace [statement*] S0 [statement*]
  construct T [typeSpec*] _ [^ DS]
- construct S1 [statement*] _ [typeSpec_repeat DS each T]
  construct S2 [statement*] _ [typeSpec_repeat_byField DS each T]
- construct S3 [statement*] _ [typeSpec_ignore DS each T]
  construct S [statement*] S0 [. S1] [. S2] [. S3]
  by S
 end function
@@ -66,6 +60,5 @@ function main
        'Prg '[ 'program '] 'by REPLACE
    'end 'function
  construct P1 [program] S0 [. Rules] [. MAIN ]
- by P1 [typeSpec_eliminateIgnored]
-       [typeSpec_eliminateOrderedBy]
+ by P1 [typeSpec_eliminateOrderedBy]
 end function
