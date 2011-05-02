@@ -36,7 +36,7 @@ are of the same importance. However, most existing {\tt diff} tools notify
 developers more changes than they wish to see.  In this paper, we propose an
 automated technique to specify and detect only those relevant changes in
 programs in order to avoid looking at other trivial changes.  Using four
-elementary extensions to program language grammars (Ignore, Order, Prefer and
+elementary extensions to programming language grammars (Ignore, Order, Prefer and
 Keep), developers can specify, with limited effort, what types of changes are
 relevant to their programming tasks. The algorithms for generating the
 normalisation and clone removal transformations distill the non-trivial or
@@ -46,23 +46,23 @@ other {\tt diff} techniques.
 \end{abstract}
 \section{Introduction}
 
-``Nothing endures but change.'' -- Heraclitus (c.535 BC - 475 BC). This philosophy is largely true in most software development projects. However, not all changes are equally meaningful to different purposes. For example, changing the indentations of statements does not necessarily alter the meanings or semantics expressed by a program. Nonetheless it could lead to false alarms to any revision control system as text-based difference comparison algorithms are typically used (e.g., the {\bf diff} utility in Unix). Although an indentation is not meaningful to the executation semantics of C/Java programs, it can be very important to other programming languages such as Python. Still can it be meaningful to C/Java developers who care about pretty-prints for the sake of code reviews. Another example is the API evolution: thanks to the widely adopted information hiding principle, users of object-oriented programming libraries are encouraged to neglect any changes behind the API. Therefore detecting changes to the API of software components becomes meaningful. On the other hand, providers of the API need to pay attention to most changes inside the API implementation. 
+``Nothing endures but change.'' -- Heraclitus (c.535 BC - 475 BC). This philosophy is largely true in most software development projects. However, not all changes are equally meaningful to different purposes. For example, changing the indentations of statements does not necessarily alter the meanings or semantics expressed by a program. Nonetheless it could lead to false alarms to any revision control system as text-based difference comparison algorithms are typically used (e.g., the {\bf diff} utility in Unix~\cite{diff}). Although an indentation is not meaningful to the executation semantics of C/Java programs, it can be very important to other programming languages such as Python. Still can it be meaningful to C/Java developers who care about pretty-prints for the sake of code reviews. Another example is the API evolution: thanks to the widely adopted information hiding and modular design principle~\cite{Parnas:1972:CUD:361598.361623}, users of object-oriented programming libraries are encouraged to neglect any changes behind the API. Therefore detecting changes to the API of software components becomes meaningful~\cite{DBLP:journals/smr/DigJ06}. On the other hand, providers of the API need to pay attention to most changes inside the API implementation. 
 
-Given that a change considered as meaningful for one purpose may be meaningless to another, how can one specify the types of changes that need to be detected for this given purpose? Furthermore, how can such a specification be used for an automatic detection? Most change detection tools are good at either reporting {\em all} changes in programs through general purpose diff algorithms, or at finding out certain or all changes that are {\em specific} to one particular programming or modeling language. However, few aims to provide a generic solution that can also be customised to the specific language and the specific needs of the developers.
+Given that a change considered as meaningful for one purpose may be trivial to another, how can one specify the types of changes to be detected for this given purpose? Furthermore, how can such a specification be used for an automatic detection? Most change detection tools are either good at reporting {\em all} changes through general purpose diff algorithms on programs represented as line-separated text~\cite{diff, canfora09software} and structured models~\cite{DBLP:conf/sle/HeidenreichJSW09}; or good at finding out certain or all changes that are {\em specific} to one particular programming or modeling language such as UML class diagrams~\cite{xing05ase}, dependency graphs~\cite{Jackson:1994:SDT:645543.655704}, or Verilog~\cite{Duley:2010:PDA:1858996.1859093}. However, few aims to provide a generic solution that can also be customised to the specific language and the specific needs of the developers.
 
-In this paper, we propose a new way to specify meaningful changes as the composition of elementary changes that are defined on a ``normalisation'' of the grammatically correct source programs. The normalised results are always valid in language for the specific purpose, possibly refined from the source language. We show that such normalisations can be specified as as simple as annotations on the original grammar rules, while specific needs of the normalisation can be further accommodated by user-defined transformations. Each type of elementary normalisation corresponds to an elementary kind of production rules in the grammars. Once such annotations are specified, a fully automated meta-transformation can turn them into a composition of transformations that operate directly on the source programs. The composed transformation separates meaningful changes from the meaningless ones.
+In this paper, we propose a new way to specify meaningful changes as the composition of elementary changes that are defined on a ``normalisation'' of grammatically correct source programs. The normalised results are always valid in a language for the specific purpose, possibly refined from the source language. We show that such normalisations can be specified simply as annotations on the original ``production rules''~\cite{Aho:1986:CPT:6448}, while specific needs of further normalisation can be accommodated by user-defined function. Each type of elementary normalisation corresponds to an elementary kind of terms in the production rules of the source programming language. Once such annotations are specified, a fully automated meta-transformation can turn them into a composed transformation that operates directly on the source programs, which separates meaningful changes from the trivial ones. 
 
-These specifications, including the meta-transformations, are all written as a few generic modifications to the meta-grammar\footnote{The grammar of a TXL grammar is expressed in TXL too.} of the TXL transformation systems~\cite{txl}. Therefore it is applicable to any source language specifiable by TXL, which currently supports several general-purpose programming languages (C/Java/CSharp/Python), as well as several graphical modeling languages (e.g., XML, XMI, GXL). 
+The meta-transformation is written as a generic modification to the meta-grammar\footnote{The grammar of a TXL grammar is expressed in TXL too.} of the TXL transformation system~\cite{txl}. Therefore it is applicable to any source language specifiable by TXL, which currently supports several general-purpose programming languages (C/Java/CSharp/Python), as well as several graphical modeling languages (e.g., XML, XMI, GXL). 
 
-To evaluate our meaningful change tool  (hereafter {\tt mct}), we show how few changes are required to be added to the grammars for a few typical programming tasks. Also we applied {\tt mct} to detect these meaningful changes in the CVS repository of two medium-sized open-source projects.  
+To evaluate our meaningful change tool  (hereafter {\tt mct}), we show how few changes are required to be added to the grammars for a few typical programming tasks. Also we applied {\tt mct} to detect these meaningful changes in the CVS repositories of two medium-sized open-source projects.  
    
-The remainder of the paper is organised as follows: Section~\ref{sec:background} introduces a small running example to illustrate the problem and the requirements for specifying and detecting meaningful changes. Section~\ref{sec:approach} explains the approach we adopt to bootstrap the normalisation transformations needed in the implementation of the tool. 
-Section~\ref{sec:experiment} presents the results of a number of experiments in using the tool, and comparing the performance with existing {\tt diff} tools. Section~\ref{related} compares the conceptual differences in the design of existing approaches, and indicates some limitations of our approach. Section~\ref{conclude} concludes the findings.
+The remainder of the paper is organised as follows: Section~\ref{sec:background} introduces a small running example to illustrate the problem and the requirements for specifying and detecting meaningful changes. Using this running example, Section~\ref{sec:approach} explains the approach we adopt to bootstrap the normalisation transformations needed in the implementation of the tool. 
+Section~\ref{sec:experiment} presents the results of a number of experiments in using the tool, and comparing the performance with existing {\tt diff} tools. Section~\ref{sec:related} compares the conceptual differences in the design of existing approaches, and indicates some limitations of our approach. Section~\ref{sec:conclude} concludes the findings.
 
-\section{Motivating Examples}\label{sec:background}
+\section{A Motivating Example}\label{sec:background}
 The essence of meaningful change can be illustrated using a simple Java program in Listing~\ref{listing:1}.
 After some trivial changes, it is still the same program shown in Listing~\ref{listing:2}.
-Unix {\tt diff} utility reports these changes as 1 deletion and 1 modification of a big chuck in Listing~\ref{listing:3}. Applying a more advanced algorithm {\tt ldiff}~\cite{canfora09software} to this example, line-based changes are reported as 2 insertions, 1 deletion and 2 modifications. Each of the 5 changes is at most two lines for programmers to check. Note that we have applied both diff algorithm to ignore the whitespaces. 
+Unix {\tt diff} utility~\cite{diff} reports these changes as 1 deletion and 1 modification of a big chuck in Listing~\ref{listing:3}. Applying a more advanced algorithm {\tt ldiff}~\cite{canfora09software} to this example, line-based changes are reported as 2 insertions, 1 deletion and 2 modifications. Each of the 5 changes is at most two lines for programmers to check. Note that we have applied both diff algorithm to ignore the whitespaces. 
 
 \lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld.java},label=listing:1]{code/HelloWorld-1.java}
 \lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld-2.java},label=listing:2]{code/HelloWorld-2.java}
@@ -84,7 +84,7 @@ To detect a meaningful change between two versions of a program, our proposed so
 \caption{Specifying and detecting meaningful changes, an overview}\label{fig:overview}
 \end{figure}
 
-\section{Bootstrapping Transformations}\label{sec:approach}
+\section{Specifying Relevant Changes}\label{sec:approach}
 
 Before specifying our tool, we first define a few requirements for detecting {\em meaningful changes} through normalisation transformations.
 \begin{definition}
@@ -109,20 +109,20 @@ one can start with the basic types of structural terms on each production rule, 
 The three elementory structural normalisations preserve the validty of the normalised program in terms of the source programming language. %Based on the BNF, the production rules of programming languages are typically of three types,
 %mandatory, optional, or repeat. 
 \begin{property}
-{\bf Syntax validty of normalised programs.\label{defn:norm4}} The normalised program by the three elementary transformations are valid programs in the original programming language.
+{\bf Composibility of syntax validty.\label{defn:norm4}} The normalised program by the three elementary transformations are valid programs in the {\em source} programming language.
 \end{property}
 
-Of course, sometimes the validity of the normalised programs is not a concern if the purpose of checking meaningful changes is not to obtain a compilable program. In those cases, one can relax the requirement about the preferred rule for alternative sequences `$|$'. 
+The validity of the normalised programs is not a concern when the purpose of checking meaningful changes is not to obtain a compilable program. In such cases, one could choose to redefine the target grammar to be incompatible to the source language. On the other hand, if there is a simple alternative in the source language's production rule, such as semicolon, then it is useful to apply the Prefer rule to switch to a simpler alternative while preserving the source grammar in the transformed targets.
 
 Also it is found that the elementary normalisations can be further customized. The unconditional ignored rule for an optional term `?' can be associated with a conditional check, for example in the API extraction example, one would remove the declaration if and only if it does not have a `public' or `protected' modifiers. Similarly, the ordered rule for repeating terms `*' can be customized to ascending or descending orders, and the ordering criteria can be associated with certain key' substructures.
 
 The following property guarantees that a functional composition of the three basic normalisation transformations still satisfy the requirements of terminable normalisation.
-\begin{property}
-If two basic normalisations $N_1$ and $N_2$ satisfy the terminable normalisation requirements in Definitions~\ref{defn:norm} and~\ref{defn:norm2}, then the functional composition $N_1 \oplus N_2 (P) = N_1 (N_2(P))$ also satisfies the terminable normalisation requirements.
+\begin{property} {\bf Composibility of terminable normalisation}
+If two basic normalisations $N_1$ and $N_2$ satisfy the terminable normalisation requirements in Definitions~\ref{defn:norm} and~\ref{defn:norm2}, then the functional composition $(N_1 \oplus N_2) (P) = N_2 (N_1(P))$ also satisfies the terminable normalisation requirements.
 \end{property}
 
-After each program revision is normalised, the next task is to detect the meaningful changes. One extreme of  the methods is to apply an existing {\tt diff} algorithm, which in fact may or may not detect the exact differences.  Another extreme of the methods is to apply clone detection~\cite{NiCAD}. The benefit of applying clone detection is that one could take advantage of knowning the meaningful structures. Therefore, if the ordering is not imporant and as long as the normalised entities are the same, the clone detector could find them. On  the other hand, if the two entities are similar but not exactly the same, a meaningful context of the difference can be shown.
-Not all language constructs should be considered as clones. E.g., the index variables of a for-loop are apparently not the best candidate to tell meaningful changes. It makes little sense to keep the for-loop structure while remove all the index variables.
+After each program revision is normalised, the next task is to detect the non-trivial changes. One extreme of  the methods is to apply an existing {\tt diff} algorithm, which in fact may or may not detect the exact differences.  Another extreme of the methods is to apply clone detection~\cite{DBLP:conf/iwpc/RoyC08a}. The benefit of applying clone detection is that one could take advantage of knowning the meaningful structures. Therefore, if the ordering is not imporant and as long as the normalised entities are the same, the clone detector could find them. On  the other hand, if the two entities are similar but not exactly the same, a meaningful context of the difference can be shown.
+Not all language constructs should be considered as clones. E.g., the index variables of a for-loop are apparently not the best candidate to tell meaningful changes. It makes little sense to keep the for-loop structure while removing all the index variables.
 To be able to specify which part of the language construct needs to be considered as clones to removal, another kind of annotation to the non-terminals are introduced as the following rule. 
 
 \begin{definition}
@@ -133,18 +133,18 @@ In principle any parameterised AST-based clone detector could be used for this p
 
 Table~\ref{table:rule} summarises the four elementary annotations to the meta-grammar for the normalisation/clone removals. Although they are by no means complete, we found that they are sufficient for many practical meaningful change detection tasks.
 \begin{table*}\centering
-\caption{Basic annotation rules to the TXL grammar}\label{table:rule}
+\caption{Basic annotations to the terms in a TXL grammar}\label{table:rule}
 \begin{tabular}{|c|c|c|c|}\hline
-Transformation & Application scope & TXL annotations & Example \\\hline\hline
-Ignore & Repeat/List ($*$), Optional ($|$) & [\ldots ignored when F] & [repeat member\_declaration \emph{ignored when Private}]\\\hline\hline 
-Order & Repeat/List ($*$) & [\ldots ordered by F] & [member\_declaration \emph{ordered by Ascending}] \\\hline\hline
-Prefer & Alternative ($|$) & [\ldots preferred ] & [method\_body \emph{preferred}] \\\hline\hline
+\bf Transformation & \bf Application scope & \bf TXL annotations & \bf Example \\\hline\hline
+Ignore & Repeat/List ($*$), Optional ($|$) & [\ldots ignored when F] & [repeat member\_declaration \emph{ignored when Private}]\\\hline
+Order & Repeat/List ($*$) & [\ldots ordered by F] & [member\_declaration \emph{ordered by Ascending}] \\\hline
+Prefer & Alternative ($|$) & [\ldots preferred ] & [method\_body \emph{preferred}] \\\hline
 Keep & Any non-terminal term & [\ldots kept ] & [class\_body\_declaration \emph{kept}] \\\hline
-\hline\end{tabular}
+\end{tabular}
 \end{table*}
 
 \subsection{A Running Example}\label{sec:example}
-To illustrate the features of our method, here we use the example of the Java 5 grammar provided by the TXL site, with 970 lines of code. Listing~\ref{listing:java0} selects a few production rules, with line numbers of the original Java5 grammar. In the conventions of TXL meta-grammar, a non-terminal is enbraced by square brackets, and a production rule is defined by the `define...end define' blocks.
+To illustrate the features of our method, here we use the example of the Java 5 grammar provided by the TXL site\footnote{http://txl.ca}, with 970 lines of code. Listing~\ref{listing:java0} selects a few production rules, with line numbers of the original Java5 grammar. In the conventions of TXL meta-grammar, a non-terminal is enbraced by square brackets, and a production rule is defined by the `define...end define' blocks. TXL is a functional programming language in which a transformation is defined by either a non-recursive {\tt function} or a recursive {\tt rule}~\cite{txl}.
 
 \lstinputlisting[language=,identifierstyle=,caption={\tt cat -n java.grm},label=listing:java0]{code/java.rules0.grm}
 \lstinputlisting[language=,identifierstyle=,numbers=left,numbersep=3pt,caption={\tt cat -n java.annotated.grm},label=listing:java1]{code/java.rules1.grm}
@@ -190,14 +190,14 @@ The above generic implementation is done on the meta-grammar of TXL. When it is 
 \lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n java.Txl},label=listing:output]{code/java.Txl}
 
 In brief, the above extension of Java5 grammar has 8 annotations added by the user, plus 1 user-defined string comparison rule for sorting the nodes in inverse alphabatical order and 1 user-defined function for selecting non-API members to be removed.
-\subsection{The normalised programs and meaningful changes}
+\subsection{The normalised programs and relevant changes}
 We have implemented the processor of all the four types of elementary annotations using TXL, which generates all transformation rules per annotated term. Applying the composed {\tt mct}  transformation to the two Java programs in Listings~\ref{listing:1} and~\ref{listing:2}, separately, the same result is obtained, as shown in in Listing~\ref{listing:result5}. Both {\tt hello} and {\tt world} members are removed because they are not public nor protected members of the class. The {\tt main} method has the modifiers ordered ascendingly as {\tt public static}, whilst its method body is replaced by the preferred simplification semicolon alternative. 
 
-When the same transformation is applied to the concatenated inputs of both programs, the clone removal step runs to correctly remove all the clones according to the terms annotated by ``kept''. As a result, their is no longer anything left after the clone removal, leaving the output is empty as shown in Listing~\ref{listing:result4}.
+When the same transformation is applied to the concatenated inputs of both programs, the clone removal step runs to correctly remove all the clones according to the terms annotated by ``kept''. As a result, their is no longer anything left after the clone removal, leaving the output empty as shown in Listing~\ref{listing:result4}.
 \lstinputlisting[numbers=left,caption={\tt mct HelloWorld.java},label=listing:result5]{code/HelloWorld-2.norm}
 \lstinputlisting[numbers=left,caption={\tt cat HelloWorld.java HelloWorld-2.java > HelloWorld-2.pair \\ mct HelloWorld-2.pair java.Txl},label=listing:result4]{code/HelloWorld-2.mct}
 
-\section{Performance evaluation}\label{sect:experiment}
+\section{Performance evaluation}\label{sec:experiment}
 %In this section, we aim to evaluate the proposed {\tt mct} tool for the efficiency and scalability to normalise programs.
 %\subsection{Versatility: The annotations on TXL grammars}
 %Out of the default TXL installation~\cite{txl}, there are about a dozen grammars for various programming languages.
@@ -245,42 +245,14 @@ To evaluate the efficiency of {\tt mct}, we take the CVS repository of {\tt org.
 \hline\end{tabular}
 \end{table}
 
-\section{Related work}
+\section{Related work}\label{sec:related}
 \subsection{Grammarware}
  
-   ~\cite{klint05tosem}
+~\cite{klint05tosem}
    
 \subsection{Transformation systems}
 
    `TXL` [cordy02]
-   
-\subsection{Bi- Directional Synchronisation}
-
-   `UnQL+`
-   
-\subsection{Model- Driven Development}
-
-   `Kermeta`, `ATL`
-   
-\subsection{Requirements Traceability}
-
-   Information Retrieval
-   
-\subsection{Change Management}
-
-   `CVS`, `Subversion`
-   
-   `Git`
-   
-\subsection{Fine- grained Change Management}
-
-   `Molhado`
-   
-   Incremental IR
-   
-\subsection{Invariant Traceability}
-
-   RE05, ICSM08, ASE08
    
 \subsection{Model Diff}
 Xing and Stroulia~\cite{xing05ase} propose an approach to recover UML models from java code, and compares them producing a tree of structural changes, which reports the differences between the
@@ -302,10 +274,7 @@ Duley et al~\cite{Duley:2010:PDA:1858996.1859093} present VDiff for differencing
 
 Loh and Kim~\cite{Loh:2010:LPD:1810295.1810348,Kim:2009:DRS:1555001.1555046} present the LSDiff tool which automatically identifies structural changes as logic rules.
 
-
-
-
-\section{Conclusions and future work}
+\section{Conclusions and future work}\label{sec:conclude}
 
    Scalability
    
