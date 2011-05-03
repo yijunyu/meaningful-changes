@@ -27,7 +27,15 @@ result/$(1)/%.$(1): $(bin)/$(1)c source/$(1)/%.$(1)
 	$$^ -o $$@
 	if [ -e test/$(1)/$$*.$(1) ]; then diff $$@ test/$(1)/$$*.$(1); fi
 endef
+
 $(foreach ext,$(extensions),$(eval $(call example,$(ext))))
+
+result/v/%.v: $(bin)/vc source/v/%.v
+	@mkdir -p result/v
+	sed "s/'/?/g" source/v/$*.v > result/v/$*.v.tmp
+	$(bin)/vc result/v/$*.v.tmp -o $@
+	rm -f result/v/$*.v.tmp
+	if [ -e test/v/$*.v ]; then diff $@ test/v/$*.v; fi
 
 $(bin)/%c: Txl/%.Txl
 	$(txlc) Txl/$*.Txl 
