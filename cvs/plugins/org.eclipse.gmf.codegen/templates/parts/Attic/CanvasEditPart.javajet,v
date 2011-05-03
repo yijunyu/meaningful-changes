@@ -1,0 +1,207 @@
+head	1.2;
+access;
+symbols
+	v20081022-1925:1.2
+	v20081015-1925:1.2
+	v20081008-1925:1.2
+	v20081001-1925:1.2
+	v20080924-1925:1.2
+	v20080917-1925:1.2
+	v20080911-1728:1.2
+	v20080910-1520:1.2
+	v20080903-1520:1.2
+	v20080827-1520:1.2
+	v20080813-1520:1.2
+	v20080806-1520:1.2
+	R1_0_maintenance:1.2.0.2
+	R1_0:1.2
+	v20050828:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2005.09.30.19.16.05;	author atikhomirov;	state dead;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.03.22.20.29;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@[dstadnik] support for (a) connections (with associated domain class) and (b) compartments
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.diacanvas" class="CanvasEditPartGen" imports="org.eclipse.gmf.codegen.gmfgen.* org.eclipse.gmf.codegen.util.ImportUtil"%>
+<%GenDiagram genDiagram = (GenDiagram) argument;%>
+package <%=genDiagram.getEditPartsPackageName()%>;
+<%ImportUtil importManager = new ImportUtil(genDiagram.getEditPartsPackageName());%>
+
+import java.util.List;
+import java.util.Map;
+import org.eclipse.draw2d.*;
+import org.eclipse.draw2d.geometry.Dimension;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.util.EContentAdapter;
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.gef.*;
+import org.eclipse.gef.commands.*;
+import org.eclipse.gef.editparts.*;
+import org.eclipse.gef.editpolicies.*;
+import org.eclipse.gef.requests.ChangeBoundsRequest;
+import org.eclipse.gef.requests.CreateRequest;
+import org.eclipse.gmf.diagramrt.*;
+import org.eclipse.gmf.runtime.gef.commands.CreateDiagramNodeCommand;
+import org.eclipse.gmf.runtime.gef.commands.ChangeNodeBoundsCommand;
+import org.eclipse.gmf.runtime.update.DiagramUpdateManager;
+<%importManager.markImportLocation(stringBuffer);%>
+
+/**
+ * @@generated
+ */
+public class <%=genDiagram.getEditPartClassName()%> extends AbstractGraphicalEditPart {
+	/**
+	 * @@generated
+	 */
+	private final <%=importManager.getImportedName("org.eclipse.gmf.runtime.gef.ColorSupport")%> myColorSupport;
+
+	/**
+	 * @@generated
+	 */
+	private final DiagramUpdateManager myDiagramListener = new DiagramUpdateManager() {
+		protected Map getEditPartRegistry() {
+			return getViewer().getEditPartRegistry();
+		}
+	};
+
+	/**
+	 * @@generated
+	 */
+	public <%=genDiagram.getEditPartClassName()%>(DiagramCanvas model) {
+		setModel(model);
+		myColorSupport = new <%=importManager.getImportedName("org.eclipse.gmf.runtime.gef.ColorSupport")%>();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void createEditPolicies() {
+		installEditPolicy(EditPolicy.COMPONENT_ROLE, new RootComponentEditPolicy());
+		installEditPolicy(EditPolicy.LAYOUT_ROLE, new XYLayoutEditPolicy() {
+			// 
+			// FIXME !!! 
+			//
+			protected Command createAddCommand(EditPart child, Object constraint) {
+				return UnexecutableCommand.INSTANCE;
+			}
+			protected Command createChangeConstraintCommand(EditPart child, Object constraint) {
+				return null;
+			}
+			protected Command createChangeConstraintCommand(ChangeBoundsRequest request, EditPart child, Object constraint) {
+				DiagramNode node = (DiagramNode) child.getModel();
+				Point newLocation = node.getLocation().getTranslated(request.getMoveDelta());
+				Dimension newSize = node.getSize().getExpanded(request.getSizeDelta());
+				return new ChangeNodeBoundsCommand(node, newLocation, newSize);
+			}
+			protected Command getCreateCommand(CreateRequest request) {
+				if (request.getNewObjectType() != DiagramNode.class) {
+					return null;
+				}
+				DiagramNode diagramNode = (DiagramNode) request.getNewObject();
+				if (request.getLocation() != null) {
+					Point location = request.getLocation().getCopy();
+					getHostFigure().translateToRelative(location);
+					diagramNode.setLocation(location);
+				}
+				if (request.getSize() != null && !request.getSize().isEmpty()) {
+<%
+					// XXX plus subject to 'resizable' attribute of the node?
+%>
+					diagramNode.setSize(request.getSize());
+				}
+				return new CreateDiagramNodeCommand(diagramNode, getDiagramCanvas());
+			}
+			protected Command getDeleteDependantCommand(Request arg0) {
+				// TODO Auto-generated method stub
+				return null;
+			}
+		});
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected IFigure createFigure() {
+		Figure f = new FreeformLayer();
+		f.setBorder(new MarginBorder(5));
+		f.setLayoutManager(new FreeformLayout());
+		return f;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected List getModelChildren() {
+		return getDiagramCanvas().getNodes();
+	}
+
+	/**
+	 * @@generated
+	 */
+	public Object getAdapter(Class key) {
+		if (SnapToHelper.class == key) {
+			return new SnapToGrid(this);
+		}
+		return super.getAdapter(key);
+	}
+
+	/**
+	 * @@generated
+	 */
+	public DiagramCanvas getDiagramCanvas() {
+		return (DiagramCanvas) getModel();
+	}
+
+	/**
+	 * @@generated
+	 */
+	public <%=importManager.getImportedName("org.eclipse.gmf.runtime.gef.ColorSupport")%> getColorSupport() {
+		return myColorSupport;
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void activate() {
+		super.activate();
+		getDiagramCanvas().eAdapters().add(myDiagramListener);
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void deactivate() {
+		getDiagramCanvas().eAdapters().remove(myDiagramListener);
+		super.deactivate();
+	}
+}
+<%importManager.emitSortedImports();%>@
+
+
+1.1
+log
+@*** empty log message ***
+@
+text
+@@
+

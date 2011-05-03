@@ -1,0 +1,98 @@
+head	1.2;
+access;
+symbols
+	v20080813-1520:1.2
+	v20080806-1520:1.2
+	v20080731-1520:1.2
+	v20061013-1330:1.1
+	M1_20:1.1
+	v20060904-1500:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2006.11.02.21.58.38;	author atikhomirov;	state dead;
+branches;
+next	1.1;
+
+1.1
+date	2006.08.24.15.38.54;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@JET templates for gmfgraph model replaced with Xpand counterparts.
+MapMode handling simplified
+@
+text
+@<%@@ jet package="org.eclipse.gmf.graphdef.codegen.templates" class="TopGenerator" 
+	imports="org.eclipse.gmf.gmfgraph.* org.eclipse.gmf.gmfgraph.util.* org.eclipse.gmf.common.codegen.* org.eclipse.gmf.graphdef.codegen.* org.eclipse.emf.ecore.* java.util.Iterator org.eclipse.emf.ecore.util.EcoreUtil; "%>
+<%
+Object[] args = (Object[]) argument;
+Figure figure = (Figure) args[0];
+final GraphDefDispatcher /*inner*/dispatcher = (GraphDefDispatcher) args[1];
+final GraphDefDispatcher topDispatcher = (GraphDefDispatcher) args[2];
+final boolean isStaticFieldsOutsideClassBody = ((Boolean) args[3]).booleanValue();
+
+class Asserter {
+	void makeAssert(boolean checkTrue){
+		assert checkTrue;
+		//temporarily use more forced way to ensure assertion
+		//TODO: replace with single assert 
+		if (!checkTrue){
+			throw new IllegalStateException("Enable Assertions");
+		}
+	}
+}
+
+final Asserter myAsserter = new Asserter();
+myAsserter.makeAssert(topDispatcher.getImportManager() == /*inner*/dispatcher.getImportManager());
+myAsserter.makeAssert(topDispatcher.getFQNSwitch() == /*inner*/dispatcher.getFQNSwitch());
+
+final ImportAssistant importManager = topDispatcher.getImportManager();
+final FigureQualifiedNameSwitch fqnSwitch = topDispatcher.getFQNSwitch();
+%>
+<%importManager.emitPackageStatement(stringBuffer);%>
+
+<%importManager.markImportLocation(stringBuffer);%>
+
+/**
+ * @@generated
+ */
+public class <%=importManager.getCompilationUnitName()%> extends <%=fqnSwitch.get(figure, importManager)%> {
+
+<%@@ include file="scalablePolygonAsInnerClass.jetinc"%>
+
+<% /*NOTE: class structure is selected by topDispatcher, but children, attributes etc -- by inner dispatcher*/ %>
+<%=topDispatcher.dispatch(figure, new Object[] {
+		/*inner*/dispatcher.create(figure, "this"), 
+		topDispatcher.create(figure, "this")
+})%>
+
+<%
+if (isStaticFieldsOutsideClassBody){ /*put fields out of inner class body*/ %>
+}
+	<%@@ include file="staticFields.jetinc"%>
+<% } else { %>
+	<%@@ include file="staticFields.jetinc"%>
+}
+<%}%>
+<%importManager.emitSortedImports();%>
+@
+
+
+1.1
+log
+@[154687] mgolubev - Support scalable polygons
+@
+text
+@@
+

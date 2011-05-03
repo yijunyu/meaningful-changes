@@ -1,0 +1,261 @@
+head	1.6;
+access;
+symbols
+	v20080813-1520:1.6
+	v20080807-1333:1.6
+	v20080806-1520:1.4
+	v20080731-1520:1.4
+	v20080722-1827:1.3
+	R2_1_maintenance:1.3.0.4
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080528-1052:1.3
+	v20080417-1610:1.3
+	v20080222-1200:1.3
+	v20080215-1500:1.3
+	v20080207-0207:1.3
+	v20071214-1111:1.3
+	v20071108-0000:1.3
+	v20071003-0000:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.2
+	R2_0:1.3
+	R4_20:1.3
+	v20070621-0000:1.3
+	RC3_20:1.3
+	v20070608-1300:1.3
+	v20070605-1400:1.3
+	v20070601-1400:1.3
+	v20070518-1300:1.2
+	v20070330-1300:1.2
+	v20060316-0600:1.2
+	v20070307-0700:1.2
+	v20070228-2000:1.2
+	v20070208-1800:1.2
+	M4_20:1.2
+	v20061214-0000:1.2
+	M3_20:1.2
+	v20061117-0800:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.6
+date	2008.08.07.13.29.48;	author dstadnik;	state Exp;
+branches;
+next	1.5;
+commitid	6561489af8ca4567;
+
+1.5
+date	2008.08.07.08.57.06;	author dstadnik;	state Exp;
+branches;
+next	1.4;
+commitid	3b01489ab8de4567;
+
+1.4
+date	2008.07.31.12.17.18;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+commitid	4c9e4891ad4c4567;
+
+1.3
+date	2007.05.28.13.33.47;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	3e69465ada3a4567;
+
+1.2
+date	2006.11.16.19.50.19;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	64d5455cc0fb4567;
+
+1.1
+date	2006.11.02.21.58.36;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@[243403] support float properties
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2006/GraphicalDefinition"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«EXTENSION Util»
+
+«DEFINE localCoordinates FOR gmfgraph::RealFigure»
+	/**
+	 * @@generated
+	 */
+	private boolean myUseLocalCoordinates = «!children.typeSelect(Polyline).isEmpty()»;
+
+	/**
+	 * @@generated
+	 */
+	protected boolean useLocalCoordinates() {
+		return myUseLocalCoordinates;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void setUseLocalCoordinates(boolean useLocalCoordinates) {
+		myUseLocalCoordinates = useLocalCoordinates;
+	}
+«ENDDEFINE»
+
+«DEFINE localCoordinates FOR gmfgraph::Polyline-»
+«ENDDEFINE»
+
+«DEFINE localCoordinates FOR gmfgraph::Label-»
+«ENDDEFINE»
+
+
+«DEFINE extraMethods FOR gmfgraph::Figure-»
+«ENDDEFINE»
+
+«DEFINE extraMethods FOR gmfgraph::ScalablePolygon-»
+«EXPAND xtras::ScalablePolygon::behaviour-»
+«ENDDEFINE»
+
+«DEFINE extraMethods FOR gmfgraph::SVGFigure-»
+«EXPAND svgProperty FOREACH properties-»
+«ENDDEFINE»
+
+«DEFINE svgProperty FOR gmfgraph::SVGProperty-»
+«IF getter != null-»
+	«EXPAND svgPropertyGetter-»
+«ENDIF-»
+«IF setter != null-»
+	«EXPAND svgPropertySetter-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE svgPropertyGetter FOR gmfgraph::SVGProperty-»
+
+	/**
+	 * @@generated
+	 */
+	public «svgPropertyType()» «getter»() {
+		org.w3c.dom.NodeList nodes = getNodes("«query»"); //$NON-NLS-1$
+		if (nodes.getLength() > 0) {
+			org.w3c.dom.Element element = (org.w3c.dom.Element) nodes.item(0);
+			«IF type == gmfgraph::SVGPropertyType::COLOR-»
+			return getColor(element, "«attribute»"); //$NON-NLS-1$
+			«ELSEIF type == gmfgraph::SVGPropertyType::FLOAT-»
+			String value = element.getAttributeNS(null, "«attribute»"); //$NON-NLS-1$
+			return Float.parseFloat(value);
+			«ELSE-»
+			return element.getAttributeNS(null, "«attribute»"); //$NON-NLS-1$
+			«ENDIF-»
+		}
+		«IF type == gmfgraph::SVGPropertyType::FLOAT-»
+		return 0;
+		«ELSE-»
+		return null;
+		«ENDIF-»
+	}
+«ENDDEFINE»
+
+«DEFINE svgPropertySetter FOR gmfgraph::SVGProperty-»
+
+	/**
+	 * @@generated
+	 */
+	public void «setter»(«svgPropertyType()» value) {
+		«IF type == gmfgraph::SVGPropertyType::COLOR-»
+		String svalue = org.eclipse.gmf.runtime.lite.svg.SVGUtils.toSVGColor(getDocument(), value);
+		«ELSEIF type == gmfgraph::SVGPropertyType::FLOAT-»
+		String svalue = Float.toString(value);
+		«ENDIF-»
+		org.w3c.dom.NodeList nodes = getNodes("«query»"); //$NON-NLS-1$
+		for (int i = 0; i < nodes.getLength(); i++) {
+			((org.w3c.dom.Element) nodes.item(i)).setAttributeNS(null, "«attribute»", //$NON-NLS-1$
+				«IF type == gmfgraph::SVGPropertyType::STRING»value«ELSE»svalue«ENDIF»);
+		}
+		«IF callSuper-»
+		super.«setter»(value);
+		«ENDIF-»
+	}
+«ENDDEFINE»
+@
+
+
+1.5
+log
+@[243391] init css engine
+@
+text
+@d76 3
+d83 3
+d87 1
+d99 2
+@
+
+
+1.4
+log
+@[234668] support svg figures in gmfgraph
+@
+text
+@d75 1
+a75 1
+			return org.eclipse.gmf.runtime.lite.svg.SVGUtils.toSWTColor(element, "«attribute»"); //$NON-NLS-1$
+@
+
+
+1.3
+log
+@FigureDescriptor with explicit means to access children introduced into gmfgraph
+@
+text
+@d15 1
+d50 53
+a102 1
+«ENDDEFINE»@
+
+
+1.2
+log
+@do not generate localcoordinates methods for labels
+@
+text
+@d13 1
+a13 1
+«IMPORT "http://www.eclipse.org/gmf/2005/GraphicalDefinition"»
+d16 1
+a16 1
+«DEFINE localCoordinates FOR gmfgraph::Figure»
+@
+
+
+1.1
+log
+@JET templates for gmfgraph model replaced with Xpand counterparts.
+MapMode handling simplified
+@
+text
+@d37 4
+a40 1
+«DEFINE localCoordinates FOR gmfgraph::Polyline»
+@
+

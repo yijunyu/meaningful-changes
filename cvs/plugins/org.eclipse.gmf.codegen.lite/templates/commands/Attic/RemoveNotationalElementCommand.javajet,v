@@ -1,0 +1,219 @@
+head	1.4;
+access;
+symbols
+	v20080910-1520:1.4
+	v20061005-1700:1.1
+	v20060824-1600:1.1
+	v20060713-1700:1.1
+	R1_0_maintenance:1.1.0.2
+	R1_0:1.1
+	v20060627-1200:1.1
+	v20060626-1420:1.1
+	v20060620-0400:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2006.09.01.16.14.08;	author atikhomirov;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2006.08.04.17.09.59;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.08.02.10.43.51;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.06.19.19.14.13;	author ashatalin;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[155040] bblajer - Common Lite runtime functionality moved to dedicated plugin
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.lite.commands" class="RemoveNotationalElementCommandGenerator"
+	imports="org.eclipse.gmf.common.codegen.*"%>
+
+<%
+ImportAssistant importManager = (ImportAssistant) ((Object[]) argument)[1];
+%>
+
+<%
+importManager.emitPackageStatement(stringBuffer);
+importManager.markImportLocation(stringBuffer);
+%>
+
+/**
+ * @@generated
+ */
+public class RemoveNotationalElementCommand extends <%=importManager.getImportedName("org.eclipse.emf.common.command.AbstractCommand")%> {
+	/**
+	 * @@generated
+	 */
+	private final <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> childView;
+	/**
+	 * @@generated
+	 */
+	private final <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> parentView;
+
+	/**
+	 * @@generated
+	 */
+	private <%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> domainElement;
+
+	/**
+	 * @@generated
+	 */
+	private <%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%> removeEdgeCommands;
+
+	/**
+	 * @@generated
+	 */
+	public RemoveNotationalElementCommand(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> parentView, <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> childView) {
+		this.parentView = parentView;
+		this.childView = childView;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected boolean prepare() {
+		if (!parentView.getChildren().contains(childView)) {
+			return false;
+		}
+		removeEdgeCommands = new <%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%>();
+		for(<%=importManager.getImportedName("java.util.Iterator")%> it = childView.getSourceEdges().iterator(); it.hasNext(); ) {
+			<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Edge")%> next = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Edge")%>) it.next();
+			removeEdgeCommands.append(new RemoveNotationalEdgeCommand(childView.getDiagram(), next));
+		}
+		for(Iterator it = childView.getTargetEdges().iterator(); it.hasNext(); ) {
+			<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Edge")%> next = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Edge")%>) it.next();
+			removeEdgeCommands.append(new RemoveNotationalEdgeCommand(childView.getDiagram(), next));
+		}
+		if (removeEdgeCommands.isEmpty()) {
+			return true;
+		}
+		return removeEdgeCommands.canExecute();
+	}
+
+	/**
+	 * @@generated
+	 */
+	public boolean canUndo() {
+		return true;
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void execute() {
+		parentView.removeChild(childView);
+		if (!removeEdgeCommands.isEmpty()) {
+			removeEdgeCommands.execute();
+		}
+		sweepElement();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void sweepElement() {
+		if (childView.isSetElement()) {
+			domainElement = childView.getElement();
+			childView.setElement(null);
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void redo() {
+		execute();
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void undo() {
+		restoreElement();
+		removeEdgeCommands.undo();
+		parentView.insertChild(childView);
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void restoreElement() {
+		if (childView.isSetElement()) {
+			childView.setElement(domainElement);
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected final <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> getChildView() {
+		return childView;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected final <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> getParent() {
+		return parentView;
+	}
+}
+<%importManager.emitSortedImports();%>
+@
+
+
+1.3
+log
+@[bblajer] #152851 Deletion of element without links is not reflected in view model
+@
+text
+@@
+
+
+1.2
+log
+@[bblajer] #146009 Reflect changes in domain model links
+@
+text
+@d60 3
+d78 3
+a80 1
+		removeEdgeCommands.execute();
+@
+
+
+1.1
+log
+@#146009 Lite Generator: Changes in the underlying domain model should be automatically reflected in the notational model
+1,2,3 Parts commited.
+@
+text
+@d29 10
+d47 14
+a60 2
+	public boolean canExecute() {
+		return parentView.getChildren().contains(childView);
+d75 12
+d100 2
+d104 23
+@
+

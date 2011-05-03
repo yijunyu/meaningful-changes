@@ -1,0 +1,318 @@
+head	1.3;
+access;
+symbols
+	v20081022-1925:1.3
+	v20081015-1925:1.3
+	v20081008-1925:1.3
+	v20081001-1925:1.3
+	v20080930-1130:1.3
+	v20080926-1245:1.3
+	v20080924-1925:1.3
+	v20080917-1925:1.3
+	v20080911-1728:1.3
+	v20080910-1520:1.3
+	v20080903-1520:1.3
+	v20080827-1520:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2008.08.29.18.54.10;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	48f948b845d14567;
+
+1.2
+date	2008.08.28.21.22.12;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	3cb348b717024567;
+
+1.1
+date	2008.08.26.20.52.27;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	3a7648b46d064567;
+
+
+desc
+@@
+
+
+1.3
+log
+@[235113] alternative parser access
+@
+text
+@/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Dmitry Stadnik (Borland) - initial API and implementation
+ *    Artem Tikhomirov (Borland) - [235113] alternative parser access
+ *                                 [244419] custom parsers
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«EXTENSION xpt::providers::ParserUtils»
+
+«DEFINE Main FOR gmfgen::GenParsers-»
+«EXPAND xpt::Common::copyright FOR editorGen-»
+package «packageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «className»«EXPAND extendsList»«EXPAND implementsList» {
+	«EXPAND impl::parsers::ParserProvider::parsers FOREACH editorGen.diagram.topLevelNodes»
+	«EXPAND impl::parsers::ParserProvider::parsers FOREACH editorGen.diagram.childNodes»
+	«EXPAND impl::parsers::ParserProvider::parsers FOREACH editorGen.diagram.links»
+
+«IF extensibleViaService-»
+	«EXPAND impl::parsers::ParserProvider::getParserByVisualIdMethod-»
+	«EXPAND impl::parsers::ParserProvider::accessorMethod_delegate2providers-»
+	«EXPAND impl::parsers::ParserProvider::provider_getParserMethod»
+	«EXPAND impl::parsers::ParserProvider::provider_providesMethod»
+	«EXPAND impl::parsers::ParserProvider::HintAdapterClass»
+«ELSE-»
+	«EXPAND impl::parsers::ParserProvider::accessorMethod_direct-»
+«ENDIF-»
+	«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE extendsList FOR gmfgen::GenParsers»«IF extensibleViaService» extends org.eclipse.gmf.runtime.common.core.service.AbstractProvider«ENDIF»«ENDDEFINE»
+
+«DEFINE implementsList FOR gmfgen::GenParsers»«IF extensibleViaService» implements org.eclipse.gmf.runtime.common.ui.services.parser.IParserProvider«ENDIF»«ENDDEFINE»
+
+/*
+ * this/self - aka hintHolder, visual element to present a text (i.e. one of Node's labels)
+ * elementTypeHolder - model element being displayed
+ * modelFacet - may be null
+ * parsedElement - accessor to EObject being edited 
+ */
+«DEFINE accessorCall(gmfgen::GenCommonBase elementTypeHolder, gmfgen::LabelModelFacet labelModelFacet, String parsedElement) FOR gmfgen::GenCommonBase-»
+«IF getDiagram().editorGen.labelParsers.extensibleViaService-»
+«EXPAND impl::parsers::ParserProvider::accessorCall_delegate2providers(elementTypeHolder, labelModelFacet, parsedElement)-»
+«ELSE-»
+«EXPAND impl::parsers::ParserProvider::accessorCall_direct(elementTypeHolder, labelModelFacet, parsedElement)-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenParsers»«ENDDEFINE»
+@
+
+
+1.2
+log
+@Refactoring to address [235113] alternative parser access and [244419] Support for custom parser:
+no separate Parser implementations, rather tailored to specific view and edit methods used.
+@
+text
+@d26 3
+a28 3
+	«EXPAND parsers FOREACH editorGen.diagram.topLevelNodes»
+	«EXPAND parsers FOREACH editorGen.diagram.childNodes»
+	«EXPAND parsers FOREACH editorGen.diagram.links»
+d30 1
+a31 2
+
+«IF extensibleViaService-»
+d36 2
+a46 10
+«DEFINE parsers FOR gmfgen::GenNode»«EXPAND parser FOREACH labels»«ENDDEFINE»
+«DEFINE parsers FOR gmfgen::GenLink»«EXPAND parser FOREACH labels»«ENDDEFINE»
+«DEFINE parsers FOR gmfgen::GenChildLabelNode»«EXPAND parser(this) FOR labelModelFacet»«ENDDEFINE»
+
+«DEFINE parser FOR gmfgen::GenLabel»«EXPAND parser(this) FOR modelFacet»«ENDDEFINE»
+
+«DEFINE parser(gmfgen::GenCommonBase element) FOR gmfgen::LabelModelFacet»«ENDDEFINE»
+
+«DEFINE parser(gmfgen::GenCommonBase element) FOR gmfgen::FeatureLabelModelFacet»«EXPAND parser(element, this) FOR parser»«ENDDEFINE»
+
+a61 65
+
+«DEFINE parser(GenCommonBase element, FeatureLabelModelFacet modelFacet) FOR gmfgen::GenParserImplementation»«ERROR "Abstract template for " + this»«ENDDEFINE»
+
+«DEFINE parser(GenCommonBase element, FeatureLabelModelFacet modelFacet) FOR gmfgen::CustomParser»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private «qualifiedName» «parserFieldName(element)»;
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	private org.eclipse.gmf.runtime.common.ui.services.parser.IParser «parserAccessorName(element)»() {
+		if («parserFieldName(element)» == null) {
+			«parserFieldName(element)» = new «qualifiedName»();
+		}
+		return «parserFieldName(element)»;
+	}
+«ENDDEFINE»
+
+«DEFINE parser(GenCommonBase element, FeatureLabelModelFacet modelFacet) FOR gmfgen::ExternalParser»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private org.eclipse.gmf.runtime.common.ui.services.parser.IParser «parserAccessorName(element)»() {
+		return org.eclipse.gmf.runtime.common.ui.services.parser.ParserService.getParser(«hint»)
+	}
+«ENDDEFINE»
+
+«DEFINE parser(GenCommonBase element, FeatureLabelModelFacet modelFacet) FOR gmfgen::PredefinedParser»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private org.eclipse.gmf.runtime.common.ui.services.parser.IParser «parserFieldName(element)»;
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	private org.eclipse.gmf.runtime.common.ui.services.parser.IParser «parserAccessorName(element)»() {
+		if («parserFieldName(element)» == null) {
+			org.eclipse.emf.ecore.EAttribute[] features = new org.eclipse.emf.ecore.EAttribute[] {
+				«EXPAND MetaModel::MetaFeature FOREACH modelFacet.metaFeatures SEPARATOR ", " »
+			};
+		«IF modelFacet.editableMetaFeatures.size() > 0-»
+			org.eclipse.emf.ecore.EAttribute[] editableFeatures = new org.eclipse.emf.ecore.EAttribute[] {
+				«EXPAND MetaModel::MetaFeature FOREACH modelFacet.editableMetaFeatures SEPARATOR ", "»
+			};
+		«ENDIF-»
+		«EXPAND PredefinedParser::qualifiedClassName» parser = new «EXPAND PredefinedParser::qualifiedClassName»(features«IF modelFacet.editableMetaFeatures.size() > 0», editableFeatures«ENDIF»);
+		«EXPAND setPatterns(viewMethod, editMethod, "parser") FOR modelFacet-»
+			«parserFieldName(element)» = parser;
+		}
+		return «parserFieldName(element)»;
+	}
+«ENDDEFINE»
+
+«DEFINE setPatterns(LabelTextAccessMethod viewMethod, LabelTextAccessMethod editMethod, String parserVar) FOR FeatureLabelModelFacet-»
+«IF viewMethod != gmfgen::LabelTextAccessMethod::NATIVE-»
+	«IF isPatternSpecified(viewPattern)-»
+		«parserVar».setViewPattern("«viewPattern»");«EXPAND xpt::Common::nonNLS(1)»
+	«ENDIF-»
+	«IF isPatternSpecified(editorPattern)-»
+		«parserVar».setEditorPattern("«editorPattern»");«EXPAND xpt::Common::nonNLS(1)»
+	«ELSEIF isPatternSpecified(viewPattern)-»
+		«parserVar».setEditorPattern("«viewPattern»");«EXPAND xpt::Common::nonNLS(1)»
+	«ENDIF-»
+«ENDIF-»
+«IF editMethod != gmfgen::LabelTextAccessMethod::NATIVE-»
+	«IF isPatternSpecified(editPattern)-»
+		«parserVar».setEditPattern("«editPattern»");«EXPAND xpt::Common::nonNLS(1)»
+	«ELSEIF isPatternSpecified(viewPattern)-»
+		«parserVar».setEditPattern("«viewPattern»");«EXPAND xpt::Common::nonNLS(1)»
+	«ENDIF-»
+«ENDIF-»
+«ENDDEFINE»
+@
+
+
+1.1
+log
+@[235113] alternative parser access, step 2: use dedicated GenParsers entry, along with exposing parts of template as API
+@
+text
+@d54 21
+a74 2
+«DEFINE parser(gmfgen::GenCommonBase element) FOR gmfgen::FeatureLabelModelFacet-»
+«LET parserFieldName(element) AS parserFieldName»
+d76 10
+a85 1
+	private org.eclipse.gmf.runtime.common.ui.services.parser.IParser «parserFieldName»;
+d87 1
+d90 11
+a100 1
+		if («parserFieldName» == null) {
+d102 1
+a102 3
+			«FOREACH metaFeatures AS feature-»
+				«EXPAND MetaModel::MetaFeature FOR feature»,
+			«ENDFOREACH-»
+d104 1
+a104 1
+		«IF editableMetaFeatures.size() > 0-»
+d106 1
+a106 3
+			«FOREACH editableMetaFeatures AS feature-»
+				«EXPAND MetaModel::MetaFeature FOR feature»,
+			«ENDFOREACH-»
+d109 3
+a111 18
+		«IF viewMethod.literal == editMethod.literal-»
+			«EXPAND parserQualifiedClassName(viewMethod) FOR element.getDiagram()» parser = new «EXPAND parserQualifiedClassName(viewMethod) FOR element.getDiagram()»(features«IF editableMetaFeatures.size() > 0», editableFeatures«ENDIF»);
+			«IF viewMethod.literal != gmfgen::LabelTextAccessMethod::NATIVE.literal-»
+			«EXPAND setReaderPatterns("parser")-»
+			«EXPAND setWriterPatterns("parser")-»
+			«ENDIF-»
+			«parserFieldName» = parser;
+		«ELSE-»
+			«EXPAND parserQualifiedClassName(viewMethod) FOR element.getDiagram()» reader = new «EXPAND parserQualifiedClassName(viewMethod) FOR element.getDiagram()»(features«IF editableMetaFeatures.size() > 0», editableFeatures«ENDIF»);
+			«IF viewMethod.literal != gmfgen::LabelTextAccessMethod::NATIVE.literal-»
+			«EXPAND setReaderPatterns("reader")-»
+			«ENDIF-»
+			«EXPAND parserQualifiedClassName(editMethod) FOR element.getDiagram()» writer = new «EXPAND parserQualifiedClassName(editMethod) FOR element.getDiagram()»(features«IF editableMetaFeatures.size() > 0», editableFeatures«ENDIF»);
+			«IF editMethod.literal != gmfgen::LabelTextAccessMethod::NATIVE.literal-»
+				«EXPAND setWriterPatterns("writer")-»
+			«ENDIF-»
+			«parserFieldName» = new «EXPAND xpt::parsers::CompositeParser::qualifiedClassName FOR element.getDiagram()»(reader, writer);
+		«ENDIF-»
+d113 1
+a113 1
+		return «parserFieldName»;
+a114 13
+«ENDLET-»
+«ENDDEFINE»
+
+«DEFINE parserQualifiedClassName(gmfgen::LabelTextAccessMethod method) FOR gmfgen::GenDiagram-»
+	«IF gmfgen::LabelTextAccessMethod::NATIVE.literal == method.literal-»
+		«EXPAND xpt::parsers::NativeParser::qualifiedClassName-»
+	«ELSEIF gmfgen::LabelTextAccessMethod::PRINTF.literal == method.literal-»
+		«EXPAND xpt::parsers::PrintfParser::qualifiedClassName-»
+	«ELSEIF gmfgen::LabelTextAccessMethod::REGEXP.literal == method.literal-»
+		«EXPAND xpt::parsers::RegexpParser::qualifiedClassName-»
+	«ELSE-»
+		«EXPAND xpt::parsers::MessageFormatParser::qualifiedClassName-»
+	«ENDIF-»
+d117 2
+a118 1
+«DEFINE setReaderPatterns(String parserVar) FOR gmfgen::FeatureLabelModelFacet-»
+d120 1
+a120 1
+	«parserVar».setViewPattern("«viewPattern»");
+d123 3
+a125 5
+	«parserVar».setEditorPattern("«editorPattern»");
+	«ELSE-»
+		«IF isPatternSpecified(viewPattern)-»
+	«parserVar».setEditorPattern("«viewPattern»");
+		«ENDIF-»
+d127 2
+a128 3
+«ENDDEFINE»
+
+«DEFINE setWriterPatterns(String parserVar) FOR gmfgen::FeatureLabelModelFacet-»
+d130 3
+a132 5
+	«parserVar».setEditPattern("«editPattern»");
+	«ELSE-»
+		«IF isPatternSpecified(viewPattern)-»
+	«parserVar».setEditPattern("«viewPattern»");
+		«ENDIF-»
+a133 13
+«ENDDEFINE»
+
+/*
+ * this/self - aka hintHolder, visual element to present a text (i.e. one of Node's labels)
+ * elementTypeHolder - model element being displayed
+ * modelFacet - may be null
+ * parsedElement - accessor to EObject being edited 
+ */
+«DEFINE accessorCall(gmfgen::GenCommonBase elementTypeHolder, gmfgen::LabelModelFacet labelModelFacet, String parsedElement) FOR gmfgen::GenCommonBase-»
+«IF getDiagram().editorGen.labelParsers.extensibleViaService-»
+«EXPAND impl::parsers::ParserProvider::accessorCall_delegate2providers(elementTypeHolder, labelModelFacet, parsedElement)-»
+«ELSE-»
+«EXPAND impl::parsers::ParserProvider::accessorCall_direct(elementTypeHolder, labelModelFacet, parsedElement)-»
+a135 3
+
+«DEFINE additions FOR gmfgen::GenParsers»«ENDDEFINE»
+ @
+

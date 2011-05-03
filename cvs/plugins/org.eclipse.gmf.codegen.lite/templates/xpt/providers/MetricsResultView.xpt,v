@@ -1,0 +1,143 @@
+head	1.2;
+access;
+symbols
+	v20080910-1520:1.2
+	v20080722-1827:1.2
+	v20080716-1642:1.2
+	R2_1_maintenance:1.2.0.2
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080507-1326:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2008.05.07.13.55.39;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	388c4821b4d44567;
+
+1.1
+date	2008.05.05.15.38.49;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	2fc2481f2a084567;
+
+
+desc
+@@
+
+
+1.2
+log
+@[228913] updated ValueExpression use in GMFGen to better accomodate codegen needs (items 1,2,3)
+@
+text
+@/*
+ * Copyright (c) 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - refactoring (https://bugs.eclipse.org/230014)
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+
+
+«DEFINE inputField FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»
+«IF editorGen.editor.eclipseEditor-»
+	private org.eclipse.ui.IEditorInput editorInput;
+«ELSE-»
+	private org.eclipse.emf.common.util.URI diagramURI;
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE setInputMethod FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+void setInput(«editorGen.editor.getQualifiedClassName()» diagramPart) {
+	org.eclipse.emf.ecore.resource.Resource resource = diagramPart.getDiagram().eResource();
+«IF editorGen.editor.eclipseEditor-»
+	this.editorInput = diagramPart.getEditorInput();
+«ELSE-»
+	this.diagramURI = resource.getURI();
+«ENDIF-»
+	setTitleToolTip(resource.getURI().path());
+
+	java.util.List metrics = calculateMetrics(diagramPart);
+   	adjustLayout(metrics);
+   	viewer.setInput(metrics);
+}
+«ENDDEFINE»
+
+«DEFINE createPartControlMethod_refreshInput FOR GenEditorView-»
+«IF eclipseEditor-»
+    org.eclipse.ui.IEditorPart editor = getSite().getPage().getActiveEditor();
+    if(editor instanceof «getQualifiedClassName()») {
+		setInput((«getQualifiedClassName()») editor);
+    }
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE handleOpenMethod FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public void open(org.eclipse.jface.viewers.OpenEvent event) {
+«IF editorGen.editor.eclipseEditor-»
+	«editorGen.editor.getQualifiedClassName()» diagramPart;
+	try {
+		if (editorInput == null) {
+			return;
+		}
+		org.eclipse.ui.IEditorPart editorPart = getSite().getPage().openEditor(editorInput, «editorGen.editor.getQualifiedClassName()».ID);
+		if(false == editorPart instanceof «editorGen.editor.getQualifiedClassName()») {
+			return;
+		}
+		diagramPart = («editorGen.editor.getQualifiedClassName()») editorPart;
+	} catch (org.eclipse.ui.PartInitException e) {
+		«editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Can't open diagram editor", e); «EXPAND xpt::Common::nonNLS»
+		return;
+	}
+«ELSE-»
+	if (diagramURI == null) {
+		return;
+	}
+	org.eclipse.ui.IViewPart viewPart = «getDiagramEditorUtilQualifiedClassName()».showView(diagramURI);
+	if(false == viewPart instanceof «editorGen.editor.getQualifiedClassName()») {
+		return;
+	}
+	«editorGen.editor.getQualifiedClassName()» diagramPart = («editorGen.editor.getQualifiedClassName()») viewPart;
+«ENDIF-»
+	org.eclipse.gef.GraphicalViewer graphicalViewer = (org.eclipse.gef.GraphicalViewer) diagramPart.getAdapter(org.eclipse.gef.GraphicalViewer.class);
+	ElementMetrics selection = (ElementMetrics)((org.eclipse.jface.viewers.IStructuredSelection)event.getSelection()).getFirstElement();
+	String viewID = selection.diagramElementID;
+	if(viewID != null) {
+		org.eclipse.gmf.runtime.notation.View targetView = (org.eclipse.gmf.runtime.notation.View)diagramPart.getDiagram().eResource().getEObject(viewID);
+		if(targetView != null) {
+			org.eclipse.gef.EditPart targetEditPart = (org.eclipse.gef.EditPart)graphicalViewer.getEditPartRegistry().get(targetView);
+			if(targetEditPart != null) {
+				graphicalViewer.setSelection(new org.eclipse.jface.viewers.StructuredSelection(targetEditPart));
+			}
+		}
+	}
+}
+«ENDDEFINE»
+ @
+
+
+1.1
+log
+@[230014] refactor MetricProvider.xpt
+@
+text
+@d13 1
+a13 1
+«IMPORT "http://www.eclipse.org/gmf/2006/GenModel"»
+@
+

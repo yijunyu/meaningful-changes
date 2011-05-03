@@ -1,0 +1,751 @@
+head	1.4;
+access;
+symbols
+	v20080910-1520:1.4
+	v20070915-0000:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.2
+	R2_0:1.3
+	R4_20:1.3
+	v20070621-0000:1.3
+	RC3_20:1.3
+	v20070614-1400:1.3
+	v20070608-1300:1.3
+	v20070601-1400:1.3
+	v20070525-1500:1.3
+	v20070520-1200:1.3
+	v20070518-1300:1.3
+	v20070504-1000:1.3
+	v20070427-0600:1.3
+	v20070420-1000:1.3
+	v20070413-1300:1.3
+	v20070405-1100:1.3
+	v20070403-1500:1.3
+	v20070330-1300:1.3
+	v20060330-1300:1.3
+	v20070322-1100:1.3
+	v20060316-0600:1.3
+	v20070307-0700:1.3
+	v20070228-2000:1.3
+	v20070221-1500:1.3
+	v20070208-1800:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2007.07.04.13.22.27;	author bblajer;	state dead;
+branches;
+next	1.3;
+commitid	405d468b9f0f4567;
+
+1.3
+date	2007.02.08.18.06.31;	author atikhomirov;	state Exp;
+branches
+	1.3.2.1;
+next	1.2;
+commitid	53645cb66a64567;
+
+1.2
+date	2007.02.07.00.37.35;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	c3a45c91f4e4567;
+
+1.1
+date	2007.02.02.17.14.33;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	78d445c371764567;
+
+1.3.2.1
+date	2007.09.17.16.02.13;	author bblajer;	state dead;
+branches;
+next	;
+commitid	7b9846eea5004567;
+
+
+desc
+@@
+
+
+1.4
+log
+@Eliminated Jet templates in lite version;
+i18n in lite RT;
+For generated classes whose names are not directly modifiable via gmfgen file, consistent className/qualifiedClassName template is exposed (and used throughout the generation process, including the Generator);
+Link labels and external node labels are not selectable, but movable;
+Inner elements are not selectable with marquee tool;
+Fixed copyright statements throughout the lite RT.
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.lite.providers" class="ValidationProviderGenerator"
+	imports="org.eclipse.gmf.codegen.gmfgen.* org.eclipse.gmf.common.codegen.* org.eclipse.gmf.internal.common.codegen.* org.eclipse.emf.codegen.ecore.genmodel.*"%>
+<%
+final GenDiagram genDiagram = (GenDiagram)((Object[]) argument)[0];
+final ImportAssistant importManager = (ImportAssistant) ((Object[]) argument)[1];
+final String pluginActivatorClass = importManager.getImportedName(genDiagram.getEditorGen().getPlugin().getActivatorQualifiedClassName());
+final GenAuditRoot audits = genDiagram.getEditorGen().getAudits();
+final boolean hasNotationModelAudit;
+{
+ boolean hasDiagramElementRule = false;
+ if (audits != null) {
+  for (java.util.Iterator it = audits.getRules().iterator(); it.hasNext();) {
+   GenAuditRule r = (GenAuditRule) it.next();
+   if (r.getTarget() instanceof GenDiagramElementTarget || r.getTarget() instanceof GenNotationElementTarget) {
+    hasDiagramElementRule = true;
+    break;
+   }
+  }
+ }
+ hasNotationModelAudit = audits != null && hasDiagramElementRule;
+}
+
+%>
+<%@@ include file="../copyright4java.jetinc"%>
+<%importManager.emitPackageStatement(stringBuffer);%>
+
+<%
+final java.util.List<String> innerClasses = new java.util.ArrayList<String>();
+final String __javaOperationContainer = "JavaAudits";
+if(audits != null) {
+	innerClasses.add(__javaOperationContainer);
+	//innerClasses.addAll(audits.getAllRequiredConstraintAdaptersLocalClassNames());
+	for (java.util.Iterator it = audits.getRules().iterator(); it.hasNext();) {
+		GenAuditRule nextAudit = (GenAuditRule) it.next();
+		if (nextAudit.isRequiresConstraintAdapter()) {
+			String nextClassName = nextAudit.getConstraintAdapterLocalClassName();
+			if (nextClassName != null) {
+				innerClasses.add(nextClassName);
+			}
+		}
+	}
+	//innerClasses.addAll(audits.getAllContextSelectorsLocalClassNames());
+	for (java.util.Iterator it = audits.getRules().iterator(); it.hasNext();) {
+		String nextClassName = ((GenAuditRule) it.next()).getContextSelectorLocalClassName();
+		if(nextClassName != null) {
+			innerClasses.add(nextClassName);
+		}			
+	}	
+}
+innerClasses.add("CtxSwitchStrategy");
+innerClasses.add("ValidateAction");
+for(java.util.Iterator it = innerClasses.iterator(); it.hasNext();) importManager.registerInnerClass((String)it.next()); 
+
+importManager.markImportLocation(stringBuffer);
+
+importManager.addImport("org.eclipse.core.runtime.IStatus");
+importManager.addImport("org.eclipse.emf.common.util.Diagnostic");
+importManager.addImport("org.eclipse.emf.ecore.EObject");
+importManager.addImport("org.eclipse.emf.ecore.util.Diagnostician");
+importManager.addImport("org.eclipse.emf.transaction.TransactionalEditingDomain");
+importManager.addImport("org.eclipse.emf.transaction.util.TransactionUtil");
+importManager.addImport("org.eclipse.emf.validation.model.EvaluationMode");
+importManager.addImport("org.eclipse.emf.validation.model.IConstraintStatus");
+importManager.addImport("org.eclipse.emf.validation.service.IBatchValidator");
+importManager.addImport("org.eclipse.emf.validation.service.ModelValidationService");
+importManager.addImport("org.eclipse.gmf.runtime.notation.View");
+importManager.addImport("org.eclipse.jface.action.Action");
+importManager.addImport("org.eclipse.jface.action.IAction");
+importManager.addImport("org.eclipse.ui.IWorkbenchPart");
+importManager.addImport("org.eclipse.ui.IEditorPart");
+importManager.addImport("org.eclipse.ui.PlatformUI");
+%>
+
+/**
+ * @@generated
+ */
+public class <%=genDiagram.getValidationProviderClassName()%> {
+	/**
+	 * @@generated
+	 */
+	private static boolean constraintsActive = false;	
+	
+	/**
+	 * @@generated
+	 */
+	public static boolean shouldConstraintsBePrivate() {
+		return false;
+	}
+	
+	/**
+	 * @@generated
+	 */
+	public static class ValidateAction extends Action {
+		/**
+		 * @@generated
+		 */		
+		public static final String VALIDATE_ACTION_KEY = "validateAction"; //$NON-NLS-1$
+		/**
+		 * @@generated
+		 */
+		private IWorkbenchPart myWorkbenchPart;
+		/**
+		 * @@generated
+		 */
+		public ValidateAction(IWorkbenchPart part) {
+			setId(VALIDATE_ACTION_KEY);
+			setText("Validate");
+			myWorkbenchPart = part;
+			setEnabled(myWorkbenchPart instanceof <%=importManager.getImportedName(genDiagram.getEditorGen().getEditor().getQualifiedClassName())%>);
+		}
+		/**
+		 * @@generated
+		 */
+		public void run() {
+			if (!isEnabled()) {
+				return;
+			}
+			final <%=importManager.getImportedName(genDiagram.getEditorGen().getEditor().getQualifiedClassName())%> part = (<%=importManager.getImportedName(genDiagram.getEditorGen().getEditor().getQualifiedClassName())%>) myWorkbenchPart;
+			try {
+				new <%=importManager.getImportedName("org.eclipse.jface.operation.IRunnableWithProgress")%>() {
+					public void run(<%=importManager.getImportedName("org.eclipse.core.runtime.IProgressMonitor")%> monitor) throws InterruptedException, <%=importManager.getImportedName("java.lang.reflect.InvocationTargetException")%> {
+						<%=importManager.getImportedName("org.eclipse.gef.GraphicalViewer")%> viewer = (<%=importManager.getImportedName("org.eclipse.gef.GraphicalViewer")%>) part.getAdapter(<%=importManager.getImportedName("org.eclipse.gef.GraphicalViewer")%>.class);
+						<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Diagram")%> diagram = part.getDiagram();
+						<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService")%> viewService;
+						if (viewer == null) {
+							viewService = new <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.NaiveViewService")%>(diagram);
+						} else {
+							viewService = new <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.EditPartRegistryBasedViewService")%>(viewer);
+						}
+						runValidation(diagram, viewService);
+					}
+				}
+				.run(new <%=importManager.getImportedName("org.eclipse.core.runtime.NullProgressMonitor")%>());
+			} catch (Exception e) {
+				<%=pluginActivatorClass%>.getInstance().logError("Validation action failed", e); //$NON-NLS-1$
+			}
+		}
+
+		/**
+		 * @@generated
+		 */
+		public static void runValidation(View view, <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService")%> service) {
+			final View target = view;
+			final <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService")%> viewService = service;
+			Runnable task = new Runnable() {
+				public void run() {
+					try {
+						constraintsActive = true;
+						validate(target, viewService);
+					} finally {
+						constraintsActive = false;
+					}
+				}
+			};
+			TransactionalEditingDomain txDomain = TransactionUtil.getEditingDomain(target);
+			if(txDomain != null) {
+				try {
+					txDomain.runExclusive(task);
+				} catch (Exception e) {
+					<%=pluginActivatorClass%>.getInstance().logError("Validation action failed", e); //$NON-NLS-1$
+				}
+			} else {
+				task.run();
+			}
+		}
+
+		/**
+		 * @@generated
+		 */
+		private static Diagnostic runEMFValidator(View target) {
+			if(target.isSetElement() && target.getElement() != null) {
+				return new Diagnostician().validate(target.getElement());
+			}
+			return Diagnostic.OK_INSTANCE;
+		}
+	
+		/**
+		 * @@generated
+		 */
+		private static void validate(View target, <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService")%> viewService) {
+			<%=importManager.getImportedName("org.eclipse.emf.common.util.URI")%> diagramUri = (target.getDiagram() != null) ? <%=importManager.getImportedName("org.eclipse.emf.ecore.util.EcoreUtil")%>.getURI(target.getDiagram()) : null;
+			if (diagramUri != null) {
+				<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.validation.ValidationState")%> validationState = <%=pluginActivatorClass%>.getInstance().getValidationStateManager().getValidationState(diagramUri);
+				<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.validation.IValidationStateUpdater")%> updater = validationState.startUpdate();
+				try {
+					Diagnostic diagnostic = runEMFValidator(target);
+					update(updater, diagnostic, viewService);
+					IBatchValidator validator = (IBatchValidator)ModelValidationService.getInstance().newValidator(EvaluationMode.BATCH);
+					validator.setIncludeLiveConstraints(true);
+					if (target.isSetElement() && target.getElement() != null) {
+						IStatus status = validator.validate(target.getElement());
+						update(updater, status, viewService);
+					}
+
+<%if(hasNotationModelAudit) {%>
+					validator.setTraversalStrategy(getNotationTraversalStrategy(validator));
+					IStatus status = validator.validate(target);
+					update(updater, status, viewService);
+<%}%>
+					updater.commitChanges();
+				} catch (Exception e) {
+					updater.discardChanges();
+				}
+			}
+		}
+
+		/**
+		 * @@generated
+		 */
+		private static void update(<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.validation.IValidationStateUpdater")%> updater, Diagnostic emfValidationStatus, <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService")%> viewService) {
+			if (emfValidationStatus.getSeverity() == Diagnostic.OK) {
+				return;
+			}
+			final Diagnostic rootStatus = emfValidationStatus;
+			<%=importManager.getImportedName("java.util.List")%> allDiagnostics = new <%=importManager.getImportedName("java.util.ArrayList")%>();
+			collectTargetElements(rootStatus, new <%=importManager.getImportedName("java.util.HashSet")%>(), allDiagnostics);
+			for (<%=importManager.getImportedName("java.util.Iterator")%> it = emfValidationStatus.getChildren().iterator(); it.hasNext();) {
+				Diagnostic nextDiagnostic = (Diagnostic) it.next();
+				<%=importManager.getImportedName("java.util.List")%> data = nextDiagnostic.getData();
+				if (data != null && !data.isEmpty() && data.get(0) instanceof <%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) {
+					<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> element = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) data.get(0);
+					View view = viewService.findView(element);
+					if (view != null) {
+						<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.validation.ViolationDescriptor")%> next = <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.validation.ViolationDescriptor")%>.create(view, nextDiagnostic);
+						if (next != null) {
+							updater.addViolation(next);
+						}
+					}
+				}
+			}
+		}
+
+		/**
+		 * @@generated
+		 * @@elsewhere see XXXMarkerNavigationProvider
+		 */
+		private static void update(<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.validation.IValidationStateUpdater")%> updater, IStatus validationStatus, <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService")%> viewService) {
+			if (validationStatus.isOK()) {
+				return;
+			}
+			final IStatus rootStatus = validationStatus;
+			<%=importManager.getImportedName("java.util.List")%> allStatuses = new <%=importManager.getImportedName("java.util.ArrayList")%>();
+			collectTargetElements(rootStatus, new <%=importManager.getImportedName("java.util.HashSet")%>(), allStatuses);
+			for (<%=importManager.getImportedName("java.util.Iterator")%> it = allStatuses.iterator(); it.hasNext();) {
+				<%=importManager.getImportedName("org.eclipse.emf.validation.model.IConstraintStatus")%> nextStatus = (<%=importManager.getImportedName("org.eclipse.emf.validation.model.IConstraintStatus")%>) it.next();
+				View view = viewService.findView(nextStatus.getTarget());
+				if (view != null) {
+					<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.validation.ViolationDescriptor")%> next = <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.validation.ViolationDescriptor")%>.create(view, nextStatus);
+					if (next != null) {
+						updater.addViolation(next);
+					}
+				}
+			}
+		}
+
+		/**
+		 * @@generated
+		 */
+		private static <%=importManager.getImportedName("java.util.Set")%> collectTargetElements(Diagnostic diagnostic, <%=importManager.getImportedName("java.util.Set")%> targetElementCollector, <%=importManager.getImportedName("java.util.List")%> allDiagnostics) {
+			<%=importManager.getImportedName("java.util.List")%> data = diagnostic.getData();
+			EObject target = null;
+			if (data != null && !data.isEmpty() && data.get(0) instanceof EObject) {
+				target = (EObject) data.get(0);
+				targetElementCollector.add(target);
+				allDiagnostics.add(diagnostic);
+			}
+			if (diagnostic.getChildren() != null && !diagnostic.getChildren().isEmpty()) {
+				for (<%=importManager.getImportedName("java.util.Iterator")%> it = diagnostic.getChildren().iterator(); it.hasNext();) {
+					collectTargetElements((Diagnostic) it.next(), targetElementCollector, allDiagnostics);
+				}
+			}
+			return targetElementCollector;
+		}
+
+		/**
+		 * @@generated
+		 */
+		private static <%=importManager.getImportedName("java.util.Set")%> collectTargetElements(IStatus status, <%=importManager.getImportedName("java.util.Set")%> targetElementCollector, <%=importManager.getImportedName("java.util.List")%> allConstraintStatuses) {
+			if (status instanceof IConstraintStatus) {
+				targetElementCollector.add(((IConstraintStatus) status).getTarget());
+				allConstraintStatuses.add(status);
+			}
+			if (status.isMultiStatus()) {
+				IStatus[] children = status.getChildren();
+				for (int i = 0; i < children.length; i++) {
+					collectTargetElements(children[i], targetElementCollector, allConstraintStatuses);
+				}
+			}
+			return targetElementCollector;
+		}
+	}
+
+	/**
+	* @@generated
+	*/
+	static boolean isInDefaultEditorContext(Object object) {
+		if(shouldConstraintsBePrivate() && !constraintsActive) {
+			return false;
+		}
+		if (object instanceof View) {
+			return constraintsActive && <%=importManager.getImportedName(genDiagram.getEditPartQualifiedClassName())%>.MODEL_ID.equals(<%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.getModelID((View)object));
+		}
+		return true;
+	}	
+<%
+boolean usesNotationContextSwitch = false;
+java.util.List allAudits = (audits != null) ? audits.getRules() : java.util.Collections.EMPTY_LIST;
+// mere pairs
+java.util.HashMap<String, GenAuditRule> contextId2Audit = new java.util.HashMap<String, GenAuditRule>();
+java.util.Map<GenCommonBase, String> view2SelectorMap = new java.util.IdentityHashMap<GenCommonBase, String>();
+for(java.util.Iterator it = allAudits.iterator(); it.hasNext();) {
+	GenAuditRule audit = (GenAuditRule)it.next();
+	String contextID = (audit.getTarget() != null) ? audit.getTarget().getClientContextID() : null;
+	if(contextID == null || contextId2Audit.containsKey(contextID)) continue;
+	contextId2Audit.put(contextID, audit);
+}
+for (GenAuditRule audit : contextId2Audit.values()) {
+	String selectorClassName = audit.getContextSelectorLocalClassName();
+%>
+	/**
+	* @@generated
+	*/
+	public static class <%=selectorClassName%> implements <%=importManager.getImportedName("org.eclipse.emf.validation.model.IClientSelector")%> {
+<%
+	if(audit.getTarget() instanceof GenDiagramElementTarget) {
+		usesNotationContextSwitch = true;
+		GenDiagramElementTarget	diagramElement = (GenDiagramElementTarget)audit.getTarget();
+		for(java.util.Iterator diagramElementIt = diagramElement.getElement().iterator(); diagramElementIt.hasNext();) {
+			GenCommonBase nextElement = (GenCommonBase) diagramElementIt.next();
+			view2SelectorMap.put(nextElement, selectorClassName);
+		}
+%>
+		/**
+		* @@generated
+		*/
+		public boolean selects(Object object) {		
+			if(isInDefaultEditorContext(object) && object instanceof View) {
+				String id = ((View) object).getType();
+				return id != null && semanticCtxIdMap.get(id) == <%=selectorClassName%>.class;
+			}
+			return false;
+		}
+	}
+<%	} else {%>
+		/**
+		* @@generated
+		*/
+		public boolean selects(Object object) {
+			return isInDefaultEditorContext(object);	
+		}	
+	}		
+<%
+	} 
+} // end of audits iteration
+		
+if(usesNotationContextSwitch) {
+%>
+
+	/**
+	* @@generated
+	*/
+	static final <%=importManager.getImportedName("java.util.Map")%> semanticCtxIdMap = new <%=importManager.getImportedName("java.util.HashMap")%>();
+	/**
+	* @@generated
+	*/
+	static {
+<%
+	for(java.util.Iterator it = view2SelectorMap.keySet().iterator(); it.hasNext();) {
+		GenCommonBase nextView = (GenCommonBase)it.next();
+%>
+		semanticCtxIdMap.put(String.valueOf(<%=importManager.getImportedName(nextView.getEditPartQualifiedClassName()) + ".VISUAL_ID"%>), <%=view2SelectorMap.get(nextView)%>.class); //$NON-NLS-1$
+<%	} // end of view ID iteration %>
+	}
+<%
+} // end of context map generation //usesNotationContextSwitch 
+%>
+
+<%if(hasNotationModelAudit) {%>
+	/**
+	* @@generated
+	*/
+	static <%=importManager.getImportedName("org.eclipse.emf.validation.service.ITraversalStrategy")%> getNotationTraversalStrategy(IBatchValidator validator) {
+<%	if(usesNotationContextSwitch) {%>	
+		return new CtxSwitchStrategy(validator);
+<%} else {%>			
+		return validator.getDefaultTraversalStrategy();
+<%	} // end of usesNotationContextSwitch %>
+	}
+<%} // end of hasNotationModelAudit			
+
+if(usesNotationContextSwitch) {%>
+	/**
+	 * @@generated
+	 */
+	private static class CtxSwitchStrategy implements <%=importManager.getImportedName("org.eclipse.emf.validation.service.ITraversalStrategy")%> {
+		/**
+		 * @@generated
+		 */
+		private <%=importManager.getImportedName("org.eclipse.emf.validation.service.ITraversalStrategy")%> defaultStrategy;
+		/**
+		 * @@generated
+		 */
+		private String currentSemanticCtxId;
+		/**
+		 * @@generated
+		 */
+		private boolean ctxChanged = true;
+		/**
+		 * @@generated
+		 */
+		private EObject currentTarget;	
+		/**
+		 * @@generated
+		 */
+		private EObject preFetchedNextTarget;		
+	
+		/**
+		 * @@generated
+		 */
+		CtxSwitchStrategy(IBatchValidator validator) {
+			this.defaultStrategy = validator.getDefaultTraversalStrategy();
+		}
+		
+		/**
+		 * @@generated
+		 */
+		public void elementValidated(EObject element, IStatus status) {
+			defaultStrategy.elementValidated(element, status);
+		}
+
+		/**
+		 * @@generated
+		 */
+		public boolean hasNext() {
+			return defaultStrategy.hasNext();
+		}
+
+		/**
+		 * @@generated
+		 */
+		public boolean isClientContextChanged() {
+			if(preFetchedNextTarget == null) {
+				preFetchedNextTarget = next();
+				prepareNextClientContext(preFetchedNextTarget);				
+			}			  			
+			return ctxChanged;
+		}
+
+		/**
+		 * @@generated
+		 */
+		public EObject next() {
+			EObject nextTarget = preFetchedNextTarget;
+			if(nextTarget == null) {
+				nextTarget = defaultStrategy.next();
+			}
+			this.preFetchedNextTarget = null;
+			return this.currentTarget = nextTarget;
+		}
+
+		/**
+		 * @@generated
+		 */
+		public void startTraversal(<%=importManager.getImportedName("java.util.Collection")%> traversalRoots,
+				<%=importManager.getImportedName("org.eclipse.core.runtime.IProgressMonitor")%> monitor) {
+			defaultStrategy.startTraversal(traversalRoots, monitor);
+		}
+		
+		/**
+		 * @@generated
+		 */
+		private void prepareNextClientContext(EObject nextTarget) { 
+			if (nextTarget != null && currentTarget != null) {
+				if (nextTarget instanceof View) {
+					String id = ((View) nextTarget).getType();
+					String nextSemanticId = id != null
+							&& semanticCtxIdMap.containsKey(id) ? id : null;
+					if ((currentSemanticCtxId != null && !currentSemanticCtxId
+							.equals(nextSemanticId))
+							|| (nextSemanticId != null && !nextSemanticId
+									.equals(currentSemanticCtxId))) {
+						this.ctxChanged = true;
+					}
+					currentSemanticCtxId = nextSemanticId;
+				} else {
+					// context of domain model
+					this.ctxChanged = currentSemanticCtxId != null;
+					currentSemanticCtxId = null;
+				}
+			} else {
+				this.ctxChanged = false;
+			}
+		}		
+	}// CtxSwitchStrategy
+<%} // end of usesNotationContextSwitch
+
+final GenExpressionProviderContainer expressionProviders = genDiagram.getEditorGen().getExpressionProviders();
+final java.util.Map __exprEnvVariables = java.util.Collections.EMPTY_MAP;
+final String __outEnvVarName = ""; // no env to setup //$NON-NLS-1$ 
+for(java.util.Iterator it = allAudits.iterator(); it.hasNext();) {
+	GenAuditRule nextAudit = (GenAuditRule)it.next();
+	if(nextAudit.isRequiresConstraintAdapter() && nextAudit.getRule() != null && nextAudit.getTarget() != null && nextAudit.getTarget().getContext() != null) {
+		GenClassifier __genExprContext = nextAudit.getTarget().getContext();		 
+		ValueExpression __genValueExpression = nextAudit.getRule();
+		String importedExpressionBase = (expressionProviders != null) ? importManager.getImportedName(expressionProviders.getAbstractExpressionQualifiedClassName()) : "null"; //$NON-NLS-1$
+%>
+	/**
+	 * @@generated
+	 */
+	public static class <%=nextAudit.getConstraintAdapterLocalClassName()%> extends <%=importManager.getImportedName("org.eclipse.emf.validation.AbstractModelConstraint")%> {
+		/**
+		 * @@generated
+		 */
+		private <%=importedExpressionBase%> expression;
+		/**
+		 * @@generated
+		 */
+		public <%=nextAudit.getConstraintAdapterLocalClassName()%>() {
+			expression = <%@@ include file="../expressions/getExpression.jetinc"%>;		
+		}		
+		/**
+		 * @@generated
+		 */
+		public IStatus validate(<%=importManager.getImportedName("org.eclipse.emf.validation.IValidationContext")%> ctx) {
+			Object evalCtx = ctx.getTarget();
+<%		if(nextAudit.getTarget() instanceof GenDomainAttributeTarget) {
+			GenDomainAttributeTarget attrTarget = (GenDomainAttributeTarget) nextAudit.getTarget();
+			if(attrTarget.getAttribute() != null) {
+				String fGetter = (attrTarget.getAttribute() != null) ? importManager.getImportedName(attrTarget.getAttribute().getGenPackage().getQualifiedPackageInterfaceName()) + ".eINSTANCE.get" + attrTarget.getAttribute().getFeatureAccessorName() : ""; //$NON-NLS-1$ //$NON-NLS-2$
+%>
+			if(evalCtx instanceof EObject) evalCtx = ((EObject)evalCtx).eGet(<%=fGetter%>());
+			if(evalCtx == null) {
+<%				if(attrTarget.isNullAsError()) { %>
+				return ctx.createFailureStatus(new Object[] { formatElement(ctx.getTarget()) });
+<%				} else {%>
+				return <%=importManager.getImportedName("org.eclipse.core.runtime.Status")%>.OK_STATUS;
+<%				} %>
+			}			
+<%			}
+		} else if(nextAudit.getTarget() instanceof GenAuditedMetricTarget) {
+			GenAuditedMetricTarget metricTarget = (GenAuditedMetricTarget)nextAudit.getTarget();
+			String metricKey = (metricTarget.getMetric() != null) ? metricTarget.getMetric().getKey() : "";
+			String metricProviderClassName = importManager.getImportedName(genDiagram.getMetricProviderQualifiedClassName());%>			
+			evalCtx = <%=metricProviderClassName%>.calculateMetric(<%=Conversions.toStringLiteral(metricKey)%>, evalCtx);
+<%
+		}
+%>		
+			Object result = expression.evaluate(evalCtx);
+			if(result instanceof Boolean && ((Boolean)result).booleanValue()) {
+				return <%=importManager.getImportedName("org.eclipse.core.runtime.Status")%>.OK_STATUS;
+			}
+			return ctx.createFailureStatus(new Object[] { formatElement(ctx.getTarget()) }); 
+		}
+		/**
+		 * @@generated
+		 */
+		protected String formatElement(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> object) {
+			if (object == null) {
+				return String.valueOf((Object)null);
+			}
+			<%=importManager.getImportedName("org.eclipse.emf.common.notify.AdapterFactory")%> adapterFactory = <%=pluginActivatorClass%>.getInstance().getItemProvidersAdapterFactory();
+			<%=importManager.getImportedName("org.eclipse.emf.edit.provider.IItemLabelProvider")%> labelProvider = (<%=importManager.getImportedName("org.eclipse.emf.edit.provider.IItemLabelProvider")%>) adapterFactory.adapt(object, <%=importManager.getImportedName("org.eclipse.emf.edit.provider.IItemLabelProvider")%>.class);
+			if (labelProvider != null) {
+				return object.eClass() + " " + labelProvider.getText(object);
+			}
+			return object.toString();
+		}
+	}
+<%
+	}
+} /*end of Adapters iteration*/
+
+final java.util.List<GenAuditRule> javaExpressions = new java.util.ArrayList<GenAuditRule>();
+if (audits != null && audits.getEditorGen().getExpressionProviders() != null) {
+  GenExpressionProviderContainer exprProviders = audits.getEditorGen().getExpressionProviders();
+  for (java.util.Iterator it = audits.getRules().iterator(); it.hasNext();) {
+    GenAuditRule nextAudit = (GenAuditRule) it.next();
+    if(nextAudit.getRule() != null && exprProviders.getProvider(nextAudit.getRule()) instanceof GenJavaExpressionProvider) {
+      javaExpressions.add(nextAudit);
+    }
+  }
+}
+
+if(!javaExpressions.isEmpty()) {
+%>
+/**
+ * @@generated
+ */
+static class <%=__javaOperationContainer%> {
+<%
+	for (java.util.Iterator it = javaExpressions.iterator(); it.hasNext();) {
+		GenAuditRule nextJavaRule = (GenAuditRule) it.next();
+		GenClassifier __genExprContext = nextJavaRule.getTarget().getContext();		
+		ValueExpression __genValueExpression = nextJavaRule.getRule();
+		String __genExprResultType = "java.lang.Boolean"; //$NON-NLS-1$
+%>
+<%@@ include file="../expressions/javaExpressionOperation.jetinc"%>
+<%
+	}
+%>
+} //<%=__javaOperationContainer%>
+<%
+} /* end of Java expression methods */
+%>
+} //<%=genDiagram.getValidationProviderClassName()%>
+<%importManager.emitSortedImports();%>
+@
+
+
+1.3
+log
+@refactor GenAuditContainer: flatten hierarchy as it fits most for templates we write
+@
+text
+@@
+
+
+1.3.2.1
+log
+@Eliminated Jet templates in lite version;
+i18n in lite RT;
+For generated classes whose names are not directly modifiable via gmfgen file, consistent className/qualifiedClassName template is exposed (and used throughout the generation process, including the Generator)
+@
+text
+@@
+
+
+1.2
+log
+@complete migration of plugin.xml template to xpand version - constraint providers rewritten
+@
+text
+@d7 16
+a22 3
+final GenAuditContainer audits = genDiagram.getEditorGen().getAudits();
+final boolean hasNotationModelAudit = audits != null && audits.hasDiagramElementRule();
+final boolean rcp = genDiagram.getEditorGen().getApplication() != null;
+d28 1
+a28 1
+final java.util.List innerClasses = new java.util.ArrayList();
+d32 17
+a48 2
+	innerClasses.addAll(audits.getAllRequiredConstraintAdaptersLocalClassNames());
+	innerClasses.addAll(audits.getAllContextSelectorsLocalClassNames());
+d307 4
+a310 3
+java.util.Map ctx2Rules = (audits != null) ? audits.getAllRulesToTargetContextMap() : new java.util.HashMap();
+java.util.List allAudits = (audits != null) ? audits.getAllAuditRules() : java.util.Collections.EMPTY_LIST;
+java.util.Map view2SelectorMap = new java.util.IdentityHashMap();
+d314 4
+a317 1
+	if(contextID == null || null == ctx2Rules.remove(contextID)) continue;
+d573 11
+a583 1
+final java.util.List javaExpressions = (audits != null) ? audits.getAllJavaLangAudits() : java.util.Collections.EMPTY_LIST;
+@
+
+
+1.1
+log
+@[172664]: Provide audits and metrics for Lite diagrams (including view-based and RCP) + validation decorators + validation markers (for non-RCP case);
+Several templates are rewritten with xpand;
+lite-specific TextEmitter is back (otherwise importManager is sometimes passed to xpand templates)
+@
+text
+@d470 1
+a470 1
+	if(nextAudit.requiresConstraintAdapter() && nextAudit.getRule() != null && nextAudit.getTarget() != null && nextAudit.getTarget().getContext() != null) {
+@
+

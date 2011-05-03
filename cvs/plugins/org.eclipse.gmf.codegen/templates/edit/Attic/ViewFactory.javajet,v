@@ -1,0 +1,206 @@
+head	1.5;
+access;
+symbols
+	v20081022-1925:1.5
+	v20081015-1925:1.5
+	v20081008-1925:1.5
+	v20081001-1925:1.5
+	v20080924-1925:1.5
+	v20080917-1925:1.5
+	v20080911-1728:1.5
+	v20080910-1520:1.5
+	v20080903-1520:1.5
+	v20080827-1520:1.5
+	v20080813-1520:1.5
+	v20080806-1520:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2005.10.11.12.50.57;	author atikhomirov;	state dead;
+branches;
+next	1.4;
+
+1.4
+date	2005.10.11.12.25.35;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.10.10.12.57.39;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.30.19.16.09;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.09.29.09.49.40;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@[dstadnik] #112189 remove editProviders package attribute from genmodel
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.edit" class="ViewFactoryGenerator"
+	imports="java.util.* org.eclipse.gmf.codegen.gmfgen.* org.eclipse.gmf.codegen.util.*"%>
+<%GenBaseElement genElement = (GenBaseElement) argument;%>
+<%GenDiagram genDiagram = genElement.getDiagram();%>
+package <%=genDiagram.getEditProvidersPackageName()%>;
+
+<%ImportUtil importManager = new ImportUtil(genDiagram.getEditProvidersPackageName());%>
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.draw2d.ColorConstants;
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+import org.eclipse.gmf.runtime.diagram.ui.view.factories.*;
+import org.eclipse.gmf.runtime.draw2d.ui.figures.FigureUtilities;
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+import org.eclipse.gmf.runtime.notation.View;
+<%importManager.markImportLocation(stringBuffer);%>
+
+/**
+ * @@generated
+ */
+public class <%=genElement.getNotationViewFactoryClassName()%> extends 
+<%if (genElement instanceof GenLink) {%>
+	ConnectorViewFactory
+<%} else if (genElement instanceof GenChildNode) {%>
+	AbstractLabelViewFactory
+<%} else {%>
+	AbstractShapeViewFactory
+<%}%>
+{
+
+	/**
+	 * @@generated
+	 */
+	protected void decorateView(View containerView, View view, IAdaptable semanticAdapter,
+		String semanticHint, int index, boolean persisted) {
+		super.decorateView(containerView, view, semanticAdapter, semanticHint, index, persisted);
+<%
+ColorAttributes colorAttrs = (ColorAttributes) genElement.getViewmap().find(ColorAttributes.class);
+if (colorAttrs != null && colorAttrs.getForegroundColor() != null && colorAttrs.getForegroundColor().trim().length() > 0) {%>
+		ViewUtil.setStructuralFeatureValue(view, NotationPackage.eINSTANCE.getLineStyle_LineColor(),
+			FigureUtilities.colorToInteger(ColorConstants.<%=colorAttrs.getForegroundColor()%>));
+<%
+}
+if (genElement instanceof GenNode) {
+	GenNode genNode = (GenNode) genElement;
+	if (colorAttrs != null && colorAttrs.getBackgroundColor() != null && colorAttrs.getBackgroundColor().trim().length() > 0) {%>
+		ViewUtil.setStructuralFeatureValue(view, NotationPackage.eINSTANCE.getFillStyle_FillColor(),
+			FigureUtilities.colorToInteger(ColorConstants.<%=colorAttrs.getBackgroundColor()%>));
+<%
+	}
+	if (!(genNode instanceof GenChildNode)) {
+		if (genElement.hasNameToEdit()) {%>
+		getViewService().createNode(semanticAdapter, view,
+			<%=AccessUtil.getSemanticHintsClassName(genElement)%>.<%=AccessUtil.getNameSemanticHint(genElement)%>,
+			ViewUtil.APPEND, persisted, getPreferencesHint());
+<%
+		}
+		List genChildContainers = genNode.getChildContainers();
+		for (int j = 0; j < genChildContainers.size(); j++) {
+			GenChildContainer genChildContainer = (GenChildContainer) genChildContainers.get(j);
+%>
+		getViewService().createNode(semanticAdapter, view, "<%=genChildContainer.getGroupID()%>",
+			ViewUtil.APPEND, persisted, getPreferencesHint());
+<%
+		}
+	}
+}
+if (genElement instanceof GenLink) {
+	GenLink genLink = (GenLink) genElement;
+	List labels = genLink.getLabels();
+	for (int j = 0; j < labels.size(); j++) {
+		LinkLabel label = (LinkLabel) labels.get(j);
+%>
+		getViewService().createNode(semanticAdapter, view, "<%=AccessUtil.getLinkLabelViewName(label)%>",
+			ViewUtil.APPEND, persisted, getPreferencesHint());
+<%
+	}
+}
+%>
+	}
+}
+<%importManager.emitSortedImports();%>
+@
+
+
+1.4
+log
+@#112191 colors as Viewmap's Attributes
+@
+text
+@@
+
+
+1.3
+log
+@[dstadnik]
+#111780 Link labels with read-only flag and relative positioning
+@
+text
+@d37 2
+a38 2
+String fgColour = genElement.getForegroundColor();
+if (fgColour != null && fgColour.trim().length() > 0) {%>
+d40 1
+a40 1
+			FigureUtilities.colorToInteger(ColorConstants.<%=fgColour%>));
+d45 1
+a45 2
+	String bgColour = genNode.getBackgroundColor();
+	if (bgColour != null && bgColour.trim().length() > 0) {%>
+d47 1
+a47 1
+			FigureUtilities.colorToInteger(ColorConstants.<%=bgColour%>));
+@
+
+
+1.2
+log
+@[dstadnik] support for (a) connections (with associated domain class) and (b) compartments
+@
+text
+@d68 11
+@
+
+
+1.1
+log
+@[dstadnik] Use Notation Model as runtime model
+@
+text
+@d2 1
+a2 1
+  imports="org.eclipse.gmf.codegen.gmfgen.* org.eclipse.gmf.codegen.util.*"%>
+d9 1
+d12 2
+d21 8
+a28 2
+<%if (genElement instanceof GenLink) {%>ConnectorViewFactory<%} else {%>AbstractShapeViewFactory<%}%> {
+<%if (genElement.hasNameToEdit()) {%>
+d33 2
+a34 1
+	protected void decorateView(View containerView, View view, IAdaptable semanticAdapter, String semanticHint, int index, boolean persisted) {
+d36 27
+a62 1
+		getViewService().createNode(semanticAdapter, view, <%=AccessUtil.getSemanticHintsClassName(genElement)%>.<%=AccessUtil.getNameSemanticHint(genElement)%>,
+d64 5
+a69 1
+<%}%>
+@
+

@@ -2,17 +2,10 @@
 tokens
     space  "[ \t]+"
     newline  "\n" | "" | "\n"
-    id  "[$\u][$\i]*" | "[$\u][$\i]*\?[bdh][\dabcdefABCDEF]+" 
+    id  "[$\u][\.$\i]*" | "[$\u][$\i]*\?[bdh][\dabcdefABCDEFx]+" 
     number  "\d+[lL]?"   % DecimalIntegerLiteral | OctalIntegerLiteral 
-          | "\d+\?[bdh][\dabcdefABCDEF]+"
-          | "\d+[bdh][\dabcdefABCDEF]+"
-%          | "\d+.\d*([eE][+-]?\d+)?[fFdD]?"  % DecimalFloatingPointLiteral
-%          | ".\d+([eE][+-]?\d+)?[fFdD]?"  % DecimalFloatingPointLiteral (cont.'d)
-%          | "\d+[eE][+-]?\d+[fFdD]?"  % DecimalFloatingPointLiteral (cont.'d)
-%          | "\d+([eE][+-]?\d+)?[fFdD]"  % DecimalFloatingPointLiteral (cont.'d)
-%          | "0[xX][\dabcdefABCDEF]+.[pP][+-]?\d+[fFdD]?"  % HexadecimalFloatingPointLiteral
-%          | "0[xX][\dabcdefABCDEF]*.[\dabcdefABCDEF]+[pP][+-]?\d+[fFdD]?"  % HexadecimalFloatingPointLiteral (cont.'d)
-%          | "0[xX][\dabcdefABCDEF]+([pP][+-]?\d+)?[lLfFdD]?"  % HexIntegerLiteral | HexadecimalFloatingPointLiteral (cont.'d)
+          | "\d+\?[bdh][\dabcdefABCDEFx]+"
+          | "\d+[bdh][\dabcdefABCDEFx]+"
 end tokens
 
 comments
@@ -48,8 +41,10 @@ end define
 
 define macro_statement
     [macro] [number] 'ns '/ [number] 'ps [NL]
-   |[macro] [opt id] [opt expr] [NL]
-   |[macro] [opt id] [opt subrange] [NL]
+   |[macro] [id] [opt expr] [NL]
+   |[macro] [expr] [NL]
+   | '`else
+   | '`endif
 end define
 
 define module
@@ -59,6 +54,18 @@ define module
     | [macro_statement]
 end define
 
+define statement
+  [opt declaration] [opt ';] [NL]
+end define
+redefine statement
+   [macro_statement*] ...
+ end define
+
+ redefine statement
+   ...[macro_statement*] 
+ end define
+
+
 define module_declaration
     'module [id] '( [list part_module_declaration] ') 
 end define
@@ -67,10 +74,6 @@ define part_module_declaration
     [macro_statement*] [id] [macro_statement*]
 end define
 
-
-define statement
-  [declaration] [opt ';] [NL]
-end define
 
 define declaration
     [parameter_specification]
@@ -84,13 +87,13 @@ define declaration
   | [function_decl]
 end define
 
-redefine declaration
-  [macro_statement*] ...
-end define
+ redefine declaration
+   [macro_statement*] ...
+ end define
 
-redefine declaration
-  ...[macro_statement*] 
-end define
+ redefine declaration
+   ...[macro_statement*] 
+ end define
 
 define variable_declaration
     [variable_type] [opt range] [list var] 
@@ -102,7 +105,7 @@ define var
 end define
 
 define parameter_specification
-    'parameter [id] '= [number] 
+    'parameter [id] '= [expr] 
 end define
 
 define variable_type
@@ -115,7 +118,7 @@ define variable_assignment_statement
 end define
 
 define block_statement
-   'begin [NL] [IN]
+   [opt 'initial] 'begin [NL] [IN]
 	[statement*] [EX]
    'end
 end define
@@ -139,9 +142,12 @@ define else_statement
 	[statement][EX]
 end define
 
+define case
+   'case | 'casex
+end define
 
 define case_statement
-   'case '( [expr] ')
+   [case] '( [expr] ')
      [case_statement_alternative*]
    'endcase
 end define
@@ -149,8 +155,13 @@ end define
 define case_statement_alternative
    [list choice]  ': [statement*]
 end define
-%define choices
-%end define
+
+redefine case_statement_alternative
+   [macro_statement*] ...
+end define
+redefine case_statement_alternative
+   ... [macro_statement*] 
+end define
 
 define choice
      [number]
@@ -166,26 +177,23 @@ define range
     '[ [expr] ': [expr] ']
 end define
 
-define expr
-   [simple_expression]
-  | '( [simple_expression] ')
-end define
-
 define shift_expression
-  [expr] '<= '# [number] [expr]
+  [expr] '<= '# [expr] [expr]
 end define
 
-define simple_expression
+define expr
      [id] 
    | [id] ' 'd [number]
+   | [subrange]
+   | '( [expr] ')
+   | [id] '{ [expr] '}
    | [stringlit]
    | [shift_expression]
    | [number] [opt time_unit]
    | [id] '[ [expr] ']
-   | [id] '[ [subrange] ']
-   | [u_op] [simple_expression] 
-   | [simple_expression] [op] [simple_expression] 
-   | [simple_expression] '? [simple_expression] ': [simple_expression] 
+   | [u_op] [expr] 
+   | [expr] [op] [expr] 
+   | [expr] '? [expr] ': [expr] 
    | '{ [list expr] '}
    | [function_call]
 end define
@@ -196,19 +204,32 @@ define qualified_expression
 end define
 
 define u_op
- '~| '^| '!
+ '~| '^ | '! | '|
 end define
 
 define op
-    '+ | '- | '/ | '<= | 'or | '==  | '& | '| | '!= | '|| | '&&
+    '+ | '- | '/ | '< | '> | '<= | 'or | '==  | '& | '| | '!= | '|| | '&& | '^ | '>=
 end define
 
 define component_configuration
- [id] '# '( [id] ') [id] '( [list component_declaration] ')
+ [id] [opt formal_parameter_list] [id] '( [list component_declaration] ')
 end define
 
 define component_declaration
- [SPOFF] '. [id] [SPON] '( [id] ')
+ [SPOFF] '. [id] [SPON] '( [opt expr] ')
+end define
+
+redefine component_declaration
+  [macro_statement*] ...
+end define
+
+redefine component_declaration
+   ...[macro_statement*] 
+end define
+
+
+define formal_parameter_list
+  '# '( [list expr] ') 
 end define
 
 %define void
@@ -350,8 +371,6 @@ end define
 %define file_declaration
 %end define
 %define file_open_information
-%end define
-%define formal_parameter_list
 %end define
 %define full_type_declaration
 %end define

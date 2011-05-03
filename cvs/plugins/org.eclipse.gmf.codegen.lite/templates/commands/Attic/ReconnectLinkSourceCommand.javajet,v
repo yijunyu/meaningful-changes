@@ -1,0 +1,377 @@
+head	1.2;
+access;
+symbols
+	v20080910-1520:1.2
+	v20070208-1800:1.1
+	v20070103-0300:1.1
+	M4_20:1.1
+	v20061222-1800:1.1
+	v20061214-0000:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2007.02.14.13.42.30;	author bblajer;	state dead;
+branches;
+next	1.1;
+commitid	75e045d311c54567;
+
+1.1
+date	2006.12.12.12.54.41;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	355b457ea6574567;
+
+
+desc
+@@
+
+
+1.2
+log
+@Commands rewritten with xPand;
+[173999]: Non-resizable figures (for the Lite version).
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.lite.commands" class="ReconnectLinkSourceCommandGenerator"
+    imports="org.eclipse.emf.common.util.* org.eclipse.gmf.codegen.gmfgen.* org.eclipse.emf.codegen.ecore.genmodel.* org.eclipse.emf.ecore.* org.eclipse.gmf.common.codegen.*"%>
+<%
+GenLink genLink = (GenLink) ((Object[]) argument)[0];
+GenDiagram genDiagram = genLink.getDiagram();
+GenLinkConstraints linkConstraints = genLink.getCreationConstraints();
+final ImportAssistant importManager = (ImportAssistant) ((Object[]) argument)[1];
+%>
+<%@@ include file="../copyright4java.jetinc"%>
+<%
+importManager.emitPackageStatement(stringBuffer);
+importManager.markImportLocation(stringBuffer);
+%>
+<%@@ include file="../common/featureGetAccessor.jetinc"%>
+
+/**
+ * @@generated
+ */
+public class <%=importManager.getCompilationUnitName()%> extends <%=importManager.getImportedName("org.eclipse.emf.common.command.CommandWrapper")%> {
+	/**
+	 * @@generated
+	 */
+	private <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Edge")%> edge;
+	/**
+	 * @@generated
+	 */
+	private <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> newSource;
+	/**
+	 * @@generated
+	 */
+	private <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> oldSource;
+	/**
+	 * @@generated
+	 */
+	public <%=importManager.getCompilationUnitName()%>(<%=importManager.getImportedName("org.eclipse.gef.requests.ReconnectRequest")%> request) {
+		this((<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Edge")%>)request.getConnectionEditPart().getModel(), (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%>)request.getTarget().getModel());
+	}
+	/**
+	 * @@generated
+	 */
+	public <%=importManager.getCompilationUnitName()%>(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Edge")%> edge, <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> newSource) {
+		this.edge = edge;
+		this.newSource = newSource;
+		this.oldSource = edge.getSource();
+	}
+	/**
+	 * @@generated
+	 */
+	protected boolean prepare() {
+<%
+	if (linkConstraints != null) {
+%>
+		final boolean[] resultHolder = new boolean[1];
+		//To validate the reconnection against constraints, the current link should be deleted. Of course, we must then undo its deletion.
+		final <%=importManager.getImportedName("org.eclipse.emf.transaction.TransactionalEditingDomain")%> domainModelEditDomain = <%=importManager.getImportedName("org.eclipse.emf.transaction.util.TransactionUtil")%>.getEditingDomain(oldSource.getDiagram().getElement());
+		<%=importManager.getImportedName("org.eclipse.emf.common.command.Command")%> command = new <%=importManager.getImportedName("org.eclipse.emf.common.command.AbstractCommand")%>() {
+			private <%=importManager.getImportedName("org.eclipse.emf.common.command.Command")%> deleteCommand = createDomainModelRemoveCommand(domainModelEditDomain);
+			public boolean canExecute() {
+				return deleteCommand.canExecute();
+			}
+			public boolean canUndo() {
+				return true;
+			}
+			public void redo() {
+			}
+			public void undo() {
+			}
+			public void execute() {
+				deleteCommand.execute();
+				try {
+					resultHolder[0] = canReconnect();
+				} finally {
+					deleteCommand.undo();
+				}
+			}
+		};
+		if (!command.canExecute()) {
+			return false;
+		}
+		new <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.commands.WrappingCommand")%>(domainModelEditDomain, command).execute();
+		if (!resultHolder[0]) {
+			return false;
+		}
+		return super.prepare();
+<%
+	} else {
+%>
+		if (!canReconnect()) {
+			return false;
+		}
+		return super.prepare();
+<%
+	}
+%>
+	}
+
+	/**
+	 * @@generated
+	 */
+	private boolean canReconnect() {
+<%
+		if (genLink.getModelFacet() instanceof TypeLinkModelFacet) {
+			TypeLinkModelFacet modelFacet = (TypeLinkModelFacet) genLink.getModelFacet();
+			GenFeature containmentFeature = modelFacet.getContainmentMetaFeature();
+			GenFeature childFeature = modelFacet.getChildMetaFeature();
+			if (containmentFeature == null) {
+%>
+		return false;
+<%
+			} else {
+%>
+		<%=importManager.getImportedName(containmentFeature.getGenClass().getQualifiedInterfaceName())%> container = (<%=importManager.getImportedName(containmentFeature.getGenClass().getQualifiedInterfaceName())%>)getRelationshipContainer(newSource.getElement(), <%=importManager.getImportedName(containmentFeature.getGenClass().getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=containmentFeature.getGenClass().getClassifierAccessorName()%>());
+		if (container == null) {
+			return false;
+		}
+<%
+				{
+					GenFeature _feature = containmentFeature;
+					String _ownerInstance = "container";
+					String _exceedsUpperBound = "return false;";
+					GenClass _ownerGenClass = containmentFeature.getGenClass();
+%>
+<%@@ include file="../common/featureMultiplicity.jetinc"%>
+<%
+				}
+				if (childFeature != null && childFeature != containmentFeature && !childFeature.isDerived()) {
+					{
+						GenFeature _feature = childFeature;
+						String _ownerInstance = "container";
+						String _exceedsUpperBound = "return false;";
+						GenClass _ownerGenClass = containmentFeature.getGenClass();
+%>
+<%@@ include file="../common/featureMultiplicity.jetinc"%>
+<%
+					}
+				}
+			}
+			//No need to check the size of the source or target features: their size does not change
+			//Still need to check the eOpposite() of the source feature
+			GenFeature sourceFeature = modelFacet.getSourceMetaFeature();
+			GenFeature sourceReverseFeature = sourceFeature == null ? null : sourceFeature.getReverse();
+			if (sourceReverseFeature != null && !sourceReverseFeature.isDerived() && sourceReverseFeature != containmentFeature && sourceReverseFeature != childFeature) {
+				GenFeature _feature = sourceReverseFeature;
+				String _ownerInstance = "newSource.getElement()";
+				String _exceedsUpperBound = "return false;";
+				GenClass _ownerGenClass = null;
+%>
+<%@@ include file="../common/featureMultiplicity.jetinc"%>
+<%
+			}
+{
+	String _source = "newSource.getElement()";
+	String _target = "edge.getTarget().getElement()";
+%>
+<%@@ include file="../common/linkConstraints.jetinc"%>
+<%
+}	//local declarations for linkConstraints.jetinc
+%>
+		return true;
+<%
+		} else if (genLink.getModelFacet() instanceof FeatureLinkModelFacet) {
+			GenFeature metaFeature = ((FeatureLinkModelFacet) genLink.getModelFacet()).getMetaFeature();
+			{
+				GenFeature _feature = metaFeature;
+				String _ownerInstance = "newSource.getElement()";
+				String _exceedsUpperBound = "return false;";
+				GenClass _ownerGenClass = null;
+%>
+<%@@ include file="../common/featureMultiplicity.jetinc"%>
+<%
+			}
+{
+	String _source = "newSource.getElement()";
+	String _target = "edge.getTarget().getElement()";
+%>
+<%@@ include file="../common/linkConstraints.jetinc"%>
+<%
+}	//local declarations for linkConstraints.jetinc
+%>
+		return true;
+<%
+		} else {
+%>
+		return false;
+<%
+		}
+%>
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected <%=importManager.getImportedName("org.eclipse.emf.common.command.Command")%> createCommand() {
+		<%=importManager.getImportedName("org.eclipse.emf.transaction.TransactionalEditingDomain")%> editingDomain = <%=importManager.getImportedName("org.eclipse.emf.transaction.util.TransactionUtil")%>.getEditingDomain(oldSource.getDiagram().getElement());
+		<%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%> result = new <%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%>();
+		result.append(new <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.commands.ReconnectNotationalEdgeSourceCommand")%>(edge, newSource));
+<%
+		if (genLink.getModelFacet() instanceof TypeLinkModelFacet) {
+			TypeLinkModelFacet modelFacet = (TypeLinkModelFacet) genLink.getModelFacet();
+			GenFeature sourceFeature = modelFacet.getSourceMetaFeature();
+			GenFeature containmentFeature = modelFacet.getContainmentMetaFeature();
+			GenFeature childFeature = modelFacet.getChildMetaFeature();
+			boolean setSource = sourceFeature != null;
+			boolean setChild = childFeature != null && childFeature != containmentFeature && !childFeature.isDerived();
+			if (containmentFeature != null) {
+				if (sourceFeature != null && sourceFeature.getEcoreFeature() instanceof EReference == true) {
+					EReference sourceEcoreFeature = (EReference)sourceFeature.getEcoreFeature();
+					if (sourceEcoreFeature.getEOpposite() == containmentFeature.getEcoreFeature()) {
+						setSource = false;
+					}
+				}
+			}
+			if (containmentFeature != null || setChild) {
+%>
+		<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> container = getRelationshipContainer(newSource.getElement(), <%=importManager.getImportedName(containmentFeature.getGenClass().getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=containmentFeature.getGenClass().getClassifierAccessorName()%>());
+		if (container == null) {
+			return <%=importManager.getImportedName("org.eclipse.emf.common.command.UnexecutableCommand")%>.INSTANCE;
+		}
+		<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> oldContainer = edge.getElement().eContainer();
+		if (oldContainer == null) {
+			return <%=importManager.getImportedName("org.eclipse.emf.common.command.UnexecutableCommand")%>.INSTANCE;
+		}
+		if (oldContainer != container) {
+<%
+			}
+			if (containmentFeature != null) {
+				if (containmentFeature.getEcoreFeature().isMany()) {
+%>
+			result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(
+				editingDomain,
+				edge.getElement().eContainer(), <%=importManager.getImportedName(containmentFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=containmentFeature.getFeatureAccessorName()%>(), edge.getElement()));
+<%
+				} else {
+%>
+			result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+				editingDomain,
+				edge.getElement().eContainer(), <%=importManager.getImportedName(containmentFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=containmentFeature.getFeatureAccessorName()%>(), <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE));
+<%
+				}
+%>
+			result.append(<%=importManager.getImportedName(containmentFeature.getEcoreFeature().isMany() ? "org.eclipse.emf.edit.command.AddCommand" : "org.eclipse.emf.edit.command.SetCommand")%>.create(
+				editingDomain,
+				container, <%=importManager.getImportedName(containmentFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=containmentFeature.getFeatureAccessorName()%>(), edge.getElement()));
+<%
+			}
+			if (setChild) {
+				if (childFeature.getEcoreFeature().isMany()) {
+%>
+			result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(
+				editingDomain,
+				edge.getElement().eContainer(), <%=importManager.getImportedName(childFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=childFeature.getFeatureAccessorName()%>(),
+				edge.getElement()));
+<%
+				} else {
+%>
+			result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+				editingDomain,
+				edge.getElement().eContainer(), <%=importManager.getImportedName(childFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=childFeature.getFeatureAccessorName()%>(),
+				<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE));
+<%
+				}
+%>
+			result.append(<%=importManager.getImportedName(childFeature.getEcoreFeature().isMany() ? "org.eclipse.emf.edit.command.AddCommand" : "org.eclipse.emf.edit.command.SetCommand")%>.create(
+				editingDomain,
+				container, <%=importManager.getImportedName(childFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=childFeature.getFeatureAccessorName()%>(), edge.getElement()));
+<%
+			}
+%>
+		}
+<%
+			if (setSource) {
+				if (sourceFeature.getEcoreFeature().isMany()) {
+%>
+		result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(
+			editingDomain,
+			edge.getElement(), <%=importManager.getImportedName(sourceFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=sourceFeature.getFeatureAccessorName()%>(),
+			oldSource.getElement()));
+		result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.AddCommand")%>.create(
+			editingDomain,
+			edge.getElement(), <%=importManager.getImportedName(sourceFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=sourceFeature.getFeatureAccessorName()%>(),
+			newSource.getElement()));
+<%
+				} else {
+%>
+		result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+			editingDomain,
+			edge.getElement(), <%=importManager.getImportedName(sourceFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=sourceFeature.getFeatureAccessorName()%>(),
+			newSource.getElement()));
+<%
+				}
+			}
+		} else if (genLink.getModelFacet() instanceof FeatureLinkModelFacet) {
+			GenFeature metaFeature = ((FeatureLinkModelFacet) genLink.getModelFacet()).getMetaFeature();
+			if (metaFeature.getEcoreFeature().isMany()) {
+%>
+		result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(
+			editingDomain,
+			oldSource.getElement(), <%=importManager.getImportedName(metaFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=metaFeature.getFeatureAccessorName()%>(), edge.getTarget().getElement()));
+		result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.AddCommand")%>.create(
+			editingDomain,
+			newSource.getElement(), <%=importManager.getImportedName(metaFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=metaFeature.getFeatureAccessorName()%>(), edge.getTarget().getElement()));
+<%
+			} else {
+%>
+		result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+			editingDomain,
+			oldSource.getElement(), <%=importManager.getImportedName(metaFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=metaFeature.getFeatureAccessorName()%>(), <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE));
+		result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+			editingDomain,
+			newSource.getElement(), <%=importManager.getImportedName(metaFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=metaFeature.getFeatureAccessorName()%>(), edge.getTarget().getElement()));
+<%
+			}
+		}
+%>
+		return result;
+	}
+
+<%@@ include file="../common/getRelationshipContainer.jetinc"%>
+<%
+	if (linkConstraints != null) {
+		String _edge = "edge";
+%>
+	/**
+	 * @@generated
+	 */
+<%@@ include file="../parts/createDomainModelRemoveCommandForLink.jetinc"%>
+<%
+	}
+%>
+}
+<%importManager.emitSortedImports();%>
+@
+
+
+1.1
+log
+@[164018]: Command generation separated from editparts for link commands (createStart, complete, reconnectSource, reconnectTarget) and nodes (create)
+@
+text
+@@
+

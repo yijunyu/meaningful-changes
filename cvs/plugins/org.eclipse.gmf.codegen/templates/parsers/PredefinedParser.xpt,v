@@ -1,0 +1,364 @@
+head	1.1;
+access;
+symbols
+	v20081022-1925:1.1
+	v20081015-1925:1.1
+	v20081008-1925:1.1
+	v20081001-1925:1.1
+	v20080930-1130:1.1
+	v20080926-1245:1.1
+	v20080924-1925:1.1
+	v20080917-1925:1.1
+	v20080911-1728:1.1
+	v20080910-1520:1.1
+	v20080903-1520:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2008.08.28.21.22.12;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	3cb348b717024567;
+
+
+desc
+@@
+
+
+1.1
+log
+@Refactoring to address [235113] alternative parser access and [244419] Support for custom parser:
+no separate Parser implementations, rather tailored to specific view and edit methods used.
+@
+text
+@/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Dmitry Stadnik (Borland) - initial implementation
+ *    Artem Tikhomirov (Borland) - [235113] alternative parser access
+ *                                 [244419] custom parsers
+ *                                 initial API
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+
+«EXTENSION xpt::parsers::i18n»
+
+// FIXME HACK temp templates
+«DEFINE className FOR gmfgen::PredefinedParser»Parser_«viewMethod.value»_«editMethod.value»«ENDDEFINE»
+«DEFINE qualifiedClassName FOR gmfgen::PredefinedParser»«holder.packageName».«EXPAND className»«ENDDEFINE»
+
+
+«DEFINE Main FOR gmfgen::PredefinedParser»
+«EXPAND xpt::Common::copyright FOR holder.editorGen-»
+package «holder.packageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public/*package-local?*/ class «EXPAND className» extends «EXPAND xpt::parsers::AbstractParser::qualifiedClassName FOR holder.editorGen.diagram» {
+
+«EXPAND fields»
+«EXPAND cons»
+«EXPAND aux_methods»
+«EXPAND parser_getEditStringMethod»
+«EXPAND parser_isValidEditStringMethod»
+«EXPAND parser_getParseCommandMethod»
+«EXPAND parser_getPrintStringMethod»
+«EXPAND parser_isAffectingEventMethod»
+«EXPAND parser_getCompletionProcessorMethod»
+«EXPAND additions»
+}
+«ENDDEFINE» 
+
+«DEFINE additions FOR PredefinedParser»«ENDDEFINE»
+
+«DEFINE fields FOR PredefinedParser-»
+«IF viewMethod == LabelTextAccessMethod::MESSAGE_FORMAT || viewMethod == LabelTextAccessMethod::PRINTF-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private String defaultPattern;
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	private String defaultEditablePattern;
+«ENDIF-»
+«IF viewMethod == LabelTextAccessMethod::MESSAGE_FORMAT»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private java.text.MessageFormat viewProcessor;
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	private java.text.MessageFormat editorProcessor;
+«ENDIF-»
+«IF editMethod == LabelTextAccessMethod::MESSAGE_FORMAT»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private java.text.MessageFormat editProcessor;
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE cons FOR PredefinedParser-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public «EXPAND className»(org.eclipse.emf.ecore.EAttribute[] features) {
+		super(features);
+«IF viewMethod == LabelTextAccessMethod::NATIVE || editMethod == LabelTextAccessMethod::NATIVE-»
+		if (features.length != 1) {
+			throw new IllegalArgumentException(java.util.Arrays.toString(features));
+		}
+«ENDIF-»
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	public «EXPAND className»(org.eclipse.emf.ecore.EAttribute[] features, org.eclipse.emf.ecore.EAttribute[] editableFeatures) {
+		super(features, editableFeatures);
+«IF viewMethod == LabelTextAccessMethod::NATIVE || editMethod == LabelTextAccessMethod::NATIVE-»
+		if (features.length != 1) {
+			throw new IllegalArgumentException(java.util.Arrays.toString(features));
+		}
+		if (editableFeatures.length != 1) {
+			throw new IllegalArgumentException(java.util.Arrays.toString(editableFeatures));
+		}
+«ENDIF-»
+	}
+«ENDDEFINE»
+
+«DEFINE aux_methods FOR PredefinedParser-»
+«IF viewMethod == LabelTextAccessMethod::MESSAGE_FORMAT-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected String getDefaultPattern() {
+		if (defaultPattern == null) {
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < features.length; i++) {
+				if (i > 0) {
+					sb.append(' ');
+				}
+				sb.append('{');
+				sb.append(i);
+				sb.append('}');
+			}
+			defaultPattern = sb.toString();
+		}
+		return defaultPattern;
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	public void setViewPattern(String viewPattern) {
+		super.setViewPattern(viewPattern);
+		viewProcessor = null;
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	public void setEditorPattern(String editorPattern) {
+		super.setEditorPattern(editorPattern);
+		editorProcessor = null;
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected java.text.MessageFormat getViewProcessor() {
+		if (viewProcessor == null) {
+			viewProcessor = new java.text.MessageFormat(getViewPattern() == null ? getDefaultPattern() : getViewPattern());
+		}
+		return viewProcessor;
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected java.text.MessageFormat getEditorProcessor() {
+		if (editorProcessor == null) {
+			editorProcessor = new java.text.MessageFormat(getEditorPattern() == null ? getDefaultEditablePattern() : getEditorPattern());
+		}
+		return editorProcessor;
+	}
+«ELSEIF viewMethod == LabelTextAccessMethod::PRINTF-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected String getDefaultPattern() {
+		if (defaultPattern == null) {
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < features.length; i++) {
+				if (i > 0) {
+					sb.append(' ');
+				}
+				sb.append('%');
+				sb.append(i + 1);
+				sb.append('$');
+				sb.append('s');
+			}
+			defaultPattern = sb.toString();
+		}
+		return defaultPattern;
+	}
+«ENDIF-»
+«IF viewMethod == LabelTextAccessMethod::MESSAGE_FORMAT || editMethod == LabelTextAccessMethod::MESSAGE_FORMAT-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected String getDefaultEditablePattern() {
+		if (defaultEditablePattern == null) {
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < editableFeatures.length; i++) {
+				if (i > 0) {
+					sb.append(' ');
+				}
+				sb.append('{');
+				sb.append(i);
+				sb.append('}');
+			}
+			defaultEditablePattern = sb.toString();
+		}
+		return defaultEditablePattern;
+	}
+«ENDIF-»
+«IF viewMethod == LabelTextAccessMethod::PRINTF || editMethod == LabelTextAccessMethod::PRINTF-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected String getDefaultEditablePattern() {
+		if (defaultEditablePattern == null) {
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < editableFeatures.length; i++) {
+				if (i > 0) {
+					sb.append(' ');
+				}
+				sb.append('%');
+				sb.append(i + 1);
+				sb.append('$');
+				sb.append('s');
+			}
+			defaultEditablePattern = sb.toString();
+		}
+		return defaultEditablePattern;
+	}
+«ENDIF-»
+«IF editMethod == LabelTextAccessMethod::MESSAGE_FORMAT-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public void setEditPattern(String editPattern) {
+		super.setEditPattern(editPattern);
+		editProcessor = null;
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected java.text.MessageFormat getEditProcessor() {
+		if (editProcessor == null) {
+			editProcessor = new java.text.MessageFormat(getEditPattern() == null ? getDefaultEditablePattern() : getEditPattern());
+		}
+		return editProcessor;
+	}
+«ELSEIF editMethod == LabelTextAccessMethod::REGEXP-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public String getEditPattern() {
+		String pattern = super.getEditPattern();
+		return pattern != null ? pattern : " ";«EXPAND xpt::Common::nonNLS»
+	}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE parser_getEditStringMethod FOR PredefinedParser-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public String getEditString(org.eclipse.core.runtime.IAdaptable adapter, int flags) {
+«IF viewMethod == LabelTextAccessMethod::MESSAGE_FORMAT-»
+		org.eclipse.emf.ecore.EObject element =	(org.eclipse.emf.ecore.EObject) adapter.getAdapter(org.eclipse.emf.ecore.EObject.class);
+		return getEditorProcessor().format(getEditableValues(element), new StringBuffer(),	new java.text.FieldPosition(0)).toString();
+«ELSEIF viewMethod == LabelTextAccessMethod::PRINTF-»
+		org.eclipse.emf.ecore.EObject element = (org.eclipse.emf.ecore.EObject) adapter.getAdapter(org.eclipse.emf.ecore.EObject.class);
+		String pattern = getEditorPattern() == null ? getDefaultEditablePattern() : getEditorPattern();
+		return String.format(pattern, getEditableValues(element));
+«ELSEIF viewMethod == LabelTextAccessMethod::REGEXP-»
+		return "";«EXPAND xpt::Common::nonNLS»
+«ELSEIF viewMethod == LabelTextAccessMethod::NATIVE-»
+		org.eclipse.emf.ecore.EObject element = (org.eclipse.emf.ecore.EObject) adapter.getAdapter(org.eclipse.emf.ecore.EObject.class);
+		String s = org.eclipse.emf.ecore.util.EcoreUtil.convertToString(editableFeatures[0].getEAttributeType(), element.eGet(editableFeatures[0]));
+		return s != null ? s : "";«EXPAND xpt::Common::nonNLS»
+«ENDIF-»
+	}
+«ENDDEFINE»
+
+«DEFINE parser_isValidEditStringMethod FOR PredefinedParser-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public org.eclipse.gmf.runtime.common.ui.services.parser.IParserEditStatus isValidEditString(org.eclipse.core.runtime.IAdaptable adapter, String editString) {
+«IF editMethod == LabelTextAccessMethod::MESSAGE_FORMAT-»
+		java.text.ParsePosition pos = new java.text.ParsePosition(0);
+		Object[] values = getEditProcessor().parse(editString, pos);
+		if (values == null) {
+			return new org.eclipse.gmf.runtime.common.ui.services.parser.ParserEditStatus(
+					«holder.editorGen.plugin.getActivatorQualifiedClassName()».ID,
+					org.eclipse.gmf.runtime.common.ui.services.parser.IParserEditStatus.UNEDITABLE,
+					org.eclipse.osgi.util.NLS.bind(
+							«EXPAND xpt::Externalizer::accessorCall(i18nKeyForMessageFormatParserInvalidInputError()) FOR holder.editorGen»,
+							new Integer(pos.getErrorIndex())));
+		}
+		return validateNewValues(values);
+«ELSEIF editMethod == LabelTextAccessMethod::PRINTF-»
+		return org.eclipse.gmf.runtime.common.ui.services.parser.ParserEditStatus.UNEDITABLE_STATUS;
+«ELSEIF editMethod == LabelTextAccessMethod::REGEXP-»
+		if (editString == null) {
+			return org.eclipse.gmf.runtime.common.ui.services.parser.ParserEditStatus.UNEDITABLE_STATUS;
+		}
+		Object[] values = editString.split(getEditPattern());
+		return validateNewValues(values);
+«ELSEIF editMethod == LabelTextAccessMethod::NATIVE-»
+		return org.eclipse.gmf.runtime.common.ui.services.parser.ParserEditStatus.EDITABLE_STATUS;
+«ENDIF-»
+	}
+«ENDDEFINE»
+
+«DEFINE parser_getParseCommandMethod FOR PredefinedParser-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public org.eclipse.gmf.runtime.common.core.command.ICommand getParseCommand(org.eclipse.core.runtime.IAdaptable adapter, String newString, int flags) {
+«IF editMethod == LabelTextAccessMethod::MESSAGE_FORMAT-»
+		Object[] values = getEditProcessor().parse(newString, new java.text.ParsePosition(0));
+		return getParseCommand(adapter, values, flags);
+«ELSEIF editMethod == LabelTextAccessMethod::PRINTF-»
+		return org.eclipse.gmf.runtime.common.core.command.UnexecutableCommand.INSTANCE;
+«ELSEIF editMethod == LabelTextAccessMethod::REGEXP-»
+		if (newString == null) {
+			return org.eclipse.gmf.runtime.common.core.command.UnexecutableCommand.INSTANCE;
+		}
+		Object[] values = newString.split(getEditPattern());
+		return super.getParseCommand(adapter, values, flags);
+«ELSEIF editMethod == LabelTextAccessMethod::NATIVE-»
+		Object value = org.eclipse.emf.ecore.util.EcoreUtil.createFromString(editableFeatures[0].getEAttributeType(), newString);
+		return getParseCommand(adapter, new Object[] { value }, flags);
+«ENDIF-»
+	}
+«ENDDEFINE»
+
+«DEFINE parser_getPrintStringMethod FOR PredefinedParser-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public String getPrintString(org.eclipse.core.runtime.IAdaptable adapter, int flags) {
+«IF viewMethod == LabelTextAccessMethod::MESSAGE_FORMAT-»
+		org.eclipse.emf.ecore.EObject element = (org.eclipse.emf.ecore.EObject) adapter.getAdapter(org.eclipse.emf.ecore.EObject.class);
+		return getViewProcessor().format(getValues(element), new StringBuffer(), new java.text.FieldPosition(0)).toString();
+«ELSEIF viewMethod == LabelTextAccessMethod::PRINTF-»
+		org.eclipse.emf.ecore.EObject element = (org.eclipse.emf.ecore.EObject) adapter.getAdapter(org.eclipse.emf.ecore.EObject.class);
+		return String.format(getViewPattern() == null ? getDefaultPattern() : getViewPattern(), getValues(element));
+«ELSEIF viewMethod == LabelTextAccessMethod::REGEXP-»
+		return "";«EXPAND xpt::Common::nonNLS»
+«ELSEIF viewMethod == LabelTextAccessMethod::NATIVE-»
+		org.eclipse.emf.ecore.EObject element = (org.eclipse.emf.ecore.EObject) adapter.getAdapter(org.eclipse.emf.ecore.EObject.class);
+		String s = org.eclipse.emf.ecore.util.EcoreUtil.convertToString(features[0].getEAttributeType(), element.eGet(features[0]));
+		return s != null ? s : "";«EXPAND xpt::Common::nonNLS»
+«ENDIF-»
+	}
+«ENDDEFINE»
+
+«DEFINE parser_isAffectingEventMethod FOR PredefinedParser-»
+«REM»NO-OP, rely on superclass for now«ENDREM-»
+«ENDDEFINE»
+
+«DEFINE parser_getCompletionProcessorMethod FOR PredefinedParser-»
+«REM»NO-OP, rely on superclass for now«ENDREM-»
+«ENDDEFINE»
+
+«DEFINE i18nValues FOR gmfgen::GenParsers-»
+«IF implementations.typeSelect(PredefinedParser).exists(p | p.editMethod == LabelTextAccessMethod::MESSAGE_FORMAT)»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForMessageFormatParserInvalidInputError(), "Invalid input at {0}")-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE i18nAccessors FOR gmfgen::GenParsers-»
+«IF implementations.typeSelect(PredefinedParser).exists(p | p.editMethod == LabelTextAccessMethod::MESSAGE_FORMAT)»
+	«EXPAND xpt::Externalizer::accessorField(i18nKeyForMessageFormatParserInvalidInputError())-»
+«ENDIF-»
+«ENDDEFINE»
+@

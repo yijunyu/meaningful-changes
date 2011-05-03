@@ -1,0 +1,268 @@
+head	1.5;
+access;
+symbols
+	v20081022-1925:1.5
+	v20081015-1925:1.5
+	v20081008-1925:1.5
+	v20081001-1925:1.5
+	v20080924-1925:1.5
+	v20080917-1925:1.5
+	v20080911-1728:1.5
+	v20080910-1520:1.5
+	v20080903-1520:1.5
+	v20080827-1520:1.5
+	v20080813-1520:1.5
+	v20080806-1520:1.5
+	v20070420-1000:1.4
+	v20070413-1300:1.4
+	v20070405-1100:1.3
+	v20070403-1500:1.3
+	v20070330-1300:1.3
+	v20060330-1300:1.3
+	v20070322-1100:1.3
+	v20060316-0600:1.3
+	v20070307-0700:1.3
+	v20070301-1200:1.3
+	v20070228-2000:1.3
+	v20070221-1500:1.3
+	v20070208-1800:1.2
+	v20070103-0300:1.2
+	M4_20:1.2
+	v20061222-1800:1.2
+	v20061218-1200:1.2
+	v20061214-0000:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2007.04.23.14.04.58;	author dstadnik;	state dead;
+branches;
+next	1.4;
+commitid	4a11462cbd094567;
+
+1.4
+date	2007.04.06.12.14.57;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+commitid	6a69461639bf4567;
+
+1.3
+date	2007.02.14.15.41.57;	author bblajer;	state Exp;
+branches;
+next	1.2;
+commitid	145545d32dc54567;
+
+1.2
+date	2006.11.30.18.19.30;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+commitid	5afc456f20b14567;
+
+1.1
+date	2006.11.24.22.25.21;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	5f734567714f4567;
+
+
+desc
+@@
+
+
+1.5
+log
+@[180702] Move logic from semantic edit policy into creation commands
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.commands" class="CreateTypeLinkCommandGenerator"
+	imports="org.eclipse.gmf.codegen.gmfgen.* org.eclipse.gmf.common.codegen.* org.eclipse.emf.codegen.ecore.genmodel.*"
+	skeleton="../common.skeleton"%>
+<%GenLink link = (GenLink) ((Object[]) argument)[0];
+GenDiagram genDiagram = link.getDiagram(); 
+
+final ImportAssistant importManager = (ImportAssistant) ((Object[]) argument)[1];
+if (false == link.getModelFacet() instanceof TypeLinkModelFacet) {
+	throw new IllegalArgumentException("TypeLinkModelFacet required");
+} 
+TypeLinkModelFacet modelFacet = (TypeLinkModelFacet) link.getModelFacet();
+
+GenFeature containmentFeature = modelFacet.getContainmentMetaFeature();
+GenFeature childFeature = modelFacet.getChildMetaFeature();
+GenFeature targetFeature = modelFacet.getTargetMetaFeature();
+GenFeature sourceFeature = modelFacet.getSourceMetaFeature();
+
+GenClass outgoingClass = sourceFeature == null ? containmentFeature.getGenClass() : sourceFeature.getTypeGenClass();
+GenClass incomingClass = targetFeature.getTypeGenClass();
+GenClass containerClass = containmentFeature.getGenClass();
+
+boolean processChildFeature = !childFeature.isDerived() && !childFeature.equals(containmentFeature);
+boolean separateContainer = modelFacet.getSourceMetaFeature() != null;
+String metaClassName = importManager.getImportedName(modelFacet.getMetaClass().getQualifiedInterfaceName());%>
+<%@@ include file="../copyright4java.jetinc"%>
+<%importManager.emitPackageStatement(stringBuffer);%>
+
+<%importManager.markImportLocation(stringBuffer);%>
+
+/**
+ * @@generated
+ */
+public class <%=importManager.getCompilationUnitName()%> extends <%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.type.core.commands.CreateRelationshipCommand")%> {
+<%if (separateContainer) {%>
+
+	/**
+	 * @@generated
+	 */
+	private <%=importManager.getImportedName(containerClass.getQualifiedInterfaceName())%> myContainer;
+<%}%>
+
+	/**
+	 * @@generated
+	 */
+	private <%=importManager.getImportedName(outgoingClass.getQualifiedInterfaceName())%> mySource;
+
+	/**
+	 * @@generated
+	 */
+	private <%=importManager.getImportedName(incomingClass.getQualifiedInterfaceName())%> myTarget;
+
+	/**
+	 * @@generated
+	 */
+	public <%=importManager.getCompilationUnitName()%>(<%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest")%> req, <%if (separateContainer) {%><%=importManager.getImportedName(containerClass.getQualifiedInterfaceName())%> container, <%}%><%=importManager.getImportedName(outgoingClass.getQualifiedInterfaceName())%> source, <%=importManager.getImportedName(incomingClass.getQualifiedInterfaceName())%> target) {
+		super(req);
+<%if (separateContainer) {%>
+		super.setElementToEdit(<%if (containerClass.isExternalInterface()) {%>(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) <%}%>container);
+		myContainer = container;
+<%} else {%>
+		super.setElementToEdit(<%if (outgoingClass.isExternalInterface()) {%>(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) <%}%>source);
+<%}%>
+		mySource = source;
+		myTarget = target;
+	}
+<%if (separateContainer) {%>
+	
+	/**
+	 * @@generated
+	 */
+	public <%=importManager.getImportedName(containerClass.getQualifiedInterfaceName())%> getContainer() {
+		return myContainer;
+	}
+<%}%>
+	
+	/**
+	 * @@generated
+	 */
+	public <%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> getSource() {
+		return <%if (outgoingClass.isExternalInterface()) {%>(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) <%}%>mySource;
+	}
+
+	/**
+	 * @@generated
+	 */
+	public <%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> getTarget() {
+		return <%if (incomingClass.isExternalInterface()) {%>(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) <%}%>myTarget;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected <%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> getEClassToEdit() {
+		return <%=importManager.getImportedName(containerClass.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=containerClass.getClassifierAccessorName()%>();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void setElementToEdit(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> element) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected <%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> doDefaultElementCreation() {
+		<%=metaClassName%> newElement = (<%=metaClassName%>) super.doDefaultElementCreation();
+		if (newElement != null) {
+			<%=getFeatureValueSetterPrefix("newElement", targetFeature, false, importManager)%>myTarget);
+<%if (modelFacet.getSourceMetaFeature() != null) {%>
+			<%=getFeatureValueSetterPrefix("newElement", sourceFeature, false, importManager)%>mySource);
+<%}
+
+if (processChildFeature) {
+	String containerVarName = separateContainer ? "myContainer" : "mySource";
+	if (childFeature.isListType()) {%>
+				<%=importManager.getImportedName("java.util.Collection")%> featureValues = <%=containerVarName%>.<%=childFeature.getGetAccessor()%>();
+				featureValues.add(newElement);
+<%	} else {%>
+			 	<%=getFeatureValueSetterPrefix(containerVarName, childFeature, false, importManager)%>newElement);
+<%	}
+}
+
+if (modelFacet.getModelElementInitializer() != null) {%>
+			<%=importManager.getImportedName(genDiagram.getElementTypesQualifiedClassName())%>.Initializers.<%=link.getUniqueIdentifier()%>.init(<%if (modelFacet.getMetaClass().isExternalInterface()) {%>(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) <%}%>newElement);
+<%}%>
+		}
+		return <%if (modelFacet.getMetaClass().isExternalInterface()) {%>(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) <%}%>newElement;
+	}
+
+}
+<%importManager.emitSortedImports();%>
+@
+
+
+1.4
+log
+@[179027] Code does not compile if domain element has explicit class name and initializer or matcher
+@
+text
+@@
+
+
+1.3
+log
+@[174171]: getting rid of superfluous semicolons
+@
+text
+@d126 1
+a126 1
+			<%=importManager.getImportedName(genDiagram.getElementTypesQualifiedClassName())%>.Initializers.<%=link.getUniqueIdentifier()%>.init(newElement);
+@
+
+
+1.2
+log
+@[157683] - Generate link creation/initialization command in single separate classes instead of duplication of the code in different SemanticEditPolicy'ies
+@
+text
+@d95 1
+a95 1
+	};
+@
+
+
+1.1
+log
+@[157683] - Generate link creation/initialization command in single separate classes instead of duplication of the code in different SemanticEditPolicy'ies
+@
+text
+@d23 1
+d34 1
+d40 1
+d55 1
+a55 1
+	public <%=importManager.getCompilationUnitName()%>(<%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest")%> req, <%=importManager.getImportedName(containerClass.getQualifiedInterfaceName())%> container, <%=importManager.getImportedName(outgoingClass.getQualifiedInterfaceName())%> source, <%=importManager.getImportedName(incomingClass.getQualifiedInterfaceName())%> target) {
+d57 1
+d60 3
+d66 1
+d74 1
+d116 1
+d118 1
+a118 1
+				<%=importManager.getImportedName("java.util.Collection")%> featureValues = myContainer.<%=childFeature.getGetAccessor()%>();
+d121 1
+a121 1
+			 	<%=getFeatureValueSetterPrefix("myContainer", childFeature, false, importManager)%>newElement);
+@
+

@@ -1,0 +1,585 @@
+head	1.7;
+access;
+symbols
+	v20081022-1925:1.7
+	v20081015-1925:1.7
+	v20081008-1925:1.7
+	v20081001-1925:1.7
+	v20080924-1925:1.7
+	v20080917-1925:1.7
+	v20080911-1728:1.7
+	v20080910-1520:1.7
+	v20080903-1520:1.7
+	v20080827-1520:1.7
+	v20080813-1520:1.7
+	v20080806-1520:1.7
+	v20070903-0000:1.6
+	v20070809-0000:1.6
+	R2_0_maintenance:1.6.0.2
+	R2_0:1.6
+	R4_20:1.6
+	v20070621-0000:1.6
+	RC3_20:1.6
+	v20070614-1400:1.6
+	v20070608-1300:1.6
+	v20070605-1400:1.6
+	v20070601-1400:1.6
+	v20070525-1500:1.6
+	v20070520-1200:1.6
+	v20070518-1300:1.6
+	v20070504-1000:1.6
+	v20070427-0600:1.6
+	v20070420-1000:1.6
+	v20070413-1300:1.6
+	v20070405-1100:1.6
+	v20070403-1500:1.6
+	v20070330-1300:1.6
+	v20060330-1300:1.6
+	v20070322-1100:1.6
+	v20060316-0600:1.6
+	v20070307-0700:1.5
+	v20070301-1200:1.5
+	v20070228-2000:1.5
+	v20070221-1500:1.5
+	v20070208-1800:1.5
+	v20070103-0300:1.4
+	M4_20:1.4
+	v20061222-1800:1.4
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.7
+date	2007.09.10.21.17.30;	author dstadnik;	state dead;
+branches;
+next	1.6;
+commitid	153446e5b4694567;
+
+1.6
+date	2007.03.08.01.02.29;	author atikhomirov;	state Exp;
+branches
+	1.6.2.1;
+next	1.5;
+commitid	bd645ef60a44567;
+
+1.5
+date	2007.01.25.16.57.54;	author ashatalin;	state Exp;
+branches;
+next	1.4;
+commitid	271945b8e1904567;
+
+1.4
+date	2006.12.20.02.16.53;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+commitid	1ea745889d114567;
+
+1.3
+date	2005.10.25.18.28.41;	author atikhomirov;	state dead;
+branches;
+next	1.2;
+
+1.2
+date	2005.10.25.11.31.55;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.10.20.16.04.34;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.6.2.1
+date	2007.09.10.20.58.22;	author dstadnik;	state dead;
+branches;
+next	;
+commitid	f4446e5afed4567;
+
+
+desc
+@@
+
+
+1.7
+log
+@rewrite element initializer in xpand
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.providers" class="ElementInitializersGenerator"
+	imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.* org.eclipse.gmf.codegen.gmfgen.* org.eclipse.gmf.common.codegen.*"%>
+<%
+final GenDiagram genDiagram = (GenDiagram) ((Object[]) argument)[0];
+final ImportAssistant importManager = (ImportAssistant) ((Object[]) argument)[1];
+%>
+<%@@ include file="../copyright4java.jetinc"%>
+<%importManager.emitPackageStatement(stringBuffer);%>
+
+<%
+importManager.registerInnerClass("Initializers");
+importManager.registerInnerClass("IObjectInitializer");
+importManager.registerInnerClass("ObjectInitializer");
+importManager.registerInnerClass("IFeatureInitializer");
+final String javaExprContainer = "Java";
+importManager.registerInnerClass(javaExprContainer);
+%>
+
+<%importManager.markImportLocation(stringBuffer);%>
+<%String pluginClassName = importManager.getImportedName(genDiagram.getEditorGen().getPlugin().getActivatorQualifiedClassName());%>
+
+/**
+ * @@generated
+ */
+public class ElementInitializers {
+<%
+int elementInitializerCount = 0;
+List elements = new LinkedList();
+if (genDiagram.getElementType() != null) {
+	elements.add(genDiagram);
+}
+for (Iterator contents = genDiagram.eAllContents(); contents.hasNext(); ) {
+	Object next = contents.next();
+	GenCommonBase genElement;
+	TypeModelFacet typeModelFacet = null;
+	if (next instanceof GenNode) {
+		genElement = (GenCommonBase) next;
+		typeModelFacet = ((GenNode) next).getModelFacet();
+	} else if (next instanceof GenLink) {
+		genElement = (GenCommonBase) next;
+		ModelFacet modelFacet = ((GenLink) next).getModelFacet();
+		if (modelFacet instanceof TypeLinkModelFacet) {
+			typeModelFacet = (TypeLinkModelFacet) ((GenLink) next).getModelFacet();
+		}
+	} else {
+		continue;
+	}
+	if (typeModelFacet != null && typeModelFacet.getModelElementInitializer() != null) {
+		elementInitializerCount++;
+	}
+	if (genElement.getElementType() != null) {
+		elements.add(genElement);
+	}
+}
+if(elementInitializerCount > 0 && genDiagram.getEditorGen().getExpressionProviders() != null) {
+	final GenExpressionProviderContainer expressionProviders = genDiagram.getEditorGen().getExpressionProviders();
+	final LinkedHashSet<GenFeatureValueSpec> javaInitializers = new LinkedHashSet<GenFeatureValueSpec>();
+	final String __javaOperationContainer = javaExprContainer; // place java expression methods here
+	final Map __exprEnvVariables = Collections.EMPTY_MAP;
+%>
+
+	/**
+	 * @@generated
+	 */
+	public static class Initializers {
+<%
+for (Map.Entry<TypeModelFacet, GenCommonBase> next : genDiagram.getTypeModelFacet2GenBaseMap().entrySet()) {
+	TypeModelFacet modelFacet = next.getKey();
+	if (modelFacet.getModelElementInitializer() instanceof GenFeatureSeqInitializer) {
+		GenFeatureSeqInitializer rootFtSeqInitializer = (GenFeatureSeqInitializer)modelFacet.getModelElementInitializer();				
+		javaInitializers.addAll(rootFtSeqInitializer.getJavaExpressionFeatureInitializers(expressionProviders));
+		String id = next.getValue().getUniqueIdentifier();
+		for(GenFeatureSeqInitializer nextFtSeqInitializer : rootFtSeqInitializer.getAllFeatureSeqInitializers()) {
+			boolean isTopLevelObjInit = nextFtSeqInitializer == rootFtSeqInitializer;
+%>		
+<%			if(isTopLevelObjInit){%>
+		/**
+		 * @@generated
+		 */
+		public static final IObjectInitializer <%=nextFtSeqInitializer.getInitializerFieldName(id)%> = new ObjectInitializer(<%=nextFtSeqInitializer.getElementClassAccessor(importManager)%>) {
+<%			} else {%>
+		ObjectInitializer <%=nextFtSeqInitializer.getInitializerFieldName(id)%>() {
+			return new ObjectInitializer(<%=nextFtSeqInitializer.getElementClassAccessor(importManager)%>) {
+<%			} %>
+		 	protected void init() {				
+<%			for(GenFeatureInitializer nextFtInitializer : (List<GenFeatureInitializer>)nextFtSeqInitializer.getInitializers()) {
+				String metaFeatureAccessor = nextFtSeqInitializer.getFeatureAccessor(nextFtInitializer, importManager);
+				if(nextFtInitializer instanceof GenReferenceNewElementSpec) {
+					GenReferenceNewElementSpec newElementSpec = (GenReferenceNewElementSpec)nextFtInitializer;
+%>			
+				add(createNewElementFeatureInitializer(<%=metaFeatureAccessor%>, new ObjectInitializer[] {
+<%					for(GenFeatureSeqInitializer newElemInit : (List<GenFeatureSeqInitializer>)newElementSpec.getNewElementInitializers()) { %>
+					<%=newElemInit.getInitializerFieldName(id)%>(), 
+<%					} // end of newElementInitializers %>
+				}));
+<%				} // end of GenReferenceNewElementSpec
+				else if(nextFtInitializer instanceof GenFeatureValueSpec) {
+					String __outEnvVarName = ""; // no env to setup;
+					GenClassifier __genExprContext = nextFtSeqInitializer.getElementClass();
+					GenFeatureValueSpec __genValueExpression = (GenFeatureValueSpec)nextFtInitializer;
+%>			
+				add(createExpressionFeatureInitializer(<%=metaFeatureAccessor%>, <%@@ include file="../expressions/getExpression.jetinc"%>));
+<%
+				} // end of GenFeatureValueSpec
+			} // end of GenFeatureInitializer iteration
+%>			}
+<%			if(!isTopLevelObjInit) { %>
+				}; // <%=nextFtSeqInitializer.getInitializerFieldName(id)%> ObjectInitializer
+			}
+<%			} // GenFeatureInitializer iteration
+		} // All GenFeatureSeqInitializer iteration
+%>
+		}; // <%=rootFtSeqInitializer.getInitializerFieldName(id)%> ObjectInitializer
+<%
+	} // (modelFacet.getModelElementInitializer() instanceof GenFeatureSeqInitializer)
+}
+%>
+	
+		/** 
+		 * @@generated
+		 */	
+		private Initializers() {
+		}
+		
+		/** 
+		 * @@generated
+		 */		
+		public static interface IObjectInitializer {
+			/** 
+			 * @@generated
+			 */		
+			public void init(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> instance);
+		}
+		
+		/** 
+		 * @@generated
+		 */	
+		public static abstract class ObjectInitializer implements IObjectInitializer {
+			/** 
+			 * @@generated
+			 */		
+			final <%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> element;		
+			/** 
+			 * @@generated
+			 */		
+			private <%=importManager.getImportedName("java.util.List")%> featureInitializers = new <%=importManager.getImportedName("java.util.ArrayList")%>();
+			/** 
+			 * @@generated
+			 */
+			ObjectInitializer(<%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> element) {
+				this.element = element;
+				init();
+			}
+			/**
+		 	 * @@generated
+		 	 */
+		 	protected abstract void init();							
+			/** 
+			 * @@generated
+			 */
+			protected final IFeatureInitializer add(IFeatureInitializer initializer) {
+				featureInitializers.add(initializer);
+				return initializer;
+			}
+			/** 
+			 * @@generated
+			 */		
+			public void init(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> instance) {
+				for (java.util.Iterator it = featureInitializers.iterator(); it.hasNext();) {
+					IFeatureInitializer nextExpr = (IFeatureInitializer)it.next();
+					try {
+						nextExpr.init(instance);
+					} catch(RuntimeException e) {
+						<%=pluginClassName%>.getInstance().logError("Feature initialization failed", e); //$NON-NLS-1$						
+					}
+				}
+			}
+		} // end of ObjectInitializer
+		
+		/** 
+		 * @@generated
+		 */
+		interface IFeatureInitializer {
+			/**
+			 * @@generated
+			 */
+			void init(EObject contextInstance);
+		}
+		
+		/**
+		 * @@generated
+		 */		
+		static IFeatureInitializer createNewElementFeatureInitializer(<%=importManager.getImportedName("org.eclipse.emf.ecore.EStructuralFeature")%> initFeature, ObjectInitializer[] newObjectInitializers) {
+			final <%=importManager.getImportedName("org.eclipse.emf.ecore.EStructuralFeature")%> feature = initFeature;
+			final ObjectInitializer[] initializers = newObjectInitializers;
+			return new IFeatureInitializer() {
+				public void init(EObject contextInstance) {
+					for (int i = 0; i < initializers.length; i++) {
+						EObject newInstance = initializers[i].element.getEPackage().getEFactoryInstance().create(initializers[i].element);
+						if(feature.isMany()) {
+							((<%=importManager.getImportedName("java.util.Collection")%>)contextInstance.eGet(feature)).add(newInstance);
+						} else {
+							contextInstance.eSet(feature, newInstance);
+						}						
+						initializers[i].init(newInstance);
+					}
+				}
+			};
+		}
+
+		/**
+		 * @@generated
+		 */		
+		static IFeatureInitializer createExpressionFeatureInitializer(<%=importManager.getImportedName("org.eclipse.emf.ecore.EStructuralFeature")%> initFeature, <%=importManager.getImportedName(expressionProviders.getAbstractExpressionQualifiedClassName())%> valueExpression) {
+			final <%=importManager.getImportedName("org.eclipse.emf.ecore.EStructuralFeature")%> feature = initFeature;
+			final <%=importManager.getImportedName(expressionProviders.getAbstractExpressionQualifiedClassName())%> expression = valueExpression;
+			return new IFeatureInitializer() {				
+				public void init(EObject contextInstance) {
+					expression.assignTo(feature, contextInstance);
+				}
+			};			
+		}		
+<%
+	if(!javaInitializers.isEmpty()) {
+%>
+		/** 
+		 * @@generated
+		 */
+		static class <%=javaExprContainer%> {
+<%
+		for(GenFeatureValueSpec __genValueExpression : javaInitializers) {
+			GenClassifier __genExprContext = __genValueExpression.getFeatureSeqInitializer().getElementClass();
+			GenExpressionProviderBase provider = expressionProviders.getProvider(__genValueExpression);
+			if(!(provider instanceof GenJavaExpressionProvider)) continue;
+			String __genExprResultType = provider.getQualifiedTypeInstanceClassName(__genValueExpression.getFeature());
+%>
+<%@@ include file="../expressions/javaExpressionOperation.jetinc"%>
+<%
+		}
+%>
+		} //<%=javaExprContainer%>
+<%	} /* end of javaInitializers */ %>
+	} // end of Initializers
+<%}%>
+}
+<%importManager.emitSortedImports();%>
+@
+
+
+1.6
+log
+@avoid unused imports in generated code
+@
+text
+@@
+
+
+1.6.2.1
+log
+@rewrite element initializers in xpand
+@
+text
+@@
+
+
+1.5
+log
+@Revriting BaseItemSemanticEditPolicy to xpand
+@
+text
+@a18 2
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EStructuralFeature;
+d142 1
+a142 1
+			final EClass element;		
+d150 1
+a150 1
+			ObjectInitializer(EClass element) {
+d193 2
+a194 2
+		static IFeatureInitializer createNewElementFeatureInitializer(EStructuralFeature initFeature, ObjectInitializer[] newObjectInitializers) {
+			final EStructuralFeature feature = initFeature;
+d214 2
+a215 2
+		static IFeatureInitializer createExpressionFeatureInitializer(EStructuralFeature initFeature, <%=importManager.getImportedName(expressionProviders.getAbstractExpressionQualifiedClassName())%> valueExpression) {
+			final EStructuralFeature feature = initFeature;
+@
+
+
+1.4
+log
+@rewrite element types in xpand
+@
+text
+@d237 1
+a237 1
+			String __genExprResultType = provider.getQualifiedInstanceClassName(__genValueExpression.getFeature());
+@
+
+
+1.3
+log
+@[rdvorak] #113647 refactoring selectors and initializers
+@
+text
+@d2 7
+a8 3
+	imports="java.util.* org.eclipse.emf.ecore.* org.eclipse.gmf.codegen.gmfgen.* org.eclipse.gmf.codegen.util.*"%>
+<%GenDiagram genDiagram = (GenDiagram) argument;%>
+package <%=genDiagram.getElementInitializersPackageName()%>;
+d10 8
+a17 1
+<%ImportUtil importManager = new ImportUtil(genDiagram.getProvidersPackageName());%>
+d19 2
+d22 1
+d27 1
+a27 1
+public class <%=genDiagram.getElementInitializersClassName()%> {
+d29 33
+a61 23
+for(Iterator it = AccessUtil.getGenEntities(genDiagram); it.hasNext();) {
+	EObject nextElement = (EObject)it.next();
+	GenBaseElement  genElement = nextElement instanceof GenBaseElement ? (GenBaseElement) nextElement : null;
+	if(genElement == null || genElement.getModelElementInitializer() == null) continue;	
+		
+	GenElementInitializer initializer = genElement.getModelElementInitializer();
+	if(initializer instanceof GenFeatureSeqInitializer) {
+		GenFeatureSeqInitializer ftInitializer = (GenFeatureSeqInitializer)initializer;
+	%>
+	/**
+	* @@generated
+	*/
+	private static final ObjectInitializer <%=initializer.getElement().getUniqueIdentifier()%> = new ObjectInitializer(new FeatureInitializer[] {
+		<% for(Iterator featInitIt = ftInitializer.getInitializers().iterator(); featInitIt.hasNext();) { 
+				GenFeatureValueSpec featureValSpec = (GenFeatureValueSpec)featInitIt.next();%>
+		new FeatureInitializer("<%=featureValSpec.getBody()%>", //$NON-NLS-1$
+					<%=importManager.getImportedName(ftInitializer.getElementQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=ftInitializer.getElementClassAccessorName()%>(),
+					<%=importManager.getImportedName(featureValSpec.getFeatureQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=featureValSpec.getFeature().getFeatureAccessorName()
+					%>())<%=featInitIt.hasNext() ? "," : ""%>
+		<%	}
+		} %>
+	});
+<%	} // end of FeatureSeqInitializer
+a63 9
+<%	int initializerCount = 0;
+	for(Iterator it = AccessUtil.getGenEntities(genDiagram); it.hasNext();) {
+		EObject nextElement = (EObject)it.next();
+		GenBaseElement  genElement = nextElement instanceof GenBaseElement ? (GenBaseElement) nextElement : null;
+		if(genElement == null || genElement.getModelElementInitializer() == null) continue;	
+		
+		GenElementInitializer initializer = genElement.getModelElementInitializer();
+		initializerCount++;	
+	%>
+a64 8
+	* @@generated
+	*/
+	public static final void <%=initializer.getInitializerMethodName()%>(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> element) {
+		<%=initializer.getElement().getUniqueIdentifier()%>.init(element);
+	}
+<%	}%>
+
+	/** 
+d66 54
+a119 3
+	 */	
+	private <%=genDiagram.getElementInitializersClassName()%>() {
+	}
+a120 5
+<%if(initializerCount > 0){%>
+	/** 
+	 * @@generated
+	 */	
+	private static class ObjectInitializer {
+d123 3
+a125 2
+		 */		
+		private FeatureInitializer[] initExpressions;	
+d130 5
+a134 2
+		ObjectInitializer(FeatureInitializer[] initExpressions) {
+			this.initExpressions = initExpressions;
+d139 40
+a178 5
+		 */		
+		void init(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> instance) {
+			for (int i = 0; i < initExpressions.length; i++) {
+				FeatureInitializer nextExpr = initExpressions[i];
+				nextExpr.init(instance);
+d180 2
+a181 15
+		}
+	}
+	
+	/** 
+	 * @@generated
+	 */	
+	private static class FeatureInitializer {
+		/** 
+		 * @@generated
+		 */		
+		private <%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> contextClass;	
+		/** 
+		 * @@generated
+		 */		
+		private <%=importManager.getImportedName("org.eclipse.emf.ecore.EStructuralFeature")%> sFeature;
+d185 8
+a192 2
+		private <%=importManager.getImportedName("java.lang.String")%> expressionBody;		
+		/** 
+d195 17
+a211 1
+		private <%=importManager.getImportedName("org.eclipse.emf.ocl.query.Query")%> query;
+d216 12
+a227 7
+		FeatureInitializer(<%=importManager.getImportedName("java.lang.String")%> expression, 
+			<%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> context, 
+			<%=importManager.getImportedName("org.eclipse.emf.ecore.EStructuralFeature")%> sFeature) {
+			this.sFeature = sFeature;
+			this.expressionBody = expression;
+			this.contextClass	= context;
+		}
+d231 10
+a240 6
+		void init(<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> contextInstance) {
+			if(this.query == null) {
+				this.query = <%=importManager.getImportedName("org.eclipse.emf.ocl.query.QueryFactory")%>.eINSTANCE.createQuery(expressionBody, contextClass);					
+			}
+			Object value = query.evaluate(contextInstance);
+			contextInstance.eSet(sFeature, value);		
+d242 4
+a245 1
+	}
+@
+
+
+1.2
+log
+@[rdvorak] #113522 correct context for initializers
+@
+text
+@@
+
+
+1.1
+log
+@[rdvorak] #113224 Generate custom initialization code for domain model elements
+@
+text
+@d22 1
+d28 8
+a35 9
+		new FeatureInitializer(	
+		<% for(Iterator featInitIt = ((GenFeatureSeqInitializer)initializer).getInitializers().iterator(); featInitIt.hasNext();) { 
+				GenFeatureValueSpec featureValSpec = (GenFeatureValueSpec)featInitIt.next();
+				String packageClsQName = featureValSpec.getFeature().getGenClass().getGenPackage().getQualifiedPackageInterfaceName();
+				String fAccessorName = featureValSpec.getFeature().getFeatureAccessorName();
+				
+				%>"<%=featureValSpec.getBody()%>", <%=importManager.getImportedName(packageClsQName)%>.eINSTANCE.get<%=fAccessorName%>()), //$NON-NLS-1$
+			<%}
+		}%>
+d37 1
+a37 1
+<%} // end of FeatureSeqInitializer
+d98 9
+a106 1
+		private EStructuralFeature sFeature;
+d115 3
+a117 2
+		FeatureInitializer(String expression, <%=importManager.getImportedName("org.eclipse.emf.ecore.EStructuralFeature")%> sFeature) {
+			this.query = <%=importManager.getImportedName("org.eclipse.emf.ocl.query.QueryFactory")%>.eINSTANCE.createQuery(expression, sFeature.getEContainingClass());
+d119 2
+d126 3
+@
+

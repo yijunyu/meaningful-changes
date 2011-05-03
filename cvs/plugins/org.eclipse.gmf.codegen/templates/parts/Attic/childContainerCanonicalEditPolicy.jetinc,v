@@ -1,0 +1,260 @@
+head	1.5;
+access;
+symbols
+	v20081022-1925:1.5
+	v20081015-1925:1.5
+	v20081008-1925:1.5
+	v20081001-1925:1.5
+	v20080924-1925:1.5
+	v20080917-1925:1.5
+	v20080911-1728:1.5
+	v20080910-1520:1.5
+	v20080903-1520:1.5
+	v20080827-1520:1.5
+	v20080813-1520:1.5
+	v20080806-1520:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	M3_10:1.4
+	I20051118-1245:1.4
+	I20051111-1800:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2005.11.23.10.11.52;	author dstadnik;	state dead;
+branches;
+next	1.4;
+
+1.4
+date	2005.11.17.18.23.01;	author ashatalin;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.11.17.12.38.37;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.11.16.15.45.26;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.11.10.17.21.40;	author ashatalin;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@#117660 move canonical edit policy into separate class to shorten it's file name
+@
+text
+@	/**
+	 * @@generated
+	 */
+	private class <%=childContainer.getEditPartClassName()%>CanonicalEditPolicy extends <%=importManager.getImportedName("org.eclipse.gmf.runtime.diagram.ui.editpolicies.CanonicalEditPolicy")%> {
+	
+<%
+{
+	String modelElementInterfaceName = importManager.getImportedName(containerNode.getModelFacet().getMetaClass().getQualifiedInterfaceName());
+	Collection genNodes = childContainer.getChildNodes();
+%>
+<%@@ include file="getSemanticChildrenList.jetinc"%>
+<%
+}
+%>
+
+		/**
+		 * @@generated
+		 */
+		protected String getFactoryHint(<%=importManager.getImportedName("org.eclipse.core.runtime.IAdaptable")%> elementAdapter) {
+			return "";
+		}
+
+	}@
+
+
+1.4
+log
+@#116905
+Using VisualIDRegistry to create CanonicalEditPolicies
+@
+text
+@@
+
+
+1.3
+log
+@#116655
+
+Generating correct access for all the features.
+@
+text
+@d5 10
+d19 2
+a20 57
+		protected <%=importManager.getImportedName("java.util.List")%> getSemanticChildrenList() {	
+<%
+String modelElementInterfaceName = importManager.getImportedName(containerNode.getModelFacet().getMetaClass().getQualifiedInterfaceName());
+%>		
+			<%=modelElementInterfaceName%> modelElement = (<%=modelElementInterfaceName%>) ((View) getHost().getModel()).getElement();
+			List result = new <%=importManager.getImportedName("java.util.LinkedList")%>();
+
+<%
+/*
+	Since there could e several child nodes with the same childMetaFeatures, but different domainMetaClasses
+specified, we are creating a Map{GenFeature -> Collection{GenChildNodes}}. If GenChildNode without specified 
+domainMetaClass found, all the rest of GenChildNodes with the same childMetaFeature will be ignored because
+all the elements from this childMetaFeature will be treated as "this" type of GenChildNodes (without specified 
+domainMetaClass).
+*/
+
+Map childFeature2NodesMap = new HashMap();
+for (Iterator it = childContainer.getChildNodes().iterator(); it.hasNext();) {
+	GenChildNode nextChildNode = (GenChildNode) it.next();
+	GenFeature genFeature = nextChildNode.getModelFacet().getChildMetaFeature();
+	List genChildNodes; 
+	if (!childFeature2NodesMap.containsKey(genFeature)) {
+		genChildNodes = new ArrayList();
+		childFeature2NodesMap.put(genFeature, genChildNodes);
+	} else {
+		genChildNodes = (List) childFeature2NodesMap.get(genFeature);
+	}
+
+	if (nextChildNode.getDomainMetaClass() == null) {
+		genChildNodes.clear();
+		genChildNodes.add(nextChildNode);
+		continue;
+	}
+	if (genChildNodes.size() == 1 && ((GenChildNode) genChildNodes.get(0)).getDomainMetaClass() == null) {
+		continue;
+	}
+	genChildNodes.add(nextChildNode);
+}
+		
+// For each childMetaFeature:
+for (Iterator it = childFeature2NodesMap.entrySet().iterator(); it.hasNext();) {
+	Map.Entry nextEntry = (Map.Entry) it.next();
+	GenFeature nextFeature = (GenFeature) nextEntry.getKey();
+	List childNodes = (List) nextEntry.getValue();
+	if (childNodes.size() == 1 && ((GenChildNode) childNodes.get(0)).getDomainMetaClass() == null) {
+// GenChildNode without specified domainMetaClass found:
+		if (nextFeature.isListType()) {
+%>
+			result.addAll(<%=getFeatureValueGetter("modelElement", nextFeature, false, importManager)%>);
+<%
+		} else {
+%>
+			<%=importManager.getImportedName(nextFeature.getTypeGenClass().getQualifiedInterfaceName())%> featureValue = <%=getFeatureValueGetter("modelElement", nextFeature, false, importManager)%>;
+			if (featureValue != null) {
+				result.add(featureValue);
+			}
+<%
+a21 3
+// Continue with the next entry in the Map
+		continue;
+	}
+a22 37
+// GenChildNodes with specified domainMetaClass found:			
+	if (nextFeature.isListType()) {
+%>
+			<%=importManager.getImportedName("java.util.Collection")%> featureValues = <%=getFeatureValueGetter("modelElement", nextFeature, false, importManager)%>;
+			for (<%=importManager.getImportedName("java.util.Iterator")%> it = featureValues.iterator(); it.hasNext();) {
+				<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> nextValue = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) it.next();
+<%
+	} else {
+%>
+			<%=importManager.getImportedName(nextFeature.getTypeGenClass().getQualifiedInterfaceName())%> nextValue = <%=getFeatureValueGetter("modelElement", nextFeature, false, importManager)%>;
+<%
+	}
+%>
+			if (nextValue != null) {
+				<%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> nextEClass = nextValue.eClass();
+<%			
+	for (Iterator childNodesIterator = childNodes.iterator(); childNodesIterator.hasNext();) {
+		GenChildNode nextChildNode = (GenChildNode) childNodesIterator.next();
+		GenClass domainMetaclass = nextChildNode.getDomainMetaClass();
+%>
+				if (<%=importManager.getImportedName(domainMetaclass.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=domainMetaclass.getClassifierAccessorName()%>().equals(nextEClass)) {
+					result.add(nextValue);
+				} <%=childNodesIterator.hasNext() ? "else" : ""%>
+<%
+	}
+	if (nextFeature.isListType()) {
+%>
+			}
+<%
+	}
+%>
+			}
+<%
+}
+%>
+			return result;
+		}
+@
+
+
+1.2
+log
+@#116448
+Correcting CanonicalEditPolicy + SemanticEditPolicy to support references with multiplicities "1","n".
+@
+text
+@d57 1
+a57 1
+			result.addAll(modelElement.<%=nextFeature.getGetAccessor()%>());
+d61 1
+a61 1
+			Object featureValue = modelElement.<%=nextFeature.getGetAccessor()%>();
+d74 1
+a74 1
+			<%=importManager.getImportedName("java.util.Collection")%> featureValues = modelElement.<%=nextFeature.getGetAccessor()%>();
+d80 1
+a80 1
+			<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> nextValue = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) modelElement.<%=nextFeature.getGetAccessor()%>();
+@
+
+
+1.1
+log
+@#115861
+ChildNode could be created not only in the compartment, but directly in it's parent.
+@
+text
+@d17 8
+d48 1
+d54 2
+d57 1
+a57 1
+			result.<%=nextFeature.isListType() ? "addAll" : "add"%>(((<%=modelElementInterfaceName%>) modelElement).<%=nextFeature.getGetAccessor()%>());
+d59 9
+d70 2
+a71 1
+			
+d74 1
+a74 1
+			<%=importManager.getImportedName("java.util.Collection")%> featureValues = ((<%=modelElementInterfaceName%>) modelElement).<%=nextFeature.getGetAccessor()%>();
+d80 1
+a80 1
+			<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> nextValue = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) ((<%=modelElementInterfaceName%>) modelElement).<%=nextFeature.getGetAccessor()%>();
+d84 2
+a85 1
+			<%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> nextEClass = nextValue.eClass();
+d91 3
+a93 3
+			if (<%=importManager.getImportedName(domainMetaclass.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=domainMetaclass.getClassifierAccessorName()%>().equals(nextEClass)) {
+				result.add(nextValue);
+			} <%=childNodesIterator.hasNext() ? "else" : ""%>
+d101 3
+@
+

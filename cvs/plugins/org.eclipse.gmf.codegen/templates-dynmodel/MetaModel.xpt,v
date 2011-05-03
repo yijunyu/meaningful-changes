@@ -1,0 +1,327 @@
+head	1.8;
+access;
+symbols
+	v20081022-1925:1.8
+	v20081015-1925:1.8
+	v20081008-1925:1.8
+	v20081001-1925:1.8
+	v20080930-1130:1.8
+	v20080926-1245:1.8
+	v20080924-1925:1.8
+	v20080917-1925:1.8
+	v20080911-1728:1.8
+	v20080910-1520:1.8
+	v20080903-1520:1.8
+	v20080827-1520:1.8
+	v20080813-1520:1.8
+	v20080806-1520:1.8
+	v20080722-1827:1.8
+	v20080718-1731:1.8
+	v20080716-1600:1.8
+	v20080716-1642:1.8
+	R2_1_maintenance:1.8.0.2
+	Root_R2_1_maintenance:1.8
+	R2_1_0:1.8
+	v20080610-1132:1.8
+	v20080603-1553:1.7
+	v20080528-1052:1.7
+	v20080521:1.7
+	v20080516-1543:1.7
+	v20080516-1143:1.7
+	v20080512-1200:1.7
+	v20080508-2000:1.7
+	v20080507-1326:1.7
+	v20080503-1740:1.6
+	v20080501-1739:1.6
+	v20080425-1959:1.6
+	v20080417-1610:1.6
+	v20080411-0411:1.5
+	v20080404-1111:1.5
+	v20080322-0000:1.5;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.8
+date	2008.06.05.11.42.19;	author atikhomirov;	state Exp;
+branches;
+next	1.7;
+commitid	242b4847d11a4567;
+
+1.7
+date	2008.05.07.13.56.02;	author atikhomirov;	state Exp;
+branches;
+next	1.6;
+commitid	39124821b4de4567;
+
+1.6
+date	2008.04.14.08.38.02;	author atikhomirov;	state Exp;
+branches;
+next	1.5;
+commitid	1b0e480317df4567;
+
+1.5
+date	2008.02.29.21.19.52;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+commitid	45a447c876f24567;
+
+1.4
+date	2008.02.28.19.04.38;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	cd347c705c44567;
+
+1.3
+date	2008.02.28.16.37.15;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	2cc347c6e33a4567;
+
+1.2
+date	2008.02.28.14.21.41;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	47ed47c6c3744567;
+
+1.1
+date	2008.02.28.13.21.26;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	1f7447c6b5554567;
+
+
+desc
+@@
+
+
+1.8
+log
+@[150177] Use dynamic EMF model instead of generated code - tests.
+@
+text
+@/*
+ * Copyright (c) 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+
+«EXTENSION Facility»
+«EXTENSION xpt::GenModelUtils»
+
+// XXX is isExternalInterface use valid here, won't all objects be just EObject?
+
+«DEFINE IsInstance(String accessor) FOR GenClass-»
+«getDMA().getQualifiedClassName()».get«getNameToken(genPackage)»().isInstance(«accessor», "«ecoreClass.name»")«ENDDEFINE»
+
+«DEFINE NotInstance(String accessor) FOR GenClass»!«EXPAND IsInstance(accessor)»«ENDDEFINE»
+
+«DEFINE IsContainerInstance(String object, GenClass metaClass) FOR GenClass-»
+«getDMA().getQualifiedClassName()».get«getNameToken(genPackage)»().isInstance(«IF isExternalInterface()»((org.eclipse.emf.ecore.EObject) «object»)«ELSE»«object»«ENDIF».eContainer(), "«ecoreClass.name»")«ENDDEFINE»
+
+«DEFINE getFeatureValue(String containerVar, genmodel::GenClass containerClass) FOR genmodel::GenFeature-»
+((«EXPAND featureTargetType») «IF isExternalInterface(containerClass)-»
+((org.eclipse.emf.ecore.EObject) «containerVar»)«ELSE-»
+«containerVar»«ENDIF-»
+.eGet(«EXPAND MetaFeature»))«ENDDEFINE»
+
+«DEFINE featureTargetType FOR GenFeature-»
+«EXPAND _featureTargetType(this) FOR ecoreFeature-»
+«ENDDEFINE»
+
+«DEFINE _featureTargetType(GenFeature gf) FOR EStructuralFeature»NO-OP«ENDDEFINE»
+«DEFINE _featureTargetType(GenFeature gf) FOR EReference-»
+«IF isListType(gf)»java.util.List«ELSE»org.eclipse.emf.ecore.EObject«ENDIF-»
+«ENDDEFINE»
+«DEFINE _featureTargetType(GenFeature gf) FOR EAttribute-»
+«IF isListType(gf)»java.util.List«ELSE»«getObjectCompatibleClassName(eAttributeType)»«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE getFeatureValue(String containerVar, genmodel::GenClass container, boolean needsCastToResultType) FOR genmodel::GenFeature-»
+// ??? FIXME
+«ENDDEFINE»
+
+«DEFINE setFeatureValue(String containerVar, genmodel::GenClass containerClass, String valueVar) FOR genmodel::GenFeature-»
+«IF isExternalInterface(containerClass)-»
+((org.eclipse.emf.ecore.EObject) «containerVar»)«ELSE-»
+«containerVar»«ENDIF-»
+.eSet(«EXPAND MetaFeature», «valueVar»)«ENDDEFINE»
+
+«DEFINE setFeatureValue(String containerVar, genmodel::GenClass containerClass, String valueVar, boolean isPlainObjectValue) FOR genmodel::GenFeature-»
+«EXPAND setFeatureValue(containerVar, containerClass, valueVar)»«ENDDEFINE»
+
+«DEFINE MetaClass FOR genmodel::GenDataType»«getDMA().getQualifiedClassName()».get«getNameToken(genPackage)»().getEDataType("«ecoreDataType.name»")«ENDDEFINE»
+«DEFINE MetaClass FOR genmodel::GenEnum»«getDMA().getQualifiedClassName()».get«getNameToken(genPackage)»().getEEnum("«ecoreEnum.name»")«ENDDEFINE»
+«DEFINE MetaClass FOR genmodel::GenClass»«getDMA().getQualifiedClassName()».get«getNameToken(genPackage)»().getEClass("«ecoreClass.name»")«ENDDEFINE»
+
+«DEFINE MetaFeature FOR genmodel::GenFeature»«EXPAND _metaFeature(ecoreFeature)»«ENDDEFINE»
+
+«DEFINE _metaFeature(EStructuralFeature f) FOR GenFeature»no-op«ENDDEFINE»
+«DEFINE _metaFeature(EReference eRef) FOR GenFeature»«getDMA().getQualifiedClassName()».get«getNameToken(genClass.genPackage)»().getEReference("«genClass.ecoreClass.name»", "«ecoreFeature.name»")«ENDDEFINE»
+«DEFINE _metaFeature(EAttribute eAttr) FOR GenFeature»«getDMA().getQualifiedClassName()».get«getNameToken(genClass.genPackage)»().getEAttribute("«genClass.ecoreClass.name»", "«ecoreFeature.name»")«ENDDEFINE»
+
+«DEFINE NewInstance FOR genmodel::GenClass-»
+«getDMA().getQualifiedClassName()».get«getNameToken(genPackage)»().newInstance("«ecoreClass.name»")«ENDDEFINE»
+
+«DEFINE NewInstance(String varName) FOR genmodel::GenClass-»
+org.eclipse.emf.ecore.EObject «varName» = «EXPAND NewInstance»;«ENDDEFINE»
+
+«DEFINE DowncastToEObject(String value) FOR genmodel::GenClass»«IF isExternalInterface()»(org.eclipse.emf.ecore.EObject) «ENDIF»«value»«ENDDEFINE»
+
+«DEFINE DeclareAndAssign(String assignee, String value) FOR GenClass-»
+org.eclipse.emf.ecore.EObject «assignee» = «value»;«ENDDEFINE»
+
+«DEFINE DeclareAndAssign(String assignee, String value, boolean isPlainObjectValue) FOR GenClass-»
+org.eclipse.emf.ecore.EObject «assignee» = «IF isPlainObjectValue»(org.eclipse.emf.ecore.EObject)«ENDIF»«value»;«ENDDEFINE»
+
+«DEFINE DeclareAndAssign(String assignee, String value, boolean isPlainObjectValue) FOR GenClassifier»NO-OP«ENDDEFINE»
+
+«DEFINE DeclareAndAssign(String assignee, String value, boolean isPlainObjectValue) FOR GenDataType-»
+«EXPAND QualifiedClassName» «assignee» = («EXPAND QualifiedClassName») «value»;«ENDDEFINE»
+
+
+«DEFINE DeclareAndAssignContainer(String assignee, String object, GenClass metaClass) FOR GenClass-»
+org.eclipse.emf.ecore.EObject «assignee» = «IF isExternalInterface(metaClass)»((org.eclipse.emf.ecore.EObject) «object»)«ELSE»«object»«ENDIF».eContainer();«ENDDEFINE»
+
+// FIXME - feature value is not necessarily of EObject type
+«DEFINE DeclareAndAssign(String assignee, String src, GenClass srcMetaClass, GenFeature srcFeature) FOR GenClass-»
+org.eclipse.emf.ecore.EObject «assignee» = «EXPAND getFeatureValue(src, srcMetaClass) FOR srcFeature»;«ENDDEFINE»
+
+«DEFINE DeclareAndAssign2(String assignee, String src, GenClass srcMetaClass, GenFeature srcFeature, String srcExt, boolean needCast) FOR GenClass-»
+org.eclipse.emf.ecore.EObject «assignee» = «EXPAND getFeatureValue(src, srcMetaClass) FOR srcFeature».«srcExt»;«ENDDEFINE»
+
+«DEFINE CastEObject(String eObjectValue) FOR GenClass»«eObjectValue»«ENDDEFINE»
+
+«DEFINE QualifiedClassName FOR GenClassifier»NO-OP«ENDDEFINE»
+«DEFINE QualifiedClassName FOR GenClass»org.eclipse.emf.ecore.EObject«ENDDEFINE»
+«DEFINE QualifiedClassName FOR GenEnum»org.eclipse.emf.common.util.Enumerator«ENDDEFINE»
+«DEFINE QualifiedClassName FOR GenDataType»«getObjectCompatibleClassName(ecoreDataType)»«ENDDEFINE»
+
+«DEFINE PopulateItemProviderFactories(String factoryListVar) FOR GenEditorGenerator-»
+«REM»
+	NO-OP since ReflectiveItemProviderAdapterFactory should
+	get added anyway.
+«ENDREM»«ENDDEFINE»
+@
+
+
+1.7
+log
+@[228913] updated ValueExpression use in GMFGen to better accomodate codegen needs (items 1,2,3)
+@
+text
+@d23 1
+a23 1
+MetaModelFacility.get«getNameToken(genPackage)»().isInstance(«accessor», "«ecoreClass.name»")«ENDDEFINE»
+d28 1
+a28 1
+MetaModelFacility.get«getNameToken(genPackage)»().isInstance(«IF isExternalInterface()»((org.eclipse.emf.ecore.EObject) «object»)«ELSE»«object»«ENDIF».eContainer(), "«ecoreClass.name»")«ENDDEFINE»
+d61 3
+a63 3
+«DEFINE MetaClass FOR genmodel::GenDataType»MetaModelFacility.get«getNameToken(genPackage)»().getEDataType("«ecoreDataType.name»")«ENDDEFINE»
+«DEFINE MetaClass FOR genmodel::GenEnum»MetaModelFacility.get«getNameToken(genPackage)»().getEEnum("«ecoreEnum.name»")«ENDDEFINE»
+«DEFINE MetaClass FOR genmodel::GenClass»MetaModelFacility.get«getNameToken(genPackage)»().getEClass("«ecoreClass.name»")«ENDDEFINE»
+d68 2
+a69 2
+«DEFINE _metaFeature(EReference eRef) FOR GenFeature»MetaModelFacility.get«getNameToken(genClass.genPackage)»().getEReference("«genClass.ecoreClass.name»", "«ecoreFeature.name»")«ENDDEFINE»
+«DEFINE _metaFeature(EAttribute eAttr) FOR GenFeature»MetaModelFacility.get«getNameToken(genClass.genPackage)»().getEAttribute("«genClass.ecoreClass.name»", "«ecoreFeature.name»")«ENDDEFINE»
+d72 1
+a72 1
+MetaModelFacility.get«getNameToken(genPackage)»().newInstance("«ecoreClass.name»")«ENDDEFINE»
+@
+
+
+1.6
+log
+@[226149] Refactor Validation/Constraints: explicit context groupings instead of ID matching, unused IClientSelectors implementations are no longer generated, less custom code in the model, odd approach with map (semanticCtxIdMap) replaced with in-place VisualID check.
+@
+text
+@d13 1
+a13 1
+«IMPORT "http://www.eclipse.org/gmf/2006/GenModel"»
+@
+
+
+1.5
+log
+@[150177] phase IV, fix last use of qualified class names in ElementInitializers (via GMFGen genmodel java methods). Cleaned genmodel of methods no longer in use, few methods moved to ElementInitializer.ext (pending removal/refactoring)
+@
+text
+@d49 1
+d58 3
+d85 5
+a89 2
+«DEFINE DeclareAndAssign(String assignee, String value, boolean isPlainObjectValue) FOR GenClassifier-»
+«ENDDEFINE»
+@
+
+
+1.4
+log
+@[150177] phase II, access to metamodel through generated facility - deal with occasional plain Objects
+@
+text
+@d31 1
+a31 1
+((«EXPAND _featureTargetType(this) FOR ecoreFeature») «IF isExternalInterface(containerClass)-»
+d36 4
+d45 1
+a45 1
+«IF isListType(gf)»java.util.List«ELSE»«eAttributeType.instanceClassName»«ENDIF-»
+d81 3
+d96 1
+d98 2
+@
+
+
+1.3
+log
+@refactor false == isInstance to NotInstance
+@
+text
+@d74 3
+@
+
+
+1.2
+log
+@[150177] phase II, access to metamodel through generated facility - specific metaFeature types, mandatory casts for Object returned from eGet
+@
+text
+@d25 2
+@
+
+
+1.1
+log
+@[150177] phase II, access to metamodel through generated facility
+@
+text
+@d23 1
+a23 1
+MetaModelFacility.get«getNameToken(genPackage)»().isInstance(«accessor»)«ENDDEFINE»
+d26 1
+a26 1
+MetaModelFacility.get«getNameToken(genPackage)»().isInstance(«IF isExternalInterface()»((org.eclipse.emf.ecore.EObject) «object»)«ELSE»«object»«ENDIF».eContainer())«ENDDEFINE»
+d29 1
+a29 1
+«IF isExternalInterface(containerClass)-»
+d32 9
+a40 1
+.eGet(«EXPAND MetaFeature»)«ENDDEFINE»
+d55 5
+a59 1
+«DEFINE MetaFeature FOR genmodel::GenFeature»MetaModelFacility.get«getNameToken(genClass.genPackage)»().getEFeature("«genClass.ecoreClass.name»", "«ecoreFeature.name»")«ENDDEFINE»
+@
+

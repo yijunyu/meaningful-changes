@@ -1,0 +1,234 @@
+head	1.2;
+access;
+symbols
+	v20081022-1925:1.2
+	v20081015-1925:1.2
+	v20081008-1925:1.2
+	v20081001-1925:1.2
+	v20080924-1925:1.2
+	v20080917-1925:1.2
+	v20080911-1728:1.2
+	v20080910-1520:1.2
+	v20080903-1520:1.2
+	v20080827-1520:1.2
+	v20080813-1520:1.2
+	v20080806-1520:1.2
+	v20070427-0600:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2007.05.03.20.42.14;	author ashatalin;	state dead;
+branches;
+next	1.1;
+commitid	7f0b463a49254567;
+
+1.1
+date	2007.04.24.18.22.42;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	1456462e4af04567;
+
+
+desc
+@@
+
+
+1.2
+log
+@[181167] - Separate sycnhronization logic from CanonicalEditPolicy / DiagramContentsInitializer
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2005/GenModel/2.0"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::diagram::editpolicies::Utils»
+«EXTENSION xpt::GenModelUtils»
+
+«REM»
+	Processing phantom children for GenNodes and GenDiagram.
+	Skipping GenCompartments
+«ENDREM»
+«DEFINE canonicalRefresh FOR gmfgen::GenChildContainer»«ENDDEFINE»
+
+«DEFINE canonicalRefresh FOR gmfgen::GenNode-»
+	«IF !getConnectedPhantomNodes(modelFacet, getDiagram()).isEmpty()-»
+		«EXPAND refreshSemantic-»
+	
+		«EXPAND refreshPhantoms-»
+	
+		«EXPAND createPhantomNodes-»
+	
+		«EXPAND getDiagramEditPart-»
+	
+		«EXPAND getDiagram-»
+
+	«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE canonicalRefresh FOR gmfgen::GenDiagram-»
+	«IF !getPhantomNodes(this).isEmpty()-»
+		«EXPAND refreshPhantoms-»
+		
+		«EXPAND createPhantomNodes-»
+	
+		«EXPAND getDiagramEditPart-»
+
+	«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE refreshPhantoms FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»
+private java.util.Collection refreshPhantoms() {
+	java.util.Collection phantomNodes = new java.util.LinkedList();
+	org.eclipse.gmf.runtime.notation.Diagram diagram = getDiagram();
+	«domainDiagramElement.getQualifiedInterfaceName()» diagramModelObject = («domainDiagramElement.getQualifiedInterfaceName()») diagram.getElement();
+	«EXPAND collectPotentialPhantoms-»
+	«EXPAND filterOutExistingPrantoms-»
+	return createPhantomNodes(phantomNodes);
+}
+«ENDDEFINE»
+
+«DEFINE collectPotentialPhantoms FOR gmfgen::GenDiagram-»
+org.eclipse.emf.ecore.resource.Resource resource = diagramModelObject.eResource();
+for (java.util.Iterator it = resource.getContents().iterator(); it.hasNext();) {
+	org.eclipse.emf.ecore.EObject nextResourceObject = (org.eclipse.emf.ecore.EObject) it.next();
+	if (nextResourceObject == diagramModelObject) {
+		continue;
+	}
+	switch («getVisualIDRegistryQualifiedClassName()».getNodeVisualID(diagram, nextResourceObject)) {
+	«EXPAND xpt::Common::caseVisualID FOREACH getPhantomNodes(this)-»
+		phantomNodes.add(nextResourceObject);
+	}
+}
+«ENDDEFINE»
+
+«DEFINE refreshSemantic FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+protected void refreshSemantic() {
+	java.util.List createdViews = new java.util.LinkedList();
+	createdViews.addAll(refreshSemanticChildren());
+	createdViews.addAll(refreshPhantoms());
+	makeViewsImmutable(createdViews);
+}
+«ENDDEFINE»
+
+«DEFINE refreshPhantoms FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+private java.util.Collection refreshPhantoms() {
+	java.util.Collection phantomNodes = new java.util.LinkedList();
+	«modelFacet.metaClass.getQualifiedInterfaceName()» container = («modelFacet.metaClass.getQualifiedInterfaceName()») ((org.eclipse.gmf.runtime.notation.View) getHost().getModel()).getElement();
+	org.eclipse.gmf.runtime.notation.Diagram diagram = getDiagram();
+	«EXPAND collectPotentialPhantoms(modelFacet.metaClass) FOREACH getOutgoingPhantomLinks(modelFacet, getDiagram())-»
+	«EXPAND filterOutInvalidPrantoms-»
+	«EXPAND filterOutExistingPrantoms-»
+	return createPhantomNodes(phantomNodes);
+}
+«ENDDEFINE»
+
+«REM»Applicable for GenLinks with FeatureLinkModelFacet only«ENDREM»
+«DEFINE collectPotentialPhantoms(genmodel::GenClass containerGenClass) FOR gmfgen::GenLink-»
+	«LET ((gmfgen::FeatureLinkModelFacet) modelFacet).metaFeature AS genFeature-»
+		«IF isListType(genFeature)-»
+phantomNodes.addAll(«EXPAND xpt::Common::getFeatureValue("container", containerGenClass) FOR genFeature»);
+		«ELSE-»
+phantomNodes.add(«EXPAND xpt::Common::getFeatureValue("container", containerGenClass) FOR genFeature»);
+		«ENDIF-»
+	«ENDLET-»
+«ENDDEFINE»
+
+«DEFINE filterOutInvalidPrantoms FOR gmfgen::GenNode-»
+for (java.util.Iterator it = phantomNodes.iterator(); it.hasNext();) {
+	switch («getDiagram().getVisualIDRegistryQualifiedClassName()».getNodeVisualID(diagram, (org.eclipse.emf.ecore.EObject) it.next())) {
+	«EXPAND xpt::Common::caseVisualID FOREACH getConnectedPhantomNodes(modelFacet, getDiagram())-»
+		break;
+	default:
+		it.remove();
+	}
+}
+«ENDDEFINE»
+
+«DEFINE filterOutExistingPrantoms FOR gmfgen::GenContainerBase-»
+for (java.util.Iterator diagramNodes = diagram.getChildren().iterator(); diagramNodes.hasNext();) {
+	org.eclipse.gmf.runtime.notation.View nextView = (org.eclipse.gmf.runtime.notation.View) diagramNodes.next();
+	org.eclipse.emf.ecore.EObject nextViewElement = nextView.getElement();
+	if (phantomNodes.contains(nextViewElement)) {
+		phantomNodes.remove(nextViewElement);
+	}	
+}
+«ENDDEFINE»
+
+«DEFINE createPhantomNodes FOR gmfgen::GenContainerBase-»
+	«EXPAND xpt::Common::generatedMemberComment»
+private java.util.Collection createPhantomNodes(java.util.Collection nodes) {
+	if (nodes.isEmpty()) {
+		return java.util.Collections.EMPTY_LIST;
+	}
+	java.util.List descriptors = new java.util.ArrayList();
+	for (java.util.Iterator elements = nodes.iterator(); elements.hasNext();) {
+		org.eclipse.emf.ecore.EObject element = (org.eclipse.emf.ecore.EObject)elements.next();
+		org.eclipse.gmf.runtime.diagram.ui.requests.CreateViewRequest.ViewDescriptor descriptor = getViewDescriptor(element);
+		descriptors.add(descriptor);
+	}
+	org.eclipse.gmf.runtime.notation.Diagram diagram = getDiagram();
+	org.eclipse.gef.EditPart diagramEditPart = getDiagramEditPart();
+	
+	org.eclipse.gmf.runtime.diagram.ui.requests.CreateViewRequest request = getCreateViewRequest(descriptors);
+	org.eclipse.gef.commands.Command cmd = diagramEditPart.getCommand(request);
+	if (cmd == null) {
+		org.eclipse.gmf.runtime.common.core.command.CompositeCommand cc = new org.eclipse.gmf.runtime.common.core.command.CompositeCommand(org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages.AddCommand_Label);
+		for (java.util.Iterator descriptorsIterator = descriptors.iterator(); descriptorsIterator.hasNext();) {
+			org.eclipse.gmf.runtime.diagram.ui.requests.CreateViewRequest.ViewDescriptor descriptor = (org.eclipse.gmf.runtime.diagram.ui.requests.CreateViewRequest.ViewDescriptor) descriptorsIterator.next();
+			org.eclipse.gmf.runtime.common.core.command.ICommand createCommand = new org.eclipse.gmf.runtime.diagram.ui.commands.CreateCommand(((org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart) getHost()).getEditingDomain(), descriptor, diagram);
+			cc.compose(createCommand);
+		}
+		cmd = new org.eclipse.gmf.runtime.diagram.ui.commands.ICommandProxy(cc);
+	}	
+	
+	java.util.List adapters = java.util.Collections.EMPTY_LIST;
+	if (cmd != null && cmd.canExecute()) {
+		org.eclipse.gmf.runtime.diagram.ui.commands.SetViewMutabilityCommand.makeMutable(new org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter(((org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart) diagramEditPart).getNotationView())).execute();
+		executeCommand(cmd);
+		adapters = (java.util.List) request.getNewObject();
+	}
+	diagramEditPart.refresh();
+	return adapters;
+}
+«ENDDEFINE»
+
+«DEFINE getDiagramEditPart FOR gmfgen::GenContainerBase-»
+	«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.gef.EditPart getDiagramEditPart() {
+	return (org.eclipse.gef.EditPart) getHost().getViewer().getEditPartRegistry().get(getDiagram());
+}
+«ENDDEFINE»
+
+«DEFINE getDiagram FOR gmfgen::GenContainerBase-»
+	«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.gmf.runtime.notation.Diagram getDiagram() {
+	return ((org.eclipse.gmf.runtime.notation.View) getHost().getModel()).getDiagram();
+}
+«ENDDEFINE»@
+
+
+1.1
+log
+@DiagramCanonicalEditpolicy template is in XPAND now.
+[182556] - getSemanticChildrenList.jetinc generates empty switch statement causing generation to fail
+@
+text
+@@
+

@@ -1,0 +1,136 @@
+head	1.2;
+access;
+symbols
+	v20080910-1520:1.2
+	v20080501-1739:1.1
+	v20080425-1959:1.1
+	v20080322-0000:1.1
+	v20071108-0000:1.1
+	v20071003-0000:1.1
+	v20070921-0000:1.1
+	v20070915-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2008.05.05.11.25.40;	author atikhomirov;	state dead;
+branches;
+next	1.1;
+commitid	3023481eeeb34567;
+
+1.1
+date	2007.06.15.09.53.04;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	2a0c4672617d4567;
+
+
+desc
+@@
+
+
+1.2
+log
+@[226725] Refactor domain element initialization not to be duplicated in Lite RT
+@
+text
+@/*
+ * Copyright (c) 2007 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+import "http://www.eclipse.org/emf/2002/Ecore";
+import "http://www.eclipse.org/gmf/2006/GenModel";
+
+cached Collection[gmfgen::GenCommonBase] getAllInitableElements(gmfgen::GenDiagram diagram) :
+	((Collection[gmfgen::GenCommonBase]) {}.addAll(diagram.links).addAll(diagram.getAllNodes())).select(e| e.getTypeModelFacet() != null)
+;
+
+cached Collection[gmfgen::GenCommonBase] elementsWithNullInitializer(gmfgen::GenDiagram diagram) :
+	diagram.getAllInitableElements().without(diagram.elementsWithInitializer())
+;
+
+cached Collection[gmfgen::GenCommonBase] elementsWithInitializer(gmfgen::GenDiagram diagram) :
+	diagram.getAllInitableElements().select(e| e.getTypeModelFacet().modelElementInitializer != null)
+;
+
+gmfgen::TypeModelFacet getTypeModelFacet(gmfgen::GenCommonBase gcb) :
+	null
+;
+
+gmfgen::TypeModelFacet getTypeModelFacet(gmfgen::GenNode node) :
+	node.modelFacet
+;
+
+gmfgen::TypeModelFacet getTypeModelFacet(gmfgen::GenLink link) :
+	{link.modelFacet}.typeSelect(gmfgen::TypeModelFacet).first()
+;
+
+List[gmfgen::GenFeatureValueSpec] getJavaInitializers(gmfgen::GenDiagram diagram) :
+	diagram.elementsWithInitializer().collect(e| e.getTypeModelFacet().modelElementInitializer.getJavaExpressionFeatureInitializers(diagram.editorGen.expressionProviders)).flatten()
+;
+
+List[gmfgen::GenFeatureValueSpec] getJavaExpressionFeatureInitializers(gmfgen::GenElementInitializer initializer, gmfgen::GenExpressionProviderContainer expressionProviders) :
+	{}
+;
+
+List[gmfgen::GenFeatureValueSpec] getJavaExpressionFeatureInitializers(gmfgen::GenFeatureSeqInitializer initializer, gmfgen::GenExpressionProviderContainer expressionProviders) :
+	expressionProviders == null ? {} :
+		initializer.initializers.collect(e| e.getJavaExpressionFeatureInitializers(expressionProviders)).flatten()
+;
+
+List[gmfgen::GenFeatureValueSpec] getJavaExpressionFeatureInitializers(gmfgen::GenFeatureInitializer featureInitializer, gmfgen::GenExpressionProviderContainer expressionProviders) :
+	{}
+;
+
+List[gmfgen::GenFeatureValueSpec] getJavaExpressionFeatureInitializers(gmfgen::GenFeatureValueSpec featureValueSpec, gmfgen::GenExpressionProviderContainer expressionProviders) :
+	(!expressionProviders.isCopy(featureValueSpec) && expressionProviders.getProvider(featureValueSpec).isJavaExpressionProvider()) ? {featureValueSpec} : {} 
+;
+
+List[gmfgen::GenFeatureValueSpec] getJavaExpressionFeatureInitializers(gmfgen::GenReferenceNewElementSpec newElementSpec, gmfgen::GenExpressionProviderContainer expressionProviders) :
+	newElementSpec.newElementInitializers.collect(e| e.getAllFeatureSeqInitializers().collect(i| i.getJavaExpressionFeatureInitializers(expressionProviders)).flatten()).flatten()
+;
+
+List[gmfgen::GenFeatureSeqInitializer] getAllFeatureSeqInitializers(gmfgen::GenFeatureSeqInitializer initializer) :
+	{initializer}.addAll(initializer.initializers.collect(e| e.getAllFeatureSeqInitializers())).flatten()
+;
+
+List[gmfgen::GenFeatureSeqInitializer] getAllFeatureSeqInitializers(gmfgen::GenFeatureInitializer gfi) :
+	{}
+;
+
+List[gmfgen::GenFeatureSeqInitializer] getAllFeatureSeqInitializers(gmfgen::GenReferenceNewElementSpec newElementSpec) :
+	newElementSpec.newElementInitializers.collect(e| e.getAllFeatureSeqInitializers()).flatten()
+;
+
+private boolean isJavaExpressionProvider(gmfgen::GenExpressionProviderBase gepb) :
+	false
+;
+
+private boolean isJavaExpressionProvider(gmfgen::GenJavaExpressionProvider gepb) :
+	true
+;
+@
+
+
+1.1
+log
+@[192168]: Convert /providers/DomainElementInitializer.javajet lite template to Xpand
+@
+text
+@@
+

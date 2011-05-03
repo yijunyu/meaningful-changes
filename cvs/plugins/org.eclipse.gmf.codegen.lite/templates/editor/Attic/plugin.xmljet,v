@@ -1,0 +1,530 @@
+head	1.12;
+access;
+symbols
+	v20080910-1520:1.12
+	v20070103-0300:1.11
+	M4_20:1.11
+	v20061222-1800:1.10
+	v20061214-0000:1.8
+	v20061120-1300:1.7
+	M3_20:1.7
+	v20061117-0800:1.7
+	v20061013-1330:1.5
+	v20061005-1700:1.3
+	M1_20:1.4
+	v20060904-1500:1.4
+	v20060824-1600:1.3
+	v20060713-1700:1.3
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3
+	v20060627-1200:1.3
+	v20060626-1420:1.3
+	v20060620-0400:1.3
+	v20060616-1400:1.3
+	v20060616-1200:1.3
+	v20060609-1400:1.3
+	v20060531-1730:1.2
+	v20060530-1930:1.2
+	v20060526-1200:1.2
+	v20060519-1300:1.2
+	v20060519-0800:1.2
+	v20060512-1000:1.2
+	I20060512-1000:1.2
+	I20060505-1400:1.2
+	I20060428-1300:1.2
+	I20060424-0500:1.2
+	I20060424-0300:1.1
+	M6_10:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.12
+date	2007.02.02.17.14.33;	author bblajer;	state dead;
+branches;
+next	1.11;
+commitid	78d445c371764567;
+
+1.11
+date	2006.12.25.12.00.12;	author bblajer;	state Exp;
+branches;
+next	1.10;
+commitid	430d458fbd4b4567;
+
+1.10
+date	2006.12.21.20.35.34;	author bblajer;	state Exp;
+branches;
+next	1.9;
+commitid	bee458af0104567;
+
+1.9
+date	2006.12.19.19.11.42;	author bblajer;	state Exp;
+branches;
+next	1.8;
+commitid	733e4588396c4567;
+
+1.8
+date	2006.11.23.18.57.15;	author bblajer;	state Exp;
+branches;
+next	1.7;
+commitid	66934565ef0a4567;
+
+1.7
+date	2006.11.15.15.23.13;	author atikhomirov;	state Exp;
+branches;
+next	1.6;
+commitid	378f455b30e04567;
+
+1.6
+date	2006.10.17.14.50.08;	author bblajer;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.09.21.10.12.03;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.08.22.17.08.48;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.06.09.10.15.28;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.04.20.18.27.23;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.04.13.21.20.16;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.12
+log
+@[172664]: Provide audits and metrics for Lite diagrams (including view-based and RCP) + validation decorators + validation markers (for non-RCP case);
+Several templates are rewritten with xpand;
+lite-specific TextEmitter is back (otherwise importManager is sometimes passed to xpand templates)
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.lite.editor" class="PluginXML"
+    imports="org.eclipse.gmf.codegen.gmfgen.* org.eclipse.emf.codegen.ecore.genmodel.* org.eclipse.emf.codegen.util.* java.util.*"%>
+<%
+final GenPlugin genPlugin = (GenPlugin) argument;
+final GenEditorGenerator editorGen = genPlugin.getEditorGen();
+final GenDiagram genDiagram = editorGen.getDiagram();
+final GenModel genModel = editorGen.getDomainGenModel();
+final GenApplication application = genDiagram.getEditorGen().getApplication();
+final boolean isRichClientPlatform = application != null;
+%>
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+<plugin>
+
+  <extension point="org.eclipse.team.core.fileTypes">
+    <?gmfgen generated="true"?>
+      <fileTypes
+         type="text"
+         extension="<%=editorGen.getDiagramFileExtension()%>">
+      </fileTypes>
+  </extension>
+
+<%
+if (editorGen.getEditor().isEclipseEditor()) {
+%>
+   <extension point="org.eclipse.ui.editors">
+     <?gmfgen generated="true"?>
+     <editor
+        id="<%=editorGen.getEditor().getID()%>"
+        name="<%=genModel.getModelName()%> Diagram Editor"
+        icon="<%=editorGen.getEditor().getIconPathX()%>"
+        extensions="<%=editorGen.getDiagramFileExtension()%>"
+        default="true"
+        class="<%=editorGen.getEditor().getQualifiedClassName()%>"
+        contributorClass="<%=editorGen.getEditor().getActionBarContributorQualifiedClassName()%>">
+     </editor>
+   </extension>
+<%
+} else {
+%>
+   <extension point="org.eclipse.ui.views">
+     <?gmfgen generated="true"?>
+      <view
+            allowMultiple="false"
+            category="<%=genDiagram.getCreationWizardCategoryID()%>"<%/*XXX: replace with gmfgen property*/%>
+            class="<%=editorGen.getEditor().getQualifiedClassName()%>"
+            icon="<%=editorGen.getEditor().getIconPathX()%>"
+            id="<%=editorGen.getEditor().getID()%>"
+            name="<%=genModel.getModelName()%> Diagram View"/>
+   </extension>
+<%
+}
+%>
+<%
+if (isRichClientPlatform) {
+	final boolean shouldGenerateApplication = true;	/*XXX: option in gmfgen*/
+	if (shouldGenerateApplication) {
+%>
+  <extension
+    point="org.eclipse.core.runtime.applications"
+    id="<%=application.getID()%>">
+    <?gmfgen generated="true"?>
+    <application>
+      <run
+        class="<%=application.getQualifiedClassName()%>">
+      </run>
+    </application>
+  </extension>
+
+   <extension
+    point="org.eclipse.ui.perspectives">
+     <?gmfgen generated="true"?>
+    <perspective
+      name="%_UI_Perspective_label"
+      class="<%=application.getPerspectiveQualifiedClassName()%>"
+      id="<%=application.getPerspectiveId()%>">
+    </perspective>
+  </extension>
+<%
+	}
+%>
+  <extension
+    point="org.eclipse.ui.commands">
+     <?gmfgen generated="true"?>
+    <command
+      name="%_UI_Menu_OpenURI_label"
+      description="%_UI_Menu_OpenURI_description"
+      categoryId="org.eclipse.ui.category.file"
+      id="<%=genPlugin.getID()%>.OpenURICommand" />  
+    <command
+      name="%_UI_Menu_Open_label"
+      description="%_UI_Menu_Open_description"
+      categoryId="org.eclipse.ui.category.file"
+      id="<%=genPlugin.getID()%>.OpenCommand" />  
+  </extension> 
+
+  <extension
+    point="org.eclipse.ui.bindings">
+     <?gmfgen generated="true"?>
+    <key
+      commandId="<%=genPlugin.getID()%>.OpenURICommand"
+      sequence="M1+U"
+      schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" />
+    <key
+      commandId="<%=genPlugin.getID()%>.OpenCommand"
+      sequence="M1+O"
+      schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" />
+  </extension>
+  <extension
+    point="org.eclipse.ui.actionSets">
+     <?gmfgen generated="true"?>
+    <actionSet
+      label="%_UI_<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>_ActionSet_label"
+      visible="true"
+      id="<%=genPlugin.getID()%>.ActionSet">
+<%
+	if (shouldGenerateApplication) {
+%>
+      <action
+        label="%_UI_Menu_About_label"
+        class="<%=application.getActionBarAdvisorQualifiedClassName()%>$AboutAction"
+        menubarPath="help/additions"
+        id="<%=genPlugin.getID()%>.AboutAction">
+      </action>
+<%
+	}
+%>
+      <action
+        label="%_UI_Menu_OpenURI_label"
+        definitionId="<%=genPlugin.getID()%>.OpenURICommand"
+        class="<%=application.getActionBarAdvisorQualifiedClassName()%>$OpenURIAction"
+        menubarPath="file/additions"
+        id="<%=genPlugin.getID()%>.OpenURIAction">
+      </action>
+      <action
+        label="%_UI_Menu_Open_label"
+        definitionId="<%=genPlugin.getID()%>.OpenCommand"
+        class="<%=application.getActionBarAdvisorQualifiedClassName()%>$OpenAction"
+        menubarPath="file/additions"
+        id="<%=application.getActionBarAdvisorQualifiedClassName()%>OpenDiagramAction">
+      </action>
+      <action
+        label="%_UI_<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>NewDiagramCommand"
+        class="<%=application.getActionBarAdvisorQualifiedClassName()%>$NewDiagramAction"
+        menubarPath="file/new/additions"
+        id="<%=genPlugin.getID()%>.NewDiagramAction">
+      </action>
+      <action
+        label="Initialize <%=editorGen.getDiagramFileExtension()%> diagram file"
+        class="<%=genDiagram.getInitDiagramFileActionQualifiedClassName()%>"
+        menubarPath="file/additions"
+        id="<%=genDiagram.getInitDiagramFileActionQualifiedClassName()%>ID">
+      </action>
+    </actionSet> 
+  </extension>
+<%
+} else {
+%>
+   <extension point="org.eclipse.ui.newWizards">
+     <?gmfgen generated="true"?>
+  	  <wizard
+  	     name="<%=genModel.getModelName()%> Diagram"
+  	     icon="<%=genDiagram.getCreationWizardIconPathX()%>"
+  	     category="<%=genDiagram.getCreationWizardCategoryID()%>"
+  	     class="<%=genDiagram.getCreationWizardQualifiedClassName()%>"
+  	     id="<%=genDiagram.getCreationWizardQualifiedClassName()%>ID">
+  	  	 <description>
+  	  		Creates <%=genModel.getModelName()%> diagram.
+  	  	 </description>  
+      </wizard>
+   </extension>
+   <extension point="org.eclipse.ui.popupMenus">
+     <?gmfgen generated="true"?>
+      <objectContribution
+            id="<%=genPlugin.getID()%>.ui.objectContribution.IFile1"
+            nameFilter="*.<%=editorGen.getDomainFileExtension()%>"
+            objectClass="org.eclipse.core.resources.IFile">
+         <action
+               label="Initialize <%=editorGen.getDiagramFileExtension()%> diagram file"
+               class="<%=genDiagram.getInitDiagramFileActionQualifiedClassName()%>"
+               menubarPath="additions"
+               enablesFor="1"
+               id="<%=genDiagram.getInitDiagramFileActionQualifiedClassName()%>ID">
+         </action>
+      </objectContribution>  
+<%
+	if (!editorGen.getEditor().isEclipseEditor()) {
+%>
+      <objectContribution
+            id="<%=genPlugin.getID()%>.ui.objectContribution.IFile2"
+            nameFilter="*.<%=editorGen.getDiagramFileExtension()%>"
+            objectClass="org.eclipse.core.resources.IFile">
+         <action
+               label="Open diagram in <%=genModel.getModelName()%> Diagram View"
+<%
+		/*XXX: property in gmfgen?*/
+		String className = "OpenDiagramIn" + genModel.getModelName() + "DiagramViewAction";
+		className = CodeGenUtil.validJavaIdentifier(className);
+%>
+               class="<%=editorGen.getEditor().getPackageName()%>.<%=className%>"
+               menubarPath="additions"
+               enablesFor="1"
+               id="<%=editorGen.getEditor().getPackageName()%>.<%=className%>ID">
+         </action>
+      </objectContribution>  
+<%
+	}
+%>
+   </extension>
+
+<%
+}
+%>
+<%if (editorGen.getNavigator() != null && !isRichClientPlatform) {%>
+<%@@ include file="../navigator/navigator.jetinc"%>
+<%}%>
+<%if (editorGen.getPropertySheet() != null) {%>
+<%@@ include file="../propsheet/sheet-extp.jetinc"%>
+<%}%>
+</plugin>
+@
+
+
+1.11
+log
+@[159567]: Use GenApplication element from gmfgen model to generate RCP code
+Use as much of the runtime templates as possible (changes are isolated as aspects)
+@
+text
+@@
+
+
+1.10
+log
+@Tabbed property sheet provided for the lite runtime (if GenPropertySheet is not null);
+IllegalStateException when closing editor fixed.
+@
+text
+@d8 2
+a9 1
+final boolean isRichClientPlatform = genDiagram.getEditorGen().getDomainGenModel().isRichClientPlatform();
+d61 1
+a61 1
+    id="<%=genModel.getModelName()%>DiagramApplication">
+d65 1
+a65 1
+        class="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>$Application">
+d75 2
+a76 2
+      class="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>$Perspective"
+      id="<%=genPlugin.getID()%>.Perspective">
+d89 1
+a89 1
+      id="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>OpenURICommand" />  
+d94 1
+a94 1
+      id="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>OpenCommand" />  
+d101 1
+a101 1
+      commandId="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>OpenURICommand"
+d105 1
+a105 1
+      commandId="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>OpenCommand"
+d115 1
+a115 1
+      id="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>ActionSet">
+d121 1
+a121 1
+        class="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>$AboutAction"
+d123 1
+a123 1
+        id="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>AboutAction">
+d130 2
+a131 2
+        definitionId="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>OpenURICommand"
+        class="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>$OpenURIAction"
+d133 1
+a133 1
+        id="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>OpenURIAction">
+d137 2
+a138 2
+        definitionId="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>OpenCommand"
+        class="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>$OpenDiagramAction"
+d140 1
+a140 1
+        id="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>OpenDiagramAction">
+d144 1
+a144 1
+        class="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>$NewDiagramAction"
+d146 1
+a146 1
+        id="<%=genDiagram.getDiagramEditorUtilQualifiedClassName()%>NewAction">
+@
+
+
+1.9
+log
+@Generate support for Navigator
+@
+text
+@d2 1
+a2 1
+    imports="org.eclipse.gmf.codegen.gmfgen.* org.eclipse.emf.codegen.ecore.genmodel.* org.eclipse.emf.codegen.util.*"%>
+d216 3
+@
+
+
+1.8
+log
+@[163214]: Lite runtime should support generation to a View
+[164843]: Make it possible to specify the editing domain with which the editor/viewer should operate
+@
+text
+@d213 3
+@
+
+
+1.7
+log
+@mark generated extensions
+@
+text
+@d2 1
+a2 1
+    imports="org.eclipse.gmf.codegen.gmfgen.* org.eclipse.emf.codegen.ecore.genmodel.*"%>
+d22 3
+d37 16
+a52 1
+
+d185 23
+@
+
+
+1.6
+log
+@Correct icons in wizards and palette: generate images, recognize relative paths, fix incorrect paths in wizard code;
+Make it possible to nest palette groups
+@
+text
+@a13 3
+<!-- gmf generator persistent region begin -->
+<!-- gmf generator persistent region end -->
+
+d15 1
+d23 1
+d43 1
+d53 1
+d65 1
+d80 1
+d92 1
+d141 1
+d154 1
+@
+
+
+1.5
+log
+@[157859] bblajer - Diagram initialization from pre-existing domain models
+@
+text
+@d28 1
+a28 1
+        icon="<%=editorGen.getEditor().getIconPath()%>"
+d139 1
+a139 1
+  	     icon="<%=genDiagram.getCreationWizardIconPath()%>"
+@
+
+
+1.4
+log
+@[154689] bblajer - support merging of generated non-java files
+@
+text
+@d125 6
+d148 14
+@
+
+
+1.3
+log
+@#143541 Add property to gmfgen to hold editing domain id
+#144205 Add property to gmfgen model to hold diagram creation wizard category id
+@
+text
+@d13 4
+@
+
+
+1.2
+log
+@[bblajer] #114200 Provide an option to generate RCP application - added RCP support for pure-GEF (lite) generator
+@
+text
+@d130 1
+a130 1
+  	     category="org.eclipse.ui.Examples"
+@
+
+
+1.1
+log
+@[bblajer] #136702 Code generation targeting pure-GEF runtime
+@
+text
+@d8 1
+d32 94
+d139 3
+@
+

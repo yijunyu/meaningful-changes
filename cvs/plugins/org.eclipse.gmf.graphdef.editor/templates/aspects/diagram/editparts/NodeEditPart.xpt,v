@@ -1,0 +1,1229 @@
+head	1.17;
+access;
+symbols
+	v20080722-1827:1.17
+	v20080718-1700:1.17
+	v20080718-1731:1.17
+	v20080716-1642:1.17
+	R2_1_maintenance:1.17.0.2
+	Root_R2_1_maintenance:1.17
+	R2_1_0:1.17
+	v20080610-1132:1.17
+	v20080603-1553:1.17
+	v20080528-1052:1.17
+	v20080521:1.9
+	v20080516-1143:1.8
+	v20080512-1200:1.5
+	v20080510-0100:1.4
+	v20080507-1326:1.4
+	v20080501-1739:1.2
+	v20080425-1959:1.2
+	v20080411-0411:1.2
+	v20080404-1111:1.2
+	v20080322-0000:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.17
+date	2008.05.28.12.42.32;	author ashatalin;	state Exp;
+branches;
+next	1.16;
+commitid	67a1483d53374567;
+
+1.16
+date	2008.05.28.11.08.28;	author ashatalin;	state Exp;
+branches;
+next	1.15;
+commitid	6cc8483d3d2b4567;
+
+1.15
+date	2008.05.27.16.33.09;	author ashatalin;	state Exp;
+branches;
+next	1.14;
+commitid	549e483c37c44567;
+
+1.14
+date	2008.05.27.16.16.52;	author ashatalin;	state Exp;
+branches;
+next	1.13;
+commitid	3565483c33f24567;
+
+1.13
+date	2008.05.27.12.28.09;	author ashatalin;	state Exp;
+branches;
+next	1.12;
+commitid	68fd483bfe544567;
+
+1.12
+date	2008.05.23.14.30.30;	author ashatalin;	state Exp;
+branches;
+next	1.11;
+commitid	1aec4836d5014567;
+
+1.11
+date	2008.05.23.12.52.26;	author ashatalin;	state Exp;
+branches;
+next	1.10;
+commitid	54964836be094567;
+
+1.10
+date	2008.05.22.12.18.01;	author ashatalin;	state Exp;
+branches;
+next	1.9;
+commitid	969483564774567;
+
+1.9
+date	2008.05.19.16.33.11;	author ashatalin;	state Exp;
+branches;
+next	1.8;
+commitid	77734831abc34567;
+
+1.8
+date	2008.05.14.17.23.29;	author ashatalin;	state Exp;
+branches;
+next	1.7;
+commitid	412b482b200e4567;
+
+1.7
+date	2008.05.14.11.35.48;	author ashatalin;	state Exp;
+branches;
+next	1.6;
+commitid	41e3482ace924567;
+
+1.6
+date	2008.05.14.11.16.59;	author ashatalin;	state Exp;
+branches;
+next	1.5;
+commitid	377e482aca274567;
+
+1.5
+date	2008.05.12.17.40.17;	author ashatalin;	state Exp;
+branches;
+next	1.4;
+commitid	a53482880fd4567;
+
+1.4
+date	2008.05.06.15.55.35;	author ashatalin;	state Exp;
+branches;
+next	1.3;
+commitid	702648207f744567;
+
+1.3
+date	2008.05.06.13.02.22;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+commitid	4985482056dc4567;
+
+1.2
+date	2008.03.07.11.35.53;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+commitid	5ab247d128944567;
+
+1.1
+date	2008.02.22.13.08.03;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	4c5647bec9294567;
+
+
+desc
+@@
+
+
+1.17
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Anna Karjakina (Borland) - initial API and implementation
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/gmf/2008/Context"»
+«IMPORT "http://www.eclipse.org/gmf/2008/GmfGraph/wysiwyg"»
+
+«EXTENSION aspects::impl::diagram::editparts::Utils»
+«EXTENSION xpt::GenModelUtils»
+
+«AROUND extendsList FOR gmfgen::GenNode»«IF hasSynchronizers(this)»extends «getDiagram().editPartsPackageName».«EXPAND superclassName»«ELSE»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+
+«DEFINE superclassName FOR gmfgen::GenNode»«IF isPolylinePoint(this)»AbstractPointEditPart«ELSE»AbstractFigureEditPart«ENDIF»«ENDDEFINE»
+
+«AROUND handleNotificationEvent FOR gmfgen::GenNode-»
+	«IF hasSynchronizers(this)-»
+		«EXPAND xpt::Common::generatedMemberComment»
+		protected void handleNotificationEvent(org.eclipse.emf.common.notify.Notification notification) {
+			Object feature = notification.getFeature();
+			«IF hasLayoutDataSynchronizers(this)»if (org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getSize_Width().equals(feature)
+				|| org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getSize_Height().equals(feature)
+				|| org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getLocation_X().equals(feature)
+				|| org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getLocation_Y().equals(feature)) {
+				return;
+			} else «ENDIF»if (org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getFillStyle_FillColor().equals(feature)) {
+				return;
+			} else if (org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getLineStyle_LineColor().equals(feature)) {
+				return;
+			}
+			super.handleNotificationEvent(notification);
+		}
+	«ENDIF-»
+	«targetDef.proceed()-»
+«ENDAROUND»
+
+«AROUND additions FOR gmfgen::GenNode-»
+	«IF hasSynchronizers(this)-»
+	
+		«EXPAND myDomainElementAdapters-»
+	
+		«EXPAND getGmfgraphElement-»
+	
+		«EXPAND removeSemanticListeners-»
+	
+		«EXPAND setFigure-»
+	
+		«EXPAND activate-»
+		«IF hasLayoutDataSynchronizers(this)-»
+		
+			«EXPAND refreshBounds-»
+		«ENDIF-»
+		«IF isPolyline(this)-»
+			«IF hasLayoutDataSynchronizers(this)-»
+		
+				«EXPAND refreshMainFigureBounds-»
+			«ENDIF-»
+		
+			«EXPAND DefaultSizeNodeFigureExt-»
+		«ENDIF-»
+	«ENDIF-»
+	«targetDef.proceed()»
+«ENDAROUND»
+
+«DEFINE myDomainElementAdapters FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private java.util.Collection<org.eclipse.emf.common.notify.Adapter> myDomainElementAdapters = new java.util.ArrayList<org.eclipse.emf.common.notify.Adapter>();
+«ENDDEFINE»
+
+«DEFINE activate FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public void activate() {
+		if (isActive()){
+			return;
+		}
+		final «EXPAND MetaModel::QualifiedClassName FOR metaclass()» modelElement = getGmfgraphElement();
+		if (modelElement == null) {
+			super.activate();
+			return;
+		}
+        «EXPAND addDomainElementAdapters FOREACH getSynchronizers(this)-»
+		modelElement.eAdapters().addAll(myDomainElementAdapters);
+		super.activate();
+	}
+«ENDDEFINE»
+
+«DEFINE getGmfgraphElement FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private «EXPAND MetaModel::QualifiedClassName FOR metaclass()» getGmfgraphElement() {
+		org.eclipse.gmf.runtime.notation.View view = getNotationView();
+		if (view == null) {
+			return null;
+		}
+		org.eclipse.emf.ecore.EObject element = view.getElement();
+		if («EXPAND MetaModel::IsInstance("element") FOR metaclass()») {
+			«EXPAND MetaModel::DeclareAndAssign("modelFigureElement", "element") FOR metaclass()»
+			return modelFigureElement;
+		}
+		return null;
+	}
+«ENDDEFINE»
+
+«DEFINE removeSemanticListeners FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected void removeSemanticListeners() {
+		«EXPAND MetaModel::QualifiedClassName FOR metaclass()» modelElement = getGmfgraphElement();
+		if (modelElement != null) {
+			modelElement.eAdapters().removeAll(myDomainElementAdapters);
+			myDomainElementAdapters.clear();
+		}
+		super.removeSemanticListeners();
+	}
+«ENDDEFINE»
+
+«DEFINE setFigure FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected void setFigure(org.eclipse.draw2d.IFigure figure) {
+		super.setFigure(figure);
+		«EXPAND processChanges-»
+	}
+«ENDDEFINE»
+
+«DEFINE processChanges FOR gmfgen::GenNode-»
+	«EXPAND MetaModel::QualifiedClassName FOR metaclass()» modelElement = getGmfgraphElement();
+	if (modelElement != null) {
+		«EXPAND processChanges FOREACH getSynchronizers(this)-»
+	}
+«ENDDEFINE»
+
+«DEFINE processChanges FOR wysiwyg::DomainPropertiesSynchronizer-»
+	«EXPAND processChanges(contexts) FOREACH actions-»
+«ENDDEFINE»
+
+«DEFINE processChanges(List[context::Context] contexts) FOR wysiwyg::AbstractAction-»
+	«ERROR "Should never be called"»
+«ENDDEFINE»
+
+«DEFINE processChanges(List[context::Context] contexts) FOR wysiwyg::MethodCallAction-»
+	«methodName»();
+«ENDDEFINE»
+
+«DEFINE processChanges(List[context::Context] contexts) FOR wysiwyg::FigurePropertySynchAction-»
+	getPrimaryShape().«EXPAND setterName»(«IF domainValueTransformerName != null»«domainValueTransformerName»(«ENDIF»«EXPAND getModelElementProperty FOREACH contexts SEPARATOR ", "»«IF domainValueTransformerName != null»)«ENDIF»);
+«ENDDEFINE»
+
+«DEFINE getModelElementProperty FOR context::Context-»
+	«ERROR "Should never be called"»
+«ENDDEFINE»
+
+«DEFINE getModelElementProperty FOR context::FeatureContext»modelElement.«EXPAND getterName FOR selector»()«ENDDEFINE»
+
+«DEFINE refreshBounds FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected void refreshBounds() {
+		«EXPAND MetaModel::QualifiedClassName FOR metaclass()» modelElement = getGmfgraphElement();
+		if (modelElement == null) {
+			return;
+		}
+		if (modelElement.getPreferredSize() != null) {
+			getFigure().setPreferredSize(getDraw2dDimension(modelElement.getPreferredSize()));
+		}
+		if (modelElement.getLocation() != null) {
+			getFigure().setLocation(getDraw2DPoint(modelElement.getLocation()));
+		}
+	}
+«ENDDEFINE»
+
+«DEFINE addDomainElementAdapters FOR wysiwyg::DomainPropertiesSynchronizer-»
+
+	org.eclipse.gmf.graphdef.editor.sheet.ChangeTracker «EXPAND changeTrackerVarName» = new org.eclipse.gmf.graphdef.editor.sheet.ChangeTracker() {
+		public void modelChanged(org.eclipse.emf.common.notify.Notification msg) {
+			«EXPAND processChanges-»
+		}
+	};
+	myDomainElementAdapters.add(«EXPAND attachContextListener(this) FOREACH contexts SEPARATOR "); \nmyDomainElementAdapters.add("»);
+«ENDDEFINE»
+
+«DEFINE changeTrackerVarName FOR wysiwyg::DomainPropertiesSynchronizer»«EXPAND changeTrackerVarName FOR (wysiwyg::AbstractAction) actions.first()»«ENDDEFINE»
+
+«DEFINE changeTrackerVarName FOR wysiwyg::AbstractAction»
+	«ERROR "Should never be called"»
+«ENDDEFINE»
+
+«DEFINE changeTrackerVarName FOR wysiwyg::MethodCallAction»«methodName»Tracker«ENDDEFINE»
+
+«DEFINE changeTrackerVarName FOR wysiwyg::FigurePropertySynchAction»«figureAttribute.toFirstLower()»Tracker«ENDDEFINE»
+
+«DEFINE attachContextListener(wysiwyg::DomainPropertiesSynchronizer synchronizer) FOR context::Context-»
+	«ERROR "Should never be called"»
+«ENDDEFINE»
+
+«DEFINE attachContextListener(wysiwyg::DomainPropertiesSynchronizer synchronizer) FOR context::FeatureContext-»
+	«IF children.size() == 0-»
+		new org.eclipse.gmf.graphdef.editor.sheet.FeatureTracker(«EXPAND changeTrackerVarName FOR synchronizer», «EXPAND accessor FOR selector»)
+	«ELSE-»
+		new org.eclipse.gmf.graphdef.editor.sheet.AttachAdapter(«EXPAND accessor FOR selector», «EXPAND changeTrackerVarName FOR synchronizer», «EXPAND attachContextListener(synchronizer) FOREACH children SEPARATOR ", "»)
+	«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE refreshMainFigureBounds FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public void refreshMainFigureBounds() {
+		DefaultSizeNodeFigureExt nodeFigure = (DefaultSizeNodeFigureExt) getFigure();
+		nodeFigure.fireFigureMoved();
+		nodeFigure.revalidate();
+	}
+«ENDDEFINE»
+
+«DEFINE DefaultSizeNodeFigureExt FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedClassComment»
+	class DefaultSizeNodeFigureExt extends org.eclipse.gmf.runtime.gef.ui.figures.DefaultSizeNodeFigure {
+	
+		«EXPAND xpt::Common::generatedMemberComment»
+		DefaultSizeNodeFigureExt(int width, int height) {
+			super(width, height);
+		}
+
+		«IF hasLayoutDataSynchronizers(this)-»
+			«EXPAND xpt::Common::generatedMemberComment»
+			public void setBounds(org.eclipse.draw2d.geometry.Rectangle rect) {
+				getPrimaryShape().setBounds(rect);
+			}
+			
+			«EXPAND xpt::Common::generatedMemberComment»
+			public org.eclipse.draw2d.geometry.Rectangle getBounds() {
+				org.eclipse.draw2d.geometry.Rectangle polylineBounds = getPrimaryShape().getBounds().getCopy();
+				polylineBounds.width += 8;
+				polylineBounds.height += 8;
+				return polylineBounds;
+			}
+
+			«EXPAND xpt::Common::generatedMemberComment»			
+			public void fireFigureMoved() {
+				super.fireFigureMoved();
+			}
+		«ELSE-»
+			«EXPAND xpt::Common::generatedMemberComment»
+			protected boolean useLocalCoordinates() {
+				return true;
+			}
+			
+			«EXPAND xpt::Common::generatedMemberComment»
+			protected void paintFigure(org.eclipse.draw2d.Graphics graphics) {
+				graphics.pushState();
+				graphics.setLineWidth(1);
+				graphics.setLineStyle(org.eclipse.swt.SWT.LINE_DOT);
+				org.eclipse.draw2d.geometry.Rectangle fb = getBounds();
+				graphics.drawRectangle(fb.x, fb.y, fb.width - 1, fb.height - 1);
+				graphics.popState();
+				super.paintFigure(graphics);
+			}
+		«ENDIF-»
+		
+	}
+«ENDDEFINE»
+
+«REM»Temporary solution. Use MetaModel.xpt from formtk here.«ENDREM»
+«DEFINE accessor FOR ecore::EStructuralFeature»org.eclipse.gmf.gmfgraph.GMFGraphPackage.eINSTANCE.get«eContainingClass.name.toFirstUpper()»_«name.toFirstUpper()»()«ENDDEFINE»
+
+«DEFINE setterName FOR wysiwyg::FigurePropertySynchAction»set«figureAttribute»«ENDDEFINE»
+
+«DEFINE getterName FOR ecore::EStructuralFeature»«IF eType.name == "EBoolean"»is«ELSE»get«ENDIF»«name.toFirstUpper()»«ENDDEFINE»@
+
+
+1.16
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@d205 1
+a205 1
+		new org.eclipse.gmf.graphdef.editor.sheet.MultipleTargetsFeatureTracker(«EXPAND changeTrackerVarName FOR synchronizer», «EXPAND accessor FOR selector»)
+@
+
+
+1.15
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@d238 3
+a240 3
+				org.eclipse.draw2d.geometry.Rectangle contentPaneBounds = getContentPane().getBounds().getCopy();
+				contentPaneBounds.setSize(getContentPane().getPreferredSize());
+				return polylineBounds.getUnion(contentPaneBounds);
+@
+
+
+1.14
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@d242 2
+a243 1
+			
+d252 11
+@
+
+
+1.13
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@d205 1
+a205 1
+		new org.eclipse.gmf.graphdef.editor.sheet.FeatureTracker(«EXPAND changeTrackerVarName FOR synchronizer», «EXPAND accessor FOR selector»)
+@
+
+
+1.12
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@d23 3
+a25 1
+«AROUND extendsList FOR gmfgen::GenNode»«IF hasSynchronizers(this)»extends «getDiagram().editPartsPackageName».AbstractFigureEditPart«ELSE»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+d53 1
+a53 1
+		«EXPAND getModelFigureElement-»
+a67 2
+				
+				«EXPAND getPrimaryDragEditPolicy-»
+d87 1
+a87 1
+		final «EXPAND MetaModel::DeclareAndAssign("modelElement", "getModelFigureElement()") FOR metaclass()»
+d98 1
+a98 1
+«DEFINE getModelFigureElement FOR gmfgen::GenNode-»
+d100 8
+a107 4
+	private «EXPAND MetaModel::QualifiedClassName FOR metaclass()» getModelFigureElement() {
+		org.eclipse.gmf.gmfgraph.Shape shape = getShape();
+		if («EXPAND MetaModel::IsInstance("shape") FOR metaclass()») {
+			«EXPAND MetaModel::DeclareAndAssign("modelFigureElement", "shape") FOR metaclass()»
+d117 1
+a117 1
+		«EXPAND MetaModel::DeclareAndAssign("modelElement", "getModelFigureElement()") FOR metaclass()»
+d135 1
+a135 1
+	«EXPAND MetaModel::DeclareAndAssign("modelElement", "getModelFigureElement()") FOR metaclass()»
+d166 1
+a166 1
+		«EXPAND MetaModel::DeclareAndAssign("modelElement", "getModelFigureElement()") FOR metaclass()»
+a219 9
+«DEFINE getPrimaryDragEditPolicy FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public org.eclipse.gef.EditPolicy getPrimaryDragEditPolicy() {
+		org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableEditPolicyEx editPolicy = new org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableEditPolicyEx();
+		editPolicy.setDragAllowed(false);
+		return editPolicy;
+	}
+«ENDDEFINE»
+
+d237 4
+a240 1
+				return getPrimaryShape().getBounds();
+@
+
+
+1.11
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@d219 3
+a221 1
+		return new org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableEditPolicyEx();
+@
+
+
+1.10
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@d62 10
+d207 49
+@
+
+
+1.9
+log
+@[230191] - Start using FeatureTracker/AttachAdapter for listening model changes in org.eclipse.gmf.graphdef.editor
+@
+text
+@d30 1
+a30 1
+			if (org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getSize_Width().equals(feature)
+d35 1
+a35 1
+			} else if (org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getFillStyle_FillColor().equals(feature)) {
+d58 4
+a61 2
+
+		«EXPAND refreshBounds-»
+a148 3
+«REM»
+	Pull up this method to AbstractFigureEditPart?..
+«ENDREM»
+@
+
+
+1.8
+log
+@Calling handleMajorSemanticChange() on any layoutManager modifications.
+It's necessary to populate new instance of LayoutManager with proper layout constraints for each child figure.
+@
+text
+@d26 1
+a26 1
+	«IF hasBoundsSynchronizer(this)-»
+d35 4
+a41 2
+	«ELSE-»
+		«targetDef.proceed()-»
+d43 1
+d48 12
+a59 3
+		«EXPAND additions(viewmap)-»
+	«ELSE-»
+		«targetDef.proceed()»
+d61 1
+d64 3
+a66 1
+«DEFINE additions(gmfgen::Viewmap innerViewmap) FOR gmfgen::GenNode-»
+d69 1
+a69 10
+«DEFINE additions(gmfgen::InnerClassViewmap innerViewmap) FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private java.util.Collection<org.eclipse.emf.common.notify.Adapter> myDomainElementAdapters = new java.util.ArrayList<org.eclipse.emf.common.notify.Adapter>();
+	
+	«EXPAND getModelFigureElement-»
+	
+	«EXPAND removeSemanticListeners-»
+	
+	«EXPAND setFigure-»
+	
+a81 8
+		
+		org.eclipse.gmf.runtime.notation.View view = getNotationView();
+		«EXPAND setViewColor("Background", "Fill")-»
+		«EXPAND setViewColor("Foreground", "Line")-»
+
+		«EXPAND listenViewColor("Background", "Fill")-»
+		«EXPAND listenViewColor("Foreground", "Line")-»
+		
+a83 74
+	«IF hasBoundsSynchronizer(this)-»
+	
+		«EXPAND refreshBounds-»
+	«ENDIF-»
+
+	«EXPAND xpt::Common::generatedMemberComment»
+    public static int getRgbColor(org.eclipse.gmf.gmfgraph.ConstantColor modelColor) {
+        final int rgbColor;
+		switch (modelColor.getValue().getValue()) {
+        case org.eclipse.gmf.gmfgraph.ColorConstants.WHITE: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.white.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.BLACK: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.black.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.LIGHT_GRAY: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.lightGray.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.GRAY: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.gray.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.DARK_GRAY: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.darkGray.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.RED: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.red.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.ORANGE: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.orange.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.YELLOW: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.yellow.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.GREEN: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.green.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.LIGHT_GREEN: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.lightGreen.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.DARK_GREEN: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.darkGreen.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.CYAN: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.cyan.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.LIGHT_BLUE: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.lightBlue.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.BLUE: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.blue.getRGB().hashCode();
+            break;
+        }
+        case org.eclipse.gmf.gmfgraph.ColorConstants.DARK_BLUE: {
+            rgbColor = org.eclipse.draw2d.ColorConstants.darkBlue.getRGB().hashCode();
+            break;
+        }
+        default:
+            rgbColor = -1;
+        }
+        return rgbColor;
+    }	
+a197 61
+«DEFINE setViewColor(String modelColorProperty, String viewColorProperty) FOR gmfgen::GenNode-»
+final org.eclipse.gmf.runtime.notation.«viewColorProperty»Style the«viewColorProperty»Style = (org.eclipse.gmf.runtime.notation.«viewColorProperty»Style) view.getStyle(org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.get«viewColorProperty»Style());
+if (modelElement.get«modelColorProperty»Color() != null) {
+	final int rgbColor;
+	if (modelElement.get«modelColorProperty»Color() instanceof org.eclipse.gmf.gmfgraph.RGBColor) {
+		org.eclipse.gmf.gmfgraph.RGBColor modelColor = (org.eclipse.gmf.gmfgraph.RGBColor) modelElement.get«modelColorProperty»Color();
+		rgbColor = (modelColor.getRed()& 0xFF) | ((modelColor.getGreen() & 0xFF) << 8) | ((modelColor.getBlue() & 0xFF) << 16);
+	} else {
+		org.eclipse.gmf.gmfgraph.ConstantColor modelColor = (org.eclipse.gmf.gmfgraph.ConstantColor) modelElement.get«modelColorProperty»Color();
+		rgbColor = getRgbColor(modelColor);
+	}
+	if (rgbColor != -1 && the«viewColorProperty»Style.get«viewColorProperty»Color() != rgbColor) {
+		org.eclipse.emf.workspace.AbstractEMFOperation setColorOperation = new org.eclipse.emf.workspace.AbstractEMFOperation(getEditingDomain(), "Synchronizing view «modelColorProperty» color with the model", java.util.Collections.singletonMap(org.eclipse.emf.transaction.Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) { //$NON-NLS-1$
+			protected org.eclipse.core.runtime.IStatus doExecute(org.eclipse.core.runtime.IProgressMonitor monitor, org.eclipse.core.runtime.IAdaptable info) throws org.eclipse.core.commands.ExecutionException {
+				the«viewColorProperty»Style.set«viewColorProperty»Color(rgbColor);
+				return org.eclipse.core.runtime.Status.OK_STATUS;
+			}
+		};
+		try {
+			setColorOperation.execute(new org.eclipse.core.runtime.NullProgressMonitor(), null);
+		} catch (org.eclipse.core.commands.ExecutionException e) {
+			«getDiagram().editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Unable to synchronize view «modelColorProperty» color with the model", e); //$NON-NLS-1$
+		}
+	}
+}
+«ENDDEFINE»
+
+«DEFINE listenViewColor(String modelColorProperty, String viewColorProperty) FOR gmfgen::GenNode-»
+final org.eclipse.gmf.runtime.notation.«viewColorProperty»Style the«viewColorProperty»Style1 = (org.eclipse.gmf.runtime.notation.«viewColorProperty»Style) view.getStyle(org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.get«viewColorProperty»Style());
+addListenerFilter("«viewColorProperty»StyleListener", new org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener() {
+	public void notifyChanged(final org.eclipse.emf.common.notify.Notification notification) {
+		try {
+			new org.eclipse.emf.workspace.AbstractEMFOperation(getEditingDomain(), "Synchronizing model «modelColorProperty» color with the view", java.util.Collections.singletonMap(org.eclipse.emf.transaction.Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) { //$NON-NLS-1$
+				protected org.eclipse.core.runtime.IStatus doExecute(org.eclipse.core.runtime.IProgressMonitor monitor, org.eclipse.core.runtime.IAdaptable info) throws org.eclipse.core.commands.ExecutionException {
+					org.eclipse.gmf.runtime.notation.«viewColorProperty»Style the«viewColorProperty»Style = (org.eclipse.gmf.runtime.notation.«viewColorProperty»Style) notification.getNotifier();
+					if (notification.getFeatureID(org.eclipse.gmf.runtime.notation.«viewColorProperty»Style.class) == org.eclipse.gmf.runtime.notation.NotationPackage.«viewColorProperty.toUpperCase()»_STYLE__«viewColorProperty.toUpperCase()»_COLOR)
+						{
+							int color = the«viewColorProperty»Style.get«viewColorProperty»Color();
+							org.eclipse.gmf.gmfgraph.RGBColor modelColor;
+							if (modelElement.get«modelColorProperty»Color() instanceof org.eclipse.gmf.gmfgraph.RGBColor) {
+								modelColor = (org.eclipse.gmf.gmfgraph.RGBColor) modelElement.get«modelColorProperty»Color();
+							} else {
+								modelColor = org.eclipse.gmf.gmfgraph.GMFGraphFactory.eINSTANCE.createRGBColor();
+								modelElement.set«modelColorProperty»Color(modelColor);
+							}
+							if (modelColor.getRed() != (color & 0x000000FF) || modelColor.getGreen() != (color & 0x0000FF00) >> 8 || modelColor.getBlue() != (color & 0x00FF0000) >> 16) {
+								modelColor.setRed(color & 0x000000FF);
+								modelColor.setGreen((color & 0x0000FF00) >> 8);
+								modelColor.setBlue((color & 0x00FF0000) >> 16);
+							}
+						}
+					return org.eclipse.core.runtime.Status.OK_STATUS;
+				}
+			}.execute(new org.eclipse.core.runtime.NullProgressMonitor(), null);
+		} catch (org.eclipse.core.commands.ExecutionException e) {
+			«getDiagram().editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Unable to synchronize model «modelColorProperty» color with the view", e); //$NON-NLS-1$
+		}
+	}
+}, the«viewColorProperty»Style1);
+«ENDDEFINE»
+
+@
+
+
+1.7
+log
+@Using standard figure accessor instead of private variable.
+@
+text
+@d201 5
+a205 1
+«DEFINE processChanges FOR wysiwyg::AbstractDomainSynchronizer-»
+d209 1
+a209 1
+«DEFINE processChanges FOR wysiwyg::MethodCallSynchronizer-»
+d213 1
+a213 1
+«DEFINE processChanges FOR wysiwyg::FigurePropertySynchronizer-»
+d242 1
+a242 1
+«DEFINE addDomainElementAdapters FOR wysiwyg::AbstractDomainSynchronizer-»
+d252 3
+a254 1
+«DEFINE changeTrackerVarName FOR wysiwyg::AbstractDomainSynchronizer»
+d258 1
+a258 1
+«DEFINE changeTrackerVarName FOR wysiwyg::MethodCallSynchronizer»«methodName»Tracker«ENDDEFINE»
+d260 1
+a260 1
+«DEFINE changeTrackerVarName FOR wysiwyg::FigurePropertySynchronizer»«figureAttribute.toFirstLower()»Tracker«ENDDEFINE»
+d262 1
+a262 1
+«DEFINE attachContextListener(wysiwyg::AbstractDomainSynchronizer synchronizer) FOR context::Context-»
+d266 1
+a266 1
+«DEFINE attachContextListener(wysiwyg::AbstractDomainSynchronizer synchronizer) FOR context::FeatureContext-»
+d338 1
+a338 1
+«DEFINE setterName FOR wysiwyg::FigurePropertySynchronizer»set«figureAttribute»«ENDDEFINE»
+@
+
+
+1.6
+log
+@- Migrating to new .gmfgen model
+- Using (0,0) as a minimum size for DefaultNode to make resize feedback minimum size == (0,0)
+@
+text
+@a55 3
+	private «innerViewmap.className» myFigure;
+	
+	«EXPAND xpt::Common::generatedMemberComment»
+d210 1
+a210 1
+	myFigure.«EXPAND setterName»(«IF domainValueTransformerName != null»«domainValueTransformerName»(«ENDIF»«EXPAND getModelElementProperty FOREACH contexts SEPARATOR ", "»«IF domainValueTransformerName != null»)«ENDIF»);
+@
+
+
+1.5
+log
+@[230191] - Start using FeatureTracker/AttachAdapter for listening model changes in org.eclipse.gmf.graphdef.editor
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2007 Borland Software Corporation
+d14 1
+a14 1
+«IMPORT "http://www.eclipse.org/gmf/2006/GenModel"»
+d25 18
+a221 4
+«DEFINE setterName FOR wysiwyg::FigurePropertySynchronizer»set«figureAttribute»«ENDDEFINE»
+
+«DEFINE getterName FOR ecore::EStructuralFeature»«IF eType.name == "EBoolean"»is«ELSE»get«ENDIF»«name.toFirstUpper()»«ENDDEFINE»
+
+a240 16
+«DEFINE handleNotificationEvent FOR gmfgen::GenNode-»
+	«IF hasBoundsSynchronizer(this)-»
+		«EXPAND xpt::Common::generatedMemberComment»
+		protected void handleNotificationEvent(org.eclipse.emf.common.notify.Notification notification) {
+			Object feature = notification.getFeature();
+			if (org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getSize_Width().equals(feature)
+				|| org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getSize_Height().equals(feature)
+				|| org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getLocation_X().equals(feature)
+				|| org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getLocation_Y().equals(feature)) {
+				return;
+			}
+			super.handleNotificationEvent(notification);
+		}
+	«ENDIF-»
+«ENDDEFINE»
+
+d333 5
+a337 1
+«DEFINE accessor FOR ecore::EStructuralFeature»org.eclipse.gmf.gmfgraph.GMFGraphPackage.eINSTANCE.get«eContainingClass.name.toFirstUpper()»_«name.toFirstUpper()»()«ENDDEFINE»@
+
+
+1.4
+log
+@[230191] - Start using FeatureTracker/AttachAdapter for listening model changes in org.eclipse.gmf.graphdef.editor
+@
+text
+@d17 2
+d23 1
+a23 4
+«AROUND extendsList FOR gmfgen::GenNode-»
+«IF generateSyncronizationCode(metaclass()) && isInnerClassViewmap(viewmap)»extends «getDiagram().editPartsPackageName».AbstractFigureEditPart«ELSE-»
+«targetDef.proceed()»«ENDIF-»
+«ENDAROUND»
+d26 5
+a30 5
+«IF generateSyncronizationCode(metaclass())-»
+«EXPAND additions(viewmap)-»
+«ELSE-»
+«targetDef.proceed()»
+«ENDIF-»
+a39 1
+// TODO: use myFigure?
+d41 3
+a43 1
+	protected org.eclipse.draw2d.Figure myNodeFigure;
+d45 1
+a45 2
+	«EXPAND xpt::Common::generatedMemberComment»
+	private java.util.Collection<org.eclipse.emf.common.notify.Adapter> myDomainElementAdapters = new java.util.ArrayList<org.eclipse.emf.common.notify.Adapter>();
+d47 1
+a47 10
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected void removeSemanticListeners() {
+		org.eclipse.gmf.runtime.notation.View view = (org.eclipse.gmf.runtime.notation.View) getModel();
+		if (view.getElement() != null) {
+			«EXPAND MetaModel::DeclareAndAssign("modelElement", "view.getElement()") FOR metaclass()»
+			modelElement.eAdapters().removeAll(myDomainElementAdapters);
+			myDomainElementAdapters.clear();
+		}
+		super.removeSemanticListeners();
+	}
+d54 2
+a55 2
+		org.eclipse.gmf.runtime.notation.View view = (org.eclipse.gmf.runtime.notation.View) getModel();
+		if (view.getElement() == null) {
+d59 1
+a59 7
+
+		final «EXPAND MetaModel::DeclareAndAssign("modelElement", "view.getElement()") FOR metaclass()»
+        «FOREACH metaclass().getAllGenFeatures() AS nextGenFeature-»
+            «IF !skip(nextGenFeature)-»
+            	«EXPAND addListener(metaclass(), nextGenFeature.ecoreFeature) FOR nextGenFeature-»
+            «ENDIF-»
+        «ENDFOREACH-»
+a60 115
+        
+		final org.eclipse.gmf.runtime.notation.Bounds bounds = (org.eclipse.gmf.runtime.notation.Bounds) ((org.eclipse.gmf.runtime.notation.Node) view).getLayoutConstraint();
+		final int sizeX;
+		final int sizeY;
+		if (modelElement.getPreferredSize() != null) {
+			sizeX = getMapMode().DPtoLP(modelElement.getPreferredSize().getDx());
+			sizeY = getMapMode().DPtoLP(modelElement.getPreferredSize().getDy());
+		} else {
+			sizeX = getMapMode().DPtoLP(20);
+			sizeY = getMapMode().DPtoLP(20);
+		}
+		final int locationX;
+		final int locationY;
+		if (modelElement.getLocation() != null) {
+			locationX = getMapMode().DPtoLP(modelElement.getLocation().getX());
+			locationY = getMapMode().DPtoLP(modelElement.getLocation().getY());
+		} else {
+			locationX = bounds.getX();
+			locationY = bounds.getY();
+		}
+		if (sizeX != bounds.getWidth() || sizeY != bounds.getHeight() || locationX != bounds.getX() || locationY != bounds.getY()) {
+			try {
+				new org.eclipse.emf.workspace.AbstractEMFOperation(getEditingDomain(), "Synchronizing view size with the model", java.util.Collections.singletonMap(org.eclipse.emf.transaction.Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) { //$NON-NLS-1$
+					protected org.eclipse.core.runtime.IStatus doExecute(org.eclipse.core.runtime.IProgressMonitor monitor, org.eclipse.core.runtime.IAdaptable info) throws org.eclipse.core.commands.ExecutionException {
+						bounds.setX(locationX);
+						bounds.setY(locationY);
+						bounds.setWidth(sizeX);
+						bounds.setHeight(sizeY);
+						return org.eclipse.core.runtime.Status.OK_STATUS;
+					}
+				}.execute(new org.eclipse.core.runtime.NullProgressMonitor(), null);
+			} catch (org.eclipse.core.commands.ExecutionException e) {
+				«getDiagram().editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Unable to synchronize view size with the model", e); //$NON-NLS-1$			
+			}
+		}
+		addListenerFilter("BoundsListener", new org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener() {
+			public void notifyChanged(final org.eclipse.emf.common.notify.Notification notification) {
+				try {
+					new org.eclipse.emf.workspace.AbstractEMFOperation(getEditingDomain(), "Synchronizing model size with the view", java.util.Collections.singletonMap(org.eclipse.emf.transaction.Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) { //$NON-NLS-1$
+						protected org.eclipse.core.runtime.IStatus doExecute(org.eclipse.core.runtime.IProgressMonitor monitor, org.eclipse.core.runtime.IAdaptable info) throws org.eclipse.core.commands.ExecutionException {
+							org.eclipse.gmf.runtime.notation.Bounds bounds = (org.eclipse.gmf.runtime.notation.Bounds) notification.getNotifier();
+							org.eclipse.gmf.gmfgraph.Dimension dim = modelElement.getPreferredSize();
+							if (dim == null) {
+								dim = org.eclipse.gmf.gmfgraph.GMFGraphFactory.eINSTANCE.createDimension();
+								modelElement.setPreferredSize(dim);
+							}
+							org.eclipse.gmf.gmfgraph.Point location = modelElement.getLocation();
+							if (location == null) {
+								location = org.eclipse.gmf.gmfgraph.GMFGraphFactory.eINSTANCE.createPoint();
+								modelElement.setLocation(location);
+							}
+				
+							int x = getMapMode().LPtoDP(bounds.getX());
+							int y = getMapMode().LPtoDP(bounds.getY());
+							int width = getMapMode().LPtoDP(bounds.getWidth());
+							int height = getMapMode().LPtoDP(bounds.getHeight());
+							if (location.getX() != x || location.getY() != y) {
+								location.setX(x);
+								location.setY(y);
+							}
+							if (dim.getDx() != width || dim.getDy() != height) {
+								dim.setDx(width);
+								dim.setDy(height);
+							}
+
+							myNodeFigure.setPreferredSize(bounds.getWidth(), bounds.getHeight());
+							myNodeFigure.setLocation(new org.eclipse.draw2d.geometry.Point(bounds.getX(), bounds.getY()));
+				
+							if (modelElement.getLayoutData() instanceof org.eclipse.gmf.gmfgraph.XYLayoutData || (modelElement.eContainer() instanceof org.eclipse.gmf.gmfgraph.Layoutable && ((org.eclipse.gmf.gmfgraph.Layoutable)modelElement.eContainer()).getLayout() instanceof org.eclipse.gmf.gmfgraph.XYLayout)) {
+								org.eclipse.gmf.gmfgraph.XYLayoutData xyLayoutData = (org.eclipse.gmf.gmfgraph.XYLayoutData) modelElement.getLayoutData();
+								if (xyLayoutData == null) {
+									xyLayoutData = org.eclipse.gmf.gmfgraph.GMFGraphFactory.eINSTANCE.createXYLayoutData();
+									modelElement.setLayoutData(xyLayoutData);
+									xyLayoutData.setTopLeft(org.eclipse.gmf.gmfgraph.GMFGraphFactory.eINSTANCE.createPoint());
+									xyLayoutData.getTopLeft().setX(0);
+									xyLayoutData.getTopLeft().setY(0);
+									xyLayoutData.setSize(org.eclipse.gmf.gmfgraph.GMFGraphFactory.eINSTANCE.createDimension());
+									xyLayoutData.getSize().setDx(40);
+									xyLayoutData.getSize().setDy(40);
+								}
+								org.eclipse.gmf.gmfgraph.Point topLeft;
+								if (xyLayoutData.getTopLeft() != null) {
+									topLeft = xyLayoutData.getTopLeft();
+								} else {
+									topLeft = org.eclipse.gmf.gmfgraph.GMFGraphFactory.eINSTANCE.createPoint();
+									xyLayoutData.setTopLeft(topLeft);
+								}
+								if (topLeft.getX() != location.getX() || topLeft.getY() != location.getY()) {
+									topLeft.setX(location.getX());
+									topLeft.setY(location.getY());
+								}
+
+								org.eclipse.gmf.gmfgraph.Dimension size;
+								if (xyLayoutData.getSize() != null) {
+									size = xyLayoutData.getSize();
+								} else {
+									size = org.eclipse.gmf.gmfgraph.GMFGraphFactory.eINSTANCE.createDimension();
+									xyLayoutData.setSize(size);
+								}
+								if (size.getDx() != dim.getDx() || size.getDy() != dim.getDy()) {
+									size.setDx(dim.getDx());
+									size.setDy(dim.getDy());
+								}
+							}
+							return org.eclipse.core.runtime.Status.OK_STATUS;
+						}
+					}.execute(new org.eclipse.core.runtime.NullProgressMonitor(), null);
+				} catch (org.eclipse.core.commands.ExecutionException e) {
+					«getDiagram().editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Unable to synchronize model size with the view", e); //$NON-NLS-1$			
+				}
+				if (getRoot() != null) {
+					handleMajorSemanticChange();	
+				}
+			}
+		}, bounds);
+d62 1
+d71 1
+d73 2
+a74 20
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected org.eclipse.draw2d.LayoutManager getFigureLayoutManager() {
+		return myFigure.getLayoutManager();
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected void setFigureLayoutManager(org.eclipse.draw2d.LayoutManager layoutManager) {
+		myFigure.setLayoutManager(layoutManager);
+	}
+	
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected void refreshBounds() {
+		if (((org.eclipse.gmf.runtime.notation.View) getParent().getModel()).getElement() instanceof org.eclipse.gmf.gmfgraph.AbstractFigure) {
+			int width = ((Integer) getStructuralFeatureValue(org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getSize_Width())).intValue();
+			int height = ((Integer) getStructuralFeatureValue(org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getSize_Height())).intValue();
+			myNodeFigure.setPreferredSize(new org.eclipse.draw2d.geometry.Dimension(width, height));
+		} else {
+			super.refreshBounds();
+		}
+	}
+d147 89
+a235 4
+«DEFINE addListener(genmodel::GenClass modelElementEClass, ecore::EReference ecoreFeature) FOR genmodel::GenFeature-»
+	myDomainElementAdapters.add(new org.eclipse.gmf.graphdef.editor.sheet.AttachAdapter(«EXPAND MetaModel::MetaFeature», new org.eclipse.emf.common.notify.impl.AdapterImpl() {
+		public void notifyChanged(org.eclipse.emf.common.notify.Notification msg) {
+			if (msg.isTouch()) {
+d238 1
+a238 1
+			«EXPAND aspects::impl::diagram::editparts::NodeEditPart::processChangesCall(modelElementEClass)-»
+d240 1
+a240 1
+	}));
+d243 3
+a245 2
+«DEFINE addListener(genmodel::GenClass modelElementEClass, ecore::EAttribute ecoreFeature) FOR genmodel::GenFeature-»
+	myDomainElementAdapters.add(new org.eclipse.gmf.graphdef.editor.sheet.FeatureTracker(new org.eclipse.gmf.graphdef.editor.sheet.ChangeTracker() {
+d247 1
+a247 4
+			«EXPAND aspects::impl::diagram::editparts::NodeEditPart::processChangesCall(modelElementEClass)-»
+		    «IF isCornerWidthOrHeight(this)-»
+			    myFigure.repaint();
+		    «ENDIF-»
+d249 2
+a250 1
+	}, «EXPAND MetaModel::MetaFeature»));
+d253 18
+a270 2
+«DEFINE addListener(genmodel::GenClass modelElementEClass, ecore::EStructuralFeature ecoreFeature) FOR genmodel::GenFeature-»
+	«ERROR "Should not be called"-»
+d332 4
+a335 1
+«ENDDEFINE»@
+
+
+1.3
+log
+@[230191] - Start using FeatureTracker/AttachAdapter for listening model changes in org.eclipse.gmf.graphdef.editor
+@
+text
+@d297 3
+@
+
+
+1.2
+log
+@Migrating to new templates from .codegen plugin.
+@
+text
+@d46 14
+d71 1
+a71 2
+
+        «FOREACH metaclass().getAllGenFeatures() AS nextGenFeature»
+d73 1
+a73 10
+                «EXPAND listenerForDatatype(metaclass()) FOR nextGenFeature-»
+		addListenerFilter("«EXPAND uniqueFeatureKey FOR nextGenFeature»_Listener", new org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener() {
+			public void notifyChanged(org.eclipse.emf.common.notify.Notification notification) {
+			    «EXPAND notifyBodyForDatatype(metaclass()) FOR nextGenFeature-»
+			    «EXPAND aspects::impl::diagram::editparts::NodeEditPart::processChangesCall(metaclass()) FOR nextGenFeature-»
+			    «IF isCornerWidthOrHeight(nextGenFeature)-»
+			    myFigure.repaint();
+			    «ENDIF-»
+			}
+		}, modelElement, «EXPAND MetaModel::MetaFeature FOR nextGenFeature»);
+d75 2
+a76 1
+        «ENDFOREACH»
+d294 6
+a299 2
+«DEFINE listenerForDatatype(genmodel::GenClass modelElementEClass) FOR genmodel::GenFeature-»
+«EXPAND listenerForDatatype(modelElementEClass, getTypeGenClassifier())-»
+d302 3
+a304 3
+«DEFINE listenerForDatatype(genmodel::GenClass modelElementEClass, genmodel::GenClassifier type) FOR genmodel::GenFeature-»
+	final org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener «EXPAND uniqueFeatureKey»_PropertiesListener = new org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener() {
+		public void notifyChanged(org.eclipse.emf.common.notify.Notification notification) {
+d306 3
+d310 1
+a310 21
+	};
+	«EXPAND addFeaturePropertyChangeListeners(modelElementEClass)-»
+«ENDDEFINE»
+
+«DEFINE listenerForDatatype(genmodel::GenClass modelElementEClass, genmodel::GenDataType type) FOR genmodel::GenFeature-»
+«ENDDEFINE»
+
+«DEFINE addFeaturePropertyChangeListeners(genmodel::GenClass modelElementEClass) FOR genmodel::GenFeature-»
+«IF this.isListType()-»
+for (int i = 0; i < «EXPAND MetaModel::getFeatureValue("modelElement", modelElementEClass)».size(); i++) {
+	addListenerFilter("«EXPAND uniqueFeatureKey»_PropertiesListener#" + i, «EXPAND uniqueFeatureKey»_PropertiesListener, (org.eclipse.emf.ecore.EObject) «EXPAND MetaModel::getFeatureValue("modelElement", modelElementEClass)».get(i));
+}
+«ELSE-»
+if («EXPAND MetaModel::getFeatureValue("modelElement", modelElementEClass)» != null) {
+	addListenerFilter("«EXPAND uniqueFeatureKey»_PropertiesListener", «EXPAND uniqueFeatureKey»_PropertiesListener, «EXPAND MetaModel::getFeatureValue("modelElement", modelElementEClass)»);
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE notifyBodyForDatatype(genmodel::GenClass modelElementEClass) FOR genmodel::GenFeature-»
+«EXPAND notifyBodyForDatatype(modelElementEClass, getTypeGenClassifier())-»
+d313 2
+a314 18
+«DEFINE notifyBodyForDatatype(genmodel::GenClass modelElementEClass, genmodel::GenClassifier type) FOR genmodel::GenFeature-»
+    «IF this.isListType()-»
+	int listSize = «EXPAND MetaModel::getFeatureValue("modelElement", modelElementEClass)».size();
+	if (notification.getOldValue() instanceof java.util.Collection) {
+		listSize += ((java.util.Collection) notification.getOldValue()).size();
+	} else {
+		listSize++;
+	}
+	for (int i = 0; i < listSize; i++) {
+		removeListenerFilter("«EXPAND uniqueFeatureKey»_PropertiesListener#" + i);
+	}
+    «ELSE-»
+	removeListenerFilter("«EXPAND uniqueFeatureKey»_PropertiesListener");
+    «ENDIF-»
+    «EXPAND addFeaturePropertyChangeListeners(modelElementEClass)-»
+«ENDDEFINE»
+
+«DEFINE notifyBodyForDatatype(genmodel::GenClass modelElementEClass, genmodel::GenDataType type) FOR genmodel::GenFeature-»
+d376 1
+a376 3
+«ENDDEFINE»
+
+«DEFINE uniqueFeatureKey FOR genmodel::GenFeature»«genClass.ecoreClass.name»_«ecoreFeature.name.toFirstUpper()»«ENDDEFINE»@
+
+
+1.1
+log
+@Updating gmfgaph editor:
+- Setting default size of all graphical elements to 0,0
+- updating aspect templates to reflect latest changes
+- regenerating code
+@
+text
+@d56 1
+a56 1
+		final «metaclass().getQualifiedInterfaceName()» modelElement = («metaclass().getQualifiedInterfaceName()») view.getElement();
+d60 2
+a61 2
+                «EXPAND listenerForDatatype FOR nextGenFeature-»
+		addListenerFilter("«nextGenFeature.getFeatureAccessorName()»_Listener", new org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener() {
+d63 2
+a64 2
+			    «EXPAND notifyBodyForDatatype FOR nextGenFeature-»
+			    «getProcessChangesCall(nextGenFeature, "modelElement")»;
+d69 1
+a69 1
+		}, modelElement, «nextGenFeature.genClass.genPackage.getQualifiedPackageInterfaceName()».eINSTANCE.get«nextGenFeature.getFeatureAccessorName()»());
+d289 2
+a290 2
+«DEFINE listenerForDatatype FOR genmodel::GenFeature-»
+«EXPAND listenerForDatatype(getTypeGenClassifier())-»
+d293 2
+a294 2
+«DEFINE listenerForDatatype(genmodel::GenClassifier type) FOR genmodel::GenFeature-»
+	final org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener «this.getFeatureAccessorName()»_PropertiesListener = new org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener() {
+d296 1
+a296 1
+		    «getProcessChangesCall(this, "modelElement")»;
+d299 1
+a299 1
+	«EXPAND addFeaturePropertyChangeListeners-»
+d302 1
+a302 1
+«DEFINE listenerForDatatype(genmodel::GenDataType type) FOR genmodel::GenFeature-»
+d305 1
+a305 1
+«DEFINE addFeaturePropertyChangeListeners FOR genmodel::GenFeature-»
+d307 2
+a308 2
+for (int i = 0; i < modelElement.«this.getGetAccessor()»().size(); i++) {
+	addListenerFilter("«this.getFeatureAccessorName()»_PropertiesListener#" + i, «this.getFeatureAccessorName()»_PropertiesListener, (org.eclipse.emf.ecore.EObject) modelElement.«this.getGetAccessor()»().get(i));
+d311 2
+a312 2
+if (modelElement.«this.getGetAccessor()»() != null) {
+	addListenerFilter("«this.getFeatureAccessorName()»_PropertiesListener", «this.getFeatureAccessorName()»_PropertiesListener, modelElement.«this.getGetAccessor()»());
+d317 2
+a318 2
+«DEFINE notifyBodyForDatatype FOR genmodel::GenFeature-»
+«EXPAND notifyBodyForDatatype(getTypeGenClassifier())-»
+d321 1
+a321 1
+«DEFINE notifyBodyForDatatype(genmodel::GenClassifier type) FOR genmodel::GenFeature-»
+d323 1
+a323 1
+	int listSize = modelElement.«this.getGetAccessor()»().size();
+d330 1
+a330 1
+		removeListenerFilter("«this.getFeatureAccessorName()»_PropertiesListener#" + i);
+d333 1
+a333 1
+	removeListenerFilter("«this.getFeatureAccessorName()»_PropertiesListener");
+d335 1
+a335 1
+    «EXPAND addFeaturePropertyChangeListeners-»
+d338 1
+a338 1
+«DEFINE notifyBodyForDatatype(genmodel::GenDataType type) FOR genmodel::GenFeature-»
+d401 2
+@
+

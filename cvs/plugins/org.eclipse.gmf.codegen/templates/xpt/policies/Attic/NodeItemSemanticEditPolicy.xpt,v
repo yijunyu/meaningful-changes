@@ -1,0 +1,494 @@
+head	1.8;
+access;
+symbols
+	v20081022-1925:1.8
+	v20081015-1925:1.8
+	v20081008-1925:1.8
+	v20081001-1925:1.8
+	v20080924-1925:1.8
+	v20080917-1925:1.8
+	v20080911-1728:1.8
+	v20080910-1520:1.8
+	v20080903-1520:1.8
+	v20080827-1520:1.8
+	v20080813-1520:1.8
+	v20080806-1520:1.8;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.8
+date	2007.02.01.11.51.44;	author dstadnik;	state dead;
+branches;
+next	1.7;
+commitid	dd445c1d44e4567;
+
+1.7
+date	2007.01.30.16.42.29;	author ashatalin;	state Exp;
+branches;
+next	1.6;
+commitid	4e0e45bf75734567;
+
+1.6
+date	2007.01.29.18.09.13;	author ashatalin;	state Exp;
+branches;
+next	1.5;
+commitid	21cf45be38464567;
+
+1.5
+date	2007.01.29.15.10.15;	author ashatalin;	state Exp;
+branches;
+next	1.4;
+commitid	c0645be0e564567;
+
+1.4
+date	2007.01.25.18.52.32;	author ashatalin;	state Exp;
+branches;
+next	1.3;
+commitid	5a5745b8fc6e4567;
+
+1.3
+date	2007.01.25.16.57.54;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+commitid	271945b8e1904567;
+
+1.2
+date	2007.01.18.15.28.09;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+commitid	14f645af92094567;
+
+1.1
+date	2007.01.17.13.12.34;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	3d0045ae20c04567;
+
+
+desc
+@@
+
+
+1.8
+log
+@editpolicy templates should be located in one folder
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+ 
+«REM»
+	This template should be called only for non-design nodes (modelFacet != null) 
+	because *ItemSemanticEditPolicy responsible for dealing with semantic model 
+	elements and meaningless (should not be generated) for pure design nodes.   
+«ENDREM»
+ 
+«IMPORT "http://www.eclipse.org/gmf/2005/GenModel/2.0"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«EXTENSION xpt::policies::Utils»
+«EXTENSION xpt::GenModelUtils»
+
+«DEFINE NodeItemSemanticEditPolicy FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::copyright FOR getDiagram().editorGen-»
+package «getDiagram().editPoliciesPackageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «itemSemanticEditPolicyClassName» extends «getDiagram().getBaseItemSemanticEditPolicyQualifiedClassName()» {
+	«IF childNodes.size() > 0-»
+	
+		«EXPAND xpt::policies::childContainerCreateCommand::childContainerCreateCommand FOR childNodes-»
+	«ENDIF-»
+	
+	«EXPAND getDestroyElementCommand-»
+	«IF !getAllPotentialLinks(this).isEmpty()-»
+		«EXPAND createLinks-»
+	«ENDIF-»
+	«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE getDestroyElementCommand FOR gmfgen::GenNode-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gef.commands.Command getDestroyElementCommand(org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest req) {
+	org.eclipse.gef.commands.CompoundCommand cc = new org.eclipse.gef.commands.CompoundCommand();
+	«EXPAND destroyAllLinks-»
+	«EXPAND destroySemanticElement-»
+	return cc;
+}
+«ENDDEFINE»
+
+«DEFINE destroyAllLinks FOR gmfgen::GenNode-»
+java.util.Collection allEdges = new java.util.ArrayList();
+org.eclipse.gmf.runtime.notation.View view = (org.eclipse.gmf.runtime.notation.View) getHost().getModel();
+allEdges.addAll(view.getSourceEdges());
+allEdges.addAll(view.getTargetEdges());
+for (java.util.Iterator it = allEdges.iterator(); it.hasNext();) {
+	org.eclipse.gmf.runtime.notation.Edge nextEdge = (org.eclipse.gmf.runtime.notation.Edge) it.next();
+	org.eclipse.gef.EditPart nextEditPart = (org.eclipse.gef.EditPart) getHost().getViewer().getEditPartRegistry().get(nextEdge);
+	org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper editCommandRequest = new org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper(new org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest(((«getEditPartQualifiedClassName()») getHost()).getEditingDomain(), req.isConfirmationRequired()), java.util.Collections.EMPTY_MAP);
+	cc.add(nextEditPart.getCommand(editCommandRequest));
+}
+«ENDDEFINE»
+
+«DEFINE destroySemanticElement FOR gmfgen::GenNode-»
+	«LET !{}.add(this).typeSelect(gmfgen::GenTopLevelNode).isEmpty() AS isTopLevel-»
+cc.add(getMSLWrapper(new org.eclipse.gmf.runtime.emf.type.core.commands.DestroyElementCommand(req) «IF isTopLevel || modelFacet.isPhantomElement()»{
+		«IF isTopLevel-»
+			«EXPAND destroyShortcut-»
+		«ENDIF-»
+		«IF modelFacet.isPhantomElement()-»
+			«EXPAND destroyPhantomElement-»
+		«ENDIF-»
+			
+}«ENDIF»));
+	«ENDLET-»
+«ENDDEFINE»
+
+«REM»Method in anonimous inner class - should not be prefixed with @@generated javadoc«ENDREM»
+«DEFINE destroyShortcut FOR gmfgen::GenTopLevelNode-»
+
+protected org.eclipse.emf.ecore.EObject getElementToDestroy() {
+	org.eclipse.gmf.runtime.notation.View view = (org.eclipse.gmf.runtime.notation.View) getHost().getModel();
+	org.eclipse.emf.ecore.EAnnotation annotation = view.getEAnnotation("Shortcut"); //$NON-NLS-1$
+	if (annotation != null) {
+		return view;
+	}
+	return super.getElementToDestroy();
+}		
+«ENDDEFINE»
+
+«REM»Chortcuts supported only for top-level elements«ENDREM»
+«DEFINE destroyShortcut FOR gmfgen::GenNode»«ENDDEFINE»
+
+«REM»Method in anonimous inner class - should not be prefixed with @@generated javadoc«ENDREM»
+«DEFINE destroyPhantomElement FOR gmfgen::GenNode-»
+
+protected org.eclipse.gmf.runtime.common.core.command.CommandResult doExecuteWithResult(org.eclipse.core.runtime.IProgressMonitor progressMonitor, org.eclipse.core.runtime.IAdaptable info) throws org.eclipse.core.commands.ExecutionException {
+	org.eclipse.emf.ecore.EObject eObject = getElementToDestroy();
+	boolean removeFromResource = eObject.eContainer() == null;
+	org.eclipse.gmf.runtime.common.core.command.CommandResult result = super.doExecuteWithResult(progressMonitor, info);
+	org.eclipse.emf.ecore.resource.Resource resource = eObject.eResource();
+	if (removeFromResource && resource != null) {
+		resource.getContents().remove(eObject);
+	}
+	return result;
+}
+«ENDDEFINE»
+
+«REM»
+ * Start  		start of link creation. 
+ *				User click to this editpart and start dragging with link tool.
+ * Complete 	end of the command
+ *				User points to this editpart as a link target and release mouse button.
+ *
+ * Outgoing 	the node is link source
+ *				This element could be a source for this type of link.
+ * Incoming		the node is link destination
+ *				This element could be a target for this type of link.
+«ENDREM»
+
+«DEFINE createLinks FOR gmfgen::GenNode-»
+
+	«EXPAND getCreateRelationshipCommand-»
+
+	«EXPAND createLinkCommands(this) FOREACH getAllPotentialLinks(this)-»
+
+«ENDDEFINE»
+
+«DEFINE getCreateRelationshipCommand FOR gmfgen::GenNode-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gef.commands.Command getCreateRelationshipCommand(org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest req) {
+	«EXPAND callLinkCommands(this) FOREACH getAllPotentialLinks(this)-»
+	return super.getCreateRelationshipCommand(req);
+}
+«ENDDEFINE»
+
+«DEFINE callLinkCommands(gmfgen::GenNode node) FOR gmfgen::GenLink-»
+if («getDiagram().getElementTypesQualifiedClassName()».«getUniqueIdentifier()» == req.getElementType()) {
+	return req.getTarget() == null ? «IF createStartLinkCommand(this, node)-»
+		«EXPAND startLinkCommandCreatorName(node)»(req)«ELSE-»
+		null«ENDIF-»
+	: «IF createCompleteLinkCommand(this, node)-»
+	 	«EXPAND completeLinkCommandCreatorName(node)»(req)«ELSE-»
+		null«ENDIF-»
+;
+}
+«ENDDEFINE»
+
+«DEFINE createLinkCommands(gmfgen::GenNode node) FOR gmfgen::GenLink-»
+	«IF createStartLinkCommand(this, node)-»
+	
+		«EXPAND createStartLinkCommand(node)-»
+	«ENDIF-»
+	«IF createCompleteLinkCommand(this, node)-»
+	
+		«EXPAND createCompleteLinkCommand(node)-»
+	«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE createStartLinkCommand(gmfgen::GenNode node) FOR gmfgen::GenLink-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gef.commands.Command «EXPAND startLinkCommandCreatorName(node) FOR this»(org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest req) {
+	«EXPAND defineSourceTargetAndCheckConstraints(createStartIncomingLinkCommand(this, node), false)-»
+«REM»create always executable command«ENDREM»«-»
+	return new org.eclipse.gef.commands.Command() {
+	};
+}
+«ENDDEFINE»
+
+«DEFINE createCompleteLinkCommand(gmfgen::GenNode node) FOR gmfgen::GenLink-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gef.commands.Command «EXPAND completeLinkCommandCreatorName(node) FOR this»(org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest req) {
+	«EXPAND defineSourceTargetAndCheckConstraints(createCompleteOutgoingLinkCommand(this, node), true)-»
+	«EXPAND linkCreateCommand FOR modelFacet-»
+}
+«ENDDEFINE»
+
+«DEFINE linkCreateCommand FOR gmfgen::TypeLinkModelFacet-»
+«REM»create semantic command«ENDREM»«-»
+if (req.getContainmentFeature() == null) {
+	req.setContainmentFeature(«EXPAND xpt::Common::metaFeatureAccessor FOR containmentMetaFeature»);
+}
+return getMSLWrapper(new «getCreateCommandQualifiedClassName()»(req, «EXPAND linkCreationParameters(false, true)»));
+«ENDDEFINE»
+
+«DEFINE linkCreateCommand FOR gmfgen::FeatureLinkModelFacet-»
+«REM»create semantic command«ENDREM»«-»
+org.eclipse.gmf.runtime.emf.type.core.requests.SetRequest setReq = new org.eclipse.gmf.runtime.emf.type.core.requests.SetRequest(sourceEObject, «getQualifiedPackageInterfaceName(metaFeature.genClass.genPackage)».eINSTANCE.get«getFeatureAccessorName(metaFeature)»(), target);
+return getMSLWrapper(new org.eclipse.gmf.runtime.emf.type.core.commands.SetValueCommand(setReq));
+«ENDDEFINE»
+
+«DEFINE linkCreateCommand FOR gmfgen::LinkModelFacet-»
+	«EXPAND incorrectLinkModelFacet-»
+«ENDDEFINE»
+
+«DEFINE defineSourceTargetAndCheckConstraints(boolean reversedRequest, boolean isCompleteCommand) FOR gmfgen::GenLink-»
+	«EXPAND defineLinkSourceTarget(reversedRequest, isCompleteCommand)-»
+	«EXPAND definionContainer FOR modelFacet-»
+	if(!«getDiagram().getLinkCreationConstraintsQualifiedClassName()».canCreate«getUniqueIdentifier()»(«EXPAND linkCreationParameters(reversedRequest, isCompleteCommand) FOR modelFacet»)) {
+		return org.eclipse.gef.commands.UnexecutableCommand.INSTANCE;			
+	}
+«ENDDEFINE»
+
+«DEFINE linkCreationParameters(boolean reversed, boolean isComplete) FOR gmfgen::TypeLinkModelFacet»«IF null != sourceMetaFeature»container, «ENDIF»«EXPAND linkCreationSourceTargetParameters(reversed, isComplete)»«ENDDEFINE»
+
+«DEFINE linkCreationParameters(boolean reversed, boolean isComplete) FOR gmfgen::FeatureLinkModelFacet»«EXPAND linkCreationSourceTargetParameters(reversed, isComplete)»«ENDDEFINE»
+
+«DEFINE linkCreationSourceTargetParameters(boolean reversed, boolean isComplete) FOR gmfgen::LinkModelFacet-»
+«IF !reversed || isComplete»source«ELSE»null«ENDIF», «IF reversed || isComplete»target«ELSE»null«ENDIF»«ENDDEFINE»
+
+«DEFINE linkCreationParameters(boolean reversed, boolean isComplete) FOR gmfgen::LinkModelFacet»
+	«EXPAND incorrectLinkModelFacet-»
+«ENDDEFINE»
+
+«DEFINE defineLinkSourceTarget(boolean reversedRequest, boolean isCompleteCommand) FOR gmfgen::GenLink-»
+	«LET !reversedRequest || isCompleteCommand AS checkSource-»
+		«LET reversedRequest || isCompleteCommand AS checkTarget-»
+			«IF checkSource-»
+org.eclipse.emf.ecore.EObject sourceEObject = req.get«IF reversedRequest»Target«ELSE»Source«ENDIF»();
+			«ENDIF-»
+			«IF checkTarget-»
+org.eclipse.emf.ecore.EObject targetEObject = req.get«IF reversedRequest»Source«ELSE»Target«ENDIF»();
+			«ENDIF-»
+if («IF checkSource»false == sourceEObject instanceof «getQualifiedInterfaceName(modelFacet.getSourceType())»«ENDIF»«IF checkSource && checkTarget» || «ENDIF»«IF checkTarget»false == targetEObject instanceof «getQualifiedInterfaceName(modelFacet.getTargetType())»«ENDIF») {
+	return org.eclipse.gef.commands.UnexecutableCommand.INSTANCE;
+}
+			«IF checkSource-»
+«getQualifiedInterfaceName(modelFacet.getSourceType())» source = («getQualifiedInterfaceName(modelFacet.getSourceType())») sourceEObject;
+			«ENDIF-»
+			«IF checkTarget-»
+«getQualifiedInterfaceName(modelFacet.getTargetType())» target = («getQualifiedInterfaceName(modelFacet.getTargetType())») targetEObject;
+			«ENDIF-»
+		«ENDLET-»
+	«ENDLET-»
+«ENDDEFINE»
+
+«DEFINE definionContainer FOR gmfgen::TypeLinkModelFacet-»
+	«IF null != sourceMetaFeature-»
+«getQualifiedInterfaceName(containmentMetaFeature.genClass)» container = («getQualifiedInterfaceName(containmentMetaFeature.genClass)») getRelationshipContainer(source, «getQualifiedPackageInterfaceName(containmentMetaFeature.genClass.genPackage)».eINSTANCE.get«getClassifierAccessorName(containmentMetaFeature.genClass)»(), req.getElementType());
+if (container == null) {
+	return org.eclipse.gef.commands.UnexecutableCommand.INSTANCE;
+}
+	«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE definionContainer FOR gmfgen::FeatureLinkModelFacet»«ENDDEFINE»
+
+«DEFINE definionContainer FOR gmfgen::LinkModelFacet-»
+	«EXPAND incorrectLinkModelFacet-»
+«ENDDEFINE»
+
+«DEFINE defineLinkContainer FOR gmfgen::GenLink-»
+«ENDDEFINE»
+
+«REM»Should be called only if createStartLinkCommand(this, node) == true«ENDREM»
+«DEFINE startLinkCommandCreatorName(gmfgen::GenNode node) FOR gmfgen::GenLink»getCreateStart«IF createStartOutgoingLinkCommand(this, node)»Outgoing«ELSEIF createStartIncomingLinkCommand(this, node)»Incoming«ENDIF»«getUniqueIdentifier()»Command«ENDDEFINE»
+
+«REM»Should be called only if createCompleteLinkCommand(this, node) == true«ENDREM»
+«DEFINE completeLinkCommandCreatorName(gmfgen::GenNode node) FOR gmfgen::GenLink»getCreateComplete«IF createCompleteIncomingLinkCommand(this, node)»Incoming«ELSEIF createCompleteOutgoingLinkCommand(this, node)»Outgoing«ENDIF»«getUniqueIdentifier()»Command«ENDDEFINE»
+
+«DEFINE incorrectLinkModelFacet FOR gmfgen::LinkModelFacet-»
+	«ERROR "Unrecognized link model facet: " + this-»
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenNode»«ENDDEFINE»@
+
+
+1.7
+log
+@All the @@generated comments moved into a separate "define" statement.
+@
+text
+@@
+
+
+1.6
+log
+@[167466] - Do not generate ??ItemSemanticEditPolicy for pure-design elements
+@
+text
+@d28 1
+a28 3
+/**
+ * @@generated
+ */
+d44 1
+a44 3
+/**
+ * @@generated
+ */
+d132 1
+a132 3
+/**
+ * @@generated
+ */
+d163 1
+a163 3
+/**
+ * @@generated
+ */
+d173 1
+a173 3
+/**
+ * @@generated
+ */
+@
+
+
+1.5
+log
+@[170077] - Remove link with class from the domain model on deleting link's destination
+@
+text
+@d13 6
+d32 1
+a32 1
+	«IF null != modelFacet && childNodes.size() > 0-»
+d38 1
+a38 1
+	«IF null != modelFacet && !getAllPotentialLinks(this).isEmpty()-»
+d72 7
+a78 8
+		«LET null != modelFacet && modelFacet.isPhantomElement() AS isPhantom-»
+cc.add(getMSLWrapper(new org.eclipse.gmf.runtime.emf.type.core.commands.DestroyElementCommand(req) «IF isTopLevel || isPhantom»{
+			«IF isTopLevel-»
+				«EXPAND destroyShortcut-»
+			«ENDIF-»
+			«IF isPhantom-»
+				«EXPAND destroyPhantomElement-»
+			«ENDIF-»
+a80 1
+		«ENDLET-»
+@
+
+
+1.4
+log
+@Restoring delete commands for child elements.
+@
+text
+@d44 21
+d67 1
+a67 1
+	return getMSLWrapper(new org.eclipse.gmf.runtime.emf.type.core.commands.DestroyElementCommand(req) «IF isTopLevel || isPhantom»{
+d75 2
+a76 2
+		}«ENDIF»);
+		«ENDLET»
+a77 1
+	}
+@
+
+
+1.3
+log
+@Revriting BaseItemSemanticEditPolicy to xpand
+@
+text
+@a29 1
+	«IF !{}.add(this).typeSelect(gmfgen::GenTopLevelNode).isEmpty()-»
+d31 1
+a31 2
+		«EXPAND getDestroyElementCommand-»
+	«ENDIF-»
+d44 13
+a56 8
+		return getMSLWrapper(new org.eclipse.gmf.runtime.emf.type.core.commands.DestroyElementCommand(req) {
+	«EXPAND destroyShortcut-»
+	«IF null != modelFacet && modelFacet.isPhantomElement()-»
+	
+		«EXPAND destroyPhantomElement-»
+	«ENDIF-»
+	
+		});
+d78 1
+a88 1
+			
+@
+
+
+1.2
+log
+@correctin gcompialtion error for phantom elements.
+@
+text
+@d166 1
+a166 1
+	req.setContainmentFeature(«getQualifiedPackageInterfaceName(containmentMetaFeature.genClass.genPackage)».eINSTANCE.get«getFeatureAccessorName(containmentMetaFeature)»());
+d177 3
+a179 2
+«REM»Should never be called!«ENDREM»
+«DEFINE linkCreateCommand FOR gmfgen::LinkModelFacet»«ENDDEFINE»
+d196 3
+a198 2
+«REM»Should never be called!«ENDREM»
+«DEFINE linkCreationParameters(boolean reversed, boolean isComplete) FOR gmfgen::LinkModelFacet»«ENDDEFINE»
+d233 3
+a235 2
+«REM»Should never be called!«ENDREM»
+«DEFINE definionContainer FOR gmfgen::LinkModelFacet»«ENDDEFINE»
+d246 4
+@
+
+
+1.1
+log
+@NodeItemSemanticEditPolicy template reimplemented using xpand.
+@
+text
+@d79 1
+a79 1
+	org.eclipse.emf.ecore.resource.Resourceresource = eObject.eResource();
+@
+

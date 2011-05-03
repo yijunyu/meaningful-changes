@@ -1,0 +1,509 @@
+head	1.3;
+access;
+symbols
+	v20081022-1925:1.3
+	v20081015-1925:1.3
+	v20081008-1925:1.3
+	v20081001-1925:1.3
+	v20080924-1925:1.3
+	v20080917-1925:1.3
+	v20080911-1728:1.3
+	v20080910-1520:1.3
+	v20080903-1520:1.3
+	v20080827-1520:1.3
+	v20080813-1520:1.3
+	v20080806-1520:1.3
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3
+	I20060317-1300:1.2
+	I20060317-1200:1.2
+	I20060316-1300:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2006.03.19.16.57.17;	author ashatalin;	state dead;
+branches;
+next	1.2;
+
+1.2
+date	2006.03.14.17.40.30;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.03.14.14.18.23;	author ashatalin;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@#128024 Model references are not recognized as links
+#131543 Obsolete code should be eliminated
+@
+text
+@<%
+List genLinks = genDiagram.getLinks();
+
+// Collecting all phantom elements
+Map genClass2Phantom = new LinkedHashMap();
+for (Iterator topLevelNodes = genDiagram.getTopLevelNodes().iterator(); topLevelNodes.hasNext();) {
+	GenTopLevelNode nextTopLevelNode = (GenTopLevelNode) topLevelNodes.next();
+	TypeModelFacet nextModelFacet = nextTopLevelNode.getModelFacet();
+	if (!nextModelFacet.isPhantomElement()) {
+		continue;
+	}
+	genClass2Phantom.put(nextModelFacet.getMetaClass(), nextTopLevelNode);
+}
+
+for (Iterator it = genLinks.iterator(); it.hasNext();) {
+	GenLink nextLink = (GenLink) it.next();
+%>
+	
+/**
+ * @@generated
+ */
+private static final Integer LINK_KEY_<%=nextLink.getVisualID()%> = new Integer(<%=nextLink.getVisualID()%>);
+<%
+}
+%>
+
+/**
+ * @@generated
+ */
+private <%=importManager.getImportedName("java.util.Map")%> myLinkVID2EObjectMap = new <%=importManager.getImportedName("java.util.HashMap")%>();
+	
+/**
+ * @@generated
+ */
+private <%=importManager.getImportedName("java.util.Map")%> myEObject2NodeMap = new <%=importManager.getImportedName("java.util.HashMap")%>();
+
+/**
+ * @@generated
+ */
+private void initDiagramContents(Diagram diagram, EObject diagramModelObject) {
+<%
+for (Iterator it = genLinks.iterator(); it.hasNext();) {
+	GenLink nextLink = (GenLink) it.next();
+%>
+	myLinkVID2EObjectMap.put(LINK_KEY_<%=nextLink.getVisualID()%>, new LinkedList());
+<%
+}
+%>
+	create<%=genDiagram.getUniqueIdentifier()%>Children(diagram, diagramModelObject);
+<%
+if (!genClass2Phantom.isEmpty()) {
+%>
+	Resource resource = diagramModelObject.eResource();
+	for (<%=importManager.getImportedName("java.util.Iterator")%> it = resource.getContents().iterator(); it.hasNext();) {
+		EObject nextResourceObject = (EObject) it.next();
+		if (nextResourceObject == diagramModelObject) {
+			continue;
+		}
+		int nodeVID = <%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.INSTANCE.getNodeVisualID(diagram, nextResourceObject, "");
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%> nextNode;
+		switch (nodeVID) {
+<%
+	for (Iterator phantoms = genClass2Phantom.values().iterator(); phantoms.hasNext();) {
+		GenTopLevelNode phantomNode = (GenTopLevelNode) phantoms.next();
+%>
+		case <%=phantomNode.getVisualID()%>:
+			nextNode = ViewService.createNode(diagram, nextResourceObject, null, <%=pluginActivatorClass%>.DIAGRAM_PREFERENCES_HINT);
+			myEObject2NodeMap.put(nextResourceObject, nextNode);
+			create<%=phantomNode.getUniqueIdentifier()%>Children(nextNode, nextResourceObject);
+			break;
+<%
+	}
+%>
+		}
+	}
+<%
+}
+// TODO: remove "createLinks()" method - this task should be done by canonicalEditPolicies
+%>		
+		createLinks();
+	}
+<%
+boolean generateGetCompartment = false;
+
+for (Iterator containers = genDiagram.getAllContainers().iterator(); containers.hasNext();) {
+	GenContainerBase nextContainer = (GenContainerBase) containers.next();
+%>	
+
+/**
+ * @@generated
+ */
+private void create<%=nextContainer.getUniqueIdentifier()%>Children(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> viewObject, EObject modelObject) {
+<%
+	if (nextContainer.getContainedNodes().size() > 0) {
+%>
+	EObject nextValue;
+	<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%> nextNode;
+	int nodeVID;
+<%
+	} else if (nextContainer instanceof GenNode && ((GenNode) nextContainer).getCompartments().size() > 0) {
+%>
+	<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%> nextNode;
+<%
+	}
+	
+	for (Iterator children = nextContainer.getContainedNodes().iterator(); children.hasNext();) {
+		GenNode nextChild = (GenNode) children.next();
+		TypeModelFacet typeModelFacet = nextChild.getModelFacet();
+		if (typeModelFacet.isPhantomElement()) {
+// Skipping top-leve phantoms
+			continue;
+		}
+		GenFeature childMetaFeature = typeModelFacet.getChildMetaFeature();
+		if (childMetaFeature.isListType()) {
+%>
+	for (<%=importManager.getImportedName("java.util.Iterator")%> values = <%=getFeatureValueGetter("modelObject", childMetaFeature, true, importManager)%>.iterator(); values.hasNext();) {
+		nextValue = (EObject) values.next();
+<%
+		} else {
+%>
+	nextValue = <%=getFeatureValueGetter("modelObject", childMetaFeature, true, importManager)%>;
+<%
+		}
+%>
+	nodeVID = <%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.INSTANCE.getNodeVisualID(viewObject, nextValue, "");
+	if (<%=nextChild.getVisualID()%> == nodeVID) {
+		nextNode = ViewService.createNode(viewObject, nextValue, null, <%=pluginActivatorClass%>.DIAGRAM_PREFERENCES_HINT);
+		myEObject2NodeMap.put(nextValue, nextNode);
+		create<%=nextChild.getUniqueIdentifier()%>Children(nextNode, nextValue);
+	}
+<%
+		if (childMetaFeature.isListType()) {
+%>
+	}
+<%
+		}
+	}
+	
+	if (nextContainer instanceof GenNode) {
+		GenNode nextNode = (GenNode) nextContainer;
+		for (Iterator compartments = nextNode.getCompartments().iterator(); compartments.hasNext();) {
+			GenCompartment nextCompartment = (GenCompartment) compartments.next();
+			generateGetCompartment = true;
+%>
+	nextNode = getCompartment(viewObject, "<%=nextCompartment.getTitle()%>");
+	if (nextNode != null) {
+		create<%=nextCompartment.getUniqueIdentifier()%>Children(nextNode, modelObject);
+	}
+<%
+		}
+	}
+	if (false == nextContainer instanceof GenCompartment) {
+%>
+	storeLinks(modelObject, viewObject.getDiagram());
+<%	}%>
+}
+<%
+}
+
+if (generateGetCompartment) {
+%>
+	
+/**
+ * @@generated
+ */
+private <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%> getCompartment(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> node, String name) {
+	for (<%=importManager.getImportedName("java.util.Iterator")%> it = node.getChildren().iterator(); it.hasNext();) {
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> nextView = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%>) it.next();
+		if (nextView instanceof <%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%> && name.equals(nextView.getType())) {
+			return (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%>) nextView;
+		}
+	}
+	return null;
+}
+<%
+}
+%>
+
+/**
+ *@@generated
+ */
+private void storeLinks(EObject container, Diagram diagram) {
+	<%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> containerMetaclass = container.eClass();
+	storeFeatureModelFacetLinks(container, containerMetaclass, diagram);
+	storeTypeModelFacetLinks(container, containerMetaclass, diagram);
+}
+	
+/**
+ * @@generated
+ */
+private void storeTypeModelFacetLinks(EObject container, <%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> containerMetaclass, Diagram diagram) {	
+<%
+for (Iterator it = genLinks.iterator(); it.hasNext();) {
+	GenLink nextLink = (GenLink) it.next();
+	if (nextLink.getModelFacet() instanceof TypeLinkModelFacet) {
+		TypeLinkModelFacet typeLinkModelFacet = (TypeLinkModelFacet) nextLink.getModelFacet();
+		GenFeature childMetaFeature = typeLinkModelFacet.getChildMetaFeature();
+%>		
+	if (<%=importManager.getImportedName(childMetaFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=childMetaFeature.getGenClass().getClassifierAccessorName()%>().isSuperTypeOf(containerMetaclass)) {
+<%		if (childMetaFeature.isListType()) {%>		
+		for (<%=importManager.getImportedName("java.util.Iterator")%> values = <%=getFeatureValueGetter("container", childMetaFeature, true, importManager)%>.iterator(); values.hasNext();) {
+			EObject nextValue = ((EObject) values.next());
+<%		} else {%>
+		EObject nextValue = (EObject) <%=getFeatureValueGetter("container", childMetaFeature, true, importManager)%>;
+<%		}%>
+		Object structuralFeatureResult = <%=getFeatureValueGetter("nextValue", typeLinkModelFacet.getTargetMetaFeature(), true, importManager)%>;
+		if (structuralFeatureResult instanceof EObject) {
+			EObject dst = (EObject) structuralFeatureResult;
+<%		if (typeLinkModelFacet.getSourceMetaFeature() != null) {%>
+			structuralFeatureResult = <%=getFeatureValueGetter("nextValue", typeLinkModelFacet.getSourceMetaFeature(), true, importManager)%>;
+			if (structuralFeatureResult instanceof EObject) {
+				EObject src = (EObject) structuralFeatureResult;
+<%		} else {%>
+			EObject src = nextValue;
+<%		}%>
+			int linkVID = <%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.INSTANCE.getLinkWithClassVisualID(nextValue);
+			if (<%=nextLink.getVisualID()%> == linkVID) {
+				((<%=importManager.getImportedName("java.util.Collection")%>) myLinkVID2EObjectMap.get(LINK_KEY_<%=nextLink.getVisualID()%>)).add(new LinkDescriptor(src, dst, nextValue, diagram));
+			}
+<%		if (typeLinkModelFacet.getSourceMetaFeature() != null) {%>
+			}
+<%		}%>
+		}
+<%
+		if (childMetaFeature.isListType()) {
+%>
+		}
+<%
+		}
+%>
+	}
+<%
+	}
+}
+%>
+}
+
+/**
+ *@@generated
+ */
+private void storeFeatureModelFacetLinks(EObject container, <%=importManager.getImportedName("org.eclipse.emf.ecore.EClass")%> containerMetaclass, Diagram diagram) {
+<%
+for (Iterator it = genLinks.iterator(); it.hasNext();) {
+	GenLink nextLink = (GenLink) it.next();
+	if (nextLink.getModelFacet() instanceof FeatureModelFacet) {
+		FeatureModelFacet linkFMF = (FeatureModelFacet) nextLink.getModelFacet();
+		GenFeature genFeature = linkFMF.getMetaFeature();
+		GenTopLevelNode phantomNode = (GenTopLevelNode) genClass2Phantom.get(genFeature.getTypeGenClass());
+%>
+	if (<%=importManager.getImportedName(genFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=genFeature.getGenClass().getClassifierAccessorName()%>().isSuperTypeOf(containerMetaclass)) {
+<%		if (genFeature.isListType()) {%>
+		for (<%=importManager.getImportedName("java.util.Iterator")%> destinations = <%=getFeatureValueGetter("container", genFeature, true, importManager)%>.iterator(); destinations.hasNext();) {
+			EObject nextDestination = (EObject) destinations.next();
+<%		} else {%>
+		if (<%=getFeatureValueGetter("container", genFeature, true, importManager)%> instanceof EObject) {
+			EObject nextDestination = (EObject) <%=getFeatureValueGetter("container", genFeature, true, importManager)%>;
+<%		}%>
+			((<%=importManager.getImportedName("java.util.Collection")%>) myLinkVID2EObjectMap.get(LINK_KEY_<%=nextLink.getVisualID()%>)).add(new LinkDescriptor(container, nextDestination, <%=importManager.getImportedName(genDiagram.getElementTypesQualifiedClassName())%>.<%=nextLink.getUniqueIdentifier()%>, diagram));
+<%		if (genFeature.isContains() && phantomNode != null) {%>
+			int nodeVID = <%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.INSTANCE.getNodeVisualID(diagram, nextDestination, "");
+			if (<%=phantomNode.getVisualID()%> == nodeVID) {
+				<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%> nextNode = ViewService.createNode(diagram, nextDestination, null, <%=pluginActivatorClass%>.DIAGRAM_PREFERENCES_HINT);
+				myEObject2NodeMap.put(nextDestination, nextNode);
+				create<%=phantomNode.getUniqueIdentifier()%>Children(nextNode, nextDestination);
+			}
+<%		}%>
+		}
+	}
+<%
+	}
+}
+%>
+}
+
+/**
+ * @@generated
+ */
+private void createLinks() {
+<%
+if (genLinks.size() > 0) {
+%>
+	<%=importManager.getImportedName("java.util.Collection")%> linkElements;
+<%
+}
+
+for (Iterator it = genLinks.iterator(); it.hasNext();) {
+	GenLink nextLink = (GenLink) it.next();
+%>
+	linkElements = (<%=importManager.getImportedName("java.util.Collection")%>) myLinkVID2EObjectMap.get(LINK_KEY_<%=nextLink.getVisualID()%>);
+	for (<%=importManager.getImportedName("java.util.Iterator")%> it = linkElements.iterator(); it.hasNext();) {
+		LinkDescriptor nextLinkDescriptor = (LinkDescriptor) it.next();
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Edge")%> edge = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Edge")%>) ViewService.getInstance().createEdge(nextLinkDescriptor.getSemanticAdapter(), nextLinkDescriptor.getDiagram(), "", <%=importManager.getImportedName("org.eclipse.gmf.runtime.diagram.core.util.ViewUtil")%>.APPEND, <%=pluginActivatorClass%>.DIAGRAM_PREFERENCES_HINT);
+		if (edge != null) {
+			edge.setSource((<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%>) myEObject2NodeMap.get(nextLinkDescriptor.getSource()));
+			edge.setTarget((<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%>) myEObject2NodeMap.get(nextLinkDescriptor.getDestination()));
+		}
+	}
+<%
+}
+%>
+}
+	
+/**
+ * @@generated
+ */
+private class LinkDescriptor {
+	
+	/**
+   	 * @@generated
+     */
+	private EObject mySource;
+		
+	/**
+   	 * @@generated
+     */
+	private EObject myDestination;
+		
+	/**
+   	 * @@generated
+     */
+	private IAdaptable mySemanticAdapter;
+		
+	/**
+   	 * @@generated
+     */
+	private Diagram myDiagram;
+		
+	/**
+   	 * @@generated
+     */
+	protected LinkDescriptor(EObject source, EObject destination, EObject linkElement, Diagram diagram) {
+		this(source, destination, diagram);
+		mySemanticAdapter = new <%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter")%>(linkElement);
+	}
+
+	/**
+   	 * @@generated
+     */
+	protected LinkDescriptor(EObject source, EObject destination, <%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.type.core.IElementType")%> elementType, Diagram diagram) {
+		this(source, destination, diagram);
+		final <%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.type.core.IElementType")%> elementTypeCopy = elementType;
+		mySemanticAdapter = new <%=importManager.getImportedName("org.eclipse.core.runtime.IAdaptable")%>() {
+			public Object getAdapter(Class adapter) {
+				if (<%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.type.core.IElementType")%>.class.equals(adapter)) {
+					return elementTypeCopy;
+				}
+				return null;
+			}
+		};
+	}
+		
+	/**
+   	 * @@generated
+     */
+	private LinkDescriptor(EObject source, EObject destination, Diagram diagram) {
+		mySource = source;
+		myDestination = destination;
+		myDiagram = diagram;
+	}
+		
+	/**
+   	 * @@generated
+     */
+	protected EObject getSource() {
+		return mySource;
+	}
+		
+	/**
+   	 * @@generated
+     */
+	protected EObject getDestination() {
+		return myDestination;
+	}
+		
+	/**
+   	 * @@generated
+     */
+	protected Diagram getDiagram() {
+		return myDiagram;
+	}
+		
+	/**
+   	 * @@generated
+     */
+	protected IAdaptable getSemanticAdapter() {
+		return mySemanticAdapter;
+	}
+}@
+
+
+1.2
+log
+@#131543 Correcting InitDiagramFile logic
+@
+text
+@@
+
+
+1.1
+log
+@#131543 Code reconstructing the diagram contents separated from the init diagram file action.
+@
+text
+@d2 13
+a53 1
+	int nodeVID;
+d59 3
+d66 5
+a70 7
+			nodeVID = <%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.INSTANCE.getNodeVisualID(diagram, nextResourceObject, "");
+			if (<%=phantomNode.getVisualID()%> == nodeVID) {
+				<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Node")%> nextNode = ViewService.createNode(diagram, nextResourceObject, null, <%=pluginActivatorClass%>.DIAGRAM_PREFERENCES_HINT);
+				myEObject2NodeMap.put(nextResourceObject, nextNode);
+				create<%=phantomNode.getUniqueIdentifier()%>Children(nextNode, nextResourceObject);
+				continue;
+			}
+d75 1
+d78 1
+d152 1
+d155 1
+d199 3
+a201 6
+	if (-1 != containerMetaclass.getFeatureID(<%=importManager.getImportedName(childMetaFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=childMetaFeature.getFeatureAccessorName()%>())) {
+		Object featureValue = <%=getFeatureValueGetter("container", childMetaFeature, true, importManager)%>;
+<%
+		if (childMetaFeature.isListType()) {
+%>		
+		for (<%=importManager.getImportedName("java.util.Iterator")%> values = ((<%=importManager.getImportedName("java.util.Collection")%>) featureValue).iterator(); values.hasNext();) {
+d203 8
+a210 10
+<%
+		} else {
+%>
+		EObject nextValue = (EObject) featureValue;
+<%		
+		}
+%>
+		int linkVID = <%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.INSTANCE.getLinkWithClassVisualID(nextValue);
+		if (<%=nextLink.getVisualID()%> == linkVID) {
+			Object structuralFeatureResult = <%=getFeatureValueGetter("nextValue", typeLinkModelFacet.getTargetMetaFeature(), true, importManager)%>;
+d212 7
+a218 2
+				EObject dst = (EObject) structuralFeatureResult;
+				((<%=importManager.getImportedName("java.util.Collection")%>) myLinkVID2EObjectMap.get(LINK_KEY_<%=nextLink.getVisualID()%>)).add(new LinkDescriptor(container, dst, nextValue, diagram));
+d220 3
+d250 1
+a250 2
+	if (-1 != containerMetaclass.getFeatureID(<%=importManager.getImportedName(genFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=genFeature.getFeatureAccessorName()%>())) {
+		Object structuralFeatureResult = <%=getFeatureValueGetter("container", genFeature, true, importManager)%>;
+d252 1
+a252 1
+		for (<%=importManager.getImportedName("java.util.Iterator")%> destinations = ((<%=importManager.getImportedName("java.util.Collection")%>) structuralFeatureResult).iterator(); destinations.hasNext();) {
+d255 2
+a256 2
+		if (structuralFeatureResult instanceof EObject) {
+			EObject nextDestination = (EObject) structuralFeatureResult;
+@
+

@@ -1,0 +1,267 @@
+head	1.3;
+access;
+symbols
+	v20081022-1925:1.3
+	v20081015-1925:1.3
+	v20081008-1925:1.3
+	v20081001-1925:1.3
+	v20080924-1925:1.3
+	v20080917-1925:1.3
+	v20080911-1728:1.3
+	v20080910-1520:1.3
+	v20080903-1520:1.3
+	v20080827-1520:1.3
+	v20080813-1520:1.3
+	v20080806-1520:1.3;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2007.02.05.17.28.03;	author ashatalin;	state dead;
+branches;
+next	1.2;
+commitid	155b45c769234567;
+
+1.2
+date	2007.02.02.11.07.23;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+commitid	67f745c31b6a4567;
+
+1.1
+date	2007.02.02.10.49.59;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	527745c317554567;
+
+
+desc
+@@
+
+
+1.3
+log
+@Using WorkspaceSynchronized to listen notification from the resources subsystem.
+@
+text
+@/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2005/GenModel/2.0"»
+
+«REM»Inner class of DocumentProvider«ENDREM»
+«DEFINE ResourceSetSynchronizer FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedClassComment»	
+protected class ResourceSetSynchronizer implements org.eclipse.core.resources.IResourceChangeListener {
+
+	«EXPAND attributes-»
+	
+	«EXPAND constructor-»
+
+	«EXPAND resourceChanged-»
+
+	«EXPAND getDiagramResourceEntry-»
+	
+	«EXPAND ResourceDeltaVisitor-»
+
+	«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE attributes FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»	
+private ResourceSetInfo myInfo;
+«ENDDEFINE»
+
+«DEFINE constructor FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»	
+protected ResourceSetSynchronizer(ResourceSetInfo info) {
+	myInfo = info;
+}
+«ENDDEFINE»
+
+«DEFINE resourceChanged FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»	
+public void resourceChanged(org.eclipse.core.resources.IResourceChangeEvent event) {
+	final ResourceDeltaVisitor deltaVisitor = new ResourceDeltaVisitor();
+	try {
+		event.getDelta().accept(deltaVisitor);
+	} catch (org.eclipse.core.runtime.CoreException e) {
+		handleCoreException(e, "FileDocumentProvider.resourceChanged");
+	}
+	synchronized (myInfo) {
+		if (!myInfo.isSynchronized()) {
+			return;
+		}
+	}
+
+	org.eclipse.swt.widgets.Display.getDefault().asyncExec(new Runnable() {
+
+		public void run() {
+			if (deltaVisitor.getDeletedResources().size() > 0) {
+				// Just closing editor
+				handleElementDeleted(myInfo.getEditorInput());
+				return;
+			}
+
+			java.util.Map.Entry diagramEntry = getDiagramResourceEntry(deltaVisitor.getMovedResourcesMap());
+			if (diagramEntry != null) {
+				deltaVisitor.getMovedResourcesMap().remove(diagramEntry.getKey());
+				// Setting new editor input since diagram file was
+				// renamed Could be processed together with the rest of
+				// moved resources if org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.document.FileEditorInputProxy will wupport
+				// org.eclipse.ui.IFileEditorInput substitution
+				handleElementMoved(myInfo.getEditorInput(), (org.eclipse.core.runtime.IPath) diagramEntry.getKey());
+			}
+			if (deltaVisitor.getMovedResourcesMap().size() > 0) {
+				handleResourcesMoved(deltaVisitor.getMovedResourcesMap());
+			}
+			if (deltaVisitor.getChangedResources().size() > 0 || deltaVisitor.getMovedResourcesMap().size() > 0) {
+				// reloading changed resources + changing URIs for moved
+				// resources
+				handleResourcesChanged(myInfo, deltaVisitor.getChangedResources(), null);
+			}
+			if (deltaVisitor.getMovedResourcesMap().size() > 0) {
+				// Marking whole org.eclipse.emf.ecore.resource.ResourceSet as changed to preserve
+				// changes in resource URIs made by
+				// handleResourcesMoved() call
+				markWholeResourceSetAsDirty(myInfo.getResourceSet());
+			}
+		}
+	});
+}
+«ENDDEFINE»
+
+«DEFINE getDiagramResourceEntry FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»	
+private java.util.Map.Entry getDiagramResourceEntry(java.util.Map movedResources) {
+	for (java.util.Iterator it = movedResources.entrySet().iterator(); it.hasNext();) {
+		java.util.Map.Entry nextEntry = (java.util.Map.Entry) it.next();
+		org.eclipse.emf.ecore.resource.Resource nextResource = (org.eclipse.emf.ecore.resource.Resource) nextEntry.getValue();
+		org.eclipse.core.resources.IFile file = org.eclipse.emf.workspace.util.WorkspaceSynchronizer.getFile(nextResource);
+		if (file != null && file.equals(myInfo.getEditorInput().getFile())) {
+			return nextEntry;
+		}
+	}
+	return null;
+}
+«ENDDEFINE»
+
+«DEFINE ResourceDeltaVisitor FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedClassComment»	
+private class ResourceDeltaVisitor implements org.eclipse.core.resources.IResourceDeltaVisitor {
+
+	«EXPAND attributesRDV-»
+	
+	«EXPAND visitRDV-»
+
+	«EXPAND getChangedResourcesRDV-»
+
+	«EXPAND getDeletedResourcesRDV-»
+
+	«EXPAND getMovedResourcesMapRDV-»
+
+	«EXPAND additionsRDV-»
+}
+«ENDDEFINE»
+
+«DEFINE attributesRDV FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»	
+private java.util.Collection myChangedResources = new java.util.ArrayList();
+
+	«EXPAND xpt::Common::generatedMemberComment»	
+private java.util.Map myMovedResources = new java.util.HashMap();
+
+	«EXPAND xpt::Common::generatedMemberComment»	
+private java.util.Collection myDeletedResources = new java.util.ArrayList();
+«ENDDEFINE»
+
+
+«DEFINE visitRDV FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment("Can be called from any thread")»
+public boolean visit(org.eclipse.core.resources.IResourceDelta delta) {
+	if (delta.getFlags() != org.eclipse.core.resources.IResourceDelta.MARKERS && delta.getResource().getType() == org.eclipse.core.resources.IResource.FILE) {
+		if ((delta.getKind() & (org.eclipse.core.resources.IResourceDelta.CHANGED | org.eclipse.core.resources.IResourceDelta.REMOVED)) != 0) {
+			org.eclipse.emf.ecore.resource.Resource resource = myInfo.getResourceSet().getResource(org.eclipse.emf.common.util.URI.createURI(delta.getFullPath().toString()), false);
+			if (resource != null && resource.isLoaded()) {
+				synchronized (myInfo) {
+					if (myInfo.fCanBeSaved) {
+						myInfo.setUnSynchronized(resource);
+						return false;
+					}
+				}
+				if ((delta.getKind() & org.eclipse.core.resources.IResourceDelta.REMOVED) != 0) {
+					// element could be either moved/deleted or
+					// changed.
+					if ((org.eclipse.core.resources.IResourceDelta.MOVED_TO & delta.getFlags()) != 0) {
+						org.eclipse.core.runtime.IPath destination = delta.getMovedToPath();
+						myMovedResources.put(destination, resource);
+					} else {
+						myDeletedResources.add(resource);
+					}
+				} else {
+					myChangedResources.add(resource);
+				}
+			}
+		}
+	}
+
+	return true;
+}
+«ENDDEFINE»
+
+«DEFINE getChangedResourcesRDV FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»	
+public java.util.Collection getChangedResources() {
+	return myChangedResources;
+}
+«ENDDEFINE»
+
+«DEFINE getDeletedResourcesRDV FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»	
+public java.util.Collection getDeletedResources() {
+	return myDeletedResources;
+}
+«ENDDEFINE»
+
+«DEFINE getMovedResourcesMapRDV FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»	
+public java.util.Map getMovedResourcesMap() {
+	return myMovedResources;
+}
+«ENDDEFINE»
+
+«DEFINE additionsRDV FOR gmfgen::GenDiagram-»
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenDiagram-»
+«ENDDEFINE»@
+
+
+1.2
+log
+@Adding NONNLS
+@
+text
+@@
+
+
+1.1
+log
+@Document Provider generated using xpand templates.
+@
+text
+@d15 1
+@
+

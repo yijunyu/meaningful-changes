@@ -1,0 +1,174 @@
+head	1.3;
+access;
+symbols
+	v20081022-1925:1.3
+	v20081015-1925:1.3
+	v20081008-1925:1.3
+	v20081001-1925:1.3
+	v20080924-1925:1.3
+	v20080917-1925:1.3
+	v20080911-1728:1.3
+	v20080910-1520:1.3
+	v20080903-1520:1.3
+	v20080827-1520:1.3
+	v20080813-1520:1.3
+	v20080806-1520:1.3
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3
+	v20050828:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2005.10.04.15.40.37;	author atikhomirov;	state dead;
+branches;
+next	1.2;
+
+1.2
+date	2005.10.04.13.18.07;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.03.22.20.29;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@[dstadnik]
+#111455 Generate consistent names for notation view factories
+#111461 Do not use 'final' keyword in method parameters
+#111460 Generate dedicated edit part for the node label
+#111457 Use model labels in palette factory
+@
+text
+@<%
+	GenFeature genFeature = genNode.getDomainNameFeature();
+	String metaPackageInterfaceName = importManager.getImportedName(genFeature.getGenPackage().getQualifiedPackageInterfaceName());
+%>
+	/**
+	 * @@generated
+	 */
+	protected IFigure createDirectEditFigure() {
+		// FIXME reuse getInitialText
+		return new Label(String.valueOf(getDiagramNode().getDomainModelElement().eGet(getDefaultNameFeature())), getImage());
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected Image getImage() {
+		EditingDomain ed = AdapterFactoryEditingDomain.getEditingDomainFor(getDiagramNode().getDomainModelElement());
+		// XXX it's our way to get adapter factory without initializing it right here. Is there better way?
+		if (ed instanceof AdapterFactoryEditingDomain) {
+			IItemLabelProvider labelProvider = (IItemLabelProvider) ((AdapterFactoryEditingDomain) ed).getAdapterFactory().adapt(getDiagramNode().getDomainModelElement(), IItemLabelProvider.class);
+			if (labelProvider != null) {
+				return <%=importManager.getImportedName("org.eclipse.emf.edit.ui.provider.ExtendedImageRegistry")%>.getInstance().getImage(labelProvider.getImage(getDiagramNode().getDomainModelElement()));
+			}
+			// else fall through
+		}
+		return null;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected IFigure getDirectEditFigure() {
+		if (myDirectEditFigure == null) {
+			myDirectEditFigure = createDirectEditFigure();
+		}
+		return myDirectEditFigure;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected EditPolicy createDirectEditPolicy() {
+		return new DirectEditPolicy() {
+			protected Command getDirectEditCommand(DirectEditRequest request) {
+				EAttribute domainNameFeature = (EAttribute) request.getDirectEditFeature();
+				if (domainNameFeature == null) {
+					System.err.println("Someone passes DirectEditRequest without directEditFeature set");
+					domainNameFeature = getDefaultNameFeature();
+				}
+				return new ChangeDiagramElementNameCommand(getDiagramNode(), domainNameFeature,(String) request.getCellEditor().getValue());
+			}
+			protected void showCurrentEditValue(DirectEditRequest request) {
+				IFigure fig = getDirectEditFigure();
+				if (fig instanceof Label) {
+					((Label)fig).setText((String)request.getCellEditor().getValue());
+					fig.getUpdateManager().performUpdate();
+				}
+			}
+		};
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void performDirectEdit() {
+		if(myManager == null) {
+			myManager = new DefaultDirectEditManager(this, new DefaultDirectEditManager.DirectEditInfoProvider() {
+				public Object getDirectEditFeature() {
+					return <%=metaPackageInterfaceName%>.eINSTANCE.get<%=genFeature.getFeatureAccessorName()%>();
+				}
+				public String getInitialText() {
+					return String.valueOf(getDiagramNode().getDomainModelElement().eGet((EAttribute) getDirectEditFeature()));
+				}
+				public IFigure getDirectEditFigure() {
+					return <%=genNode.getEditPartClassName()%>.this.getDirectEditFigure();
+				}
+				public Font getTextFont() {
+					return getDirectEditFigure().getFont();
+				}
+			});
+		}
+		myManager.show();
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void performRequest(Request request) {
+		if (request.getType() == RequestConstants.REQ_DIRECT_EDIT) {
+			performDirectEdit();
+		} else {
+			super.performRequest(request);
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected EAttribute getDefaultNameFeature() {
+		return <%=metaPackageInterfaceName%>.eINSTANCE.get<%=genFeature.getFeatureAccessorName()%>();
+	}
+@
+
+
+1.2
+log
+@gmfgen ECore references were replaced with GenModel references to ease template coding and as alignment with overall "genmodel for GMF" concept
+@
+text
+@@
+
+
+1.1
+log
+@*** empty log message ***
+@
+text
+@d2 1
+a2 1
+	GenFeature genFeature = genDiagram.findGenFeature(genNode.getDomainNameFeature());
+@
+

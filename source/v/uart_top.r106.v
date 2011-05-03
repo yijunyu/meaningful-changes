@@ -277,8 +277,8 @@ uart_regs	regs(
 	ri_pad_i,  dcd_pad_i}	),
 	.stx_pad_o(		stx_pad_o		),
 	.srx_pad_i(		srx_pad_i		),
-`ifdef DATA_BUS_WIDTH_8
-`else
+//`ifdef DATA_BUS_WIDTH_8
+//`else
 // debug interface signals	enabled
 .ier(ier), 
 .iir(iir), 
@@ -291,7 +291,7 @@ uart_regs	regs(
 .tf_count(tf_count),
 .tstate(tstate),
 .rstate(rstate),
-`endif					  
+//`endif					  
 	.rts_pad_o(		rts_pad_o		),
 	.dtr_pad_o(		dtr_pad_o		),
 	.int_o(		int_o		)
@@ -321,18 +321,18 @@ uart_debug_if dbg(/*AUTOINST*/
 						.rstate					 (rstate[3:0]));
 `endif 
 
-initial
+// initial
 begin
-	`ifdef DATA_BUS_WIDTH_8
+//	`ifdef DATA_BUS_WIDTH_8
 		$display("(%m) UART INFO: Data bus width is 8. No Debug interface.\n");
-	`else
+//	`else
 		$display("(%m) UART INFO: Data bus width is 32. Debug Interface present.\n");
-	`endif
-	`ifdef UART_HAS_BAUDRATE_OUTPUT
+//	`endif
+//	`ifdef UART_HAS_BAUDRATE_OUTPUT
 		$display("(%m) UART INFO: Has baudrate output\n");
-	`else
+//	`else
 		$display("(%m) UART INFO: Doesn't have baudrate output\n");
-	`endif
+//	`endif
 end
 
 endmodule

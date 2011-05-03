@@ -1,0 +1,224 @@
+head	1.3;
+access;
+symbols
+	v20080910-1520:1.3
+	v20070403-1500:1.2
+	v20070330-1300:1.2
+	v20060330-1300:1.2
+	v20070322-1100:1.2
+	v20060316-0600:1.2
+	v20070307-0700:1.2
+	v20070228-2000:1.2
+	v20070221-1500:1.2
+	v20070208-1800:1.2
+	v20070103-0300:1.2
+	M4_20:1.2
+	v20061222-1800:1.2
+	v20061214-0000:1.2
+	v20061120-1300:1.2
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061013-1330:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2007.04.04.11.05.01;	author bblajer;	state dead;
+branches;
+next	1.2;
+commitid	18c54613864d4567;
+
+1.2
+date	2006.10.18.14.22.07;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.09.21.10.12.03;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@[176696]: InitDiagramContents: do not create notational edges to and from child label nodes;
+Rewrite editpart templates in xpt;
+Unify what is refreshed for each edit part type;
+Preparation for side-affixed elements.
+@
+text
+@	<%=importManager.getImportedName("java.util.List")%> result = new <%=importManager.getImportedName("java.util.LinkedList")%>();
+<%
+Map genFeature2genLinkMap = new LinkedHashMap();
+for(Iterator it = _containedTypeModelFacetLinks; it.hasNext(); ) {
+	GenLink genLink = (GenLink)it.next();
+	TypeLinkModelFacet modelFacet = (TypeLinkModelFacet) genLink.getModelFacet();
+	GenFeature metaFeature = modelFacet.getChildMetaFeature();
+	if (!genFeature2genLinkMap.containsKey(metaFeature)) {
+		genFeature2genLinkMap.put(metaFeature, new ArrayList());
+	}
+	((Collection) genFeature2genLinkMap.get(metaFeature)).add(genLink);
+}
+Map genFeature2featureGenLinkMap = new LinkedHashMap();
+for(Iterator it = _containedFeatureModelFacetLinks; it.hasNext(); ) {
+	GenLink genLink = (GenLink)it.next();
+	GenFeature metaFeature = ((FeatureLinkModelFacet) genLink.getModelFacet()).getMetaFeature();
+	if (!genFeature2featureGenLinkMap.containsKey(metaFeature)) {
+		genFeature2featureGenLinkMap.put(metaFeature, new ArrayList());
+	}
+	((Collection) genFeature2featureGenLinkMap.get(metaFeature)).add(genLink);
+}
+if (!genFeature2genLinkMap.isEmpty() || !genFeature2featureGenLinkMap.isEmpty()) {
+%>
+	<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> modelObject = <%=_getViewCode%>.getElement();
+	<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> nextValue;
+<%
+}
+if (!genFeature2genLinkMap.isEmpty()) {
+%>
+	int linkVID;
+<%
+}
+for (Iterator entries = genFeature2genLinkMap.entrySet().iterator(); entries.hasNext();) {
+	Map.Entry nextEntry = (Map.Entry) entries.next();
+	GenFeature metaFeature = (GenFeature) nextEntry.getKey();
+	Collection genLinksCollection = (Collection) nextEntry.getValue();
+	if (metaFeature.isListType()) {
+%>
+	for(<%=importManager.getImportedName("java.util.Iterator")%> it = <%myFeatureGetAccessorHelper.appendFeatureValueGetter("modelObject", metaFeature, null, true);%>.iterator(); it.hasNext(); ) {
+		nextValue = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) it.next();
+<%
+	} else {
+%>
+	nextValue = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>)<%myFeatureGetAccessorHelper.appendFeatureValueGetter("modelObject", metaFeature, null, false);%>;
+<%
+	}
+%>
+	linkVID = <%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.INSTANCE.getLinkWithClassVisualID(nextValue);
+<%
+	boolean generateSwitch = genLinksCollection.size() != 1;
+	if (generateSwitch) {
+%>
+	switch (linkVID) {
+<%
+	}
+	for (Iterator genLinksIterator = genLinksCollection.iterator(); genLinksIterator.hasNext(); ) {
+		GenLink nextLink = (GenLink) genLinksIterator.next();
+		TypeLinkModelFacet modelFacet = (TypeLinkModelFacet) nextLink.getModelFacet();
+		if (generateSwitch) {
+%>
+	case <%=importManager.getImportedName(nextLink.getEditPartQualifiedClassName())%>.VISUAL_ID: {
+<%
+		} else {
+%>
+	if (<%=importManager.getImportedName(nextLink.getEditPartQualifiedClassName())%>.VISUAL_ID == linkVID) {
+<%
+		}
+		if (modelFacet.getSourceMetaFeature() != null) {
+%>
+		<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> source = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>)<%myFeatureGetAccessorHelper.appendFeatureValueGetter("nextValue", modelFacet.getSourceMetaFeature(), null, false);%>;
+<%
+		} else {
+%>
+		<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> source = <%=_getViewCode%>.getElement();
+<%
+		}
+		if (modelFacet.getTargetMetaFeature() != null) {
+%>
+		<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> target = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>)<%myFeatureGetAccessorHelper.appendFeatureValueGetter("nextValue", modelFacet.getTargetMetaFeature(), null, false);%>;
+<%
+		} else {
+%>
+		<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> target = <%=_getViewCode%>.getElement();
+<%
+		}
+%>
+		if (source != null && target != null) {
+			result.add(new <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.LinkDescriptor")%>(source, target, nextValue, linkVID));
+		}
+<%
+		if (generateSwitch) {
+%>
+		break;
+	}
+<%
+		} else {
+%>
+	}
+<%
+		}
+%>
+<%
+	}	//iterate over genLinksCollection
+	if (generateSwitch) {
+%>
+	}
+<%
+	}
+	if (metaFeature.isListType()) {
+%>
+	}
+<%
+	}
+}
+for (Iterator entries = genFeature2featureGenLinkMap.entrySet().iterator(); entries.hasNext();) {
+	Map.Entry nextEntry = (Map.Entry) entries.next();
+	GenFeature metaFeature = (GenFeature) nextEntry.getKey();
+	Collection genLinksCollection = (Collection) nextEntry.getValue();
+	if (metaFeature.isListType()) {
+%>
+	for(<%=importManager.getImportedName("java.util.Iterator")%> it = <%myFeatureGetAccessorHelper.appendFeatureValueGetter("modelObject", metaFeature, null, true);%>.iterator(); it.hasNext(); ) {
+		nextValue = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>) it.next();
+<%
+	} else {
+%>
+	nextValue = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%>)<%myFeatureGetAccessorHelper.appendFeatureValueGetter("modelObject", metaFeature, null, false);%>;
+<%
+	}
+%>
+	if (nextValue != null) {
+<%
+	for (Iterator genLinksIterator = genLinksCollection.iterator(); genLinksIterator.hasNext(); ) {
+		GenLink nextLink = (GenLink) genLinksIterator.next();
+%>
+		result.add(new <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.LinkDescriptor")%>(modelObject, nextValue, null, <%=importManager.getImportedName(nextLink.getEditPartQualifiedClassName())%>.VISUAL_ID));
+<%
+	}
+%>
+	}
+<%
+	if (metaFeature.isListType()) {
+%>
+	}
+<%
+	}
+}
+%>
+	return result;
+@
+
+
+1.2
+log
+@#161380 simplify feature model facets
+@
+text
+@@
+
+
+1.1
+log
+@[157859] bblajer - Diagram initialization from pre-existing domain models
+@
+text
+@d16 1
+a16 1
+	GenFeature metaFeature = ((FeatureModelFacet) genLink.getModelFacet()).getMetaFeature();
+@
+

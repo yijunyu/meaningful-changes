@@ -1,0 +1,213 @@
+head	1.2;
+access;
+symbols
+	v20081022-1925:1.2
+	v20081015-1925:1.2
+	v20081008-1925:1.1
+	v20081001-1925:1.1
+	v20080930-1130:1.1
+	v20080926-1245:1.1
+	v20080924-1925:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2008.10.14.12.53.49;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	2e35d48f496534567;
+
+1.1
+date	2008.09.23.14.54.38;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	2569e48d903244567;
+
+
+desc
+@@
+
+
+1.2
+log
+@[174961] Menu actions - refactor LoadResource and CreateShortcut actions to use generic genmodel action infrastructure
+@
+text
+@/*
+ * Copyright (c) 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+
+«EXTENSION impl::actions::MenuAction»
+
+«DEFINE Main FOR GenEditorGenerator»
+   <extension point="org.eclipse.ui.menus">
+      «EXPAND xpt::Common::xmlGeneratedTag»
+      <!-- menuContribution locationURI="menu:org.eclipse.ui.main.menu?after=«»">
+      </menuContribution>
+      <menuContribution locationURI="toolbar:org.eclipse.ui.main.toolbar?after=«»">
+      </menuContribution -->
+«EXPAND menuContribution FOREACH contextMenus-»
+   </extension>
+
+«IF hasCommandsToContribute()-»
+   <extension point="org.eclipse.ui.commands">
+      «EXPAND xpt::Common::xmlGeneratedTag»
+      <category id="«editor.iD»" name="%cmdcategory.name" description="%cmdcategory.desc"/>
+«EXPAND commandContribution FOREACH contextMenus-»
+   </extension>
+«ENDIF-»
+
+«IF hasHandlersToContribute()-»
+   <extension point="org.eclipse.ui.handlers">
+      «EXPAND xpt::Common::xmlGeneratedTag»
+«EXPAND handlerContribution FOREACH contextMenus-»
+   </extension>
+«ENDIF-»
+
+   <!-- optionally, specify keybindings -->
+«ENDDEFINE»
+
+«DEFINE menuContribution FOR gmfgen::GenContextMenu-»
+«EXPAND _menuContribution(this, "popup:org.eclipse.gmf.runtime.diagram.ui.DiagramEditorContextMenu")-»
+«ENDDEFINE»
+
+«DEFINE menuContribution(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenContributionManager»«ERROR "Abstract menuContribution for " + this»«ENDDEFINE»
+«DEFINE menuContribution(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenMenuManager»«EXPAND _menuContribution(contextMenu, "popup:" + iD)»«ENDDEFINE»
+«DEFINE menuContribution(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenToolBarManager»«EXPAND _menuContribution(contextMenu, "toolbar:" + iD)»«ENDDEFINE»
+
+«DEFINE _menuContribution(gmfgen::GenContextMenu contextMenu, String locationURI) FOR gmfgen::GenContributionManager-»
+      <menuContribution locationURI="«locationURI»">
+«EXPAND menuEntry(contextMenu) FOREACH items-»
+      </menuContribution>
+«EXPAND menuContribution(contextMenu) FOREACH items.typeSelect(GenContributionManager)-»
+«ENDDEFINE»
+
+
+«DEFINE commandContribution FOR gmfgen::GenContributionManager-»
+«EXPAND commandContribution FOREACH items.typeSelect(GenCustomAction)-»
+«EXPAND commandContribution FOREACH items.typeSelect(GenAction)-»
+«EXPAND commandContribution FOREACH items.typeSelect(GenContributionManager)-»
+«ENDDEFINE»
+
+«DEFINE handlerContribution FOR gmfgen::GenContributionManager-»
+«EXPAND handlerContribution FOREACH items.typeSelect(GenCustomAction).select(a | a.generateBoilerplate)-»
+«EXPAND handlerContribution FOREACH items.typeSelect(GenContributionManager)-»
+«ENDDEFINE»
+
+«DEFINE commandContribution FOR gmfgen::GenCustomAction-»
+      <command id="«EXPAND commandIdentifier»"
+         name="«name»"
+         categoryId="«owner.editorGen.editor.iD»"
+         defaultHandler="«qualifiedClassName»"/>
+«ENDDEFINE»
+
+«DEFINE commandContribution FOR gmfgen::GenAction-»
+      <command id="«EXPAND commandIdentifier»"
+         name="«name/*FIXME: into i18n keys*/»"
+         categoryId="«owner.editorGen.editor.iD»"
+         defaultHandler="«qualifiedClassName»"/>
+«ENDDEFINE»
+
+«DEFINE handlerContribution FOR gmfgen::GenCustomAction-»
+      <handler
+         commandId="«EXPAND commandIdentifier»"
+         class="«qualifiedClassName»">
+         <enabledWhen>
+            <and>
+               <test property="org.eclipse.core.runtime.bundleState" args="«owner.editorGen.plugin.iD»" value="ACTIVE"/>
+               <with variable="activePartId"><equals value="«owner.editorGen.editor.iD»"/></with>
+            </and>
+         </enabledWhen>
+      </handler>
+«ENDDEFINE»
+
+«DEFINE commandIdentifier FOR gmfgen::GenCustomAction»«owner.editorGen.plugin.iD».«qualifiedClassName.split('\\.').last()»«ENDDEFINE»
+«DEFINE commandIdentifier FOR gmfgen::GenAction»«owner.editorGen.plugin.iD».«qualifiedClassName.split('\\.').last()»«ENDDEFINE»
+
+«DEFINE menuEntry(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenContributionItem»«REM»NO-OP XXX or ERROR?«ENDREM»«ENDDEFINE»
+«DEFINE menuEntry(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenSeparator-»
+         <separator «IF groupName != null»name="«groupName»" «ENDIF»visible="true"/>
+«ENDDEFINE»
+«DEFINE menuEntry(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenGroupMarker-»
+         <separator name="«groupName»"/>
+«ENDDEFINE»
+«DEFINE menuEntry(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenCommandAction-»
+         <command commandId="«commandIdentifier»">
+            <visibleWhen>
+«EXPAND menuCondition FOR contextMenu-»
+            </visibleWhen>
+         </command>
+«ENDDEFINE»
+«DEFINE menuEntry(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenCustomAction-»
+         <command commandId="«EXPAND commandIdentifier»">
+            <visibleWhen>
+«EXPAND menuCondition FOR contextMenu-»
+            </visibleWhen>
+         </command>
+«ENDDEFINE»
+«DEFINE menuEntry(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenAction-»
+         <command commandId="«EXPAND commandIdentifier»">
+            <visibleWhen>
+«EXPAND menuCondition FOR contextMenu-»
+            </visibleWhen>
+         </command>
+«ENDDEFINE»
+
+«DEFINE menuEntry(gmfgen::GenContextMenu contextMenu) FOR gmfgen::GenMenuManager»
+         <menu id="«iD»" label="«name»">
+            <visibleWhen>
+«EXPAND menuCondition FOR contextMenu-»
+            </visibleWhen>
+         </menu>
+«ENDDEFINE»
+
+«DEFINE menuCondition FOR gmfgen::GenContextMenu-»
+               <and>
+                  <test property="org.eclipse.core.runtime.bundleState" args="«editorGen.plugin.iD»" value="ACTIVE"/>
+                  <with variable="activePartId"><equals value="«editorGen.editor.iD»"/></with>
+                  <with variable="selection">«IF context.size() > 1»<or>«ENDIF»
+«REM»XXX, perhaps, <adapt type="EditPart">?«ENDREM-»
+«FOREACH context AS de-»
+                     <instanceof value="«de.getEditPartQualifiedClassName()»"/>
+«ENDFOREACH-»
+                  «IF context.size() > 1»</or>«ENDIF»</with>
+               </and>
+«ENDDEFINE»
+
+«DEFINE i18n FOR gmfgen::GenEditorGenerator-»
+«IF hasCommandsToContribute()-»
+# Commands and menu actions
+cmdcategory.name=«modelID» Editor Commands
+cmdcategory.desc=«modelID» Editor Commands
+«ENDIF»
+«ENDDEFINE»@
+
+
+1.1
+log
+@[174961] Code generation support for custom actions
+@
+text
+@d64 1
+d80 7
+d100 2
+a101 3
+«DEFINE commandIdentifier FOR gmfgen::GenCustomAction-»
+«owner.editorGen.plugin.iD».«qualifiedClassName.split('\\.').last()-»
+«ENDDEFINE»
+d124 7
+@
+

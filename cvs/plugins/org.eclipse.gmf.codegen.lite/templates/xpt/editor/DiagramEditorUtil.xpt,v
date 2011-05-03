@@ -1,0 +1,461 @@
+head	1.9;
+access;
+symbols
+	v20080910-1520:1.9
+	v20080722-1827:1.9
+	v20080716-1642:1.9
+	R2_1_maintenance:1.9.0.2
+	Root_R2_1_maintenance:1.9
+	R2_1_0:1.9
+	v20080507-1326:1.9
+	v20080501-1739:1.8
+	v20080425-1959:1.8
+	v20080322-0000:1.8
+	v20071108-0000:1.8
+	v20071003-0000:1.8
+	v20070921-0000:1.7
+	v20070915-0000:1.7
+	v20070903-0000:1.8
+	v20070809-0000:1.7
+	R2_0_maintenance:1.7.0.2
+	R2_0:1.7
+	R4_20:1.7
+	v20070621-0000:1.7
+	RC3_20:1.6
+	v20070614-1400:1.6
+	v20070608-1300:1.6
+	v20070601-1400:1.6
+	v20070525-1500:1.5
+	v20070520-1200:1.5
+	v20070518-1300:1.4
+	v20070504-1000:1.4
+	v20070427-0600:1.4
+	v20070420-1000:1.3
+	v20070413-1300:1.2
+	v20070405-1100:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.9
+date	2008.05.07.13.55.38;	author atikhomirov;	state Exp;
+branches;
+next	1.8;
+commitid	388c4821b4d44567;
+
+1.8
+date	2007.08.13.14.11.03;	author bblajer;	state Exp;
+branches;
+next	1.7;
+commitid	65c246c066754567;
+
+1.7
+date	2007.06.15.15.36.23;	author bblajer;	state Exp;
+branches;
+next	1.6;
+commitid	f534672b1f74567;
+
+1.6
+date	2007.05.29.14.55.32;	author bblajer;	state Exp;
+branches;
+next	1.5;
+commitid	2543465c3ee24567;
+
+1.5
+date	2007.05.18.21.17.26;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+commitid	25e5464e17e24567;
+
+1.4
+date	2007.04.24.14.16.48;	author bblajer;	state Exp;
+branches;
+next	1.3;
+commitid	4264462e114e4567;
+
+1.3
+date	2007.04.13.15.21.20;	author bblajer;	state Exp;
+branches;
+next	1.2;
+commitid	797b461f9fef4567;
+
+1.2
+date	2007.04.10.14.40.10;	author bblajer;	state Exp;
+branches;
+next	1.1;
+commitid	5b02461ba1c84567;
+
+1.1
+date	2007.04.04.11.05.01;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	18c54613864d4567;
+
+
+desc
+@@
+
+
+1.9
+log
+@[228913] updated ValueExpression use in GMFGen to better accomodate codegen needs (items 1,2,3)
+@
+text
+@/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::GenModelUtils»
+«EXTENSION xpt::editor::i18n»
+
+«DEFINE DiagramEditorUtil FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::copyright FOR editorGen»
+package «editorGen.editor.packageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «diagramEditorUtilClassName» «EXPAND supertypes» {
+	«EXPAND openFilePathDialog-»
+«IF editorGen.editor.eclipseEditor-»
+	«EXPAND openEditor-»
+«ELSE-»
+	«EXPAND showView-»
+«ENDIF-»
+	«EXPAND initializeDiagram-»
+«IF !editorGen.sameFileForDiagramAndModel-»
+	«EXPAND convertURIs-»
+«ENDIF-»
+	«EXPAND isReadOnly-»
+«IF editorGen.application == null-»
+	«EXPAND setCharset-»
+«ENDIF-»
+	«EXPAND saveOptions-»
+	«EXPAND isKnownShortcutModelID-»
+	«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE supertypes FOR gmfgen::GenDiagram»«ENDDEFINE»
+
+«DEFINE openFilePathDialog FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public static String openFilePathDialog(org.eclipse.swt.widgets.Shell shell, String fileExtensionFilter, int style) {
+	org.eclipse.swt.widgets.FileDialog fileDialog = new org.eclipse.swt.widgets.FileDialog(shell, style);
+	fileDialog.setFilterExtensions(new String[]{fileExtensionFilter});
+
+	fileDialog.open();
+	if (fileDialog.getFileName() != null && fileDialog.getFileName().length() > 0) {
+		return fileDialog.getFilterPath() + java.io.File.separator + fileDialog.getFileName();
+	}
+	else {
+		return null;
+	}
+}
+«ENDDEFINE»
+
+«DEFINE openEditor FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public static org.eclipse.ui.IEditorPart openEditor(org.eclipse.emf.common.util.URI fileURI) {
+	org.eclipse.ui.IWorkbench workbench = org.eclipse.ui.PlatformUI.getWorkbench();
+	org.eclipse.ui.IWorkbenchWindow workbenchWindow = workbench.getActiveWorkbenchWindow();
+	org.eclipse.ui.IWorkbenchPage page = workbenchWindow.getActivePage();
+
+	org.eclipse.ui.IEditorDescriptor editorDescriptor = workbench.getEditorRegistry().getDefaultEditor(fileURI.lastSegment());
+	if (editorDescriptor == null) {
+		org.eclipse.jface.dialogs.MessageDialog.openError(
+		workbenchWindow.getShell(),
+		«EXPAND xpt::Externalizer::accessorCall(i18nKeyForDiagramEditorUtilErrorNoDescriptor().titleKey()) FOR editorGen»,
+		java.text.MessageFormat.format(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForDiagramEditorUtilErrorNoDescriptor().messageKey()) FOR editorGen», new Object[] {fileURI.toFileString()}));
+		return null;
+	} else {
+		try {
+			return page.openEditor(new org.eclipse.emf.common.ui.URIEditorInput(fileURI), editorDescriptor.getId());
+		} catch (org.eclipse.ui.PartInitException exception) {
+			org.eclipse.jface.dialogs.MessageDialog.openError(
+				workbenchWindow.getShell(),
+				«EXPAND xpt::Externalizer::accessorCall(i18nKeyForDiagramEditorUtilErrorOpeningEditor()) FOR editorGen»,	
+				exception.getMessage());
+			return null;
+		}
+	}
+}
+«ENDDEFINE»
+
+«DEFINE showView FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public static org.eclipse.ui.IViewPart showView(org.eclipse.emf.common.util.URI fileURI) {
+	org.eclipse.ui.IWorkbench workbench = org.eclipse.ui.PlatformUI.getWorkbench();
+	org.eclipse.ui.IWorkbenchWindow workbenchWindow = workbench.getActiveWorkbenchWindow();
+	org.eclipse.ui.IWorkbenchPage page = workbenchWindow.getActivePage();
+
+	try {
+		org.eclipse.gmf.runtime.lite.parts.DiagramViewPart diagramView = (org.eclipse.gmf.runtime.lite.parts.DiagramViewPart) page.showView(«editorGen.editor.getQualifiedClassName()».ID);
+		if (!diagramView.showDiagram(null, fileURI)) {
+			return null;
+		}
+		return diagramView;
+	} catch (org.eclipse.ui.PartInitException exception) {
+		org.eclipse.jface.dialogs.MessageDialog.openError(
+			workbenchWindow.getShell(),
+			«EXPAND xpt::Externalizer::accessorCall(i18nKeyForDiagramEditorUtilErrorOpeningView()) FOR editorGen», 
+			exception.getMessage());
+		return null;
+	}
+}
+«ENDDEFINE»
+
+«DEFINE convertURIs FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public static org.eclipse.emf.common.util.URI getDiagramFileURI(org.eclipse.emf.common.util.URI modelFileURI) {
+	if (modelFileURI == null || !modelFileURI.isFile()) {
+		return null;
+	}
+	return modelFileURI.trimFileExtension().appendFileExtension("«editorGen.diagramFileExtension»");	«EXPAND xpt::Common::nonNLS»
+}
+
+«EXPAND xpt::Common::generatedMemberComment»
+public static org.eclipse.emf.common.util.URI getModelFileURI(org.eclipse.emf.common.util.URI diagramFileURI) {
+	if (diagramFileURI == null || !diagramFileURI.isFile()) {
+		return null;
+	}
+	return diagramFileURI.trimFileExtension().appendFileExtension("«editorGen.domainFileExtension»");	«EXPAND xpt::Common::nonNLS»
+}
+«ENDDEFINE»
+
+«DEFINE isReadOnly FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment("Returns whether the given element is read only in its editing domain.")»
+public static boolean isReadOnly(org.eclipse.emf.ecore.EObject element) {
+	if (element == null) {
+		return true;
+	}
+	org.eclipse.emf.ecore.resource.Resource resource = element.eResource();
+	if (resource == null) {
+		return false;
+	}
+	return isReadOnly(resource);
+}
+
+«EXPAND xpt::Common::generatedMemberComment»
+public static boolean isReadOnly(org.eclipse.emf.ecore.resource.Resource resource) {
+	org.eclipse.emf.transaction.TransactionalEditingDomain editingDomain = org.eclipse.emf.transaction.util.TransactionUtil.getEditingDomain(resource);
+	if (editingDomain == null) {
+		return false;
+	}
+	return editingDomain.isReadOnly(resource);
+}
+«ENDDEFINE»
+
+«DEFINE initializeDiagram FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public static org.eclipse.gmf.runtime.notation.Diagram createDiagramFor(org.eclipse.emf.ecore.EObject diagramRoot) {
+	if («getEditPartQualifiedClassName()».VISUAL_ID != «getVisualIDRegistryQualifiedClassName()».getDiagramVisualID(diagramRoot)) {
+		return null;
+	}
+	org.eclipse.gmf.runtime.notation.Diagram result = org.eclipse.gmf.runtime.notation.NotationFactory.eINSTANCE.createDiagram();
+	result.setElement(diagramRoot);
+	«getNotationViewFactoryQualifiedClassName()».INSTANCE.decorateView(result);
+	new DiagramInitializer().initDiagramContents(result);
+	return result;
+}
+
+«EXPAND xpt::editor::DiagramInitializer::DiagramInitializer-»
+«ENDDEFINE»
+
+«DEFINE setCharset FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public static void setCharset(org.eclipse.core.resources.IFile file) {
+	if (file == null) {
+		return;
+	}
+	try {
+		file.setCharset("UTF-8", new org.eclipse.core.runtime.NullProgressMonitor()); «EXPAND xpt::Common::nonNLS»
+	} catch (org.eclipse.core.runtime.CoreException e) {
+		«editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Unable to set charset for file " + file.getFullPath(), e); «EXPAND xpt::Common::nonNLS»
+	}
+}	
+«ENDDEFINE»
+
+«DEFINE saveOptions FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public static java.util.Map getSaveOptions() {
+	java.util.Map saveOptions = new java.util.HashMap();
+	saveOptions.put(org.eclipse.emf.ecore.xmi.XMLResource.OPTION_ENCODING, "UTF-8"); «EXPAND xpt::Common::nonNLS»
+	saveOptions.put(org.eclipse.emf.ecore.xmi.XMLResource.OPTION_RECORD_UNKNOWN_FEATURE, Boolean.TRUE);
+	saveOptions.put(org.eclipse.emf.ecore.resource.Resource.OPTION_SAVE_ONLY_IF_CHANGED, org.eclipse.emf.ecore.resource.Resource.OPTION_SAVE_ONLY_IF_CHANGED_MEMORY_BUFFER);
+	return saveOptions;
+}
+«ENDDEFINE»
+
+«DEFINE isKnownShortcutModelID FOR gmfgen::GenDiagram-»
+«IF containsShortcutsTo.size() > 0-»
+«EXPAND xpt::Common::generatedMemberComment»
+public static boolean isKnownShortcutModelID(String modelID) {
+	«EXPAND acceptModelID(this) FOREACH containsShortcutsTo-»
+	return false;
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE acceptModelID(gmfgen::GenDiagram diagram) FOR String-»
+«IF this == diagram.editorGen.modelID-»
+if («diagram.getEditPartQualifiedClassName()».MODEL_ID.equals(modelID)) {
+«ELSE-»
+if ("«this»".equals(modelID)) {	«EXPAND xpt::Common::nonNLS»
+«ENDIF-»
+	return true;
+}
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenDiagram»«ENDDEFINE»
+
+«DEFINE i18nAccessors FOR gmfgen::GenDiagram-»
+«IF editorGen.editor.eclipseEditor-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForDiagramEditorUtilErrorOpeningEditor())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForDiagramEditorUtilErrorNoDescriptor().titleKey())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForDiagramEditorUtilErrorNoDescriptor().messageKey())-»
+«ELSE-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForDiagramEditorUtilErrorOpeningView())-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE i18nValues FOR gmfgen::GenDiagram-»
+«IF editorGen.editor.eclipseEditor-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForDiagramEditorUtilErrorOpeningEditor(), "Error Opening Editor")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForDiagramEditorUtilErrorNoDescriptor().titleKey(), "Error")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForDiagramEditorUtilErrorNoDescriptor().messageKey(), "There is no editor registered for the file {0}")-»
+«ELSE-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForDiagramEditorUtilErrorOpeningView(), "Error Opening View")-»
+«ENDIF-»
+«ENDDEFINE»
+@
+
+
+1.8
+log
+@1. Don't cache templates if dynamic templates option is on;
+2. [199747] Support shortcuts in the Lite diagrams (including notation model update for links between alien shortcuts);
+3. Decorations should be visible;
+4. TransactionalUpdateManager: more notifications to be dispatched to parents, make it possible to add more in subclasses;
+5. On element creation, it should be given an opportunity to contribute its notational update commands;
+6. [199749]: Delete from View supported (request, edit policy, command, UI action);
+7. Add @@generated tags where they were missing;
+8. ChildNotationModelRefresher: if the child feature is derived transient, notation model refresher should listen to containment feature.
+@
+text
+@d13 1
+a13 1
+«IMPORT "http://www.eclipse.org/gmf/2006/GenModel"»
+@
+
+
+1.7
+log
+@i18n for all Lite templates in Xpand
+@
+text
+@d40 1
+d196 20
+@
+
+
+1.6
+log
+@Rewrite some templates with XPand;
+Adopt VisualIDRegistry from full RT.
+@
+text
+@d17 1
+d73 2
+a74 2
+		"Error",
+		"There is no editor registered for the file " + fileURI.toFileString());
+d82 1
+a82 1
+				"Error Opening Editor",
+d106 1
+a106 1
+			"Error Opening View",
+d196 20
+@
+
+
+1.5
+log
+@switching to nsURI format which uses year to denote model version (same way EMF does)
+@
+text
+@d156 1
+a156 1
+	if («getEditPartQualifiedClassName()».VISUAL_ID != «getVisualIDRegistryQualifiedClassName()».INSTANCE.getDiagramVisualID(diagramRoot)) {
+@
+
+
+1.4
+log
+@CanonicalStyle is taken into account while refreshing notational model to reflect changes in underlying domain model;
+Update is now centralized and transactional;
+Changes to visibility are dispatched to the parent of the affected view as well (was: only to the view itself);
+Save options are not reused, for easy modification of the generated code;
+Side-affixed children are not considered direct children;
+Empty edit-patterns are treated the same way as null patterns (view pattern is used instead).
+@
+text
+@d13 1
+a13 1
+«IMPORT "http://www.eclipse.org/gmf/2005/GenModel/2.0"»
+@
+
+
+1.3
+log
+@Never save read-only resources
+@
+text
+@a184 3
+private static java.util.Map ourSaveOptions = null;
+
+«EXPAND xpt::Common::generatedMemberComment»
+d186 5
+a190 7
+	if (ourSaveOptions == null) {
+		ourSaveOptions = new java.util.HashMap();
+		ourSaveOptions.put(org.eclipse.emf.ecore.xmi.XMIResource.OPTION_ENCODING, "UTF-8"); «EXPAND xpt::Common::nonNLS»
+		ourSaveOptions.put(org.eclipse.emf.ecore.xmi.XMLResource.OPTION_RECORD_UNKNOWN_FEATURE, Boolean.TRUE);
+		ourSaveOptions.put(org.eclipse.emf.ecore.resource.Resource.OPTION_SAVE_ONLY_IF_CHANGED, org.eclipse.emf.ecore.resource.Resource.OPTION_SAVE_ONLY_IF_CHANGED_MEMORY_BUFFER);
+	}
+	return ourSaveOptions;
+@
+
+
+1.2
+log
+@[179970] - Adopt code generater to make use of EMF "conditional resource saving";
+Correctly set charset for IFiles
+@
+text
+@d140 5
+@
+
+
+1.1
+log
+@[176696]: InitDiagramContents: do not create notational edges to and from child label nodes;
+Rewrite editpart templates in xpt;
+Unify what is refreshed for each edit part type;
+Preparation for side-affixed elements.
+@
+text
+@d35 4
+d164 30
+@
+

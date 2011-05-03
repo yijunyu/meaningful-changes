@@ -1,0 +1,210 @@
+head	1.4;
+access;
+symbols
+	v20080910-1520:1.4
+	v20070228-2000:1.3
+	v20070221-1500:1.3
+	v20070208-1800:1.3
+	v20070103-0300:1.3
+	M4_20:1.3
+	v20061222-1800:1.3
+	v20061214-0000:1.3
+	v20061120-1300:1.3
+	M3_20:1.3
+	v20061117-0800:1.3
+	v20061013-1330:1.2
+	M1_20:1.1
+	v20060904-1500:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2007.03.02.21.21.16;	author bblajer;	state dead;
+branches;
+next	1.3;
+commitid	2b1945e895484567;
+
+1.3
+date	2006.10.18.14.22.07;	author dstadnik;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.10.09.17.03.14;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.07.03.17.42.27;	author ashatalin;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[164018]: Add<>Command and Clone<>Command moved to separate classes;
+Common methods from edit policies moved to runtime superclasses
+@
+text
+@<%
+	//input: _edge : String
+%>
+			private <%=importManager.getImportedName("org.eclipse.emf.common.command.Command")%> createDomainModelRemoveCommand(<%=importManager.getImportedName("org.eclipse.emf.transaction.TransactionalEditingDomain")%> editingDomain) {
+<%
+	if (genLink.getModelFacet() instanceof TypeLinkModelFacet) {
+		TypeLinkModelFacet modelFacet = (TypeLinkModelFacet) genLink.getModelFacet();
+		GenFeature sourceFeature = modelFacet.getSourceMetaFeature();
+		GenFeature containmentFeature = modelFacet.getContainmentMetaFeature();
+		GenFeature childFeature = modelFacet.getChildMetaFeature();
+		GenFeature targetFeature = modelFacet.getTargetMetaFeature();
+		//See creation of links in NodeEditPart
+
+		boolean removeSource = sourceFeature != null;
+		boolean removeTarget = targetFeature != null;
+		boolean removeChild = childFeature != null && childFeature != containmentFeature && !childFeature.isDerived();
+		if (containmentFeature != null) {
+			if (sourceFeature != null && sourceFeature.getEcoreFeature() instanceof EReference == true) {
+				EReference sourceEcoreFeature = (EReference)sourceFeature.getEcoreFeature();
+				if (sourceEcoreFeature.getEOpposite() == containmentFeature.getEcoreFeature()) {
+					removeSource = false;
+				}
+			}
+			if (targetFeature != null && targetFeature.getEcoreFeature() instanceof EReference == true) {
+				EReference targetEcoreFeature = (EReference)targetFeature.getEcoreFeature();
+				if (targetEcoreFeature.getEOpposite() == containmentFeature.getEcoreFeature()) {
+					removeTarget = false;
+				}
+			}
+%>
+				<%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%> result = new <%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%>();
+<%
+			if (containmentFeature.getEcoreFeature().isMany()) {
+%>
+				result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getElement().eContainer(), <%=importManager.getImportedName(containmentFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=containmentFeature.getFeatureAccessorName()%>(), <%=_edge%>.getElement()));
+<%
+			} else {
+%>
+				result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getElement().eContainer(), <%=importManager.getImportedName(containmentFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=containmentFeature.getFeatureAccessorName()%>(), <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE));
+<%
+			}
+		} else {
+%>
+				return <%=importManager.getImportedName("org.eclipse.emf.common.command.UnexecutableCommand")%>.INSTANCE;
+<%
+		}
+		if (removeChild) {
+			if (childFeature.getEcoreFeature().isMany()) {
+%>
+				result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getElement().eContainer(), <%=importManager.getImportedName(childFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=childFeature.getFeatureAccessorName()%>(),
+					<%=_edge%>.getElement()));
+<%
+			} else {
+%>
+				result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getElement().eContainer(), <%=importManager.getImportedName(childFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=childFeature.getFeatureAccessorName()%>(),
+					<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE));
+<%
+			}
+		}
+		if (removeSource) {
+			if (sourceFeature.getEcoreFeature().isMany()) {
+%>
+				result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getElement(), <%=importManager.getImportedName(sourceFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=sourceFeature.getFeatureAccessorName()%>(), <%=_edge%>.getSource().getElement()));
+<%
+			} else {
+%>
+				result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getElement(), <%=importManager.getImportedName(sourceFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=sourceFeature.getFeatureAccessorName()%>(), <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE));
+<%
+			}
+		}
+		if (removeTarget) {
+			if (targetFeature.getEcoreFeature().isMany()) {
+%>
+				result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getElement(), <%=importManager.getImportedName(targetFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=targetFeature.getFeatureAccessorName()%>(), <%=_edge%>.getTarget().getElement()));
+<%
+			} else {
+%>
+				result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getElement(), <%=importManager.getImportedName(targetFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=targetFeature.getFeatureAccessorName()%>(), <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE));
+<%
+			}
+		}
+%>
+				return result;
+<%
+	} else if (genLink.getModelFacet() instanceof FeatureLinkModelFacet) {
+		GenFeature metaFeature = ((FeatureLinkModelFacet) genLink.getModelFacet()).getMetaFeature();
+		if (metaFeature.getEcoreFeature().isMany()) {
+%>
+				return <%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getSource().getElement(), <%=importManager.getImportedName(metaFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=metaFeature.getFeatureAccessorName()%>(), <%=_edge%>.getTarget().getElement());
+<%
+		} else {
+%>
+				return <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(
+					editingDomain,
+					<%=_edge%>.getSource().getElement(), <%=importManager.getImportedName(metaFeature.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=metaFeature.getFeatureAccessorName()%>(), <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE);
+<%
+		}
+%>
+<%
+	}
+%>
+			}
+@
+
+
+1.3
+log
+@#161380 simplify feature model facets
+@
+text
+@@
+
+
+1.2
+log
+@[160205] bblajer - move and clone elements on diagram
+@
+text
+@d101 2
+a102 2
+	} else if (genLink.getModelFacet() instanceof FeatureModelFacet) {
+		GenFeature metaFeature = ((FeatureModelFacet) genLink.getModelFacet()).getMetaFeature();
+@
+
+
+1.1
+log
+@#149298 Lite Generator: Make it possible to reroute links
+@
+text
+@d37 1
+a37 1
+					<%=_edge%>.getElement().eContainer(), <%=_edge%>.getElement().eContainmentFeature(), <%=_edge%>.getElement()));
+d43 1
+a43 1
+					<%=_edge%>.getElement().eContainer(), <%=_edge%>.getElement().eContainmentFeature(), <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE));
+@
+

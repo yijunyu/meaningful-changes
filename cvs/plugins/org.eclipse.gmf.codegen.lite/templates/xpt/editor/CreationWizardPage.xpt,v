@@ -1,0 +1,583 @@
+head	1.4;
+access;
+symbols
+	v20080910-1520:1.4
+	v20080722-1827:1.4
+	v20080716-1642:1.4
+	R2_1_maintenance:1.3.0.2
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080507-1326:1.3
+	v20080501-1739:1.2
+	v20080425-1959:1.2
+	v20080322-0000:1.2
+	v20071108-0000:1.1
+	v20071003-0000:1.1
+	v20070921-0000:1.1
+	v20070915-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2008.07.01.18.48.55;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	4f14486a7c174567;
+
+1.3
+date	2008.05.07.13.55.38;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	388c4821b4d44567;
+
+1.2
+date	2008.02.26.22.50.33;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	405e47c497b74567;
+
+1.1
+date	2007.06.20.10.16.10;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	37dd4678fe694567;
+
+
+desc
+@@
+
+
+1.4
+log
+@refactored templates moving towards [188329] - Support Java 5.0 (would need to respect generic types when adding into collections) while trying to accomplish [227127]
+@
+text
+@/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::GenModelUtils»
+«EXTENSION xpt::editor::Wizard»
+«EXTENSION xpt::editor::GenDiagram»
+«EXTENSION xpt::editor::i18n»
+
+«DEFINE CreationWizardPage FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::copyright FOR editorGen»
+package «editorGen.editor.packageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «creationWizardPageClassName» «EXPAND supertypes» {
+	«EXPAND attrs-»
+
+	«EXPAND ctor-»
+
+	«EXPAND createControl-»
+
+	«EXPAND validatePage-»
+
+	«EXPAND getResult-»
+
+	«EXPAND getDiagramFileURI-»
+
+	«EXPAND finish-»
+
+	«EXPAND doFinish-»
+
+	«EXPAND createDiagramFile-»
+
+«IF standaloneDomainModel() && hasDocumentRoot()-»
+	«EXPAND createDocumentRoot-»
+«ENDIF-»
+
+	«EXPAND handleException-»
+
+	«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE supertypes FOR gmfgen::GenDiagram»extends «IF isRichClientPlatform()»org.eclipse.jface.wizard.WizardPage«ELSE»org.eclipse.ui.dialogs.WizardNewFileCreationPage«ENDIF»«ENDDEFINE»
+
+«DEFINE attrs FOR gmfgen::GenDiagram-»
+«IF isRichClientPlatform()-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.swt.widgets.Text fileField;
+«ENDIF-»
+«EXPAND xpt::Common::generatedMemberComment»
+private «EXPAND createdDiagramFileType» «EXPAND createdDiagramFileAttributeName»;
+«ENDDEFINE»
+
+«DEFINE createdDiagramFileAttributeName FOR gmfgen::GenDiagram»«IF isRichClientPlatform()»myCreatedDiagramFileURI«ELSE»myCreatedDiagramFile«ENDIF»«ENDDEFINE»
+«DEFINE createdDiagramFileMethodName FOR gmfgen::GenDiagram»«IF isRichClientPlatform()»getCreatedDiagramFileURI«ELSE»getCreatedDiagramFile«ENDIF»«ENDDEFINE»
+«DEFINE createdDiagramFileType FOR gmfgen::GenDiagram»«IF isRichClientPlatform()»org.eclipse.emf.common.util.URI«ELSE»org.eclipse.core.resources.IFile«ENDIF»«ENDDEFINE»
+
+«DEFINE getResult FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public «EXPAND createdDiagramFileType» «EXPAND createdDiagramFileMethodName»() {
+	return «EXPAND createdDiagramFileAttributeName»;
+}
+«ENDDEFINE»
+
+«DEFINE ctor FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public «creationWizardPageClassName»(«EXPAND ctorFormalParams») {
+	super(«EXPAND ctor_superCallParams»);
+	setTitle(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageTitle()) FOR editorGen»);
+	setDescription(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageDescription()) FOR editorGen»);
+}
+«ENDDEFINE»
+
+«DEFINE ctorFormalParams FOR gmfgen::GenDiagram»«IF !isRichClientPlatform()»org.eclipse.jface.viewers.IStructuredSelection selection«ENDIF»«ENDDEFINE»
+
+«DEFINE ctor_superCallParams FOR gmfgen::GenDiagram»«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPagePageName()) FOR editorGen»«IF !isRichClientPlatform()», selection«ENDIF»«ENDDEFINE»
+
+«DEFINE createControl FOR gmfgen::GenDiagram-»
+«IF isRichClientPlatform()-»
+«EXPAND xpt::Common::generatedMemberComment»
+public void createControl(org.eclipse.swt.widgets.Composite parent) {
+	org.eclipse.swt.widgets.Composite composite = new org.eclipse.swt.widgets.Composite(parent, org.eclipse.swt.SWT.NONE);
+	{
+		org.eclipse.swt.layout.GridLayout layout = new org.eclipse.swt.layout.GridLayout();
+		layout.numColumns = 1;
+		layout.verticalSpacing = 12;
+		composite.setLayout(layout);
+
+		org.eclipse.swt.layout.GridData data = new org.eclipse.swt.layout.GridData();
+		data.verticalAlignment = org.eclipse.swt.layout.GridData.FILL;
+		data.grabExcessVerticalSpace = true;
+		data.horizontalAlignment = org.eclipse.swt.layout.GridData.FILL;
+		composite.setLayoutData(data);
+	}
+	org.eclipse.swt.widgets.Label resourceURILabel = new org.eclipse.swt.widgets.Label(composite, org.eclipse.swt.SWT.LEFT);
+	{
+		resourceURILabel.setText(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageResourceURILabel()) FOR editorGen»);
+
+		org.eclipse.swt.layout.GridData data = new org.eclipse.swt.layout.GridData();
+		data.horizontalAlignment = org.eclipse.swt.layout.GridData.FILL;
+		resourceURILabel.setLayoutData(data);
+	}
+
+	org.eclipse.swt.widgets.Composite fileComposite = new org.eclipse.swt.widgets.Composite(composite, org.eclipse.swt.SWT.NONE);
+	{
+		org.eclipse.swt.layout.GridData data = new org.eclipse.swt.layout.GridData();
+		data.horizontalAlignment = org.eclipse.swt.layout.GridData.FILL;
+		data.grabExcessHorizontalSpace = true;
+		fileComposite.setLayoutData(data);
+
+		org.eclipse.swt.layout.GridLayout layout = new org.eclipse.swt.layout.GridLayout();
+		layout.marginHeight = 0;
+		layout.marginWidth = 0;
+		layout.numColumns = 2;
+		fileComposite.setLayout(layout);
+	}
+	fileField = new org.eclipse.swt.widgets.Text(fileComposite, org.eclipse.swt.SWT.BORDER);
+	{
+		org.eclipse.swt.layout.GridData data = new org.eclipse.swt.layout.GridData();
+		data.horizontalAlignment = org.eclipse.swt.layout.GridData.FILL;
+		data.grabExcessHorizontalSpace = true;
+		data.horizontalSpan = 1;
+		fileField.setLayoutData(data);
+	}
+
+	fileField.addModifyListener(validator);
+	org.eclipse.swt.widgets.Button resourceURIBrowseFileSystemButton = new org.eclipse.swt.widgets.Button(fileComposite, org.eclipse.swt.SWT.PUSH);
+	resourceURIBrowseFileSystemButton.setText(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageBrowseButtonLabel()) FOR editorGen»);
+
+	resourceURIBrowseFileSystemButton.addSelectionListener(new org.eclipse.swt.events.SelectionAdapter() {
+			 public void widgetSelected(org.eclipse.swt.events.SelectionEvent event) {
+				 String fileExtension = "«editorGen.diagramFileExtension»";
+				 String filePath = «getDiagramEditorUtilQualifiedClassName()».openFilePathDialog(getShell(), "*." + fileExtension, org.eclipse.swt.SWT.OPEN);	«EXPAND xpt::Common::nonNLS»
+				 if (filePath != null) {
+					 if (!filePath.endsWith("." + fileExtension)) {	«EXPAND xpt::Common::nonNLS»
+						 filePath += "." + fileExtension;	«EXPAND xpt::Common::nonNLS»
+					 }
+					 fileField.setText(filePath);
+				 }
+			 }
+		 }); 
+	setPageComplete(validatePage());
+	setControl(composite);
+}
+
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.swt.events.ModifyListener validator =
+	new org.eclipse.swt.events.ModifyListener() {
+		public void modifyText(org.eclipse.swt.events.ModifyEvent e) {
+			setPageComplete(validatePage());
+		}
+	};
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE validatePage FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected boolean validatePage() {
+«IF isRichClientPlatform()-»
+	org.eclipse.emf.common.util.URI diagramFileURI = getDiagramFileURI();
+	if (diagramFileURI == null || diagramFileURI.isEmpty()) {
+		setErrorMessage(null);
+		return false;
+	}
+
+	if (diagramFileURI.isFile()) {
+		java.io.File diagramFile = new java.io.File(diagramFileURI.toFileString());
+		if (diagramFile.exists()) {
+			setErrorMessage(java.text.MessageFormat.format(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageDiagramFileExists()) FOR editorGen», new Object[] {diagramFile}));
+			return false;
+		}
+	}
+«ELSE-»
+	if (!super.validatePage()) {
+		return false;
+	}
+	String fileName = getFileName();
+	if (fileName == null) {
+		setErrorMessage(null);
+		return false;
+	}
+
+	org.eclipse.core.runtime.IPath path = getContainerFullPath().append(fileName);
+	if (path.getFileExtension() == null) {
+		path = path.addFileExtension("«editorGen.diagramFileExtension»");	«EXPAND xpt::Common::nonNLS»
+	}
+	if (org.eclipse.core.resources.ResourcesPlugin.getWorkspace().getRoot().exists(path)) {
+		setErrorMessage(java.text.MessageFormat.format(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageDiagramFileExists()) FOR editorGen», new Object[] {path.toOSString()}));
+		return false;
+	}
+«ENDIF-»
+	String requiredExt = "«editorGen.diagramFileExtension»";	«EXPAND xpt::Common::nonNLS»
+«IF isRichClientPlatform()-»
+	String enteredExt = diagramFileURI.fileExtension();
+«ELSE-»
+	String enteredExt = path.getFileExtension();
+«ENDIF-»
+	if (enteredExt == null || !enteredExt.equals(requiredExt)) {
+		setErrorMessage(java.text.MessageFormat.format(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageIncorrectExtension()) FOR editorGen», new Object[] {requiredExt})); 
+		return false;
+	}
+«IF !editorGen.sameFileForDiagramAndModel-»
+	«IF isRichClientPlatform()-»
+	org.eclipse.emf.common.util.URI modelFileURI = «getDiagramEditorUtilQualifiedClassName()».getModelFileURI(getDiagramFileURI());
+	java.io.File modelFile = new java.io.File(modelFileURI.toFileString());
+	if (modelFile.exists()) {
+		setErrorMessage(java.text.MessageFormat.format(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageDiagramFileExists()) FOR editorGen», new Object[] {modelFile}));
+		return false;
+	}
+	«ELSE-»
+	path = path.removeFileExtension().addFileExtension("«editorGen.domainFileExtension»"); «EXPAND xpt::Common::nonNLS»
+	if (org.eclipse.core.resources.ResourcesPlugin.getWorkspace().getRoot().exists(path)) {
+		setErrorMessage(java.text.MessageFormat.format(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageDiagramFileExists()) FOR editorGen», new Object[] {path.lastSegment()}));
+		return false;
+	}
+	«ENDIF-»
+«ENDIF-»
+	setErrorMessage(null);
+	return true;
+}
+«ENDDEFINE»
+
+«DEFINE getDiagramFileURI FOR gmfgen::GenDiagram-»
+«IF isRichClientPlatform()-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.emf.common.util.URI getDiagramFileURI() {
+	try {
+		return org.eclipse.emf.common.util.URI.createFileURI(fileField.getText());
+	} catch (Exception exception) {
+	}
+	return null;
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE finish FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment("Performs the operations necessary to create and open the diagram\n" + 
+  "@@return boolean indicating whether the creation and opening the Diagram was successful ")»
+public boolean finish() {
+	final boolean[] result = new boolean[1];
+«IF isRichClientPlatform()-»
+		org.eclipse.jface.operation.IRunnableWithProgress op = new org.eclipse.jface.operation.IRunnableWithProgress() {
+			public void run(org.eclipse.core.runtime.IProgressMonitor monitor) {
+«ELSE-»
+		org.eclipse.ui.actions.WorkspaceModifyOperation op = new org.eclipse.ui.actions.WorkspaceModifyOperation(null) {
+			protected void execute(org.eclipse.core.runtime.IProgressMonitor monitor) {
+«ENDIF-»
+				result[0] = doFinish(monitor);
+			}
+		};
+
+		try {
+			getContainer().run(false, true, op);
+		} catch (InterruptedException e) {
+			return false;
+		} catch (java.lang.reflect.InvocationTargetException e) {
+			if (e.getTargetException() instanceof org.eclipse.core.runtime.CoreException) {
+				org.eclipse.jface.dialogs.ErrorDialog.openError(
+					getContainer().getShell(),
+					«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageCreationFailed()) FOR editorGen»,
+					null,	// no special message
+					((org.eclipse.core.runtime.CoreException) e.getTargetException()).getStatus());
+			}
+			else {
+				// CoreExceptions are handled above, but unexpected runtime exceptions and errors may still occur.
+				«editorGen.plugin.getActivatorQualifiedClassName()».getInstance().getLog().log(new org.eclipse.core.runtime.Status(org.eclipse.core.runtime.IStatus.ERROR, «editorGen.plugin.getActivatorQualifiedClassName()».ID, 0, «EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageCreationFailed()) FOR editorGen», e.getTargetException()));
+			}
+			return false;
+		}
+		return result[0];
+	}
+«ENDDEFINE»
+
+«DEFINE doFinish FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment("@@param monitor the <code>org.eclipse.core.runtime.IProgressMonitor</code> to use to indicate progress and check for cancellation\n" + 
+  "@@return boolean indicating whether the diagram was created and opened successfully")»
+public boolean doFinish(org.eclipse.core.runtime.IProgressMonitor monitor) {
+	«EXPAND createdDiagramFileAttributeName» = createDiagramFile(monitor);
+	return «EXPAND createdDiagramFileAttributeName» != null;
+}
+«ENDDEFINE»
+
+«DEFINE createDiagramFile FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private «EXPAND createdDiagramFileType» createDiagramFile(org.eclipse.core.runtime.IProgressMonitor monitor) {
+	org.eclipse.emf.transaction.TransactionalEditingDomain editingDomain = «EXPAND xpt::editor::Common::createEditingDomain FOR editorGen»;
+	org.eclipse.emf.ecore.resource.ResourceSet resourceSet = editingDomain.getResourceSet();
+	«EXPAND defineResources-»
+
+	if (diagramResource != null«IF standaloneDomainModel()» && modelResource != null«ENDIF») {
+«IF domainDiagramElement != null && !standaloneDomainModel()-»
+		((org.eclipse.emf.ecore.xmi.XMLResource) diagramResource).getDefaultSaveOptions().put(org.eclipse.emf.ecore.xmi.XMLResource.OPTION_EXTENDED_META_DATA, Boolean.TRUE);
+		((org.eclipse.emf.ecore.xmi.XMLResource) diagramResource).getDefaultLoadOptions().put(org.eclipse.emf.ecore.xmi.XMLResource.OPTION_EXTENDED_META_DATA, Boolean.TRUE);
+«ENDIF-»
+		org.eclipse.emf.workspace.AbstractEMFOperation saveOperation = new org.eclipse.emf.workspace.AbstractEMFOperation(editingDomain, «EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageCommandLabel()) FOR editorGen») {
+			public org.eclipse.core.runtime.IStatus doExecute(org.eclipse.core.runtime.IProgressMonitor monitor, org.eclipse.core.runtime.IAdaptable info) throws org.eclipse.core.commands.ExecutionException {
+				«EXPAND createAndSave-»
+			}
+		};
+		try {
+			saveOperation.execute(new org.eclipse.core.runtime.NullProgressMonitor(), null);
+		} catch (org.eclipse.core.commands.ExecutionException e) {
+			«editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Exception occurred while creating the diagram", e);	«EXPAND xpt::Common::nonNLS»
+			return null;
+		}
+		«EXPAND setCharset-»
+		«EXPAND openDiagram-»
+«IF isRichClientPlatform()-»
+		return getDiagramFileURI();
+«ELSE-»
+		return diagramFile;
+«ENDIF-»
+	}
+return null;
+}
+«ENDDEFINE»
+
+«DEFINE defineResources FOR gmfgen::GenDiagram-»
+«IF isRichClientPlatform()-»
+final org.eclipse.emf.ecore.resource.Resource diagramResource = resourceSet.createResource(getDiagramFileURI());
+	«IF standaloneDomainModel()-»
+final org.eclipse.emf.ecore.resource.Resource modelResource = resourceSet.createResource(«getDiagramEditorUtilQualifiedClassName()».getModelFileURI(getDiagramFileURI()));
+	«ENDIF-»
+«ELSE-»
+org.eclipse.core.runtime.IPath diagramFilePath = getContainerFullPath().append(getFileName());
+if (diagramFilePath.getFileExtension() == null) {
+	diagramFilePath = diagramFilePath.addFileExtension("«editorGen.diagramFileExtension»");		«EXPAND xpt::Common::nonNLS»
+}
+final org.eclipse.core.resources.IFile diagramFile = org.eclipse.core.resources.ResourcesPlugin.getWorkspace().getRoot().getFile(diagramFilePath);
+final org.eclipse.emf.ecore.resource.Resource diagramResource = resourceSet.createResource(org.eclipse.emf.common.util.URI.createPlatformResourceURI(diagramFilePath.toString(), true));
+	«IF standaloneDomainModel()-»
+org.eclipse.core.runtime.IPath modelFilePath = diagramFilePath.removeFileExtension().addFileExtension("«editorGen.domainFileExtension»"); «EXPAND xpt::Common::nonNLS»
+final org.eclipse.core.resources.IFile modelFile = org.eclipse.core.resources.ResourcesPlugin.getWorkspace().getRoot().getFile(modelFilePath);
+final org.eclipse.emf.ecore.resource.Resource modelResource = resourceSet.createResource(org.eclipse.emf.common.util.URI.createPlatformResourceURI(modelFilePath.toString(), true));
+	«ENDIF-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE createAndSave FOR gmfgen::GenDiagram-»
+monitor.beginTask(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageTaskName()) FOR editorGen», 1);
+try {
+«IF domainDiagramElement != null-»
+	«EXPAND createInitialModel("model")»
+	«LET standaloneDomainModel() ? "modelResource" : "diagramResource" AS resourceToUse-»
+	«resourceToUse».getContents().add(«IF hasDocumentRoot()»createDocumentRoot(model)«ELSE»«EXPAND MetaModel::DowncastToEObject("model") FOR domainDiagramElement»«ENDIF»);
+	«ENDLET-»
+«ENDIF-»
+	org.eclipse.gmf.runtime.notation.Diagram diagram = org.eclipse.gmf.runtime.notation.NotationFactory.eINSTANCE.createDiagram();
+«IF domainDiagramElement != null-»
+	diagram.setElement(«EXPAND MetaModel::DowncastToEObject("model") FOR domainDiagramElement»);
+«ENDIF-»
+	«getNotationViewFactoryQualifiedClassName()».INSTANCE.decorateView(diagram);
+	diagramResource.getContents().add(diagram);
+	try {
+«IF standaloneDomainModel()-»
+		modelResource.save(«getDiagramEditorUtilQualifiedClassName()».getSaveOptions());
+«ENDIF-»
+		diagramResource.save(«getDiagramEditorUtilQualifiedClassName()».getSaveOptions());
+	} catch (java.io.IOException e) {
+		handleSaveException(e);
+	}
+	return org.eclipse.core.runtime.Status.OK_STATUS;
+} finally {
+	monitor.done();
+}
+«ENDDEFINE»
+
+// TODO: introduce separate method as in FullRT
+«DEFINE createInitialModel(String varName) FOR gmfgen::GenDiagram»«EXPAND MetaModel::NewInstance(varName) FOR domainDiagramElement»«ENDDEFINE»
+
+«DEFINE setCharset FOR gmfgen::GenDiagram-»
+«IF !isRichClientPlatform()-»
+«getDiagramEditorUtilQualifiedClassName()».setCharset(diagramFile);
+	«IF standaloneDomainModel()-»
+«getDiagramEditorUtilQualifiedClassName()».setCharset(modelFile);
+	«ENDIF-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE openDiagram FOR gmfgen::GenDiagram-»
+«IF editorGen.editor.eclipseEditor-»
+«IF isRichClientPlatform()-»
+if («getDiagramEditorUtilQualifiedClassName()».openEditor(getDiagramFileURI()) == null) {
+	return null;
+}
+«ELSE-»
+try {
+	org.eclipse.ui.ide.IDE.openEditor(org.eclipse.ui.PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(), diagramFile);
+} catch (org.eclipse.ui.PartInitException e) {
+	«editorGen.plugin.getActivatorQualifiedClassName()».getInstance().getLog().log(e.getStatus());
+	return null;
+}
+«ENDIF-»
+«ELSE-»
+if («getDiagramEditorUtilQualifiedClassName()».showView(diagramResource.getURI()) == null) {
+	return null;
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE createDocumentRoot FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private static «EXPAND MetaModel::QualifiedClassName FOR getDocumentRoot()» createDocumentRoot(«EXPAND MetaModel::QualifiedClassName FOR domainDiagramElement» model) {
+	«EXPAND MetaModel::NewInstance("docRoot") FOR getDocumentRoot()»
+«LET getDocumentRootSetFeature() AS f»«IF f == null-»
+	docRoot.set«domainDiagramElement.ecoreClass.name»(model); // FIXME name of the set method is pure guess«ELSE-»
+	«EXPAND MetaModel::modifyFeature("docRoot", getDocumentRoot(), "model") FOR f»;«ENDIF»
+«ENDLET-»
+	return docRoot;
+}
+«ENDDEFINE»
+
+«DEFINE handleException FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private void handleSaveException(java.io.IOException e) throws org.eclipse.core.commands.ExecutionException {
+	throw new org.eclipse.core.commands.ExecutionException(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForCreationWizardPageSaveFailed()) FOR editorGen», e);
+}
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenDiagram»«ENDDEFINE»
+
+«DEFINE i18nAccessors FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPagePageName())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageTitle())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageDescription())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageDiagramFileExists())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageIncorrectExtension())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageModelFileExists())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageCreationFailed())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageCommandLabel())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageTaskName())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageSaveFailed())-»
+«IF isRichClientPlatform()-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageResourceURILabel())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForCreationWizardPageBrowseButtonLabel())-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE i18nValues FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPagePageName(), "Diagram Location")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageTitle(), "Create " + editorGen.domainGenModel.modelName + " Diagram")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageDescription(), "Create a new " + editorGen.domainGenModel.modelName + " Diagram")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageDiagramFileExists(), "Diagram File already exists: {0}")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageIncorrectExtension(), "The file name must end in {0}")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageModelFileExists(), "Model File already exists: {0}")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageCreationFailed(), "Creation Failed")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageCommandLabel(), "Create Diagram")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageTaskName(), "Creating Diagram")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageSaveFailed(), "Save Failed")-»
+«IF isRichClientPlatform()-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageResourceURILabel(), "&File")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForCreationWizardPageBrowseButtonLabel(), "&Browse...")-»
+«ENDIF-»
+«ENDDEFINE»
+@
+
+
+1.3
+log
+@[228913] updated ValueExpression use in GMFGen to better accomodate codegen needs (items 1,2,3)
+@
+text
+@d419 1
+a419 1
+	«EXPAND MetaModel::setFeatureValue("docRoot", getDocumentRoot(), "model") FOR f»;«ENDIF»
+@
+
+
+1.2
+log
+@[150177] phase I, refactor existing code: completed - all metamodel access moved to MetaModel template, LiteRT version updated
+@
+text
+@d13 1
+a13 1
+«IMPORT "http://www.eclipse.org/gmf/2006/GenModel"»
+@
+
+
+1.1
+log
+@Rewrite /editor/* templates in XPand;
+Use common template to generate code that creates an editing domain in various places;
+OpenDiagramEditPolicy: package statement was missing.
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2007 Borland Software Corporation
+d355 1
+a355 1
+	«domainDiagramElement.getQualifiedInterfaceName()» model = «EXPAND createInitialModel»;
+d357 1
+a357 1
+	«resourceToUse».getContents().add(«IF hasDocumentRoot()»createDocumentRoot(model)«ELSE»«unparenthesizedCast("model", domainDiagramElement, null)»«ENDIF»);
+d362 1
+a362 1
+	diagram.setElement(«unparenthesizedCast("model", domainDiagramElement, null)»);
+d380 2
+a381 1
+«DEFINE createInitialModel FOR gmfgen::GenDiagram»«EXPAND xpt::Common::newInstance FOR domainDiagramElement»«ENDDEFINE»
+d415 2
+a416 2
+private static «getDocumentRoot().getQualifiedInterfaceName()» createDocumentRoot(«domainDiagramElement.getQualifiedInterfaceName()» model) {
+	«EXPAND xpt::Common::newInstance("docRoot") FOR getDocumentRoot()»
+d419 1
+a419 1
+	docRoot.set«f.getAccessorName()»(model);«ENDIF»
+@
+

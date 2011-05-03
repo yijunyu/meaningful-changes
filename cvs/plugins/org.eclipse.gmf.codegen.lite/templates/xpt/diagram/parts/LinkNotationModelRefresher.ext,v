@@ -1,0 +1,245 @@
+head	1.4;
+access;
+symbols
+	v20080910-1520:1.4
+	v20080722-1827:1.4
+	v20080716-1642:1.4
+	R2_1_maintenance:1.4.0.2
+	Root_R2_1_maintenance:1.4
+	R2_1_0:1.4
+	v20080507-1326:1.4
+	v20080501-1739:1.3
+	v20080425-1959:1.3
+	v20080322-0000:1.3
+	v20071108-0000:1.3
+	v20071003-0000:1.3
+	v20070921-0000:1.3
+	v20070915-0000:1.3
+	v20070903-0000:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.2
+	R2_0:1.3
+	R4_20:1.3
+	v20070621-0000:1.3
+	RC3_20:1.3
+	v20070614-1400:1.3
+	v20070608-1300:1.3
+	v20070601-1400:1.3
+	v20070525-1500:1.3
+	v20070520-1200:1.3
+	v20070518-1300:1.2
+	v20070504-1000:1.1
+	v20070427-0600:1.1
+	v20070420-1000:1.1
+	v20070413-1300:1.1
+	v20070405-1100:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2008.05.07.13.55.37;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	388c4821b4d44567;
+
+1.3
+date	2007.05.18.21.17.25;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	25e5464e17e24567;
+
+1.2
+date	2007.05.04.14.08.43;	author bblajer;	state Exp;
+branches;
+next	1.1;
+commitid	464d463b3e6a4567;
+
+1.1
+date	2007.04.04.11.04.48;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	18c54613864d4567;
+
+
+desc
+@@
+
+
+1.4
+log
+@[228913] updated ValueExpression use in GMFGen to better accomodate codegen needs (items 1,2,3)
+@
+text
+@/*
+ * Copyright (c) 2007 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+import "http://www.eclipse.org/emf/2002/Ecore";
+import "http://www.eclipse.org/emf/2002/GenModel";
+import "http://www.eclipse.org/gmf/2008/GenModel";
+extension xpt::diagram::LinkFinder;
+
+boolean needsLinkNotationModelRefresher(gmfgen::GenCommonBase gcb) :
+	gcb.primNeedsLinkNotationModelRefresher()
+;
+
+boolean needsLinkNotationModelRefresher(gmfgen::GenDiagram diagram) :
+	true	//due to uncontained links
+;
+
+boolean primNeedsLinkNotationModelRefresher(gmfgen::GenCommonBase gcb) :
+	gcb.containedLinks().size() > 0
+;
+
+cached Collection[genmodel::GenFeature] getAffectingFeatures(gmfgen::GenCommonBase gcb) :
+	{}.union(gcb.containedLinks().modelFacet.collect(e| e.getAffectingFeatures()).flatten())
+;
+
+private Collection[genmodel::GenFeature] getAffectingFeatures(gmfgen::LinkModelFacet facet) :
+	{}
+;
+
+private Collection[genmodel::GenFeature] getAffectingFeatures(gmfgen::TypeLinkModelFacet facet) :
+	{facet.childMetaFeature, facet.sourceMetaFeature, facet.targetMetaFeature}.select(e| e != null)
+;
+
+private Collection[genmodel::GenFeature] getAffectingFeatures(gmfgen::FeatureLinkModelFacet facet) :
+	{facet.metaFeature}
+;
+
+Collection[genmodel::GenFeature] getLinkChildFeatures(gmfgen::GenCommonBase gcb) :
+	getLinkChildFeatures(gcb, containedLinks(gcb))
+;
+
+Collection[genmodel::GenFeature] getLinkChildFeatures(gmfgen::GenCommonBase gcb, Collection[gmfgen::GenLink] someOfContainedLinks) :
+	{}.union(someOfContainedLinks.collect(e| e.modelFacet.getLinkChildFeature())).select(e| e != null)
+;
+
+private genmodel::GenFeature getLinkChildFeature(gmfgen::LinkModelFacet facet) :
+	null
+;
+
+private genmodel::GenFeature getLinkChildFeature(gmfgen::TypeLinkModelFacet facet) :
+	facet.childMetaFeature
+;
+
+private genmodel::GenFeature getLinkChildFeature(gmfgen::FeatureLinkModelFacet facet) :
+	facet.metaFeature
+;
+
+Collection[gmfgen::GenNode] getTypeGenLinksForFeature(gmfgen::GenCommonBase gcb, genmodel::GenFeature genFeature, Collection[gmfgen::GenLink] containedLinks) :
+JAVA org.eclipse.gmf.internal.codegen.lite.utils.SemanticSyncUtils.getTypeGenLinks(org.eclipse.gmf.codegen.gmfgen.GenCommonBase, org.eclipse.emf.codegen.ecore.genmodel.GenFeature, java.util.Collection)
+;
+
+Collection[gmfgen::GenNode] getFeatureGenLinksForFeature(gmfgen::GenCommonBase gcb, genmodel::GenFeature genFeature, Collection[gmfgen::GenLink] containedLinks) :
+JAVA org.eclipse.gmf.internal.codegen.lite.utils.SemanticSyncUtils.getFeatureGenLinks(org.eclipse.gmf.codegen.gmfgen.GenCommonBase, org.eclipse.emf.codegen.ecore.genmodel.GenFeature, java.util.Collection)
+;
+
+cached Collection[gmfgen::GenCommonBase] getLinkContainersWithAncestors(gmfgen::GenDiagram diagram) :
+	buildAncestorClosure((Collection[gmfgen::GenCommonBase]) diagram.links.collect(e| e.getPossibleContainers()).flatten())
+;
+
+private Collection[gmfgen::GenCommonBase] buildAncestorClosure(Collection[gmfgen::GenCommonBase] elements) :
+JAVA org.eclipse.gmf.internal.codegen.lite.utils.SemanticSyncUtils.buildAncestorClosure(java.util.Collection)
+;
+
+Collection[gmfgen::GenCommonBase] getContainedContainers(gmfgen::GenCommonBase gcb) :
+	{}
+;
+
+Collection[gmfgen::GenCommonBase] getContainedContainers(gmfgen::GenContainerBase gcb) :
+	gcb.containedNodes
+;
+
+Collection[gmfgen::GenCommonBase] getContainedContainers(gmfgen::GenNode node) :
+	{}.addAll(node.containedNodes).addAll(node.compartments).addAll(node.containedLinks())
+;
+
+Collection[gmfgen::GenCommonBase] getContainedContainers(gmfgen::GenLink link) :
+	link.containedLinks()
+;
+
+@
+
+
+1.3
+log
+@switching to nsURI format which uses year to denote model version (same way EMF does)
+@
+text
+@d15 1
+a15 1
+import "http://www.eclipse.org/gmf/2006/GenModel";
+@
+
+
+1.2
+log
+@1. Links to links;
+2. Exception from TreeEditPartViewer (in the outline) while closing the diagram editor (because unregister is not called, only deactivate) fixed;
+3. instead of rerouting a link to an end that does not support it, remove the link
+@
+text
+@d15 1
+a15 1
+import "http://www.eclipse.org/gmf/2005/GenModel/2.0";
+@
+
+
+1.1
+log
+@[176696]: InitDiagramContents: do not create notational edges to and from child label nodes;
+Rewrite editpart templates in xpt;
+Unify what is refreshed for each edit part type;
+Preparation for side-affixed elements.
+@
+text
+@d18 1
+a18 1
+boolean needsLinkNotationModelRefresher(gmfgen::GenContainerBase gcb) :
+d26 1
+a26 1
+boolean primNeedsLinkNotationModelRefresher(gmfgen::GenContainerBase gcb) :
+d30 1
+a30 1
+cached Collection[genmodel::GenFeature] getAffectingFeatures(gmfgen::GenContainerBase gcb) :
+d46 1
+a46 1
+Collection[genmodel::GenFeature] getLinkChildFeatures(gmfgen::GenContainerBase gcb) :
+d50 1
+a50 1
+Collection[genmodel::GenFeature] getLinkChildFeatures(gmfgen::GenContainerBase gcb, Collection[gmfgen::GenLink] someOfContainedLinks) :
+d66 2
+a67 2
+Collection[gmfgen::GenNode] getTypeGenLinksForFeature(gmfgen::GenContainerBase genContainerBase, genmodel::GenFeature genFeature, Collection[gmfgen::GenLink] containedLinks) :
+JAVA org.eclipse.gmf.internal.codegen.lite.utils.SemanticSyncUtils.getTypeGenLinks(org.eclipse.gmf.codegen.gmfgen.GenContainerBase, org.eclipse.emf.codegen.ecore.genmodel.GenFeature, java.util.Collection)
+d70 2
+a71 2
+Collection[gmfgen::GenNode] getFeatureGenLinksForFeature(gmfgen::GenContainerBase genContainerBase, genmodel::GenFeature genFeature, Collection[gmfgen::GenLink] containedLinks) :
+JAVA org.eclipse.gmf.internal.codegen.lite.utils.SemanticSyncUtils.getFeatureGenLinks(org.eclipse.gmf.codegen.gmfgen.GenContainerBase, org.eclipse.emf.codegen.ecore.genmodel.GenFeature, java.util.Collection)
+d74 2
+a75 2
+cached Collection[gmfgen::GenContainerBase] getLinkContainersWithAncestors(gmfgen::GenDiagram diagram) :
+	buildAncestorClosure((Collection[gmfgen::GenContainerBase]) diagram.links.collect(e| e.getPossibleContainers()).flatten())
+d78 1
+a78 1
+private Collection[gmfgen::GenContainerBase] buildAncestorClosure(Collection[gmfgen::GenContainerBase] elements) :
+d82 5
+a86 1
+Collection[gmfgen::GenContainerBase] getContainedContainers(gmfgen::GenContainerBase gcb) :
+d90 2
+a91 2
+Collection[gmfgen::GenContainerBase] getContainedContainers(gmfgen::GenNode node) :
+	{}.addAll(node.containedNodes).addAll(node.compartments)
+d93 5
+@
+

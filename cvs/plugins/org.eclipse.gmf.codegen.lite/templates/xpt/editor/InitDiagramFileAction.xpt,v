@@ -1,0 +1,264 @@
+head	1.3;
+access;
+symbols
+	v20080910-1520:1.3
+	v20080722-1827:1.3
+	v20080716-1642:1.3
+	R2_1_maintenance:1.3.0.2
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080507-1326:1.3
+	v20080501-1739:1.2
+	v20080425-1959:1.2
+	v20080322-0000:1.2
+	v20071108-0000:1.2
+	v20071003-0000:1.2
+	v20070921-0000:1.1
+	v20070915-0000:1.1
+	v20070903-0000:1.2
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.3
+date	2008.05.07.13.55.38;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	388c4821b4d44567;
+
+1.2
+date	2007.08.13.14.11.03;	author bblajer;	state Exp;
+branches;
+next	1.1;
+commitid	65c246c066754567;
+
+1.1
+date	2007.06.20.10.16.10;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	37dd4678fe694567;
+
+
+desc
+@@
+
+
+1.3
+log
+@[228913] updated ValueExpression use in GMFGen to better accomodate codegen needs (items 1,2,3)
+@
+text
+@/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::editor::i18n»
+«EXTENSION xpt::editor::Wizard»
+
+«DEFINE InitDiagramFileAction FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::copyright FOR editorGen»
+package «editorGen.editor.packageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «initDiagramFileActionClassName» «EXPAND supertypes» {
+	«EXPAND selectedModelFile-»
+	«EXPAND selection-»
+	«EXPAND targetPart-»
+	«EXPAND selectionChanged-»
+	«EXPAND run-»
+	«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE supertypes FOR gmfgen::GenDiagram-»
+«IF isRichClientPlatform()»extends org.eclipse.emf.common.ui.action.WorkbenchWindowActionDelegate«ELSE»implements org.eclipse.ui.IObjectActionDelegate«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE selectedModelFileType FOR gmfgen::GenDiagram»«IF isRichClientPlatform()»org.eclipse.emf.common.util.URI«ELSE»org.eclipse.core.resources.IFile«ENDIF»«ENDDEFINE»
+«DEFINE selectedModelFileName FOR gmfgen::GenDiagram»«IF isRichClientPlatform()»mySelectedModelFileURI«ELSE»mySelectedModelFile«ENDIF»«ENDDEFINE»
+«DEFINE selectedModelFileAsURI FOR gmfgen::GenDiagram»«IF isRichClientPlatform()»«EXPAND selectedModelFileName»«ELSE»org.eclipse.emf.common.util.URI.createPlatformResourceURI(«EXPAND selectedModelFileName».getFullPath().toString(), true)«ENDIF»«ENDDEFINE»
+«DEFINE selectedModelFileAsString FOR gmfgen::GenDiagram»«IF isRichClientPlatform()»«EXPAND selectedModelFileName».toString()«ELSE»«EXPAND selectedModelFileName».getFullPath().toString()«ENDIF»«ENDDEFINE»
+
+«DEFINE selectedModelFile FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private «EXPAND selectedModelFileType» «EXPAND selectedModelFileName»;
+«ENDDEFINE»
+
+«DEFINE selection FOR gmfgen::GenDiagram-»
+«IF !isRichClientPlatform()-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.jface.viewers.IStructuredSelection mySelection;
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE targetPart FOR gmfgen::GenDiagram-»
+«IF !isRichClientPlatform()-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.ui.IWorkbenchPart myPart;
+
+«EXPAND xpt::Common::generatedMemberComment»
+public void setActivePart(org.eclipse.jface.action.IAction action, org.eclipse.ui.IWorkbenchPart targetPart) {
+	myPart = targetPart;
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE selectionChanged FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public void selectionChanged(org.eclipse.jface.action.IAction action, org.eclipse.jface.viewers.ISelection selection) {
+«IF isRichClientPlatform()-»
+	super.selectionChanged(action, selection);
+«ELSE-»
+	mySelection = org.eclipse.jface.viewers.StructuredSelection.EMPTY;
+	action.setEnabled(false);
+«ENDIF-»
+	«EXPAND selectedModelFileName» = null;
+	if (selection instanceof org.eclipse.jface.viewers.IStructuredSelection == false || selection.isEmpty()) {
+		return;
+	}
+	Object firstElement = ((org.eclipse.jface.viewers.IStructuredSelection) selection).getFirstElement();
+	«EXPAND defineModelFile-»
+«IF isRichClientPlatform()-»
+	if (mySelectedModelFileURI != null) {
+		mySelectedModelFileURI = mySelectedModelFileURI.trimFragment();
+	}
+«ELSE-»
+	mySelection = (org.eclipse.jface.viewers.IStructuredSelection) selection;
+«ENDIF-»
+	action.setEnabled(true);
+}
+«ENDDEFINE»
+
+«DEFINE defineModelFile FOR gmfgen::GenDiagram-»
+«EXPAND tryInstanceof-»
+«EXPAND tryAdaptable-»
+«ENDDEFINE»
+
+«DEFINE tryInstanceof FOR gmfgen::GenDiagram-»
+if («EXPAND selectedModelFileName» == null && firstElement instanceof «EXPAND selectedModelFileType») {
+	«EXPAND selectedModelFileName» = («EXPAND selectedModelFileType») firstElement;
+}
+«ENDDEFINE»
+
+«DEFINE tryAdaptable FOR gmfgen::GenDiagram-»
+if («EXPAND selectedModelFileName» == null && firstElement instanceof org.eclipse.core.runtime.IAdaptable) {
+	«EXPAND selectedModelFileName» = («EXPAND selectedModelFileType») ((org.eclipse.core.runtime.IAdaptable) firstElement).getAdapter(«EXPAND selectedModelFileType».class);
+}
+«ENDDEFINE»
+
+«DEFINE run FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public void run(org.eclipse.jface.action.IAction action) {
+	org.eclipse.emf.ecore.EObject diagramRoot = null;
+	org.eclipse.emf.transaction.TransactionalEditingDomain editingDomain = «EXPAND xpt::editor::Common::createEditingDomain FOR editorGen»;
+«IF isRichClientPlatform()-»
+	if (mySelectedModelFileURI != null) {
+«ENDIF-»
+«IF editorGen.sameFileForDiagramAndModel-»
+		org.eclipse.emf.ecore.resource.ResourceSet resourceSet = new org.eclipse.emf.ecore.resource.impl.ResourceSetImpl();
+«ELSE-»
+		org.eclipse.emf.ecore.resource.ResourceSet resourceSet = editingDomain.getResourceSet();
+«ENDIF-»
+		try {
+			org.eclipse.emf.ecore.resource.Resource resource = resourceSet.getResource(«EXPAND selectedModelFileAsURI», true);
+			diagramRoot = (org.eclipse.emf.ecore.EObject) resource.getContents().get(0);
+		} catch (org.eclipse.emf.common.util.WrappedException ex) {
+			«editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Unable to load resource: " + «EXPAND selectedModelFileAsString», ex); «EXPAND xpt::Common::nonNLS»
+			org.eclipse.jface.dialogs.MessageDialog.openError(«EXPAND getShell»,
+				«EXPAND xpt::Externalizer::accessorCall(i18nKeyForInitDiagramFileResourceErrorDialog().titleKey()) FOR editorGen»,
+                «EXPAND xpt::Externalizer::accessorCall(i18nKeyForInitDiagramFileResourceErrorDialog().messageKey()) FOR editorGen»);
+			return;
+		}
+«IF isRichClientPlatform()-»
+	}
+«ENDIF-»
+	org.eclipse.jface.wizard.Wizard wizard = new «getNewDiagramFileWizardQualifiedClassName()»(«EXPAND selectedModelFileName», «EXPAND additionalWizardParameters»diagramRoot, editingDomain);
+	«EXPAND xpt::editor::Common::wizardDialogSettings("wizard", "InitDiagramFile")-»
+	wizard.setForcePreviousAndNextButtons(«EXPAND needsForceButtons»);
+	wizard.setWindowTitle(org.eclipse.osgi.util.NLS.bind(
+	    «EXPAND xpt::Externalizer::accessorCall(i18nKeyForInitDiagramFileWizardTitle()) FOR editorGen»,
+	    «EXPAND xpt::editor::VisualIDRegistry::modelID»));
+
+    org.eclipse.jface.wizard.WizardDialog dialog = new org.eclipse.jface.wizard.WizardDialog(«EXPAND getShell», wizard);
+    dialog.create();
+    «EXPAND xpt::editor::Common::setDefaultShellSize("dialog.getShell()")-»
+    dialog.open();
+}
+«ENDDEFINE»
+
+«DEFINE additionalWizardParameters FOR gmfgen::GenDiagram»«IF !isRichClientPlatform()»myPart.getSite().getPage(), mySelection, «ENDIF»«ENDDEFINE»
+
+«DEFINE getShell FOR gmfgen::GenDiagram»«IF isRichClientPlatform()»getWindow().getShell()«ELSE»myPart.getSite().getShell()«ENDIF»«ENDDEFINE»
+
+«DEFINE needsForceButtons FOR gmfgen::GenDiagram»«IF isRichClientPlatform()»mySelectedModelFileURI != null«ELSE»false«ENDIF»«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenDiagram»«ENDDEFINE»
+
+«DEFINE i18nAccessors FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForInitDiagramFileResourceErrorDialog().titleKey())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForInitDiagramFileResourceErrorDialog().messageKey())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForInitDiagramFileWizardTitle())-»
+«ENDDEFINE»
+
+«DEFINE i18nValues FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForInitDiagramFileResourceErrorDialog().titleKey(), "Error")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForInitDiagramFileResourceErrorDialog().messageKey(), "Model file loading failed")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForInitDiagramFileWizardTitle(), "Initialize new {0} diagram file")-»
+«ENDDEFINE»
+@
+
+
+1.2
+log
+@1. Don't cache templates if dynamic templates option is on;
+2. [199747] Support shortcuts in the Lite diagrams (including notation model update for links between alien shortcuts);
+3. Decorations should be visible;
+4. TransactionalUpdateManager: more notifications to be dispatched to parents, make it possible to add more in subclasses;
+5. On element creation, it should be given an opportunity to contribute its notational update commands;
+6. [199749]: Delete from View supported (request, edit policy, command, UI action);
+7. Add @@generated tags where they were missing;
+8. ChildNotationModelRefresher: if the child feature is derived transient, notation model refresher should listen to containment feature.
+@
+text
+@d13 1
+a13 1
+«IMPORT "http://www.eclipse.org/gmf/2006/GenModel"»
+@
+
+
+1.1
+log
+@Rewrite /editor/* templates in XPand;
+Use common template to generate code that creates an editing domain in various places;
+OpenDiagramEditPolicy: package statement was missing.
+@
+text
+@d137 1
+a137 6
+	org.eclipse.jface.dialogs.IDialogSettings pluginDialogSettings = «editorGen.plugin.getActivatorQualifiedClassName()».getInstance().getDialogSettings();
+	org.eclipse.jface.dialogs.IDialogSettings initDiagramFileSettings = pluginDialogSettings.getSection("InitDiagramFile"); «EXPAND xpt::Common::nonNLS»
+	if (initDiagramFileSettings == null) {
+		initDiagramFileSettings = pluginDialogSettings.addNewSection("InitDiagramFile"); «EXPAND xpt::Common::nonNLS»
+	}
+	wizard.setDialogSettings(initDiagramFileSettings);
+d145 1
+a145 1
+    dialog.getShell().setSize(Math.max(500, dialog.getShell().getSize().x), 500);
+@
+

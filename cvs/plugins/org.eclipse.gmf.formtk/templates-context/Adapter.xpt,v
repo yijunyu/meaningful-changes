@@ -1,0 +1,63 @@
+head	1.1;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2008.04.01.17.16.12;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	20f147f26ddb4567;
+
+
+desc
+@@
+
+
+1.1
+log
+@[192711] generalization of propsheet towards common forms UI codegen. Phase I - placeholder project with (not yet refactored) templates.
+@
+text
+@/*
+ * Copyright (c) 2008 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+«IMPORT "http://www.eclipse.org/gmf/2008/Context"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+
+«EXTENSION Context»
+
+«DEFINE New(List[FeatureContext] conditionAccessors) FOR List[FeatureContext]-»
+«IF !isEmpty()-»
+«IF withChildren().isEmpty()»«EXPAND newFeatureTracker-»
+«ELSE-»
+«IF !withoutChildren().isEmpty()»«EXPAND newFeatureTracker FOR withoutChildren()», «ENDIF-»
+«EXPAND newAttachAdapter(conditionAccessors) FOREACH withChildren().filterEReference() SEPARATOR ","-»
+«ENDIF-»
+«ENDIF-»
+«ENDDEFINE»
+
+
+«DEFINE newFeatureTracker FOR List[FeatureContext]-»
+new FeatureTracker(this, «EXPAND MetaModel::accessor FOREACH selector SEPARATOR ","»)«ENDDEFINE»
+
+«REM»assumes !fc.children.isEmpty«ENDREM»
+«DEFINE newAttachAdapter(List[FeatureContext] conditionAccessors) FOR FeatureContext-»
+new AttachAdapter(«EXPAND MetaModel::accessor FOR selector», «IF conditionAccessors.contains(this)-»
+new ChangeTracker() {
+	public void modelChanged(org.eclipse.emf.common.notify.Notification n) {
+		// FIXME enable/disable widget(s) -- HOWEVER, need access to Binding/Widget here, so can't share the template with e.g. Alex's ItemProviders
+	}
+}, «ENDIF-»
+«EXPAND New(conditionAccessors) FOR children.typeSelect(FeatureContext)»)«ENDDEFINE»
+@

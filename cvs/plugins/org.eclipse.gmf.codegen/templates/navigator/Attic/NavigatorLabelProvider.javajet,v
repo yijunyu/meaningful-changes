@@ -1,0 +1,726 @@
+head	1.10;
+access;
+symbols
+	v20081022-1925:1.10
+	v20081015-1925:1.10
+	v20081008-1925:1.10
+	v20081001-1925:1.10
+	v20080924-1925:1.10
+	v20080917-1925:1.10
+	v20080911-1728:1.10
+	v20080910-1520:1.10
+	v20080903-1520:1.10
+	v20080827-1520:1.10
+	v20080813-1520:1.10
+	v20080806-1520:1.10
+	v20070608-1300:1.9
+	v20070605-1400:1.9
+	v20070601-1400:1.9
+	v20070525-1500:1.9
+	v20070520-1200:1.9
+	v20070518-1300:1.9
+	v20070504-1000:1.9
+	v20070427-0600:1.8
+	v20070420-1000:1.8
+	v20070413-1300:1.8
+	v20070405-1100:1.8
+	v20070403-1500:1.8
+	v20070330-1300:1.8
+	v20060330-1300:1.8
+	v20070322-1100:1.7
+	v20060316-0600:1.6
+	v20070307-0700:1.6
+	v20070301-1200:1.6
+	v20070228-2000:1.6
+	v20070221-1500:1.6
+	v20070208-1800:1.6
+	v20070103-0300:1.6
+	M4_20:1.6
+	v20061222-1800:1.6
+	v20061218-1200:1.6
+	v20061214-0000:1.6
+	v20061120-1300:1.6
+	M3_20:1.5
+	v20061117-0800:1.5
+	v20061013-1330:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.10
+date	2007.06.11.10.45.38;	author ashatalin;	state dead;
+branches;
+next	1.9;
+commitid	2581466d27cc4567;
+
+1.9
+date	2007.04.27.12.19.28;	author atikhomirov;	state Exp;
+branches;
+next	1.8;
+commitid	38924631ea4f4567;
+
+1.8
+date	2007.03.26.15.39.36;	author ashatalin;	state Exp;
+branches;
+next	1.7;
+commitid	137b4607e9374567;
+
+1.7
+date	2007.03.22.12.38.43;	author ashatalin;	state Exp;
+branches;
+next	1.6;
+commitid	1360460278d24567;
+
+1.6
+date	2006.11.20.18.46.04;	author ashatalin;	state Exp;
+branches;
+next	1.5;
+commitid	2b754561f7eb4567;
+
+1.5
+date	2006.11.07.20.04.26;	author ashatalin;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.11.03.20.43.48;	author ashatalin;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.10.18.14.21.46;	author dstadnik;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.09.26.16.12.55;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.09.22.13.21.23;	author ashatalin;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.10
+log
+@[191852] - Convert /navigator/NavigatorLabelProvider.javajet template to xpand
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.navigator" class="NavigatorLabelProviderGenerator"
+    imports="org.eclipse.gmf.codegen.gmfgen.* org.eclipse.gmf.common.codegen.* java.util.* org.eclipse.emf.codegen.ecore.genmodel.* org.eclipse.emf.ecore.*"
+    skeleton="../common.skeleton"%>
+<%
+GenNavigator genNavigator = (GenNavigator) ((Object[]) argument)[0];
+GenDiagram genDiagram = genNavigator.getEditorGen().getDiagram();
+Collection commonBaseElements = new ArrayList(genDiagram.getAllContainers());
+commonBaseElements.addAll(genDiagram.getLinks());
+final ImportAssistant importManager = (ImportAssistant) ((Object[]) argument)[1];
+
+final String commonKeyPrefix = "Navigator?";
+final String invalidElementKey = commonKeyPrefix + "InvalidElement";
+final String unknownElementKey = commonKeyPrefix + "UnknownElement";
+final String notFoundElementKey = commonKeyPrefix + "ImageNotFound";
+/* TODO: move this logic into genmodel */
+final class RegistryKey {
+	
+	private GenCommonBase myCommonBase;
+	private String myKey;
+	
+	public RegistryKey(GenCommonBase commonBase) {
+		myCommonBase = commonBase;
+	}
+	
+	public String getKey() {
+		if (myKey == null) {
+			if (myCommonBase instanceof GenDiagram) {
+				myKey = getKey((GenDiagram) myCommonBase);
+			} else if (myCommonBase instanceof GenNode) {
+				myKey = getKey((GenNode) myCommonBase);
+			} else if (myCommonBase instanceof GenLink) {
+				myKey = getKey((GenLink) myCommonBase);
+			} else if (myCommonBase instanceof GenCompartment) {
+				myKey = getKey((GenCompartment) myCommonBase);
+			} else if (myCommonBase instanceof GenLabel) {
+				myKey = getKey((GenLabel) myCommonBase);
+			} else {
+				myKey = getInvalidElementKey();
+			}
+		}
+		return myKey;
+	}
+	
+	private String getKey(GenDiagram diagram) {
+		return getCommonPrefix() + "Diagram?" + getKeyFragment(diagram.getDomainDiagramElement());
+	}
+	
+	private String getKey(GenNode node) {
+		return getCommonPrefix() + (node instanceof GenTopLevelNode ? "TopLevelNode?" : "Node?") + (node.getModelFacet() != null ? getKeyFragment(node.getModelFacet().getMetaClass()) : getKeyFragment(node.getViewmap()));
+	}
+	
+	private String getKey(GenLink link) {
+		LinkModelFacet modelFacet = link.getModelFacet();
+		if (modelFacet instanceof TypeLinkModelFacet) {
+			return getCommonPrefix() + "Link?" + getKeyFragment(((TypeLinkModelFacet) modelFacet).getMetaClass());
+		} else if (modelFacet instanceof FeatureLinkModelFacet) {
+			return getCommonPrefix() + "Link?" + getKeyFragment(((FeatureLinkModelFacet) modelFacet).getMetaFeature());
+		}
+		return getCommonPrefix() + "Link?" + getKeyFragment(link.getViewmap());
+	}
+	
+	private String getKey(GenCompartment compartment) {
+		return getKey(compartment.getNode()) + "?Compartment?" + compartment.getTitle();
+	}
+	
+	private String getKey(GenLabel label) {
+		if (label instanceof GenNodeLabel) {
+			GenNodeLabel nodeLabel = (GenNodeLabel) label;
+			return getKey(nodeLabel.getNode()) + "?Label?" + getKeyFragment(nodeLabel);
+		} else if (label instanceof GenLinkLabel) {
+			GenLinkLabel linkLabel = (GenLinkLabel) label;
+			return getKey(linkLabel.getLink()) + "?Label?" + getKeyFragment(linkLabel);
+		}
+		return getInvalidElementKey();
+	}
+	
+	private String getInvalidElementKey() {
+		return invalidElementKey;
+	}
+	
+	private String getCommonPrefix() {
+		return commonKeyPrefix;
+	}
+	
+	private String getKeyFragment(GenClass genClass) {
+		if (genClass == null) {
+			return "";
+		}
+		return genClass.getGenPackage().getNSURI() + "?" + genClass.getName();
+	}
+	
+	private String getKeyFragment(GenFeature genFeature) {
+		GenClass genClass = genFeature.getGenClass();
+		return getKeyFragment(genClass) + "?" + genFeature.getName();
+	}
+	
+	private String getKeyFragment(GenLabel genLabel) {
+		LabelModelFacet modelFacet = genLabel.getModelFacet();
+		if (modelFacet instanceof FeatureLabelModelFacet) {
+			String result = "";
+			for (Iterator it = ((FeatureLabelModelFacet) genLabel).getMetaFeatures().iterator(); it.hasNext();) {
+				result += getKeyFragment((GenFeature) it.next());
+			}
+			return result;
+		} else if (modelFacet instanceof DesignLabelModelFacet) {
+			return getKeyFragment(genLabel.getViewmap());
+		}
+		return getInvalidElementKey();
+	}
+	
+	private String getKeyFragment(Viewmap viewmap) {
+		if (viewmap instanceof FigureViewmap) {
+			return ((FigureViewmap) viewmap).getFigureQualifiedClassName();
+		} else if (viewmap instanceof InnerClassViewmap) {
+			return ((InnerClassViewmap) viewmap).getClassName();
+		} else if (viewmap instanceof ParentAssignedViewmap) {
+			return ((ParentAssignedViewmap) viewmap).getFigureQualifiedClassName();
+		}
+		return "";
+	}
+
+}
+
+%>
+<%@@ include file="../copyright4java.jetinc"%>
+<%importManager.emitPackageStatement(stringBuffer);%>
+
+<%importManager.markImportLocation(stringBuffer);%>
+
+/**
+ * @@generated
+ */
+public class <%=genNavigator.getLabelProviderClassName()%> extends <%=importManager.getImportedName("org.eclipse.jface.viewers.LabelProvider")%> implements <%=importManager.getImportedName("org.eclipse.ui.navigator.ICommonLabelProvider")%>, <%=importManager.getImportedName("org.eclipse.jface.viewers.ITreePathLabelProvider")%> {
+
+	/**
+	 * @@generated
+	 */
+	static {
+		<%=importManager.getImportedName(genNavigator.getEditorGen().getPlugin().getActivatorQualifiedClassName())%>.getInstance().getImageRegistry().put("<%=invalidElementKey%>", <%=importManager.getImportedName("org.eclipse.jface.resource.ImageDescriptor")%>.getMissingImageDescriptor());
+		<%=importManager.getImportedName(genNavigator.getEditorGen().getPlugin().getActivatorQualifiedClassName())%>.getInstance().getImageRegistry().put("<%=unknownElementKey%>", <%=importManager.getImportedName("org.eclipse.jface.resource.ImageDescriptor")%>.getMissingImageDescriptor());
+		<%=importManager.getImportedName(genNavigator.getEditorGen().getPlugin().getActivatorQualifiedClassName())%>.getInstance().getImageRegistry().put("<%=notFoundElementKey%>", <%=importManager.getImportedName("org.eclipse.jface.resource.ImageDescriptor")%>.getMissingImageDescriptor());
+	}
+	
+	/**
+	 * @@generated
+	 */
+	public void updateLabel(<%=importManager.getImportedName("org.eclipse.jface.viewers.ViewerLabel")%> label, <%=importManager.getImportedName("org.eclipse.jface.viewers.TreePath")%> elementPath) {
+		Object element = elementPath.getLastSegment();
+		if (element instanceof <%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%> && !isOwnView(((<%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%>) element).getView())) {
+			return;
+		}
+		label.setText(getText(element));
+		label.setImage(getImage(element));
+	}
+
+	/**
+	 * @@generated
+	 */
+	public <%=importManager.getImportedName("org.eclipse.swt.graphics.Image")%> getImage(Object element) {
+		if (element instanceof <%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%>) {
+			<%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%> group = (<%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%>) element;
+			return <%=importManager.getImportedName(genNavigator.getEditorGen().getPlugin().getActivatorQualifiedClassName())%>.getInstance().getBundledImage(group.getIcon());
+		}
+		
+		if (element instanceof <%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%>) {
+			<%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%> navigatorItem = (<%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%>) element;
+    		if (!isOwnView(navigatorItem.getView())) {
+    			return super.getImage(element);
+    		}
+    		return getImage(navigatorItem.getView());
+		}
+
+<%if (genDiagram.generateShortcutIcon()) {%>
+		// Due to plugin.xml content will be called only for "own" views
+		if (element instanceof <%=importManager.getImportedName("org.eclipse.core.runtime.IAdaptable")%>) {
+			<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> view = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%>) ((<%=importManager.getImportedName("org.eclipse.core.runtime.IAdaptable")%>) element).getAdapter(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%>.class);
+			if (view != null && isOwnView(view)) {
+				return getImage(view);
+			}
+		}<%
+}%>
+		return super.getImage(element);
+	}
+		
+	/**
+	 * @@generated
+	 */
+	public <%=importManager.getImportedName("org.eclipse.swt.graphics.Image")%> getImage(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> view) {
+		switch (<%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.getVisualID(view)) {
+<%for (Iterator it = commonBaseElements.iterator(); it.hasNext();) {
+	GenCommonBase nextCommonBase = (GenCommonBase) it.next();
+	if (genNavigator.getChildReferencesTo(nextCommonBase).size() > 0) {
+		RegistryKey registryKey = new RegistryKey(nextCommonBase);%>
+		case <%=importManager.getImportedName(nextCommonBase.getEditPartQualifiedClassName())%>.VISUAL_ID:
+			return getImage("<%=registryKey.getKey()%>", <%if (nextCommonBase.getElementType() != null) {%><%=importManager.getImportedName(genDiagram.getElementTypesQualifiedClassName())%>.<%=nextCommonBase.getUniqueIdentifier()%><%} else {%>null<%}%>);
+<%	}
+}%>
+		default:
+			return getImage("<%=unknownElementKey%>", null);
+		}
+	}
+	
+	/**
+	 * @@generated
+	 */
+	private <%=importManager.getImportedName("org.eclipse.swt.graphics.Image")%> getImage(String key, <%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.type.core.IElementType")%> elementType) {
+		<%=importManager.getImportedName("org.eclipse.jface.resource.ImageRegistry")%> imageRegistry = <%=importManager.getImportedName(genNavigator.getEditorGen().getPlugin().getActivatorQualifiedClassName())%>.getInstance().getImageRegistry();
+		<%=importManager.getImportedName("org.eclipse.swt.graphics.Image")%> image = imageRegistry.get(key);
+		if (image == null && elementType != null && <%=importManager.getImportedName(genDiagram.getElementTypesQualifiedClassName())%>.isKnownElementType(elementType)) {
+			image = <%=importManager.getImportedName(genDiagram.getElementTypesQualifiedClassName())%>.getImage(elementType);
+			imageRegistry.put(key, image);
+		}
+			
+		if (image == null) {
+			image = imageRegistry.get("<%=notFoundElementKey%>");
+			imageRegistry.put(key, image);
+		}
+		return image;
+	}
+	
+	/**
+	 * @@generated
+	 */
+	public String getText(Object element) {
+		if (element instanceof <%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%>) {
+			<%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%> group = (<%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%>) element;
+			return group.getGroupName();
+		}
+		
+		if (element instanceof <%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%>) {
+			<%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%> navigatorItem = (<%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%>) element;
+    		if (!isOwnView(navigatorItem.getView())) {
+    			return null;
+    		}
+    		return getText(navigatorItem.getView());
+		}
+	
+<%if (genDiagram.generateShortcutIcon()) {%>
+		// Due to plugin.xml content will be called only for "own" views
+		if (element instanceof <%=importManager.getImportedName("org.eclipse.core.runtime.IAdaptable")%>) {
+			<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> view = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%>) ((<%=importManager.getImportedName("org.eclipse.core.runtime.IAdaptable")%>) element).getAdapter(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%>.class);
+			if (view != null && isOwnView(view)) {
+				return getText(view);
+			}
+		}<%
+}%>
+		return super.getText(element);
+	}
+		
+	/**
+	 * @@generated
+	 */
+	public String getText(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> view) {
+		if (view.getElement() != null && view.getElement().eIsProxy()) {
+			return getUnresolvedDomainElementProxyText(view);
+		}
+		switch (<%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.getVisualID(view)) {
+<%for (Iterator it = commonBaseElements.iterator(); it.hasNext();) {
+	GenCommonBase nextCommonBase = (GenCommonBase) it.next();
+	if (genNavigator.getChildReferencesTo(nextCommonBase).size() > 0) {%>
+		case <%=importManager.getImportedName(nextCommonBase.getEditPartQualifiedClassName())%>.VISUAL_ID:
+			return get<%=nextCommonBase.getUniqueIdentifier()%>Text(view);
+<%	}
+}%>
+		default:
+			return getUnknownElementText(view);
+		}
+	}
+
+<%for (Iterator it = commonBaseElements.iterator(); it.hasNext();) {
+	GenCommonBase nextCommonBase = (GenCommonBase) it.next();
+	if (genNavigator.getChildReferencesTo(nextCommonBase).size() > 0) {%>
+	/**
+	 * @@generated
+	 */
+	private String get<%=nextCommonBase.getUniqueIdentifier()%>Text(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> view) {
+<%		LabelModelFacet labelModelFacet = null;
+		GenCommonBase hintHolder = null;
+		GenCommonBase elementTypeHolder = null;
+		if (nextCommonBase instanceof GenChildLabelNode) {
+			labelModelFacet = ((GenChildLabelNode) nextCommonBase).getLabelModelFacet();
+			hintHolder = nextCommonBase;
+			elementTypeHolder = nextCommonBase;
+		} else if (nextCommonBase instanceof GenNode) {
+			Collection labels = ((GenNode) nextCommonBase).getLabels();
+			if (labels.size() > 0) {
+				GenLabel nextLabel = (GenLabel) labels.iterator().next();
+				labelModelFacet = nextLabel.getModelFacet();
+				hintHolder = nextLabel;
+				elementTypeHolder = nextCommonBase;
+			}
+		} else if (nextCommonBase instanceof GenLink) {
+			Collection labels = ((GenLink) nextCommonBase).getLabels();
+			if (labels.size() > 0) {
+				GenLabel nextLabel = (GenLabel) labels.iterator().next();
+				labelModelFacet = nextLabel.getModelFacet();
+				hintHolder = nextLabel;
+				elementTypeHolder = nextCommonBase;
+			}
+		} else if (nextCommonBase instanceof GenLabel) {
+			labelModelFacet = ((GenLabel) nextCommonBase).getModelFacet();
+			hintHolder = nextCommonBase;
+			elementTypeHolder = (GenCommonBase) nextCommonBase.eContainer();
+		}
+		
+		if (elementTypeHolder != null) {
+/* 1. Label was detected. */%>
+		<%=importManager.getImportedName("org.eclipse.core.runtime.IAdaptable")%> hintAdapter = new <%=importManager.getImportedName(genDiagram.getParserProviderQualifiedClassName())%>.HintAdapter(
+				<%=importManager.getImportedName(genDiagram.getElementTypesQualifiedClassName())%>.<%=elementTypeHolder.getUniqueIdentifier()%>,
+				(view.getElement() != null ? view.getElement() : view),
+<%if (labelModelFacet instanceof DesignLabelModelFacet) {%>
+				<%=importManager.getImportedName("org.eclipse.gmf.runtime.common.ui.services.parser.CommonParserHint")%>.DESCRIPTION
+<%} else {%>
+				<%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.getType(<%=importManager.getImportedName(hintHolder.getEditPartQualifiedClassName())%>.VISUAL_ID)
+<%}%>);
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.common.ui.services.parser.IParser")%> parser = <%=importManager.getImportedName("org.eclipse.gmf.runtime.common.ui.services.parser.ParserService")%>.getInstance().getParser(hintAdapter);
+		
+		if (parser != null) {
+			return parser.getPrintString(hintAdapter, <%=importManager.getImportedName("org.eclipse.gmf.runtime.common.ui.services.parser.ParserOptions")%>.NONE.intValue());
+		} else {
+			<%=importManager.getImportedName(genDiagram.getEditorGen().getPlugin().getActivatorQualifiedClassName())%>.getInstance().logError("Parser was not found for label " + <%=String.valueOf(hintHolder.getVisualID())%>);
+			return "";
+		}
+<%		} else if (nextCommonBase instanceof GenCompartment) {
+/* 2. Compartment was detected. */%>
+		return "<%=((GenCompartment) nextCommonBase).getTitle()%>";
+<%		} else {
+			GenClass domainElement = null;
+			if (nextCommonBase instanceof GenDiagram) {
+				domainElement = ((GenDiagram) nextCommonBase).getDomainDiagramElement();
+			} else if (nextCommonBase instanceof GenNode) {
+				GenNode genNode = (GenNode) nextCommonBase;
+				if (genNode.getModelFacet() != null) {
+					domainElement = genNode.getModelFacet().getMetaClass();
+				}
+			} else if (nextCommonBase instanceof GenLink) {
+				LinkModelFacet modelFacet = ((GenLink) nextCommonBase).getModelFacet();
+				if (modelFacet instanceof TypeModelFacet) {
+					domainElement = ((TypeModelFacet) modelFacet).getMetaClass();
+				}
+			}
+			if (domainElement != null && domainElement.getLabelFeature() != null) {
+/* 3. Underlying doman model element recognized. */
+				GenFeature labelFeature = domainElement.getLabelFeature();
+				boolean notString = EcorePackage.eINSTANCE.getEString() != labelFeature.getEcoreFeature().getEType();%>
+		<%=importManager.getImportedName("org.eclipse.emf.ecore.EObject")%> domainModelElement = view.getElement();
+		if (domainModelElement != null) {
+			return <%if (notString) {%>String.valueOf(<%}%><%=getFeatureValueGetter("domainModelElement", domainElement.getLabelFeature(), true, importManager)%><%if (notString) {%>)<%}%>;
+		} else {
+			<%=importManager.getImportedName(genDiagram.getEditorGen().getPlugin().getActivatorQualifiedClassName())%>.getInstance().logError("No domain element for view with visualID = " + <%=String.valueOf(nextCommonBase.getVisualID())%>);
+			return "";
+		}
+<%			} else {
+/* 4. None of above. */%>
+		return "";
+<%			}
+		}%>
+	}
+<%	}
+}%>
+	/**
+	 * @@generated
+	 */
+	private String getUnknownElementText(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> view) {
+		return "<UnknownElement Visual_ID = " + view.getType() + ">";
+	}
+
+	/**
+	 * @@generated
+	 */
+	private String getUnresolvedDomainElementProxyText(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> view) {
+		return "<Unresolved domain element Visual_ID = " + view.getType() + ">";
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void init(<%=importManager.getImportedName("org.eclipse.ui.navigator.ICommonContentExtensionSite")%> aConfig) {
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void restoreState(<%=importManager.getImportedName("org.eclipse.ui.IMemento")%> aMemento) {
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void saveState(<%=importManager.getImportedName("org.eclipse.ui.IMemento")%> aMemento) {
+	}
+	
+	/**
+	 * @@generated
+	 */
+	public String getDescription(Object anElement) {
+		return null;
+	}
+	
+	/**
+	 * @@generated
+	 */
+	private boolean isOwnView(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> view) {
+		return <%=importManager.getImportedName(genDiagram.getEditPartQualifiedClassName())%>.MODEL_ID.equals(<%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.getModelID(view));
+	}
+
+}
+<%importManager.emitSortedImports();%>
+@
+
+
+1.9
+log
+@do not generate superfluous anonymous inner classes for parser hints
+@
+text
+@@
+
+
+1.8
+log
+@Null pointer exception corrected.
+@
+text
+@d308 10
+a317 16
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.common.ui.services.parser.IParser")%> parser = <%=importManager.getImportedName("org.eclipse.gmf.runtime.common.ui.services.parser.ParserService")%>.getInstance().getParser(new <%=importManager.getImportedName("org.eclipse.core.runtime.IAdaptable")%>() {
+			public Object getAdapter(Class adapter) {
+				if (String.class.equals(adapter)) {
+					return <%
+			if (labelModelFacet instanceof DesignLabelModelFacet) {
+				%><%=importManager.getImportedName("org.eclipse.gmf.runtime.common.ui.services.parser.CommonParserHint")%>.DESCRIPTION<%
+			} else {
+				%><%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.getType(<%=importManager.getImportedName(hintHolder.getEditPartQualifiedClassName())%>.VISUAL_ID)<%
+			}%>;
+				}
+				if (<%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.type.core.IElementType")%>.class.equals(adapter)) {
+					return <%=importManager.getImportedName(genDiagram.getElementTypesQualifiedClassName())%>.<%=elementTypeHolder.getUniqueIdentifier()%>;
+				}
+				return null;
+			}
+		});
+d319 1
+a319 1
+			return parser.getPrintString(new <%=importManager.getImportedName("org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter")%>(view.getElement() != null ? view.getElement() : view), <%=importManager.getImportedName("org.eclipse.gmf.runtime.common.ui.services.parser.ParserOptions")%>.NONE.intValue());
+@
+
+
+1.7
+log
+@Special label added for unresolved domain element proxies.
+@
+text
+@d254 1
+a254 1
+		if (view.getElement().eIsProxy()) {
+@
+
+
+1.6
+log
+@[164952] - Unable to generate diagram editor without domain model
+@
+text
+@d254 3
+d377 7
+@
+
+
+1.5
+log
+@Labels for Shortcutted elements provided.
+@
+text
+@d49 1
+a49 1
+		return getCommonPrefix() + (node instanceof GenTopLevelNode ? "TopLevelNode?" : "Node?") + getKeyFragment(node.getModelFacet().getMetaClass());
+d59 1
+a59 1
+		return getInvalidElementKey();
+d63 1
+a63 1
+		return getCommonPrefix() + "Compartment?" + getKeyFragment(compartment.getNode().getModelFacet().getMetaClass()) + "?" + compartment.getTitle();
+d86 3
+d106 1
+a106 1
+			return "DesignLabel";
+d110 11
+d335 4
+a338 1
+				domainElement = ((GenNode) nextCommonBase).getModelFacet().getMetaClass();
+@
+
+
+1.4
+log
+@Refactoring navigator to support cross-diagram shortcuts.
+@
+text
+@d119 1
+a119 1
+public class <%=genNavigator.getLabelProviderClassName()%> extends <%=importManager.getImportedName("org.eclipse.jface.viewers.LabelProvider")%> implements <%=importManager.getImportedName("org.eclipse.ui.navigator.ICommonLabelProvider")%> {
+d129 12
+d151 1
+a151 1
+		if (element instanceof <%=importManager.getImportedName(genNavigator.getAbstractNavigatorItemQualifiedClassName())%>) {
+d163 1
+a163 1
+			if (view != null) {
+d219 1
+a219 1
+    			return super.getText(element);
+d228 1
+a228 1
+			if (view != null) {
+@
+
+
+1.3
+log
+@#161380 simplify feature model facets
+@
+text
+@d134 3
+a136 2
+		if (false == element instanceof <%=importManager.getImportedName(genNavigator.getAbstractNavigatorItemQualifiedClassName())%>) {
+			return super.getImage(element);
+d139 6
+a144 3
+   		<%=importManager.getImportedName(genNavigator.getAbstractNavigatorItemQualifiedClassName())%> abstractNavigatorItem = (<%=importManager.getImportedName(genNavigator.getAbstractNavigatorItemQualifiedClassName())%>) element;
+		if (!<%=importManager.getImportedName(genDiagram.getEditPartQualifiedClassName())%>.MODEL_ID.equals(abstractNavigatorItem.getModelID())) {
+			return super.getImage(element);
+d146 18
+a163 4
+	
+		if (abstractNavigatorItem instanceof <%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%>) {
+   			<%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%> navigatorItem = (<%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%>) abstractNavigatorItem;
+			switch (navigatorItem.getVisualID()) {
+d168 2
+a169 2
+			case <%=importManager.getImportedName(nextCommonBase.getEditPartQualifiedClassName())%>.VISUAL_ID:
+				return getImage("<%=registryKey.getKey()%>", <%if (nextCommonBase.getElementType() != null) {%><%=importManager.getImportedName(genDiagram.getElementTypesQualifiedClassName())%>.<%=nextCommonBase.getUniqueIdentifier()%><%} else {%>null<%}%>);
+d172 2
+a173 6
+				default:
+					return getImage("<%=unknownElementKey%>", null);
+			}
+		} else if (abstractNavigatorItem instanceof <%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%>) {
+			<%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%> group = (<%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%>) element;
+			return <%=importManager.getImportedName(genNavigator.getEditorGen().getPlugin().getActivatorQualifiedClassName())%>.getInstance().getBundledImage(group.getIcon());
+a174 1
+		return super.getImage(element);
+d199 3
+a201 2
+		if (false == element instanceof <%=importManager.getImportedName(genNavigator.getAbstractNavigatorItemQualifiedClassName())%>) {
+			return super.getText(element);
+d204 6
+a209 3
+   		<%=importManager.getImportedName(genNavigator.getAbstractNavigatorItemQualifiedClassName())%> abstractNavigatorItem = (<%=importManager.getImportedName(genNavigator.getAbstractNavigatorItemQualifiedClassName())%>) element;
+		if (!<%=importManager.getImportedName(genDiagram.getEditPartQualifiedClassName())%>.MODEL_ID.equals(abstractNavigatorItem.getModelID())) {
+			return super.getText(element);
+d212 17
+a228 3
+		if (abstractNavigatorItem instanceof <%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%>) {
+			<%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%> navigatorItem = (<%=importManager.getImportedName(genNavigator.getNavigatorItemQualifiedClassName())%>) abstractNavigatorItem;
+			switch (navigatorItem.getVisualID()) {
+d232 2
+a233 2
+			case <%=importManager.getImportedName(nextCommonBase.getEditPartQualifiedClassName())%>.VISUAL_ID:
+				return get<%=nextCommonBase.getUniqueIdentifier()%>Text(navigatorItem.getView());
+d236 2
+a237 6
+			default:
+				return getUnknownElementText(navigatorItem.getView());
+			}
+		} else if (abstractNavigatorItem instanceof <%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%>) {
+			<%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%> group = (<%=importManager.getImportedName(genNavigator.getNavigatorGroupQualifiedClassName())%>) element;
+			return group.getGroupName();
+a238 1
+		return super.getText(element);
+d366 7
+@
+
+
+1.2
+log
+@Bracket replaced.
+@
+text
+@d96 1
+a96 1
+		if (modelFacet instanceof CompositeFeatureLabelModelFacet) {
+d98 1
+a98 1
+			for (Iterator it = ((CompositeFeatureLabelModelFacet) genLabel).getMetaFeatures().iterator(); it.hasNext();) {
+a101 2
+		} else if (modelFacet instanceof FeatureLabelModelFacet) {
+			return getKeyFragment(((FeatureLabelModelFacet) modelFacet).getMetaFeature());
+@
+
+
+1.1
+log
+@Read-only properties provided into the navigator.
+@
+text
+@d298 1
+a298 1
+			return <%if (notString) {%>String.valueOf(<%}%><%=getFeatureValueGetter("domainModelElement", domainElement.getLabelFeature(), true, importManager)%><%if (notString) {%>}<%}%>;
+@
+

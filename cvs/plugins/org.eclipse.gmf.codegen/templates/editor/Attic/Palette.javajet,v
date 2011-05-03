@@ -1,0 +1,203 @@
+head	1.3;
+access;
+symbols
+	v20081022-1925:1.3
+	v20081015-1925:1.3
+	v20081008-1925:1.3
+	v20081001-1925:1.3
+	v20080924-1925:1.3
+	v20080917-1925:1.3
+	v20080911-1728:1.3
+	v20080910-1520:1.3
+	v20080903-1520:1.3
+	v20080827-1520:1.3
+	v20080813-1520:1.3
+	v20080806-1520:1.3
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3
+	v20050828:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2005.09.29.09.49.41;	author atikhomirov;	state dead;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.26.14.32.37;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.03.22.20.29;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@[dstadnik] Use Notation Model as runtime model
+@
+text
+@<%@@ jet package="org.eclipse.gmf.codegen.templates.diacanvas" class="PaletteGen" imports="org.eclipse.gmf.codegen.gmfgen.* org.eclipse.emf.ecore.EClass org.eclipse.emf.codegen.ecore.genmodel.* java.util.* org.eclipse.gmf.codegen.util.ImportUtil"%>
+<%GenDiagram genDiagram = (GenDiagram) argument; Palette palette = genDiagram.getPalette();%>
+package <%=palette.getPackageName()%>;
+<%ImportUtil importManager = new ImportUtil(palette.getPackageName());%>
+
+import org.eclipse.emf.common.notify.AdapterFactory;
+import org.eclipse.emf.edit.provider.IItemLabelProvider;
+import org.eclipse.emf.edit.ui.provider.ExtendedImageRegistry;
+import org.eclipse.gef.palette.*;
+import org.eclipse.gef.requests.CreationFactory;
+import org.eclipse.jface.resource.*;
+<%importManager.addImport("org.eclipse.gmf.diagramrt.*");%>
+<% importManager.markImportLocation(stringBuffer);%>
+
+/**
+ * @@generated
+ */
+public class <%=palette.getFactoryClassName()%> {
+	/**
+	 * @@generated
+	 */
+	private final PaletteRoot myRoot = new PaletteRoot();
+
+	/**
+	 * @@generated
+	 */
+	private final AdapterFactory myAdapterFactory;
+
+	/**
+	 * @@generated
+	 */
+	private <%=palette.getFactoryClassName()%>(AdapterFactory adapterFactory) {
+		myAdapterFactory = adapterFactory;
+	}
+
+	/**
+	 * @@generated
+	 */
+	private PaletteRoot getRoot() {
+		return myRoot;
+	} 
+
+	/**
+	 * @@generated
+	 */
+	public static PaletteRoot createPalette(AdapterFactory adapterFactory) {
+		<%=palette.getFactoryClassName()%> factory = new <%=palette.getFactoryClassName()%>(adapterFactory);
+		factory.setupCommonTools();
+
+<%for(int toolGroupIndex = 0; toolGroupIndex < palette.getGroups().size(); toolGroupIndex++) {%>
+		factory.createToolGroup<%=toolGroupIndex%>();
+<%}%>
+		return factory.getRoot();
+	}
+
+<%
+	int toolGroupIndex = 0;
+	int nodeToolIndex = 0;
+	int linkToolIndex = 0;
+	for(Iterator it = palette.getGroups().iterator(); it.hasNext(); toolGroupIndex++) {
+		ToolGroup tg = (ToolGroup) it.next();
+%>
+	/**
+	 * @@generated
+	 */
+	private void createToolGroup<%=toolGroupIndex%>() {
+		PaletteContainer paletteContainer = createContainer("<%=tg.getTitleKey()%>");
+		// Nodes
+<%	for (int i = tg.getNodeTools().size(); i > 0; i--, nodeToolIndex++) {%>
+		createNodeTool<%=nodeToolIndex%>(paletteContainer);
+<%	}%>
+		paletteContainer.add(new PaletteSeparator());
+		// Links
+<%	for (int i = tg.getLinkTools().size(); i > 0; i--, linkToolIndex++) {%>
+		createLinkTool<%=linkToolIndex%>(paletteContainer);
+<%	}%>
+		getRoot().add(paletteContainer);
+	}
+<%}%>
+
+	/**
+	 * @@generated
+	 */
+	private void setupCommonTools() {
+<%@@ include file="commontools.jetinc" %>
+	}
+
+<%
+	// Move on and create methods called from createToolGroup 
+	toolGroupIndex = 0;
+	nodeToolIndex = 0;
+	linkToolIndex = 0;
+for(Iterator it = palette.getGroups().iterator(); it.hasNext(); toolGroupIndex++) {
+	ToolGroup tg = (ToolGroup) it.next();
+	for (Iterator it2 = tg.getNodeTools().iterator(); it2.hasNext(); nodeToolIndex++) {
+		NodeEntry nodeEntry = (NodeEntry) it2.next();
+%>
+<%@@ include file="nodetool.jetinc" %>
+<%	}
+	for (Iterator it2 = tg.getLinkTools().iterator(); it2.hasNext(); linkToolIndex++) {
+		LinkEntry linkEntry = (LinkEntry) it2.next();
+%>
+<%@@ include file="linktool.jetinc" %>
+<%	}
+}%>
+	/**
+	 * @@generated
+	 */
+	private PaletteContainer createContainer(String title) {
+		return new PaletteDrawer(title);
+	}
+
+	/**
+	 * @@generated
+	 */
+	private ImageDescriptor getImage(Object o) {
+		IItemLabelProvider labelProvider = (IItemLabelProvider) myAdapterFactory.adapt(o, IItemLabelProvider.class);
+		if (labelProvider != null) {
+			return ExtendedImageRegistry.getInstance().getImageDescriptor(labelProvider.getImage(o));
+		}
+		return null;
+	}
+}
+<%importManager.emitSortedImports();%>@
+
+
+1.2
+log
+@[ashatalin] Hand-wirtten code for additional initialization in CreationFactory should be subject to "@@generated NOT" protection (generating separate inner class for each palette tool's factory).
+@
+text
+@@
+
+
+1.1
+log
+@*** empty log message ***
+@
+text
+@a97 4
+	/**
+	 * @@generated
+	 */
+	private void createNodeTool<%=nodeToolIndex%>(PaletteContainer paletteContainer) {
+a98 1
+	}
+a102 4
+	/**
+	 * @@generated
+	 */
+	private void createLinkTool<%=linkToolIndex%>(PaletteContainer paletteContainer) {
+a103 1
+	}
+@
+

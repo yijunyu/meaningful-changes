@@ -1,0 +1,520 @@
+head	1.4;
+access;
+symbols
+	v20080910-1520:1.4
+	v20070403-1500:1.3
+	v20070330-1300:1.3
+	v20060330-1300:1.3
+	v20070322-1100:1.3
+	v20060316-0600:1.3
+	v20070307-0700:1.3
+	v20070228-2000:1.3
+	v20070221-1500:1.3
+	v20070208-1800:1.3
+	v20070103-0300:1.3
+	M4_20:1.3
+	v20061222-1800:1.3
+	v20061214-0000:1.3
+	v20061120-1300:1.2
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061013-1330:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2007.04.04.11.05.01;	author bblajer;	state dead;
+branches;
+next	1.3;
+commitid	18c54613864d4567;
+
+1.3
+date	2006.11.29.15.23.08;	author bblajer;	state Exp;
+branches;
+next	1.2;
+commitid	1928456da5db4567;
+
+1.2
+date	2006.10.18.14.22.07;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.09.21.10.12.03;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[176696]: InitDiagramContents: do not create notational edges to and from child label nodes;
+Rewrite editpart templates in xpt;
+Unify what is refreshed for each edit part type;
+Preparation for side-affixed elements.
+@
+text
+@/**
+ * @@generated
+ */
+private void initDiagramContents(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.Diagram")%> diagram) {
+	create<%=genDiagram.getUniqueIdentifier()%>Children(diagram);
+<%
+if(!genDiagram.getLinks().isEmpty()) {
+%>
+	myViewService = new <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.NaiveViewService")%>(diagram);
+	create<%=genDiagram.getUniqueIdentifier()%>ChildLinks(diagram);
+<%
+}
+%>
+}
+
+<%
+final Comparator<GenContainerBase> comparator = new Comparator<GenContainerBase>() {
+	public int compare(GenContainerBase o1, GenContainerBase o2) {
+		return o1.getVisualID() - o2.getVisualID();
+	}
+};
+TreeSet<GenContainerBase> containers2Generate = new TreeSet<GenContainerBase>(comparator);
+for (Iterator containers = genDiagram.getAllContainers().iterator(); containers.hasNext();) {
+	GenContainerBase nextContainer = (GenContainerBase) containers.next();
+	if (!nextContainer.getContainedNodes().isEmpty()) {
+		containers2Generate.add(nextContainer);
+		continue;
+	}
+	if (nextContainer instanceof GenDiagram) {
+		containers2Generate.add(nextContainer);
+		continue;
+	}
+	if (nextContainer instanceof GenNode) {
+		//May need to generate if contains compartments with children
+		for(Iterator compartments = ((GenNode) nextContainer).getCompartments().iterator(); compartments.hasNext(); ) {
+			GenCompartment nextCompartment = (GenCompartment) compartments.next();
+			if (!nextCompartment.getContainedNodes().isEmpty()) {
+				containers2Generate.add(nextContainer);
+				break;
+			}
+		}
+	}
+}
+for (Iterator<GenContainerBase> containers = containers2Generate.iterator(); containers.hasNext();) {
+	GenContainerBase nextContainer = containers.next();
+%>
+/**
+ * @@generated
+ */
+private void create<%=nextContainer.getUniqueIdentifier()%>Children(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> viewObject) {
+<%
+	if (nextContainer instanceof GenNode) {
+		boolean shouldIterateOverCompartments = false;
+		for(Iterator compartments = ((GenNode) nextContainer).getCompartments().iterator(); compartments.hasNext(); ) {
+			GenCompartment nextCompartment = (GenCompartment) compartments.next();
+			if (!nextCompartment.getContainedNodes().isEmpty()) {
+				shouldIterateOverCompartments = true;
+				break;
+			}
+		}
+		if (shouldIterateOverCompartments) {
+%>
+	for(<%=importManager.getImportedName("java.util.Iterator")%> it = viewObject.getChildren().iterator(); it.hasNext(); ) {
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> next = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%>) it.next();
+		int visualID = <%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.getVisualID(next);
+		switch (visualID) {
+<%
+			for(Iterator compartments = ((GenNode) nextContainer).getCompartments().iterator(); compartments.hasNext(); ) {
+				GenCompartment nextCompartment = (GenCompartment) compartments.next();
+				if (nextCompartment.getContainedNodes().isEmpty()) {
+					continue;
+				}
+%>
+		case <%=importManager.getImportedName(nextCompartment.getEditPartQualifiedClassName())%>.VISUAL_ID:
+			create<%=nextCompartment.getUniqueIdentifier()%>Children(next);
+			break;
+<%
+			}
+%>
+		}
+	}
+<%
+		}
+	}
+	if (!nextContainer.getContainedNodes().isEmpty()) {
+%>
+	<%=importManager.getImportedName("java.util.List")%> semanticChildren = get<%=nextContainer.getUniqueIdentifier()%>SemanticChildNodes(viewObject);
+	for(<%=importManager.getImportedName("java.util.Iterator")%> it = semanticChildren.iterator(); it.hasNext(); ) {
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.ElementDescriptor")%> nextDescriptor = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.ElementDescriptor")%>) it.next();
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand")%> createCommand = getCreate<%=nextContainer.getUniqueIdentifier()%>NotationalChildNodeCommand(viewObject, nextDescriptor);
+		if (createCommand != null && createCommand.canExecute()) {
+			createCommand.execute();
+<%
+		boolean shouldIterateToGenerate = false;
+		for(Iterator containedNodes = nextContainer.getContainedNodes().iterator(); containedNodes.hasNext(); ) {
+			GenNode nextNode = (GenNode) containedNodes.next();
+			if (containers2Generate.contains(nextNode)) {
+				shouldIterateToGenerate = true;
+				break;
+			}
+		}
+		if (shouldIterateToGenerate) {
+%>
+			<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> nextChild = createCommand.getCreatedView();
+			int childVisualID = nextDescriptor.getVisualID();
+			switch (childVisualID) {
+<%
+			for(Iterator containedNodes = nextContainer.getContainedNodes().iterator(); containedNodes.hasNext(); ) {
+				GenNode nextNode = (GenNode) containedNodes.next();
+				if (containers2Generate.contains(nextNode)) {
+%>
+			case <%=importManager.getImportedName(nextNode.getEditPartQualifiedClassName())%>.VISUAL_ID:
+				create<%=nextNode.getUniqueIdentifier()%>Children(nextChild);
+				break;
+<%
+				}
+			}	//iterate over contained nodes
+%>
+			}
+<%
+		}	//if (shouldIterateToGenerate)
+%>
+		}
+	}
+<%
+	}	//if (!nextContainer.getContainedNodes().isEmpty())
+%>
+}
+
+<%
+	if (!nextContainer.getContainedNodes().isEmpty()) {
+%>
+/**
+ * @@generated
+ */
+private <%=importManager.getImportedName("java.util.List")%> get<%=nextContainer.getUniqueIdentifier()%>SemanticChildNodes(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> parentView) {
+<%
+		{
+			String _getViewCode = "parentView";
+			List childNodes = nextContainer.getContainedNodes();
+%>
+<%@@ include file="semanticChildren.jetinc" %>
+<%
+		}
+%>
+}
+
+/**
+ * @@generated
+ */
+protected <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand")%> getCreate<%=nextContainer.getUniqueIdentifier()%>NotationalChildNodeCommand(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> parentView, <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.ElementDescriptor")%> descriptor) {
+<%
+		{
+			String _parentNode = "parentView";
+			List childNodes = nextContainer.getContainedNodes();
+			boolean isListLayout;
+			if (nextContainer instanceof GenNode) {
+				isListLayout = !org.eclipse.gmf.codegen.gmfgen.util.ViewmapLayoutTypeHelper.getSharedInstance().isStoringChildPositions((GenNode) nextContainer);
+			} else if (nextContainer instanceof GenCompartment) {
+				isListLayout = ((GenCompartment) nextContainer).isListLayout(); 
+			} else if (nextContainer instanceof GenDiagram) {
+				isListLayout = false;
+			} else {
+				throw new RuntimeException("Unexpected container");
+			}
+%>
+<%@@ include file="createNotationalNodeCommand.jetinc"%>
+<%
+		}	//local declarations
+%>
+}
+<%
+	}	//if (!nextContainer.getContainedNodes().isEmpty())
+}
+class LinksCollection {
+	private Collection<GenLink> myTypeModelFacetLinks = new LinkedList<GenLink>();
+	private Collection<GenLink> myFeatureModelFacetLinks = new LinkedList<GenLink>();
+	public void add(GenLink link) {
+		if (link.getModelFacet() instanceof TypeLinkModelFacet) {
+			myTypeModelFacetLinks.add(link);
+		} else if (link.getModelFacet() instanceof FeatureLinkModelFacet) {
+			myFeatureModelFacetLinks.add(link);
+		}
+	}
+	public Iterator<GenLink> getContainedTypeModelFacetLinks() {
+		return myTypeModelFacetLinks.iterator();
+	}
+	public Iterator<GenLink> getContainedFeatureModelFacetLinks() {
+		return myFeatureModelFacetLinks.iterator();
+	}
+}
+class CreateChildLinkElements {
+	private TreeMap<GenContainerBase, LinksCollection> myElements;
+	public CreateChildLinkElements() {
+		myElements = new TreeMap<GenContainerBase, LinksCollection>(comparator);
+	}
+	public void add(GenContainerBase o, GenLink link) {
+		buildAncestors(o);
+		myElements.get(o).add(link);
+	}
+	private void buildAncestors(GenContainerBase o) {
+		if (!myElements.containsKey(o)) {
+			LinksCollection elements = new LinksCollection();
+			myElements.put(o, elements);
+			addAncestors(o);
+		}
+	}
+	private void addAncestors(GenContainerBase o) {
+		if (o instanceof GenCompartment) {
+			GenCompartment compartment = (GenCompartment) o;
+			buildAncestors(compartment.getNode());
+		} else if (o instanceof GenTopLevelNode) {
+			GenTopLevelNode node = (GenTopLevelNode) o;
+			buildAncestors(node.getDiagram());
+		} else if (o instanceof GenChildNode) {
+			GenChildNode node = (GenChildNode) o;
+			for(Iterator it = node.getContainers().iterator(); it.hasNext(); ) {
+				GenContainerBase next = (GenContainerBase) it.next();
+				buildAncestors(next);
+			}
+		}
+	}
+	public boolean contains(GenContainerBase o) {
+		return myElements.containsKey(o);
+	}
+	public Iterator<Map.Entry<GenContainerBase, LinksCollection>> iterator() {
+		return myElements.entrySet().iterator();
+	}
+}
+if (!genDiagram.getLinks().isEmpty()) {
+	CreateChildLinkElements linkContainers2Generate = new CreateChildLinkElements();
+	//No need to explicitly add diagram, since we build the whole hierarchy up.
+	for(Iterator links = genDiagram.getLinks().iterator(); links.hasNext(); ) {
+		GenLink next = (GenLink) links.next();
+		GenClass containerClass;
+		LinkModelFacet nextModelFacet = next.getModelFacet();
+		if (nextModelFacet instanceof TypeLinkModelFacet) {
+			TypeLinkModelFacet modelFacet = (TypeLinkModelFacet) next.getModelFacet();
+			if (modelFacet.getSourceMetaFeature() == null && modelFacet.getTargetMetaFeature() == null) {
+				//if one link feature is null, the element is treated as this end of the link. If both are null, we cannot do anything about such a link.
+				containerClass = null;
+			} else {
+				containerClass = modelFacet.getContainmentMetaFeature().getGenClass();
+			}
+		} else if (nextModelFacet instanceof FeatureLinkModelFacet) {
+			GenFeature metaFeature = ((FeatureLinkModelFacet) next.getModelFacet()).getMetaFeature();
+			containerClass = metaFeature.getGenClass();
+		} else {
+			continue;
+		}
+		for (Iterator nodes = genDiagram.getAllNodes().iterator(); nodes.hasNext(); ) {
+			GenNode nextNode = (GenNode) nodes.next();
+			if (containerClass.getEcoreClass().isSuperTypeOf(nextNode.getDomainMetaClass().getEcoreClass())) {
+				linkContainers2Generate.add(nextNode, next);
+			}
+		}
+	}
+	for(Iterator<Map.Entry<GenContainerBase, LinksCollection>> entryIt = linkContainers2Generate.iterator(); entryIt.hasNext(); ) {
+		Map.Entry<GenContainerBase, LinksCollection> next = entryIt.next();
+		GenContainerBase nextContainer = next.getKey();
+		LinksCollection linksCollection = next.getValue();
+		Iterator<GenLink> typeModelFacetLinks = linksCollection.getContainedTypeModelFacetLinks();
+		Iterator<GenLink> featureModelFacetLinks = linksCollection.getContainedFeatureModelFacetLinks();
+%>
+/**
+ * @@generated
+ */
+private void create<%=nextContainer.getUniqueIdentifier()%>ChildLinks(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> viewObject) {
+<%
+		if (typeModelFacetLinks.hasNext() || featureModelFacetLinks.hasNext()) {
+%>
+	<%=importManager.getImportedName("java.util.List")%> semanticChildLinks = get<%=nextContainer.getUniqueIdentifier()%>SemanticChildLinks(viewObject);
+	for(<%=importManager.getImportedName("java.util.Iterator")%> it = semanticChildLinks.iterator(); it.hasNext(); ) {
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.LinkDescriptor")%> nextDescriptor = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.LinkDescriptor")%>) it.next();
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand")%> createCommand = getCreate<%=nextContainer.getUniqueIdentifier()%>NotationalChildLinkCommand(viewObject, nextDescriptor);
+		if (createCommand != null && createCommand.canExecute()) {
+			createCommand.execute();
+		}
+	}
+<%
+		}
+		boolean shouldIterateToGenerate = false;
+		Collection childElements = new ArrayList(nextContainer.getContainedNodes());
+		if (nextContainer instanceof GenNode) {
+			childElements.addAll(((GenNode) nextContainer).getCompartments());
+		}
+		for(Iterator childrenIterator = childElements.iterator(); childrenIterator.hasNext(); ) {
+			GenContainerBase nextChild = (GenContainerBase) childrenIterator.next();
+			if (linkContainers2Generate.contains(nextChild)) {
+				shouldIterateToGenerate = true;
+				break;
+			}
+		}
+		if (shouldIterateToGenerate) {
+%>
+	for(<%=importManager.getImportedName("java.util.Iterator")%> it = viewObject.getChildren().iterator(); it.hasNext(); ) {
+		<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> next = (<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%>) it.next();
+		int visualID = <%=importManager.getImportedName(genDiagram.getVisualIDRegistryQualifiedClassName())%>.getVisualID(next);
+		switch (visualID) {
+<%
+			for(Iterator childrenIterator = childElements.iterator(); childrenIterator.hasNext(); ) {
+				GenContainerBase nextChild = (GenContainerBase) childrenIterator.next();
+				if (!linkContainers2Generate.contains(nextChild)) {
+					continue;
+				}
+%>
+		case <%=importManager.getImportedName(nextChild.getEditPartQualifiedClassName())%>.VISUAL_ID:
+			create<%=nextChild.getUniqueIdentifier()%>ChildLinks(next);
+			break;
+<%
+			}
+%>
+		}
+	}
+<%
+		}
+%>
+}
+
+<%
+		if (typeModelFacetLinks.hasNext() || featureModelFacetLinks.hasNext()) {
+%>
+/**
+ * @@generated
+ */
+private <%=importManager.getImportedName("java.util.List")%> get<%=nextContainer.getUniqueIdentifier()%>SemanticChildLinks(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> parentView) {
+<%
+			{
+				String _getViewCode = "parentView";
+				List childNodes = nextContainer.getContainedNodes();
+				Iterator<GenLink> _containedTypeModelFacetLinks = linksCollection.getContainedTypeModelFacetLinks();;
+				Iterator<GenLink> _containedFeatureModelFacetLinks = linksCollection.getContainedFeatureModelFacetLinks();;
+%>
+<%@@ include file="semanticChildLinks.jetinc" %>
+<%
+			}
+%>
+}
+
+/**
+ * @@generated
+ */
+protected <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand")%> getCreate<%=nextContainer.getUniqueIdentifier()%>NotationalChildLinkCommand(<%=importManager.getImportedName("org.eclipse.gmf.runtime.notation.View")%> parentView, <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.LinkDescriptor")%> linkDescriptor) {
+<%
+			{
+				String _diagramCode = "parentView.getDiagram()";
+				Iterator<GenLink> _containedTypeModelFacetLinks = linksCollection.getContainedTypeModelFacetLinks();;
+				Iterator<GenLink> _containedFeatureModelFacetLinks = linksCollection.getContainedFeatureModelFacetLinks();;
+%>
+<%@@ include file="createNotationalEdgeCommand.jetinc"%>
+<%
+			}
+%>
+}
+<%
+		}
+	}
+}
+if(!genDiagram.getLinks().isEmpty()) {
+%>
+
+/**
+ * @@generated
+ */
+private <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService")%> myViewService;
+
+/**
+ * @@generated
+ */
+private <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService")%> getViewService() {
+	return myViewService;
+}
+<%
+}
+%>
+@
+
+
+1.3
+log
+@[164844]: Refactor InitDiagramFileAction to be able to use it in headless mode: XyzDiagramEditorUtil.createDiagramFor(EObject diagramRoot) method is now generated;
+If a node has compartments, but does not have any direct children, do not generate unused method getXyz_1234NotationalChildNodeCommand() and method createXyz_1234Children() that always returns Collections.EMPTY_LIST.
+@
+text
+@@
+
+
+1.2
+log
+@#161380 simplify feature model facets
+@
+text
+@d85 1
+d94 7
+a100 6
+	boolean shouldIterateToGenerate = false;
+	for(Iterator containedNodes = nextContainer.getContainedNodes().iterator(); containedNodes.hasNext(); ) {
+		GenNode nextNode = (GenNode) containedNodes.next();
+		if (containers2Generate.contains(nextNode)) {
+			shouldIterateToGenerate = true;
+			break;
+d102 1
+a102 2
+	}
+	if (shouldIterateToGenerate) {
+d108 3
+a110 3
+		for(Iterator containedNodes = nextContainer.getContainedNodes().iterator(); containedNodes.hasNext(); ) {
+			GenNode nextNode = (GenNode) containedNodes.next();
+			if (containers2Generate.contains(nextNode)) {
+d116 2
+a117 2
+			}
+		}
+d121 1
+a121 1
+	}
+d125 3
+d130 3
+d138 3
+a140 3
+	{
+		String _getViewCode = "parentView";
+		List childNodes = nextContainer.getContainedNodes();
+d144 1
+a144 1
+	}
+d153 13
+a165 13
+	{
+		String _parentNode = "parentView";
+		List childNodes = nextContainer.getContainedNodes();
+		boolean isListLayout;
+		if (nextContainer instanceof GenNode) {
+			isListLayout = !org.eclipse.gmf.codegen.gmfgen.util.ViewmapLayoutTypeHelper.getSharedInstance().isStoringChildPositions((GenNode) nextContainer);
+		} else if (nextContainer instanceof GenCompartment) {
+			isListLayout = ((GenCompartment) nextContainer).isListLayout(); 
+		} else if (nextContainer instanceof GenDiagram) {
+			isListLayout = false;
+		} else {
+			throw new RuntimeException("Unexpected container");
+		}
+d169 1
+a169 1
+	}
+d173 1
+@
+
+
+1.1
+log
+@[157859] bblajer - Diagram initialization from pre-existing domain models
+@
+text
+@d238 1
+a238 1
+			GenFeature metaFeature = ((FeatureModelFacet) next.getModelFacet()).getMetaFeature();
+@
+

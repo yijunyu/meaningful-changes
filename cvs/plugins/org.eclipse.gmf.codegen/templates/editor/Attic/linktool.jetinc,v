@@ -1,0 +1,159 @@
+head	1.4;
+access;
+symbols
+	v20081022-1925:1.4
+	v20081015-1925:1.4
+	v20081008-1925:1.4
+	v20081001-1925:1.4
+	v20080924-1925:1.4
+	v20080917-1925:1.4
+	v20080911-1728:1.4
+	v20080910-1520:1.4
+	v20080903-1520:1.4
+	v20080827-1520:1.4
+	v20080813-1520:1.4
+	v20080806-1520:1.4
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	v20050828:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2005.09.29.09.49.41;	author atikhomirov;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2005.09.26.14.51.39;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.26.14.32.37;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.03.22.20.29;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[dstadnik] Use Notation Model as runtime model
+@
+text
+@<%
+GenLink genLink = linkEntry.getGenLink();
+GenClass drtClass = genLink.getDiagramRunTimeClass();
+%>
+	/**
+	 * @@generated
+	 */
+	private void createLinkTool<%=linkToolIndex%>(PaletteContainer paletteContainer) {
+
+		//ImageDescriptor img = ImageDescriptor.createFromFile(<%=palette.getFactoryClassName()%>.class, "<%=linkEntry.getSmallIconPath()%>");*/
+<%
+final String domainElementInstanceCreationCode;
+if (genLink instanceof GenLinkWithClass) {
+	EClass domainMetaClass = ((GenLinkWithClass) genLink).getDomainMetaClass();
+	GenClass genClass = genDiagram.findGenClass(domainMetaClass);
+	domainElementInstanceCreationCode = importManager.getImportedName(genClass.getGenPackage().getQualifiedFactoryInterfaceName()) + ".eINSTANCE.create(" + importManager.getImportedName(genClass.getGenPackage().getQualifiedPackageInterfaceName()) + ".eINSTANCE.get" + genClass.getName() + "())";
+} else {
+	// no dedicated metaclass for link, thus no creation code
+	domainElementInstanceCreationCode = "null";
+}
+%>
+		ImageDescriptor img = getImage(<%=domainElementInstanceCreationCode %>);
+		CreationFactory creationFactory = new CreationLinkFactory<%=linkToolIndex%>();
+		paletteContainer.add(new ConnectionCreationToolEntry("<%=linkEntry.getTitleKey()%>", "<%=linkEntry.getDescriptionKey()%>", creationFactory, img, img));
+	}
+	
+	/**
+	 * @@generated
+	 */
+	private class CreationLinkFactory<%=linkToolIndex%> implements CreationFactory {
+	
+		/**
+	     * @@generated
+	     */
+		public Object getNewObject() {
+			<%=importManager.getImportedName(drtClass.getQualifiedInterfaceName())%> diagramLink = <%=importManager.getImportedName(drtClass.getGenPackage().getQualifiedFactoryInterfaceName())%>.eINSTANCE.create<%=drtClass.getName()%>();
+			diagramLink.setVisualID(<%=importManager.getImportedName(genLink.getEditPartQualifiedClassName())%>.VISUAL_ID);
+			diagramLink.setDomainModelElement(<%=domainElementInstanceCreationCode%>);
+			initialize(diagramLink);
+			return diagramLink;
+		}
+
+	
+		/**
+	     * @@generated
+	     */
+		public Object getObjectType() {
+			return <%=importManager.getImportedName("org.eclipse.gmf.diagramrt.DiagramLink")%>.class;
+		}
+		
+	
+		/**
+	     * @@generated
+	     */
+		private void initialize(<%=importManager.getImportedName(drtClass.getQualifiedInterfaceName())%> diagramLink) {
+			// place initialization code for attributes specific to your Diagram RunTime model here
+		}
+	};
+@
+
+
+1.3
+log
+@[ashatalin] correctly create instances of the user domain model if "InstanceClassName" property was specified in .ecore file. (using "create(EClass)" method instead of typed "create????()" methods)
+@
+text
+@@
+
+
+1.2
+log
+@[ashatalin] Hand-wirtten code for additional initialization in CreationFactory should be subject to "@@generated NOT" protection (generating separate inner class for each palette tool's factory).
+@
+text
+@d16 1
+a16 1
+	domainElementInstanceCreationCode = importManager.getImportedName(genClass.getGenPackage().getQualifiedFactoryInterfaceName()) + ".eINSTANCE.create" + genClass.getName() + "()";
+@
+
+
+1.1
+log
+@*** empty log message ***
+@
+text
+@d5 5
+d23 1
+a23 15
+		CreationFactory creationFactory = new CreationFactory() {
+			public Object getNewObject() {
+				<%=importManager.getImportedName(drtClass.getQualifiedInterfaceName())%> diagramLink = <%=importManager.getImportedName(drtClass.getGenPackage().getQualifiedFactoryInterfaceName())%>.eINSTANCE.create<%=drtClass.getName()%>();
+				diagramLink.setVisualID(<%=importManager.getImportedName(genLink.getEditPartQualifiedClassName())%>.VISUAL_ID);
+				diagramLink.setDomainModelElement(<%=domainElementInstanceCreationCode%>);
+				initialize(diagramLink);
+				return diagramLink;
+			}
+			public Object getObjectType() {
+				return <%=importManager.getImportedName("org.eclipse.gmf.diagramrt.DiagramLink")%>.class;
+			}
+			private void initialize(<%=importManager.getImportedName(drtClass.getQualifiedInterfaceName())%> diagramLink) {
+				// place initialization code for attributes specific to your Diagram RunTime model here
+			}
+		};
+d25 34
+@
+

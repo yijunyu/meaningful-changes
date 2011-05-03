@@ -1,0 +1,228 @@
+head	1.4;
+access;
+symbols
+	v20080910-1520:1.4
+	v20070307-0700:1.3
+	v20070228-2000:1.3
+	v20070221-1500:1.3
+	v20070208-1800:1.3
+	v20070103-0300:1.2
+	M4_20:1.2
+	v20061222-1800:1.2
+	v20061214-0000:1.2
+	v20061120-1300:1.2
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061013-1330:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2007.03.15.16.43.30;	author bblajer;	state dead;
+branches;
+next	1.3;
+commitid	617845f977b04567;
+
+1.3
+date	2007.01.19.17.15.18;	author bblajer;	state Exp;
+branches;
+next	1.2;
+commitid	781645b0fca44567;
+
+1.2
+date	2006.10.18.16.29.03;	author bblajer;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.09.11.15.45.01;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[164018] Command generation seperated from Parts for commands that operate with labels;
+API to display label text, apply modifications and update after (external) modifications isolated from generated code;
+Moved as much common generated code as possible to BaseTreeEditPart;
+[165700] Support diagrams in read-only mode: all EMF commands that are not composed of standard EMF commands, but modify EMF models directly should query the editing domain for read-onliness of the resource they operate on.
+@
+text
+@					protected <%=importManager.getImportedName("org.eclipse.gef.commands.Command")%> getDirectEditCommand(<%=importManager.getImportedName("org.eclipse.gef.requests.DirectEditRequest")%> request) {
+<%
+if (labelModelFacet instanceof FeatureLabelModelFacet == false) {
+%>
+						return <%=importManager.getImportedName("org.eclipse.gef.commands.UnexecutableCommand")%>.INSTANCE;
+<%
+} else {
+	FeatureLabelModelFacet featureLabelModelFacet = (FeatureLabelModelFacet) labelModelFacet;
+	List metaFeatures = featureLabelModelFacet.getMetaFeatures();
+%>
+						String value = (String) request.getCellEditor().getValue();
+						if (value == null) {
+							//Invalid value is transformed into a null by the validator.
+							//XXX: implement validator
+							return <%=importManager.getImportedName("org.eclipse.gef.commands.UnexecutableCommand")%>.INSTANCE;
+						}
+						final Object[] parseResult;
+<%
+	if (metaFeatures.size() == 1 && String.class.equals(((GenFeature) metaFeatures.get(0)).getEcoreFeature().getEType().getInstanceClass())) {
+%>
+						if (value.length() == 0) {
+							parseResult = new Object[] { null };
+						} else {
+<%
+	}
+%>
+						try {
+							parseResult = new <%=importManager.getImportedName("java.text.MessageFormat")%>(<%=editPatternCode%>).parse(value);
+						} catch (IllegalArgumentException e) {
+							return <%=importManager.getImportedName("org.eclipse.gef.commands.UnexecutableCommand")%>.INSTANCE;
+						} catch (<%=importManager.getImportedName("java.text.ParseException")%> e) {
+							return <%=importManager.getImportedName("org.eclipse.gef.commands.UnexecutableCommand")%>.INSTANCE;
+						}
+<%
+	if (metaFeatures.size() == 1 && String.class.equals(((GenFeature) metaFeatures.get(0)).getEcoreFeature().getEType().getInstanceClass())) {
+%>
+						}
+<%
+	}
+%>
+						<%=importManager.getImportedName("org.eclipse.emf.transaction.TransactionalEditingDomain")%> editingDomain = <%=importManager.getImportedName("org.eclipse.emf.transaction.util.TransactionUtil")%>.getEditingDomain(<%=primaryView%>.getDiagram().getElement());
+						if (parseResult.length != <%=metaFeatures.size()%>) {
+							return <%=importManager.getImportedName("org.eclipse.gef.commands.UnexecutableCommand")%>.INSTANCE;
+						}
+						<%=importManager.getImportedName("org.eclipse.emf.common.command.Command")%> domainModelCommand = createDomainModelCommand(editingDomain, parseResult);
+						return new <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.commands.WrappingCommand")%>(editingDomain, domainModelCommand);
+					}
+					<%=importManager.getImportedName("org.eclipse.emf.common.command.Command")%> createDomainModelCommand(<%=importManager.getImportedName("org.eclipse.emf.transaction.TransactionalEditingDomain")%> editingDomain, Object[] values) {
+						<%=importManager.getImportedName(underlyingMetaClass.getQualifiedInterfaceName())%> element = <%=resolvedSemanticElement%>;
+						<%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%> result = new <%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%>();
+						Object valueToSet;
+<%
+	boolean haveDeclaredValues = false;
+	for(int i = 0; i < metaFeatures.size(); i++) {
+		GenFeature nextFeatureToSet = (GenFeature) metaFeatures.get(i);
+		EStructuralFeature nextEcoreFeature = nextFeatureToSet.getEcoreFeature();
+%>
+						<%if (i == 0) {%><%=importManager.getImportedName("org.eclipse.emf.ecore.EAttribute")%> <%}%>feature = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EAttribute")%>) <%=importManager.getImportedName(nextFeatureToSet.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=nextFeatureToSet.getFeatureAccessorName()%>();
+						try {
+							valueToSet = <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.services.ParserUtil")%>.parseValue(feature, values[<%=i%>]);
+						} catch (IllegalArgumentException e) {
+							return <%=importManager.getImportedName("org.eclipse.emf.common.command.UnexecutableCommand")%>.INSTANCE;
+						}
+<%
+		if (nextEcoreFeature.isMany()) {
+%>
+						<%if (!haveDeclaredValues) { haveDeclaredValues = true;%><%=importManager.getImportedName("org.eclipse.emf.common.util.EList")%> <%}%>values = new <%=importManager.getImportedName("org.eclipse.emf.common.util.BasicEList")%>();
+						values.addAll(element.get<%=nextFeatureToSet.getAccessorName()%>());
+						result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(editingDomain, element, feature, values));
+						if (valueToSet != null) {
+							result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.AddCommand")%>.create(editingDomain, element, feature, valueToSet));
+						}
+<%
+		} else {
+%>
+						result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(editingDomain, element, feature, valueToSet == null ? <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.UNSET_VALUE : valueToSet));
+<%
+		}
+%>
+<%
+	}
+%>
+						return result;
+					}
+<%
+}
+%>
+@
+
+
+1.3
+log
+@Default label text should be displayed instead of the "null" string when the corresponding feature is not set;
+It should be possible to unset the value of a feature using a diagram label;
+Fixed compilation errors when a label is not feature-based
+@
+text
+@@
+
+
+1.2
+log
+@Fix compilation problems introduced by recent fix of https://bugs.eclipse.org/bugs/show_bug.cgi?id=161380
+@
+text
+@d2 9
+d18 9
+a33 1
+						<%=importManager.getImportedName("org.eclipse.emf.transaction.TransactionalEditingDomain")%> editingDomain = <%=importManager.getImportedName("org.eclipse.emf.transaction.util.TransactionUtil")%>.getEditingDomain(<%=primaryView%>.getDiagram().getElement());
+d35 5
+a39 3
+if (labelModelFacet instanceof FeatureLabelModelFacet) {
+	FeatureLabelModelFacet featureLabelModelFacet = (FeatureLabelModelFacet) labelModelFacet;
+	List metaFeatures = featureLabelModelFacet.getMetaFeatures();
+d41 1
+d70 3
+a72 1
+						result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.AddCommand")%>.create(editingDomain, element, feature, valueToSet));
+d76 1
+a76 1
+						result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(editingDomain, element, feature, valueToSet));
+@
+
+
+1.1
+log
+@[156358] bblajer - Diagram overview with Lite runtime
+@
+text
+@d19 2
+a20 39
+	GenFeature featureToSet = ((FeatureLabelModelFacet)labelModelFacet).getMetaFeature();
+	EStructuralFeature ecoreFeature = featureToSet.getEcoreFeature();
+%>
+						if (parseResult.length != 1) {
+							return <%=importManager.getImportedName("org.eclipse.gef.commands.UnexecutableCommand")%>.INSTANCE;
+						}
+						<%=importManager.getImportedName("org.eclipse.emf.common.command.Command")%> domainModelCommand = createDomainModelCommand(editingDomain, parseResult[0]);
+						return new <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.commands.WrappingCommand")%>(editingDomain, domainModelCommand);
+					}
+					<%=importManager.getImportedName("org.eclipse.emf.common.command.Command")%> createDomainModelCommand(<%=importManager.getImportedName("org.eclipse.emf.transaction.TransactionalEditingDomain")%> editingDomain, Object value) {
+						<%=importManager.getImportedName(underlyingMetaClass.getQualifiedInterfaceName())%> element = <%=resolvedSemanticElement%>;
+						<%=importManager.getImportedName("org.eclipse.emf.ecore.EAttribute")%> feature = (<%=importManager.getImportedName("org.eclipse.emf.ecore.EAttribute")%>) <%=importManager.getImportedName(featureToSet.getGenPackage().getQualifiedPackageInterfaceName())%>.eINSTANCE.get<%=featureToSet.getFeatureAccessorName()%>();
+						Object valueToSet;
+						try {
+							valueToSet = <%=importManager.getImportedName("org.eclipse.gmf.runtime.lite.services.ParserUtil")%>.parseValue(feature, value);
+						} catch (IllegalArgumentException e) {
+							return <%=importManager.getImportedName("org.eclipse.emf.common.command.UnexecutableCommand")%>.INSTANCE;
+						}
+<%
+	if (ecoreFeature.isMany()) {
+%>
+						<%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%> result = new <%=importManager.getImportedName("org.eclipse.emf.common.command.CompoundCommand")%>();
+						<%=importManager.getImportedName("org.eclipse.emf.common.util.EList")%> values = new <%=importManager.getImportedName("org.eclipse.emf.common.util.BasicEList")%>();
+						values.addAll(element.get<%=featureToSet.getAccessorName()%>());
+						result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.RemoveCommand")%>.create(editingDomain, element, feature, values));
+						result.append(<%=importManager.getImportedName("org.eclipse.emf.edit.command.AddCommand")%>.create(editingDomain, element, feature, valueToSet));
+						return result;
+<%
+	} else {
+%>
+						return <%=importManager.getImportedName("org.eclipse.emf.edit.command.SetCommand")%>.create(editingDomain, element, feature, valueToSet);
+<%
+	}
+%>
+					}
+<%
+} else if (labelModelFacet instanceof CompositeFeatureLabelModelFacet) {
+	CompositeFeatureLabelModelFacet compositeFeatureLabelModelFacet = (CompositeFeatureLabelModelFacet) labelModelFacet;
+	List metaFeatures = compositeFeatureLabelModelFacet.getMetaFeatures();
+@
+
