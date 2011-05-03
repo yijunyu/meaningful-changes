@@ -1,18 +1,18 @@
-#pragma -width 1024 -id "`" 
+#pragma -width 1024 -id "`?" 
 tokens
     space  "[ \t]+"
     newline  "\n" | "" | "\n"
-    id  "[$\u][$\i]*" | "[$\u][$\i]*\?\d+"
+    id  "[$\u][$\i]*" | "[$\u][$\i]*\?[bdh][\dabcdefABCDEF]+" 
     number  "\d+[lL]?"   % DecimalIntegerLiteral | OctalIntegerLiteral 
-          | "\d+\?b\d+"
-          | "\d+b\d+"
-          | "\d+.\d*([eE][+-]?\d+)?[fFdD]?"  % DecimalFloatingPointLiteral
-          | ".\d+([eE][+-]?\d+)?[fFdD]?"  % DecimalFloatingPointLiteral (cont.'d)
-          | "\d+[eE][+-]?\d+[fFdD]?"  % DecimalFloatingPointLiteral (cont.'d)
-          | "\d+([eE][+-]?\d+)?[fFdD]"  % DecimalFloatingPointLiteral (cont.'d)
-          | "0[xX][\dabcdefABCDEF]+.[pP][+-]?\d+[fFdD]?"  % HexadecimalFloatingPointLiteral
-          | "0[xX][\dabcdefABCDEF]*.[\dabcdefABCDEF]+[pP][+-]?\d+[fFdD]?"  % HexadecimalFloatingPointLiteral (cont.'d)
-          | "0[xX][\dabcdefABCDEF]+([pP][+-]?\d+)?[lLfFdD]?"  % HexIntegerLiteral | HexadecimalFloatingPointLiteral (cont.'d)
+          | "\d+\?[bdh][\dabcdefABCDEF]+"
+          | "\d+[bdh][\dabcdefABCDEF]+"
+%          | "\d+.\d*([eE][+-]?\d+)?[fFdD]?"  % DecimalFloatingPointLiteral
+%          | ".\d+([eE][+-]?\d+)?[fFdD]?"  % DecimalFloatingPointLiteral (cont.'d)
+%          | "\d+[eE][+-]?\d+[fFdD]?"  % DecimalFloatingPointLiteral (cont.'d)
+%          | "\d+([eE][+-]?\d+)?[fFdD]"  % DecimalFloatingPointLiteral (cont.'d)
+%          | "0[xX][\dabcdefABCDEF]+.[pP][+-]?\d+[fFdD]?"  % HexadecimalFloatingPointLiteral
+%          | "0[xX][\dabcdefABCDEF]*.[\dabcdefABCDEF]+[pP][+-]?\d+[fFdD]?"  % HexadecimalFloatingPointLiteral (cont.'d)
+%          | "0[xX][\dabcdefABCDEF]+([pP][+-]?\d+)?[lLfFdD]?"  % HexIntegerLiteral | HexadecimalFloatingPointLiteral (cont.'d)
 end tokens
 
 comments
@@ -28,9 +28,9 @@ keys
     'module 'endmodule 'begin 'end 'fork 'join 'specify 'endspecify 'if 'else 'while 'for 'forever 'repeat
     'wait 'case 'casex 'default 'endcase 'function 'endfunction 'task 'endtask 'generate 'endgenerate 'input
     'output 'inout 'integer 'wire 'reg 'event 'genvar 'real 'parameter 'signed '\\\\ '( ') '{ '} '[ '] '; '#
-    '@ '$ ', ': '= 'ns 'ps '/ 
+    '@ '$ ', ': '= 'ns 'ps '/ '^ '! '| '.
     'always 'or 
-    '`include '`define '`ifdef '`else '`endif '`timescale
+    '`include '`define '`ifdef '`else '`endif '`timescale '? 
 end keys
 
 define program
@@ -60,8 +60,13 @@ define module
 end define
 
 define module_declaration
-    'module [id] '( [list id] ') 
+    'module [id] '( [list part_module_declaration] ') 
 end define
+
+define part_module_declaration
+    [macro_statement*] [id] [macro_statement*]
+end define
+
 
 define statement
   [declaration] [opt ';] [NL]
@@ -69,16 +74,31 @@ end define
 
 define declaration
     [parameter_specification]
-  | [variable_declaration]
+  | [variable_declaration] 
   | [variable_assignment_statement]
   | [if_statement]
   | [case_statement]
   | [block_statement]
   | [qualified_expression]
+  | [component_configuration]
+  | [function_decl]
+end define
+
+redefine declaration
+  [macro_statement*] ...
+end define
+
+redefine declaration
+  ...[macro_statement*] 
 end define
 
 define variable_declaration
-    [variable_type] [opt range] [id] [opt range]
+    [variable_type] [opt range] [list var] 
+end define
+
+define var
+   [id] [opt range] 
+ | [id] '= [expr]
 end define
 
 define parameter_specification
@@ -90,8 +110,8 @@ define variable_type
 end define
 
 define variable_assignment_statement
-    [id] '= [expr]
-  | 'assign [id] '= [expr]
+    [expr] '= [expr]
+  | 'assign [expr] [opt range] '= [expr]
 end define
 
 define block_statement
@@ -104,10 +124,21 @@ define function_call
     [id] [list id] 
 end define
 
+define function_decl
+    [id] '( [list id] ')
+end define
+
 define if_statement
     'if '( [expr] ')[NL][IN]
-	[declaration][EX]
+	[statement][EX]
+    [opt else_statement]
 end define
+
+define else_statement
+    'else [NL][IN]
+	[statement][EX]
+end define
+
 
 define case_statement
    'case '( [expr] ')
@@ -116,11 +147,14 @@ define case_statement
 end define
 
 define case_statement_alternative
-   [choice]  ': [statement*]
+   [list choice]  ': [statement*]
 end define
+%define choices
+%end define
 
 define choice
      [number]
+   | [id]
    | 'default
 end define
 
@@ -134,15 +168,24 @@ end define
 
 define expr
    [simple_expression]
+  | '( [simple_expression] ')
+end define
+
+define shift_expression
+  [expr] '<= '# [number] [expr]
 end define
 
 define simple_expression
      [id] 
    | [id] ' 'd [number]
    | [stringlit]
+   | [shift_expression]
    | [number] [opt time_unit]
    | [id] '[ [expr] ']
+   | [id] '[ [subrange] ']
+   | [u_op] [simple_expression] 
    | [simple_expression] [op] [simple_expression] 
+   | [simple_expression] '? [simple_expression] ': [simple_expression] 
    | '{ [list expr] '}
    | [function_call]
 end define
@@ -152,8 +195,20 @@ define qualified_expression
   | [expr]
 end define
 
+define u_op
+ '~| '^| '!
+end define
+
 define op
-    '+ | '- | '/ | '<= | 'or
+    '+ | '- | '/ | '<= | 'or | '==  | '& | '| | '!= | '|| | '&&
+end define
+
+define component_configuration
+ [id] '# '( [id] ') [id] '( [list component_declaration] ')
+end define
+
+define component_declaration
+ [SPOFF] '. [id] [SPON] '( [id] ')
 end define
 
 %define void
@@ -209,12 +264,6 @@ end define
 %define break_list
 %end define
 %define break_element
-%end define
-%define choices
-%end define
-%define component_configuration
-%end define
-%define component_declaration
 %end define
 %define component_instantiation_statement
 %end define
@@ -411,8 +460,6 @@ end define
 %define record_nature_definition
 %end define
 %define record_type_definition
-%end define
-%define shift_expression
 %end define
 %define report_statement
 %end define
