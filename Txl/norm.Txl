@@ -10,11 +10,10 @@ redefine typeSpec
 	... [opt kept] [opt orderedBy] [opt ignoredWhen] [opt preferredWith]
 end define
 define ignoredWhen 'ignored [opt whenField] end define
-define preferredWith 'preferred [opt withField] end define
+define preferredWith 'preferred 'with [literal+] end define
 define orderedBy 'ordered [opt byField] end define
 define kept 'kept end define
 define whenField 'when [id] end define
-define withField 'with [id] end define
 define byField 'by [id] | 'by [typeModifier] end define
 
 rule typeSpec_eliminateKeptAnnotations
@@ -45,7 +44,6 @@ rule typeSpec_eliminatePreferredAnnotations
  by M I R
 end rule
 
-
 %
 % Auxiliary function
 %
@@ -71,7 +69,7 @@ end rule
 %
 function update_id I [typeid]
  import Rules [statement*]
- import RuleIDs2 [id*]
+ import KeepRuleIDs [id*]
  import IgnoreRuleIDs [id*]
  import TypeIDs [id*]
  match [typeSpec] T [typeSpec]
@@ -113,7 +111,7 @@ function update_id I [typeid]
 	    'by 'StructuredClones '[ '. 'Stmt ']
      'end 'function
  export Rules Rules [. S1] 
- export RuleIDs2 RuleIDs2 [. find_replace_I] 
+ export KeepRuleIDs KeepRuleIDs [. find_replace_I] 
  export TypeIDs TypeIDs [. TypeID] 
 end function
 
@@ -122,11 +120,11 @@ end function
 %
 % Global variables: 
 %   Rules [statement*]  %% The rules for normalising the id's
-%   RuleIDs [id*]	%% The name of the normalisation rules
+%   OrderRuleIDs [id*]	%% The name of the normalisation rules
 %
 function typeSpec_repeat DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
- import RuleIDs [id*]
+ import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
@@ -139,6 +137,10 @@ function typeSpec_repeat DS [redefineStatement] T [typeSpec]
     'rule ruleID
 	'replace '[ 'repeat I '] 
 	   'N1 '[ I '] 'N2 '[ I '] 'Rest '[ 'repeat I '] 
+%	   'construct 't1 '[ I '] 'N1 '[ 'write "t.1" '] 
+%           'construct 'T1 '[ 'stringlit '] '_ '[ 'fgets "t.1" ']
+%	   'construct 't2 '[ I '] 'N2 '[ 'write "t.2" '] 
+%           'construct 'T2 '[ 'stringlit '] '_ '[ 'fgets "t.2" ']
            'construct 'T1 '[ 'stringlit '] '_ '[ 'quote 'N1 ']
            'construct 'T2 '[ 'stringlit '] '_ '[ 'quote 'N2 ']
 	'where 'T1 '[ '> 'T2 ']
@@ -146,12 +148,12 @@ function typeSpec_repeat DS [redefineStatement] T [typeSpec]
 	   'N2 'N1 'Rest 
     'end 'rule
  export Rules Rules [. S]
- export RuleIDs RuleIDs [. ruleID]
+ export OrderRuleIDs OrderRuleIDs [. ruleID]
  by S
 end function
 function typeSpec_repeat_byField DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
- import RuleIDs [id*]
+ import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
@@ -170,7 +172,7 @@ function typeSpec_repeat_byField DS [redefineStatement] T [typeSpec]
 	   'N2 'N1 'Rest 
     'end 'rule
  export Rules Rules [. S]
- export RuleIDs RuleIDs [. ruleID]
+ export OrderRuleIDs OrderRuleIDs [. ruleID]
  by S
 end function
 
@@ -179,11 +181,11 @@ end function
 %
 % Global variables: 
 %   Rules [statement*]  %% The rules for normalising the id's
-%   RuleIDs [id*]	%% The name of the normalisation rules
+%   OrderRuleIDs [id*]	%% The name of the normalisation rules
 %
 function typeSpec_list DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
- import RuleIDs [id*]
+ import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
@@ -196,6 +198,10 @@ function typeSpec_list DS [redefineStatement] T [typeSpec]
     'rule ruleID
 	'replace '[ 'list I '] 
 	   'N1 '[ I '] ', 'N2 '[ I '] ', 'Rest '[ 'list I '] 
+%	   'construct 't1 '[ I '] 'N1 '[ 'write "t.1" '] 
+%           'construct 'T1 '[ 'stringlit '] '_ '[ 'fgets "t.1" ']
+%	   'construct 't2 '[ I '] 'N2 '[ 'write "t.2" '] 
+%           'construct 'T2 '[ 'stringlit '] '_ '[ 'fgets "t.2" ']
            'construct 'T1 '[ 'stringlit '] '_ '[ 'quote 'N1 ']
            'construct 'T2 '[ 'stringlit '] '_ '[ 'quote 'N2 ']
 	'where 'T1 '[ '> 'T2 ']
@@ -203,12 +209,12 @@ function typeSpec_list DS [redefineStatement] T [typeSpec]
 	   'N2 ', 'N1 ', 'Rest 
     'end 'rule
  export Rules Rules [. S]
- export RuleIDs RuleIDs [. ruleID]
+ export OrderRuleIDs OrderRuleIDs [. ruleID]
  by S
 end function
 function typeSpec_list_byField DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
- import RuleIDs [id*]
+ import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
@@ -227,12 +233,12 @@ function typeSpec_list_byField DS [redefineStatement] T [typeSpec]
 	   'N2 ', 'N1 ', 'Rest 
     'end 'rule
  export Rules Rules [. S]
- export RuleIDs RuleIDs [. ruleID]
+ export OrderRuleIDs OrderRuleIDs [. ruleID]
  by S
 end function
 
 %
-% Ignore the node
+% Ignore the node unconditionally
 %
 function typeSpec_ignore DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
@@ -280,8 +286,6 @@ end function
 % transformed rule, it will be used by the 'where E1 '[ F E2 '] clause to
 % select the elements that matches to be ignored, where E1 is the scope of the
 % ignored non-terminal and E2 is the ignored non-terminal
-%
-% typeRepeater R is *
 %
 function typeSpec_ignore_whenField_R DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
@@ -335,6 +339,44 @@ function typeSpec_ignore_whenField_R DS [redefineStatement] T [typeSpec]
  by S1 
 end function
 
+%
+% Use annotation 'preferred 'with L where L is a list of user-defined literals. 
+%
+function typeSpec_preferred_withField DS [redefineStatement] T [typeSpec]
+ import Rules [statement*]
+ import PreferRuleIDs [id*]
+ replace [statement*] _ [statement*] 
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] 
+	K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [preferredWith]
+ deconstruct P 'preferred 'with L [literal+]
+ construct StrID [id] _ [quote TID]
+ deconstruct I TypeID [id] 
+ construct ID1 [id] 'normalise_preferred_tokens
+ construct ruleID1 [id] ID1 [_ StrID] [_ TypeID] [!]
+ construct ID2 [id] 'normalise_preferred_replace
+ construct ruleID2 [id] ID2 [_ StrID] [_ TypeID] [!]
+ construct LL1 [literalOrVariable*] _ [literal_to_type each L] 
+ construct Pattern [pattern] LL1
+ construct LL2 [literalOrExpression*] _ [literal_to_expr each L] 
+ construct Replacement [replacement] LL2
+ construct S1 [statement*] 
+    'function ruleID1 'B '[ TID ']
+    	'replace '[ TID '* '] 'A '[ TID '* '] 
+        'deconstruct 'not 'B Pattern
+	'construct 'B1 '[ TID '] Replacement
+     	'by _ '[ '. 'A '] '[ '. 'B1 '] 
+    'end 'function
+    'function ruleID2 
+    	'replace '[ 'program '] 'Prg '[ 'program ']
+        'construct 'A '[ TID '* '] '_ '[ '^ 'Prg ']
+        'construct 'A1 '[ TID '* '] _ '[ ruleID1 each A ']
+        'by 'Prg '[ '$ 'each 'A 'A1 ']
+    'end 'function
+ export Rules Rules [. S1] 
+ export PreferRuleIDs PreferRuleIDs [. ruleID2]
+ by S1 
+end function
 
 %
 % Process all the [list Foo] or [repeat Foo] in the redefine statements
@@ -348,7 +390,8 @@ function DS_replace DS [redefineStatement]
  construct S4 [statement*] _ [typeSpec_list DS each T]
  construct S5 [statement*] _ [typeSpec_ignore_whenField_R DS each T]
  construct S6 [statement*] _ [typeSpec_ignore DS each T]
- construct S [statement*] S0 [. S1] [. S2] [. S3] [. S4] [. S5] [. S6] 
+ construct S7 [statement*] _ [typeSpec_preferred_withField DS each T]
+ construct S [statement*] S0 [. S1] [. S2] [. S3] [. S4] [. S5] [. S6] [. S7]
  by S
 end function
 
@@ -358,6 +401,21 @@ end function
 function id_to_type ID [id]
  replace [literalOrExpression*] L [literalOrExpression*]
  construct T [literalOrExpression*] '[ ID ']
+ by L [. T]
+end function
+
+%
+% Convert a literal into a singleton array of literalOrType
+%
+function literal_to_type L [literal]
+ replace [literalOrVariable*] LL [literalOrVariable*]
+ construct T [literalOrVariable*] L 
+ by LL [. T]
+end function
+
+function literal_to_expr ID [literal]
+ replace [literalOrExpression*] L [literalOrExpression*]
+ construct T [literalOrExpression*] ID 
  by L [. T]
 end function
 
@@ -389,27 +447,33 @@ end function
 %   end function
 %
 % Global variables: 
+%
 %   Rules [statement*]  %% The rules for normalising the id's
-%   RuleIDs [id*]	%% The name of the normalisation rules
+%
+%   OrderRuleIDs [id*]	%% The name of the Order normalisation rules
+%   KeepRuleIDs [id*]	%% The name of the Keep normalisation rules
+%   PreferRuleIDs [id*]	%% The name of the Prefer normalisation rules
+%   IgnoreRuleIDs [id*]	%% The name of the Ignore normalisation rules
+%
 function main 
  replace [program] P [program]
  export Rules [statement*] _
- export RuleIDs [id*] _
+ export OrderRuleIDs [id*] _
  export IgnoreRuleIDs [id*] _
- export RuleIDs2 [id*] _
+ export PreferRuleIDs [id*] _
+ export KeepRuleIDs [id*] _
  export TypeIDs [id*] _
  construct P0 [program] P [typeSpec_removeClones]
  import Rules
- import RuleIDs
- import IgnoreRuleIDs
- import RuleIDs2
+ import KeepRuleIDs
  import TypeIDs
  construct DS [redefineStatement*] _ [^ P0]
  construct S [statement*] _ [DS_replace each DS]
  construct PL [literalOrExpression*] 'Prg
- import RuleIDs
+ import OrderRuleIDs
  import IgnoreRuleIDs
- construct PL2 [literalOrExpression*] _ [id_to_type each IgnoreRuleIDs] [id_to_type each RuleIDs] [id_to_type each RuleIDs2]
+ import PreferRuleIDs
+ construct PL2 [literalOrExpression*] _ [id_to_type each IgnoreRuleIDs] [id_to_type each PreferRuleIDs] [id_to_type each OrderRuleIDs] [id_to_type each KeepRuleIDs]
  construct L [literalOrExpression*] _ [. PL] [. PL2]
  construct R [replacement] L
  construct RULE [statement]
@@ -420,7 +484,7 @@ function main
  deconstruct P0 S0 [statement*]
  import Rules
  construct P1 [program] S0 [. Rules] [. RULE ]
- by P1 [typeSpec_eliminateKeptAnnotations] 
+ by  P1 [typeSpec_eliminateKeptAnnotations] 
 	[typeSpec_eliminateOrderedAnnotations]
 	[typeSpec_eliminateIgnoredAnnotations]
 	[typeSpec_eliminatePreferredAnnotations]

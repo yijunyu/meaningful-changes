@@ -205,72 +205,52 @@ function add_if_clones_class_body_declaration SS  [class_body_declaration *] Stm
         StructuredClones  [ . Stmt ] 
 end function
 
-function normalise_ignore_by2_method_body_block1 N1  [block]
-    replace  [method_body]
-        N1 
-    by
-
-end function
-
-function normalise_ignore_by3_method_body_block1 E1  [method_body]
+function normalise_preferred_tokens_method_body_block1 B  [method_body]
     replace  [method_body *]
-        Seq  [method_body *] 
-    construct N1  [block *]
-        _  [ ^  E1 ] 
-    construct E2  [method_body]
-        E1  [normalise_ignore_by2_method_body_block1  each  N1]
- 
+        A  [method_body *] 
+    deconstruct not B
+        '; 
+    construct B1  [method_body]
+        '; 
     by
-        Seq  [ . E2 ] 
+        _  [ . A ]  [ . B1 ] 
 end function
 
-function normalise_ignore_by4_method_body_block1
+function normalise_preferred_replace_method_body_block1
     replace  [program]
-        P1  [ program ] 
-    construct List1  [method_body *]
-        _  [ ^  P1 ] 
-    construct List2  [method_body *]
-        _  [normalise_ignore_by3_method_body_block1  each  List1]
- 
-    construct P2  [program]
-        P1  [$  each  List1  List2]
+        Prg  [ program ] 
+    construct A  [method_body *]
+        _  [ ^  Prg ] 
+    construct A1  [method_body *]
+        _  [normalise_preferred_tokens_method_body_block1  each  A]
  
     by
-        P2 
+        Prg  [$  each  A  A1]
+ 
 end function
 
-function normalise_ignore_by2_constructor_body_block1 N1  [block]
-    replace  [constructor_body]
-        N1 
-    by
-
-end function
-
-function normalise_ignore_by3_constructor_body_block1 E1  [constructor_body]
+function normalise_preferred_tokens_constructor_body_block1 B  [constructor_body]
     replace  [constructor_body *]
-        Seq  [constructor_body *] 
-    construct N1  [block *]
-        _  [ ^  E1 ] 
-    construct E2  [constructor_body]
-        E1  [normalise_ignore_by2_constructor_body_block1  each  N1]
- 
+        A  [constructor_body *] 
+    deconstruct not B
+        '{ '} 
+    construct B1  [constructor_body]
+        '{ '} 
     by
-        Seq  [ . E2 ] 
+        _  [ . A ]  [ . B1 ] 
 end function
 
-function normalise_ignore_by4_constructor_body_block1
+function normalise_preferred_replace_constructor_body_block1
     replace  [program]
-        P1  [ program ] 
-    construct List1  [constructor_body *]
-        _  [ ^  P1 ] 
-    construct List2  [constructor_body *]
-        _  [normalise_ignore_by3_constructor_body_block1  each  List1]
- 
-    construct P2  [program]
-        P1  [$  each  List1  List2]
+        Prg  [ program ] 
+    construct A  [constructor_body *]
+        _  [ ^  Prg ] 
+    construct A1  [constructor_body *]
+        _  [normalise_preferred_tokens_constructor_body_block1  each  A]
  
     by
-        P2 
+        Prg  [$  each  A  A1]
+ 
 end function
 
 rule normalise_list_enum_body_class_body_declaration
@@ -499,8 +479,8 @@ function main
     export CloneNumber [number]
         0 
     by
-        Prg  [ normalise_ignore_by4_method_body_block1 ]  [ normalise_ignore_by4_constructor_body_block1 ]  [ 
-          normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 
+        Prg  [ normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 
+          normalise_preferred_replace_method_body_block1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
           normalise_list_enum_body_class_body_declaration ]  [ normalise_list_class_header_modifier ]  [ 
           normalise_list_interface_header_modifier ]  [ normalise_list_enum_header_modifier ]  [ 
           normalise_list_extends_clause_type_name ]  [ normalise_list_implements_clause_qualified_name ]  [ 
