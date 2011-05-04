@@ -1,6 +1,7 @@
+cd jhotdraw
 if [ ! -e java.txt ]; then
 	echo get all non-trival java.txt
-	find jhotdraw -name *.java,v -print | grep -v example | grep -v examples | grep -v test | grep -v Attic > java.txt
+	find . -name *.java,v -print | grep -v example | grep -v examples | grep -v test | grep -v Attic > java.txt
 fi
 x=0
 for f in `cat java.txt`; do
@@ -9,5 +10,6 @@ for f in `cat java.txt`; do
    echo -n .
    x=0
  fi
- rlog -q $f | awk -f diff.awk
+ rlog -q $f | awk -f ../diff.awk
 done
+cd -
