@@ -55,7 +55,7 @@ $(bin)/%cc: Txl/%.Txl
 
 # normalise 
 Txl/%.Txl: $(bin)/normc norm/%.norm
-	$^ -o t.t
+	/usr/bin/time $^ -o t.t
 	sed -e 's/\/\*//' t.t | sed -e 's/*\//\/* *\//g' > $@
 	rm -f t.t
 
