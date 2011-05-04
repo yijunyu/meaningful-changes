@@ -1,4 +1,5 @@
 #!/bin/bash
+#echo $*
 checker=$1
 revision=$2
 rcs_file=$3

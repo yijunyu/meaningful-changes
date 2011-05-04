@@ -4,6 +4,21 @@ redefine method_body
     |    [opt annotation_default]  '; 
 end define
 
+redefine modifier
+        'abstract 
+    |    'final 
+    |    'public 
+    |    'protected 
+    |    'private 
+    |    'static 
+    |    'transient 
+    |    'volatile 
+    |    'native 
+    |    'synchronized 
+    |    'strictfp 
+    |    [repeat annotation] 
+end define
+
 redefine constructor_body
         [repeat block] 
 end define
@@ -107,50 +122,99 @@ function Private A  [class_body_declaration]
     where not
         M  [contains  each  PublicModifiers] end function
 
-redefine import_declaration
+redefine package_header
         ...
     |    [empty] 
 end define
 
-function find_replace_import_declaration
+function find_replace_package_header
     replace  [program]
         P  [ program ] 
-    construct S  [import_declaration *]
-        _  [ find_clones_import_declaration  P ] 
+    construct S  [package_header *]
+        _  [ find_clones_package_header  P ] 
     by
-        P  [mark_clones_import_declaration  each  S]
+        P  [mark_clones_package_header  each  S]
  
 end function
 
-rule mark_clones_import_declaration S  [import_declaration]
+rule mark_clones_package_header S  [package_header]
     import CloneNumber [number]
 
     export CloneNumber
         CloneNumber  [ +  1 ] 
-    replace  [import_declaration]
+    replace  [package_header]
         S 
     by
 
 end rule
 
-function find_clones_import_declaration P  [program]
-    construct S  [import_declaration *]
+function find_clones_package_header P  [program]
+    construct S  [package_header *]
         _  [ ^  P ] 
-    replace  [import_declaration *]
+    replace  [package_header *]
 
     by
-        _  [add_if_clones_import_declaration  S  each  S]
+        _  [add_if_clones_package_header  S  each  S]
  
 end function
 
-function add_if_clones_import_declaration SS  [import_declaration *] Stmt  [import_declaration]
+function add_if_clones_package_header SS  [package_header *] Stmt  [package_header]
     deconstruct * SS
-        Stmt  Rest  [ import_declaration  * ] 
-    deconstruct * [import_declaration] Rest
+        Stmt  Rest  [ package_header  * ] 
+    deconstruct * [package_header] Rest
         Stmt 
-    replace  [import_declaration *]
-        StructuredClones  [ import_declaration  * ] 
-    deconstruct not * [import_declaration] StructuredClones
+    replace  [package_header *]
+        StructuredClones  [ package_header  * ] 
+    deconstruct not * [package_header] StructuredClones
+        Stmt 
+    by
+        StructuredClones  [ . Stmt ] 
+end function
+
+redefine type_declaration
+        ...
+    |    [empty] 
+end define
+
+function find_replace_type_declaration
+    replace  [program]
+        P  [ program ] 
+    construct S  [type_declaration *]
+        _  [ find_clones_type_declaration  P ] 
+    by
+        P  [mark_clones_type_declaration  each  S]
+ 
+end function
+
+rule mark_clones_type_declaration S  [type_declaration]
+    import CloneNumber [number]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    replace  [type_declaration]
+        S 
+    by
+
+end rule
+
+function find_clones_type_declaration P  [program]
+    construct S  [type_declaration *]
+        _  [ ^  P ] 
+    replace  [type_declaration *]
+
+    by
+        _  [add_if_clones_type_declaration  S  each  S]
+ 
+end function
+
+function add_if_clones_type_declaration SS  [type_declaration *] Stmt  [type_declaration]
+    deconstruct * SS
+        Stmt  Rest  [ type_declaration  * ] 
+    deconstruct * [type_declaration] Rest
+        Stmt 
+    replace  [type_declaration *]
+        StructuredClones  [ type_declaration  * ] 
+    deconstruct not * [type_declaration] StructuredClones
         Stmt 
     by
         StructuredClones  [ . Stmt ] 
@@ -229,6 +293,42 @@ function normalise_preferred_replace_method_body_block1
  
 end function
 
+function normalise_ignore_by2_modifier_annotation1 E1  [modifier] N1  [annotation]
+    replace  [annotation *]
+        Seq  [annotation *] 
+    by
+        Seq 
+end function
+
+function normalise_ignore_by3_modifier_annotation1 E1  [modifier]
+    replace  [modifier *]
+        Seq  [modifier *] 
+    construct N1  [annotation *]
+        _  [ ^  E1 ] 
+    construct N2  [annotation *]
+        _  [normalise_ignore_by2_modifier_annotation1  E1  each  N1]
+ 
+    construct E2  [modifier]
+        E1  [ $  N1  N2 ] 
+    by
+        Seq  [ . E2 ] 
+end function
+
+function normalise_ignore_by4_modifier_annotation1
+    replace  [program]
+        P1  [ program ] 
+    construct List1  [modifier *]
+        _  [ ^  P1 ] 
+    construct List2  [modifier *]
+        _  [normalise_ignore_by3_modifier_annotation1  each  List1]
+ 
+    construct P2  [program]
+        P1  [$  each  List1  List2]
+ 
+    by
+        P2 
+end function
+
 function normalise_preferred_tokens_constructor_body_block1 B  [constructor_body]
     replace  [constructor_body *]
         A  [constructor_body *] 
@@ -265,6 +365,42 @@ rule normalise_list_enum_body_class_body_declaration
     by
         N2  N1  Rest 
 end rule
+
+function normalise_ignore_by2_package_declaration_import_declaration1 E1  [package_declaration] N1  [import_declaration]
+    replace  [import_declaration *]
+        Seq  [import_declaration *] 
+    by
+        Seq 
+end function
+
+function normalise_ignore_by3_package_declaration_import_declaration1 E1  [package_declaration]
+    replace  [package_declaration *]
+        Seq  [package_declaration *] 
+    construct N1  [import_declaration *]
+        _  [ ^  E1 ] 
+    construct N2  [import_declaration *]
+        _  [normalise_ignore_by2_package_declaration_import_declaration1  E1  each  N1]
+ 
+    construct E2  [package_declaration]
+        E1  [ $  N1  N2 ] 
+    by
+        Seq  [ . E2 ] 
+end function
+
+function normalise_ignore_by4_package_declaration_import_declaration1
+    replace  [program]
+        P1  [ program ] 
+    construct List1  [package_declaration *]
+        _  [ ^  P1 ] 
+    construct List2  [package_declaration *]
+        _  [normalise_ignore_by3_package_declaration_import_declaration1  each  List1]
+ 
+    construct P2  [program]
+        P1  [$  each  List1  List2]
+ 
+    by
+        P2 
+end function
 
 rule normalise_list_class_header_modifier
     replace  [repeat modifier]
@@ -479,7 +615,8 @@ function main
     export CloneNumber [number]
         0 
     by
-        Prg  [ normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 
+        Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ normalise_ignore_by4_package_declaration_import_declaration1 ]  [ 
+          normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 
           normalise_preferred_replace_method_body_block1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
           normalise_list_enum_body_class_body_declaration ]  [ normalise_list_class_header_modifier ]  [ 
           normalise_list_interface_header_modifier ]  [ normalise_list_enum_header_modifier ]  [ 
@@ -487,7 +624,7 @@ function main
           normalise_list_constructor_declaration_modifier ]  [ normalise_list_variable_declaration_modifier ]  [ 
           normalise_list_variable_declarators_variable_declarator ]  [ normalise_list_method_declaration_modifier ]  [ 
           normalise_list_throws_qualified_name ]  [ normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
-          normalise_list_single_annotation_value_expression_or_nested_annotation ]  [ find_replace_import_declaration ]  [ 
-          find_replace_class_body_declaration ] 
+          normalise_list_single_annotation_value_expression_or_nested_annotation ]  [ find_replace_package_header ]  [ 
+          find_replace_type_declaration ]  [ find_replace_class_body_declaration ] 
 end function
 

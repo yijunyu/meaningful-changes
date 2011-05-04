@@ -1,5 +1,5 @@
 rm -f *-2.java.*
-for fmt in diff ldiff java5 norm clone; do
+for fmt in diff ldiff java5 normal java5_diff norm_diff clone; do
   count1=$(cat *.$fmt | grep "^[0-9]" | wc) 
   count2=$(cat *.$fmt | grep -v "^[0-9]" | wc) 
   echo $fmt $count1 > $fmt.count

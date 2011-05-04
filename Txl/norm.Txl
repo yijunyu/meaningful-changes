@@ -246,12 +246,13 @@ end function
 %
 % Ignore the node unconditionally
 %
-function typeSpec_ignore DS [redefineStatement] T [typeSpec]
+function typeSpec_ignore_opt DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import IgnoreRuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
+ deconstruct TM 'opt
  deconstruct Ig 'ignored 
  construct StrID [id] _ [quote TID]
  deconstruct I TypeID [id] 
@@ -265,13 +266,58 @@ function typeSpec_ignore DS [redefineStatement] T [typeSpec]
  construct ruleID4 [id] ID4 [_ StrID] [_ TypeID] [!]
  construct pID [id] TypeID [_ StrID]
  construct S1 [statement*]
-    'function ruleID2 'N1 '[ I ']
+   'function ruleID2 'N1 '[ I ']
     	'replace '[ TID '] 'N1 'by 
     'end 'function
     'function ruleID3 'E1 '[ TID ']
     	'replace '[ TID '* '] 'Seq '[ TID '* ']
         'construct 'N1 '[ I '* '] '_ '[ '^ 'E1 ']
         'construct 'E2  '[ TID '] 'E1  '[ ruleID2 each 'N1 '] 
+     	'by 'Seq '[ '. 'E2 '] 
+    'end 'function
+    'function ruleID4
+        'replace '[ 'program '] 'P1 '[ 'program '] 
+        'construct 'List1 '[ TID '* '] '_ '[ '^ 'P1 '] 
+        'construct 'List2 '[ TID '* ']
+            '_ '[ ruleID3 'each 'List1 ']
+        'construct 'P2 '[ 'program '] 'P1 '[ '$ 'each 'List1 'List2 ']
+       'by 'P2
+    'end 'function
+ export Rules Rules [. S1] 
+ export IgnoreRuleIDs IgnoreRuleIDs [. ruleID4]
+ by S1 
+end function
+
+function typeSpec_ignore_repeat DS [redefineStatement] T [typeSpec]
+ import Rules [statement*]
+ import IgnoreRuleIDs [id*]
+ replace [statement*] _ [statement*] 
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
+ deconstruct not TM 'opt
+ deconstruct Ig 'ignored 
+ construct StrID [id] _ [quote TID]
+ deconstruct I TypeID [id] 
+ construct ID1 [id] 'normalise_ignore_by1
+ construct ruleID1 [id] ID1 [_ StrID] [_ TypeID] [!]
+ construct ID2 [id] 'normalise_ignore_by2
+ construct ruleID2 [id] ID2 [_ StrID] [_ TypeID] [!]
+ construct ID3 [id] 'normalise_ignore_by3
+ construct ruleID3 [id] ID3 [_ StrID] [_ TypeID] [!]
+ construct ID4 [id] 'normalise_ignore_by4
+ construct ruleID4 [id] ID4 [_ StrID] [_ TypeID] [!]
+ construct pID [id] TypeID [_ StrID]
+ construct S1 [statement*]
+     'function ruleID2 'E1 '[ TID '] 'N1 '[ I ']
+    	'replace '[ I '* '] 'Seq '[ I '* ']
+     	'by 'Seq 
+    'end 'function
+    'function ruleID3 'E1 '[ TID ']
+    	'replace '[ TID '* '] 'Seq '[ TID '* ']
+        'construct 'N1 '[ I '* '] '_ '[ '^ 'E1 ']
+	'construct 'N2 '[ I '*' ] 
+		'_ '[ ruleID2 'E1 'each 'N1 ']
+        'construct 'E2  '[ TID '] 'E1  '[ '$ 'N1 'N2 '] 
      	'by 'Seq '[ '. 'E2 '] 
     'end 'function
     'function ruleID4
@@ -395,9 +441,10 @@ function DS_replace DS [redefineStatement]
  construct S3 [statement*] _ [typeSpec_list_byField DS each T]
  construct S4 [statement*] _ [typeSpec_list DS each T]
  construct S5 [statement*] _ [typeSpec_ignore_whenField_R DS each T]
- construct S6 [statement*] _ [typeSpec_ignore DS each T]
+ construct S6 [statement*] _ [typeSpec_ignore_opt DS each T]
+ construct S61 [statement*] _ [typeSpec_ignore_repeat DS each T]
  construct S7 [statement*] _ [typeSpec_preferred_withField DS each T]
- construct S [statement*] S0 [. S1] [. S2] [. S3] [. S4] [. S5] [. S6] [. S7]
+ construct S [statement*] S0 [. S1] [. S2] [. S3] [. S4] [. S5] [. S6] [. S61] [. S7]
  by S
 end function
 

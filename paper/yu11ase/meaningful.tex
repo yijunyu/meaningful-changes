@@ -78,7 +78,7 @@ Applying a structured diff algorithm~\footnote{EMFCompare, www.eclipse.org/emf/c
 In fact, none of the changes identified in this example is meaningful if the programmer only wants to see non-trivial
 changes: just as adding a newline or some whitespaces would not change the syntax of the program, nor would swapping the keywords {\tt public} and {\tt static} in the declaration of the {\tt main} method make any semantic differences.
 
-To detect a meaningful change between two versions of a program, our proposed solution includes two major steps. {\em Step 1. Specification}: the programmer defines a number of annotations to the given grammar of the programs; {\em Step 2. Transformation}: the tool generates two sets of transformations (normalisation, clone-removal) from the specification in Step 1 and applies these transformations to the two source programs to report the meaningful changes. Figure~\ref{fig:overview} illustrates the workflow of a typical use case where the thin arrow indicates the manual specification step for the developer to annotate the given grammar; and the thick arrows indicate the automated transformation steps, for the mct system to generate the grammar refinement and transformation rules to detect meaningful changes from the programs in the CVS repository. 
+To find a meaningful change between two versions of a program, our proposed solution includes two major steps. \begin{itemize}\item {\em Step 1. Specification}: the programmer defines a number of annotations to the given grammar of the programs; \item {\em Step 2. Detection}: the tool generates two sets of transformations (normalisation, clone-removal) from the specification in Step 1 and applies these transformations to the two source programs to report the meaningful changes.\end{itemize} Figure~\ref{fig:overview} illustrates the workflow of a typical use case where the thin arrow indicates the manual specification step for the developer to annotate the given grammar; and the thick arrows indicate the automated transformation steps, for the mct system to generate the grammar refinement and transformation rules to detect meaningful changes from the programs in the CVS repository. 
 \begin{figure}\centering
 \includegraphics[width=\columnwidth]{code/overview}
 \caption{Specifying and detecting meaningful changes, an overview}\label{fig:overview}
@@ -158,7 +158,7 @@ It is possible to redefine the grammar of Java5 in TXL in many ways without nece
 
 Comparing the annotated Java 5 grammar as shown in Listing~\ref{listing:java1} with the original in Listing~\ref{listing:java0}, it is clear that one only needs to ``redefine'' existing production rules while leaving other rules intact by simply including them (e.g., Line 1).
 
-The redefined rules in Table~\ref{table:rule} are used or composed in some of the term extensions. Here we explain the rationale behind these extensions. First of all, the top level rule is modified from a singleton to one or optionally two instances of the programs (Lines 2-4). The reason for this is to allow the clone detection to work on the concatenated programs being compared to remove those inter-program clones such that the kept elements are all about different elements. The annotations ``kept'' are appended to the terms such as ``package\_header'' (Line 6), ``type\_declaration'' (Line 8), ``class\_body\_declaration'' (Line 12). These instruct a clone detector to compare these three types of entities for possible clones. Although the technique is similar, there is also a fundamental difference between general-purpose clone detection and cross-program clone-removal here. The purpose is not to show the clones, instead the opposite: those non-clones are the differences to be detected.
+The redefined rules in Table~\ref{table:rule} are used or composed in some of the term extensions. Here we explain the rationale behind these extensions. First of all, the top level rule is modified from a singleton to one or optionally two instances of the programs (Lines 2-4). The reason for this is to allow the clone detection to work on the concatenated programs being compared to remove those inter-program clones such that the kept elements are all about different elements. The annotations ``\underbar{kept}'' are appended to the terms such as ``package\_header'' (Line 6), ``type\_declaration'' (Line 8), ``class\_body\_declaration'' (Line 12). These instruct a clone detector to compare these three types of entities for possible clones. Although the technique is similar, there is also a fundamental difference between general-purpose clone detection and cross-program clone-removal here. The purpose is not to show the clones, instead the opposite: those non-clones are the differences to be detected.
 When a single program is provided as the source, of course, the transformations will then degenerate into just selecting the  parts of the program in which changes are embedded.
 
 However, the ordering of elements or appearance of ignoreable details can get in the way of meaingful change detections. Therefore the normalisation transformations are required to be applied before the change detection step. 
@@ -200,17 +200,17 @@ When the same transformation is applied to the concatenated inputs of both progr
 \section{Performance evaluation}\label{sec:experiment}
 To evaluate the {\tt mct} tool, we experimented on three evolving programs, namely {\tt gmf}, {\tt jhotdraw} in Java and {\tt Uart16650} in Verilog. These benchmark programs are in the public domain: {\tt JHotDraw} is a  GUI framework for technical and structured Graphics, which was studied for the API evolution and refactoring opportunities~\cite{DBLP:journals/smr/DigJ06}; {\tt GMF} is a model-driven code generator for Eclipse Graph Editors, which was  studied for the evolution of the model/code co-evolution~\cite{DBLP:conf/sle/HerrmannsdoerferRW09}; {\tt OpenCores Uart16650} is a specification of FIFO queue for hardware, which was used for the study of Verilog Diff~\cite{Duley:2010:PDA:1858996.1859093}.
 
-To apply to these programs, we first defined the relevant changes based on their corresponding programming languages. Table~\ref{table:2} lists the size of the meta-grammar (txl.grm), Java 5 grammar (java5.Txl) and the Verilog grammars (v.Txl). The {\tt mct} tool is implemented as {\tt mct.Txl} as 19 rules that transform the 7 extended terms. The Java API normalisation tool is implemented by redefining 21 terms using 7 Keep, 17 Order, 1 Ignore and 2 Prefer annotations, and 2 user-defined rules; as a result, 27 new transformation rules are generated. The Verilog annotations include 4 Keep and 5 Order, which generates 12 transformation rules. 
+To apply to these programs, we first defined the relevant changes based on their corresponding programming languages. Table~\ref{table:2} lists the size of the meta-grammar (txl.grm), Java 5 grammar (java5.Txl) and the Verilog grammars (v.Txl). The {\tt mct} tool is implemented as {\tt mct.Txl} as 19 rules that transform the 7 extended terms. The Java API normalisation tool is implemented by redefining 21 terms using 7 Keep, 17 Order, 1 Ignore and 2 Prefer annotations, and 2 user-defined rules; as a result, 47 new transformation rules are generated. The Verilog annotations include 4 Keep and 5 Order, which generates 12 transformation rules. 
 
 \begin{table}\centering
 \caption{Size of the fully extended grammars\label{table:2}}
 \begin{tabular}{| r || r | r | r | r |  r |  r |  r  |}\hline
 {\bf Grammar} & description & LOC & Terms &  Rules \\  \hline\hline
 txl.grm & TXL meta-grammar & 408 & 58 & 0 \\
-mct.Txl & Implementation & 497 & 7 & 19 \\ \hline
-java5.Txl & Java 5 grammar &  970 & 168 & 0 \\
+mct.Txl & Implementation & 544 & 7 & 20 \\ \hline
+java5.Txl & Java 5 grammar &  976 & 168 & 0 \\
 java.norm & annotation & 123 & 21 & 2 \\ 
-java.Txl & result & 721  & 27 & 29  \\\hline  
+java.Txl & result & 721  & 27 & 49  \\\hline  
 v.Txl & Verilog grammar & 233 &  37 &  1\\
 v.norm & annotation & 45 &  9 & 0 \\
 verilog.Txl & result & 191 &  11 & 12 \\\hline
@@ -226,7 +226,7 @@ verilog.Txl & result & 191 &  11 & 12 \\\hline
 \end{table}
 
 
-Then we accessed the history of {\tt gmf} and {jhotdraw} by analysing all their commits from their public CVS repositories; whilst we use the same set of selected revisions of {\tt Uart16650} provided by Dulay et al~\cite{Duley:2010:PDA:1858996.1859093}.
+Then we accessed the history of {\tt gmf} and {\tt jhotdraw} by analysing all commits from their public CVS repositories; whilst we were using the same set of selected revisions of {\tt Uart16650} provided by Dulay et al~\cite{Duley:2010:PDA:1858996.1859093}.
 Table~\ref{table:3} lists the size metrics of the example programs. The `File' column shows the number of files stored in the repository, while the `Rev.' columns shows the number of revisions of these files. The `LOC' column indicates the lines of code of all the revisions, the `LOC$_m$' columns shows the lines of code after the normalisation transformations. The `Change column shows the number of changes detected by the {\tt diff} utility, and `Change$_m$' shows the number of changes detected by the {\tt mct} tool. 
 \begin{table*}\centering
 \caption{Size of the programs\label{table:3}}
