@@ -138,7 +138,7 @@ Table~\ref{table:rule} summarises the four elementary annotations to the meta-gr
 \bf Transformation & \bf Application scope & \bf TXL annotations & \bf Example \\\hline\hline
 Ignore & Repeat/List ($*$), Optional ($|$) & [\ldots ignored when F] & [repeat member\_declaration \emph{ignored when Private}]\\\hline
 Order & Repeat/List ($*$) & [\ldots ordered by F] & [member\_declaration \emph{ordered by Ascending}] \\\hline
-Prefer & Alternative ($|$) & [\ldots preferred ] & [method\_body \emph{preferred}] \\\hline
+Prefer & Alternative ($|$) & [\ldots preferred with C ] & [method\_body \emph{preferred with '; }] \\\hline
 Keep & Any non-terminal term & [\ldots kept ] & [class\_body\_declaration \emph{kept}] \\\hline
 \end{tabular}
 \end{table*}
@@ -198,27 +198,22 @@ When the same transformation is applied to the concatenated inputs of both progr
 \lstinputlisting[numbers=left,caption={\tt cat HelloWorld.java HelloWorld-2.java > HelloWorld-2.pair \\ mct HelloWorld-2.pair java.Txl},label=listing:result4]{code/HelloWorld-2.mct}
 
 \section{Performance evaluation}\label{sec:experiment}
-%In this section, we aim to evaluate the proposed {\tt mct} tool for the efficiency and scalability to normalise programs.
-%\subsection{Versatility: The annotations on TXL grammars}
-%Out of the default TXL installation~\cite{txl}, there are about a dozen grammars for various programming languages.
-%As we are learning TXL, several of our own TXL languages are developed as well. 
-In order to evaluate the performance of {\tt mct} tool, we conducted an experiment on the benchmark of several evolving programs, on several configurations of {\em meaningful changes}. 
+To evaluate the {\tt mct} tool, we experimented on three evolving programs, namely {\tt gmf}, {\tt jhotdraw} in Java and {\tt Uart16650} in Verilog. These benchmark programs are in the public domain: {\tt JHotDraw} is a  GUI framework for technical and structured Graphics, which was studied for the API evolution and refactoring opportunities~\cite{DBLP:journals/smr/DigJ06}; {\tt GMF} is a model-driven code generator for Eclipse Graph Editors, which was  studied for the evolution of the model/code co-evolution~\cite{DBLP:conf/sle/HerrmannsdoerferRW09}; {\tt OpenCores Uart16650} is a specification of FIFO queue for hardware, which was used for the study of Verilog Diff~\cite{Duley:2010:PDA:1858996.1859093}.
 
-To make the results accessible, we selected the benchmark programs using two criteria: (1) they are in the public domain; (2) they were reported earlier by other researchers to demonstrate the effectiveness of related techniques.
+To apply to these programs, we first defined the relevant changes based on their corresponding programming languages. Table~\ref{table:2} lists the size of the meta-grammar (txl.grm), Java 5 grammar (java5.Txl) and the Verilog grammars (v.Txl). The {\tt mct} tool is implemented as {\tt mct.Txl} as 19 rules that transform the 7 extended terms. The Java API normalisation tool is implemented by redefining 21 terms using 7 Keep, 17 Order, 1 Ignore and 2 Prefer annotations, and 2 user-defined rules; as a result, 27 new transformation rules are generated. The Verilog annotations include 4 Keep and 5 Order, which generates 12 transformation rules. 
 
-The benchmark consists of two case studies: {\tt JHotDraw} has been studied for the API evolution and refactoring opportunities~\cite{dig06ecoop}; {\tt GMF} has been studied for the evolution of the model/code co-evolution~\cite{GMF}.
-To effectively check every changes in the evolution history, we first developed a set of script to check out every revision of
-the Java programs from the CVS repository. Then, for every pair of consequent revisions, we check whether the changes on
-the program is meaningful, comparing our {\tt mct} tool with other existing {\tt diff} utilities.
-
-Comparing with other {\tt diff} Table~\ref{table:2} lists the grammars with the number of meaningful annotations as well.
-
-\begin{table}
-\caption{Size of the full grammar extended\label{table:2}}
-\begin{tabular}{| r || r | r | r | r | }\hline
-{\bf Grammar} & description & LOC & +LOC \\  \hline\hline
-txl.grm & TXL meta-grammar & 408 &  \\ \hline
-java.grm & Java 5 &  979 &   \\ \hline
+\begin{table}\centering
+\caption{Size of the fully extended grammars\label{table:2}}
+\begin{tabular}{| r || r | r | r | r |  r |  r |  r  |}\hline
+{\bf Grammar} & description & LOC & Terms &  Rules \\  \hline\hline
+txl.grm & TXL meta-grammar & 408 & 58 & 0 \\
+mct.Txl & Implementation & 497 & 7 & 19 \\ \hline
+java5.Txl & Java 5 grammar &  970 & 168 & 0 \\
+java.norm & annotation & 123 & 21 & 2 \\ 
+java.Txl & result & 721  & 27 & 29  \\\hline  
+v.Txl & Verilog grammar & 233 &  37 &  1\\
+v.norm & annotation & 45 &  9 & 0 \\
+verilog.Txl & result & 191 &  11 & 12 \\\hline
 %problem.grm &  problem frames & 82 & 5 \\ \hline
 %json.grm & JSON format for Javascript & 36 & \\ \hline
 %yaml.grm & YAML serialisation format & 94 & \\ \hline
@@ -230,20 +225,34 @@ java.grm & Java 5 &  979 &   \\ \hline
 \hline\end{tabular}
 \end{table}
 
-%\subsection{Efficiency: The evolution of JHotDraw code}
-To evaluate the efficiency of {\tt mct}, we take the CVS repository of {\tt org.eclipse.gmf} modeling project, fetched on April 15, 2011. First, we checkout every single revision of every RCS file with the extension of {\tt ,v}. Then we compare every consequent files by the {\tt diff}, {\tt ldiff} and {\tt mct} commands. If the differences are non-empty, we count the number of revisions,  number of non-empty differences and the time it took to compute the results.
-\begin{table}\centering
-\caption{Performance of change detction\label{table:2}}
-\begin{tabular}{| r || r | r | r | r ||}\hline
-{\bf GMF} &  {\bf cmts} & {\bf Rev.} & {\bf Hunks} & {\bf Time} \\\hline\hline
-{\tt diff} & with & 17,521 & 93,254 & \\\hline
-{\tt   + diff} & w/o & 15,116 & 41,212 & \\\hline
-{\tt ldiff} & with &  & & \\\hline
-{\tt txl + ldiff} & w/o  &  & & \\\hline
-{\tt mct + diff} &w/o  & & & \\\hline
-{\tt mct + ldiff} &w/o  & & & \\\hline
+
+Then we accessed the history of {\tt gmf} and {jhotdraw} by analysing all their commits from their public CVS repositories; whilst we use the same set of selected revisions of {\tt Uart16650} provided by Dulay et al~\cite{Duley:2010:PDA:1858996.1859093}.
+Table~\ref{table:3} lists the size metrics of the example programs. The `File' column shows the number of files stored in the repository, while the `Rev.' columns shows the number of revisions of these files. The `LOC' column indicates the lines of code of all the revisions, the `LOC$_m$' columns shows the lines of code after the normalisation transformations. The `Change column shows the number of changes detected by the {\tt diff} utility, and `Change$_m$' shows the number of changes detected by the {\tt mct} tool. 
+\begin{table*}\centering
+\caption{Size of the programs\label{table:3}}
+\begin{tabular}{| r || r | r || r | r ||  r | r |}\hline
+{\bf Program} & File & Rev. & LOC & LOC$_m$ & Change  & Change$_m$  \\  \hline\hline
+{\tt jhotdraw} & 1,297 & & & & &\\\hline
+{\tt gmf} & 8,809 &  & &  & & \\\hline
+{\tt uart16650} & 12 & 128 & 51,551 & 28,805 & & \\\hline
 \hline\end{tabular}
-\end{table}
+\end{table*}
+
+%
+%%\subsection{Efficiency: The evolution of JHotDraw code}
+%Every single revision of every RCS file with the extension of {\tt ,v}. Then we compare every consequent files by the {\tt diff}, {\tt ldiff} and {\tt mct} commands. If the differences are non-empty, we count the number of revisions,  number of non-empty differences and the time it took to compute the results.
+%\begin{table}\centering
+%\caption{Performance of change detction\label{table:2}}
+%\begin{tabular}{| r || r | r | r | r ||}\hline
+%{\bf GMF} &  {\bf cmts} & {\bf Rev.} & {\bf Hunks} & {\bf Time} \\\hline\hline
+%{\tt diff} & with & 17,521 & 93,254 & \\\hline
+%{\tt   + diff} & w/o & 15,116 & 41,212 & \\\hline
+%{\tt ldiff} & with &  & & \\\hline
+%{\tt txl + ldiff} & w/o  &  & & \\\hline
+%{\tt mct + diff} &w/o  & & & \\\hline
+%{\tt mct + ldiff} &w/o  & & & \\\hline
+%\hline\end{tabular}
+%\end{table}
 
 \section{Related work}\label{sec:related}
 \subsection{Grammarware}

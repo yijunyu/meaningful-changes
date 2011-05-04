@@ -9,12 +9,18 @@ end keys
 redefine typeSpec
 	... [opt kept] [opt orderedBy] [opt ignoredWhen] [opt preferredWith]
 end define
-define ignoredWhen 'ignored [opt whenField] end define
-define preferredWith 'preferred 'with [literal+] end define
-define orderedBy 'ordered [opt byField] end define
-define kept 'kept end define
-define whenField 'when [id] end define
-define byField 'by [id] | 'by [typeModifier] end define
+define ignoredWhen 'ignored [opt whenField] 
+end define
+define preferredWith 'preferred 'with [literal+] 
+end define
+define orderedBy 'ordered [opt byField] 
+end define
+define kept 'kept 
+end define
+define whenField 'when [id] 
+end define
+define byField 'by [id] | 'by [typeModifier] 
+end define
 
 rule typeSpec_eliminateKeptAnnotations
  replace * [typeSpec] T [typeSpec] 
