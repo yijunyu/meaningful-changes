@@ -1,56 +1,50 @@
 include "txl.grm"
-
 %
 % Yijun Yu: adapted from grm.txl by inserting the following pragma after 'list
 % or 'repeat: 'ordered ['by '[ name '] ]
 %
 keys
-  'ordered 'by 'ignored 'when 'meaningful
+  'ordered 'by 'ignored 'when 'kept 'preferred 'with
 end keys
-
 redefine typeSpec
-	... [opt meaningful] [opt orderedBy] [opt ignoredBy]
+	... [opt kept] [opt orderedBy] [opt ignoredWhen] [opt preferredWith]
 end define
+define ignoredWhen 'ignored [opt whenField] end define
+define preferredWith 'preferred [opt withField] end define
+define orderedBy 'ordered [opt byField] end define
+define kept 'kept end define
+define whenField 'when [id] end define
+define withField 'with [id] end define
+define byField 'by [id] | 'by [typeModifier] end define
 
-define ignoredBy
-	'ignored [opt whenField] [opt byField]
-end define
-
-define orderedBy
-	'ordered [opt byField]
-end define
-
-define whenField
-       'when [id]
-end define
-
-define byField
-       'by [id]
-     | 'by [typeModifier]
-end define
-
-define meaningful
-   'meaningful
-end define
-
-%
-% Eliminate all the annotations
-%
-rule typeSpec_eliminateOrderedBy
+rule typeSpec_eliminateKeptAnnotations
  replace * [typeSpec] T [typeSpec] 
- deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] 
- deconstruct O 'ordered B [opt byField]
- construct T1 [typeSpec] M I R
- by T1
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] 
+	K [kept] 
+ by M I R
 end rule
 
-rule typeSpec_eliminateIgnoredBy
+rule typeSpec_eliminateOrderedAnnotations
  replace * [typeSpec] T [typeSpec] 
- deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
- deconstruct Ig 'ignored W [opt whenField] B [opt byField]
- construct T1 [typeSpec] M I R
- by T1
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept]
+	O [orderedBy] 
+ by M I R
 end rule
+
+rule typeSpec_eliminateIgnoredAnnotations
+ replace * [typeSpec] T [typeSpec] 
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] 
+	Ig [ignoredWhen] 
+ by M I R
+end rule
+
+rule typeSpec_eliminatePreferredAnnotations
+ replace * [typeSpec] T [typeSpec] 
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] 
+ 	P [preferredWith]
+ by M I R
+end rule
+
 
 %
 % Auxiliary function
@@ -64,7 +58,7 @@ end function
 %
 rule typeSpec_removeClones
  replace * [typeSpec] T [typeSpec] 
- deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] 'meaningful O [opt orderedBy] Ig [opt ignoredBy]
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] 'kept O [opt orderedBy] Ig [opt ignoredWhen]
  construct T1 [typeSpec] M I R O Ig
  construct update_id_T1 [typeSpec] T1 [update_id I]
  by T1 
@@ -245,7 +239,7 @@ function typeSpec_ignore DS [redefineStatement] T [typeSpec]
  import IgnoreRuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  deconstruct Ig 'ignored 
  construct StrID [id] _ [quote TID]
  deconstruct I TypeID [id] 
@@ -294,7 +288,7 @@ function typeSpec_ignore_whenField_R DS [redefineStatement] T [typeSpec]
  import IgnoreRuleIDs [id*]
  replace [statement*] _ [statement*] 
  deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredBy]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  deconstruct Ig 'ignored W [whenField]
  deconstruct W 'when F [id]
  construct StrID [id] _ [quote TID]
@@ -426,6 +420,8 @@ function main
  deconstruct P0 S0 [statement*]
  import Rules
  construct P1 [program] S0 [. Rules] [. RULE ]
- by P1 [typeSpec_eliminateOrderedBy]
-       [typeSpec_eliminateIgnoredBy]
+ by P1 [typeSpec_eliminateKeptAnnotations] 
+	[typeSpec_eliminateOrderedAnnotations]
+	[typeSpec_eliminateIgnoredAnnotations]
+	[typeSpec_eliminatePreferredAnnotations]
 end function
