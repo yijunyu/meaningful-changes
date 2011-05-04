@@ -6,10 +6,16 @@ redefine module
     |    [macro_statement] 
 end define
 
-redefine block_statement
-        [opt  'initial]  'begin  [NL] [IN]
-            [statement *]  [EX]
-        'end 
+redefine declaration
+        [parameter_specification] 
+    |    [variable_declaration] 
+    |    [variable_assignment_statement] 
+    |    [if_statement] 
+    |    [case_statement] 
+    |    [block_statement] 
+    |    [qualified_expression] 
+    |    [component_configuration] 
+    |    [function_decl] 
 end define
 
 redefine case_statement
@@ -139,6 +145,55 @@ function add_if_clones_case_statement_alternative SS  [case_statement_alternativ
         StructuredClones  [ . Stmt ] 
 end function
 
+redefine module
+        ...
+    |    [empty] 
+end define
+
+function find_replace_module
+    replace  [program]
+        P  [ program ] 
+    construct S  [module *]
+        _  [ find_clones_module  P ] 
+    by
+        P  [mark_clones_module  each  S]
+ 
+end function
+
+rule mark_clones_module S  [module]
+    import CloneNumber [number]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    replace  [module]
+        S 
+    by
+
+end rule
+
+function find_clones_module P  [program]
+    construct S  [module *]
+        _  [ ^  P ] 
+    replace  [module *]
+
+    by
+        _  [add_if_clones_module  S  each  S]
+ 
+end function
+
+function add_if_clones_module SS  [module *] Stmt  [module]
+    deconstruct * SS
+        Stmt  Rest  [ module  * ] 
+    deconstruct * [module] Rest
+        Stmt 
+    replace  [module *]
+        StructuredClones  [ module  * ] 
+    deconstruct not * [module] StructuredClones
+        Stmt 
+    by
+        StructuredClones  [ . Stmt ] 
+end function
+
 rule normalise_list_module_statement
     replace  [repeat statement]
         N1  [statement]  N2  [statement]  Rest  [repeat statement] 
@@ -186,6 +241,6 @@ function main
     by
         Prg  [ normalise_list_module_statement ]  [ normalise_list_case_statement_alternative_choice ]  [ 
           normalise_list_module_declaration_part_module_declaration ]  [ find_replace_statement ]  [ 
-          find_replace_case_statement_alternative ] 
+          find_replace_case_statement_alternative ]  [ find_replace_module ] 
 end function
 

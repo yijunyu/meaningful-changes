@@ -12,6 +12,7 @@ program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:source/%=result/%)
+results+=$(source:source/v/%=result/verilog/%)
 example+=$(results)
 target+=$(bin)/normc $(bin)/java5cc $(program) $(results)
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
@@ -34,6 +35,13 @@ result/v/%.v: $(bin)/vc source/v/%.v
 	@mkdir -p result/v
 	sed "s/'/?/g" source/v/$*.v > result/v/$*.v.tmp
 	$(bin)/vc result/v/$*.v.tmp -o $@
+	rm -f result/v/$*.v.tmp
+	if [ -e test/v/$*.v ]; then diff $@ test/v/$*.v; fi
+
+result/verilog/%.v: $(bin)/verilogc source/v/%.v
+	@mkdir -p result/verilog
+	sed "s/'/?/g" source/v/$*.v > result/v/$*.v.tmp
+	$(bin)/verilogc result/v/$*.v.tmp -o $@
 	rm -f result/v/$*.v.tmp
 	if [ -e test/v/$*.v ]; then diff $@ test/v/$*.v; fi
 

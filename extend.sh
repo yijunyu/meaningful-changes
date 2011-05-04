@@ -1,21 +1,21 @@
 function extend() {
 wc $1
-echo define 
+echo -n define 
 grep "^end define" $1 | wc
-echo function 
+echo -n function 
 grep "^end function" $1 | wc
-echo rule 
+echo -n rule 
 grep "^end rule" $1 | wc
 }
 
 function annotate() {
-echo kept
+echo -n kept
 grep "kept" $1 | wc
-echo ordered
+echo -n ordered
 grep "ordered" $1 | wc
-echo ignored
+echo -n ignored
 grep "ignored" $1 | wc
-echo preferred
+echo -n preferred
 grep "preferred" $1 | wc
 }
 make Txl/java.Txl

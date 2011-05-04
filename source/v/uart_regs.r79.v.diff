@@ -1,0 +1,37 @@
+64a65,67
+> // Revision 1.37  2001/12/27 13:24:09  mohor
+> // lsr[7] was not showing overrun errors.
+> //
+198c201
+< `include "uart_defines.v"
+---
+> //`include "uart_defines.v"
+215a219,222
+> `ifdef UART_HAS_BAUDRATE_OUTPUT
+> 	, baud_o
+> `endif
+> 
+232a240,242
+> `ifdef UART_HAS_BAUDRATE_OUTPUT
+> output	baud_o;
+> `endif
+252a263,267
+> `ifdef UART_HAS_BAUDRATE_OUTPUT
+> assign baud_o = enable; // baud_o is actually the enable signal
+> `endif
+> 
+> 
+336c351,357
+< uart_transmitter transmitter(clk, wb_rst_i, lcr, tf_push, wb_dat_i, enable, stx_pad_o, tstate, tf_count, tx_reset, lsr_mask);
+---
+> wire serial_out;
+> 
+> uart_transmitter transmitter(clk, wb_rst_i, lcr, tf_push, wb_dat_i, enable, serial_out, tstate, tf_count, tx_reset, lsr_mask);
+> 
+> // handle loopback
+> wire serial_in = loopback ? serial_out : srx_pad_i;
+> assign stx_pad_o = loopback ? 1'b1 : serial_out;
+339c360
+< uart_receiver receiver(clk, wb_rst_i, lcr, rf_pop, srx_pad_i, enable, 
+---
+> uart_receiver receiver(clk, wb_rst_i, lcr, rf_pop, serial_in, enable, 
