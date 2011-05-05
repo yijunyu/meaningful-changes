@@ -61,7 +61,7 @@ Txl/%.Txl: $(bin)/normc norm/%.norm
 	rm -f t.t
 
 install: $(package)
-$(package): README $(program) $(norm) $(source) $(target) cvs
+$(package): README.html $(program) $(norm) $(source) $(target) cvs
 	rm -rf $(dir $(package))
 	mkdir -p  $(dir $(package))
 	tar cfz $@ $^
