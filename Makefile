@@ -16,6 +16,7 @@ results+=$(source:source/v/%=result/verilog/%)
 example+=$(results)
 target+=$(bin)/normc $(bin)/java5cc $(program) $(results)
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
+package=/home/share/sead/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
 .PHONEY: all clean install
 all: $(target)
