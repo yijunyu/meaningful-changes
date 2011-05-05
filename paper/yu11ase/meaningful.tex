@@ -4,6 +4,8 @@
 \usepackage{color}
 \usepackage{balance}
 \usepackage{multirow}
+\usepackage{version}
+\excludeversion{ldiff}
 \usepackage{listings}
 \newtheorem{property}{Property}
 \lstset{breaklines=true, basicstyle=\scriptsize, %frame=single, 
@@ -200,26 +202,80 @@ When the same transformation is applied to the concatenated inputs of both progr
 \section{Performance evaluation}\label{sec:experiment}
 To evaluate the {\tt mct} tool, we experimented on three evolving programs, namely {\tt gmf}, {\tt jhotdraw} in Java and {\tt Uart16650} in Verilog. These benchmark programs are in the public domain: {\tt JHotDraw} is a  GUI framework for technical and structured Graphics, which was studied for the API evolution and refactoring opportunities~\cite{DBLP:journals/smr/DigJ06}; {\tt GMF} is a model-driven code generator for Eclipse Graph Editors, which was  studied for the evolution of the model/code co-evolution~\cite{DBLP:conf/sle/HerrmannsdoerferRW09}; {\tt OpenCores Uart16650} is a specification of FIFO queue for hardware, which was used for the study of Verilog Diff~\cite{Duley:2010:PDA:1858996.1859093}.
 
-To apply to these programs, we first defined the relevant changes based on their corresponding programming languages. Table~\ref{table:2} lists the size of the meta-grammar (txl.grm), Java 5 grammar (java5.Txl) and the Verilog grammars (v.Txl). The {\tt mct} tool is implemented as {\tt mct.Txl} as 19 additional rules that transform the 7 extended terms. The Java API normalisation tool is implemented by redefining 21 terms using 7 Keep, 17 Order, 1 Ignore and 2 Prefer annotations, and 1 user-defined rule in additional to the original grammar. As a result, 47 new transformation rules are generated, which also defines 6 new refined terms. The Verilog annotations include 4 Keep, 4 Order and 1 Ignore, which generates 11 additional transformation rules. On a laptop running Mac OSX 10.6.7, with 2.66GHz Intel i7 CPU, 4GB DDR 1067MHz memory, the automated generation of these normalisation rules takes no more than 0.02 seconds.
+To apply to these programs, we first defined the relevant changes based on their corresponding programming languages. Table~\ref{table:2} lists the size of the meta-grammar (txl.grm), Java 5 grammar (java5.Txl) and the Verilog grammars (v.Txl). The {\tt mct} tool is implemented as {\tt mct.Txl} as 19 additional rules that transform the 7 extended terms. The Java API normalisation tool is implemented by redefining 21 terms using 7 Keep, 17 Order, 1 Ignore and 2 Prefer annotations, and 1 user-defined rule in additional to the original grammar. As a result, 47 new transformation rules are generated, which also defines 6 new refined terms. The Verilog annotations include 4 Keep, 4 Order and 1 Ignore, which generates 11 additional transformation rules. On a laptop running Mac OSX 10.6.7, with 2.66GHz Intel i7 CPU, 4GB DDR 1067MHz memory, the automated generation of these normalisation rules takes no more than 0.02 seconds. The programming language grammars in TXL (L) and the generated normalisation transformation rules in TXL (M) will be used in the remaining experiments.
 \begin{table}\centering
 \caption{Size of the fully extended grammars and time to generate the normalisation rules\label{table:2}}
 \begin{tabular}{| r || r | r | r | r |  r |  r |  r  |}\hline
-{\bf Grammar} & description & LOC & Terms &  Rules & time \\  \hline\hline
+\bf Grammar & \bf Description &\bf  LOC &\bf  Terms &\bf   Rules &\bf  Time \\  \hline\hline
 txl.grm & TXL meta-grammar & 408 & 58 & 1  &\\
 mct.Txl & Implementation & +544 & +7 & +19 &\\ \hline
-java5.Txl & Java 5 grammar &  976 & 168 & 1 &\\
+java5.Txl (L)& Java 5 grammar &  976 & 168 & 1 &\\
 java.norm & annotation & +123 & +21 & +1 &\\ 
-java.Txl & result & +721  & +6 & +47  & 0.02s\\\hline  
-v.Txl & Verilog grammar & 233 &  37 &  1 &\\
+java.Txl (M)& result & +721  & +6 & +47  & 0.02s\\\hline  
+v.Txl (L)& Verilog grammar & 233 &  37 &  1 &\\
 v.norm & annotation & +45 & +9 & 0 &\\
-verilog.Txl & result & +191 &  +2 & +11 & 0.01s\\\hline
+verilog.Txl (M)& result & +191 &  +2 & +11 & 0.01s\\\hline
 \hline\end{tabular}
 \end{table}
 
-We accessed the history of {\tt gmf} and {\tt jhotdraw} by analysing all commits from their public CVS repositories; whilst we were using the same set of selected revisions of {\tt Uart16650} provided by Dulay et al~\cite{Duley:2010:PDA:1858996.1859093}. Table~\ref{table:3} lists the size metrics of these programs. Let $X$ be `J' for the original, `L' for the commentless and `M' for the normalised code. The `File(J)' column is the number of files stored in the repository, whilst the `$\Delta$ FIle(X)' columns are the numbers of their RCS revisions that have found different from their previous revision according to the {\tt diff} utility. The `LOC(X)' columns are the accumulated lines of code of all the revisions respectively for L, J and M. We list the metrics for $X=J$ columns because the Java grammars adopted from TXL site already remove all the comments and white spaces in the programs, thus it is fairer to compare them with the normalised ones. The `$\Delta$ LOC(X)' columns are the numbers of accumulated lines of changes detected by the {\tt diff} tool on the three code bases. 
+We accessed the history of {\tt gmf} and {\tt jhotdraw} by analysing all commits from their public CVS repositories; whilst we were using the same set of selected revisions of {\tt Uart16650} provided by Dulay et al~\cite{Duley:2010:PDA:1858996.1859093}. 
+Let $X$ be `J' stand for the original code, `L' stand for the commentless and `M' stand for the normalised code. 
+The Java parsers adopted from TXL site already remove all the comments and white spaces in the programs.  Thus it is perhaps better to compare the normalised results (M) with the normalised ones (L) rather than the original code (J).
 
-In terms of number of commits, i.e., $\Delta$ File(J),  {\tt UArt16650} $<<$ {\tt JHotDraw} $<<$ {\tt GMF}, so do LOC(J) or LOC(L). Taking out whitespaces/comments does help reduce the size to nearly a half, both in terms of LOC and $\Delta$ LOC, indicating that the three open-source programs were all well-commented. 
-On the other hand, the Java API and Verilog Module Interface extraction has a much larger size reduction effect. The absolute size of the normalised code LOC(M) is almost 10 times smaller, and the differences $\Delta$ LOC(M) are also much smaller than the counterparts. 
+\begin{table}\centering
+\caption{Change of source programs with comments/whitespaces (J), w/o whitespaces/comments  (L) or after normalisations (M)\label{table:3}}
+\begin{tabular}{| r || r || r | r | r || r | r| r|  r || }\hline
+\bf \tiny Program & \bf  \tiny  File & \bf   \tiny  LOC(J) & \bf  \tiny  LOC(L) & \bf  \tiny  LOC(M) \\
+\bf \tiny $\Delta=$ {\tt diff} & \bf  \tiny  Commit & \bf  \tiny  $\Delta$ File(J)  & \bf  \tiny $\Delta$ File(L) & \bf  \tiny  $\Delta$ File(M) \\  
+             & \bf  \tiny  & \bf  \tiny  $\Delta$ LOC(J) & \bf  \tiny  $\Delta$ LOC(L) & \bf  \tiny  $\Delta$ LOC(M) \\  
+%\begin{ldiff}
+%\tiny $\Delta_2=${\tt ldiff} & \tiny  Commit & \tiny  $\Delta_2$ File(J)  & \tiny  \tiny $\Delta_2$ File(L) & \tiny 
+%$\Delta_2$ File(M) \\
+%               & \tiny  & \tiny  $\Delta_2$ LOC(J) & \tiny  $\Delta_2$ LOC(L) & \tiny  $\Delta_2$ LOC(M) \\ 
+%\end{ldiff}
+\hline\hline
+{\tt uart16650} & 12 & 51,601 & 28,805 & 28,582 \\
+{\tt (diff)}  & 128 & 62 & 53 & 52\\
+                & &1,864 & 879 & 1,001 \\
+%{\tt (ldiff)} & 128 & &  &   \\
+% & & &  &   \\
+\hline
+{\tt jhotdraw} & 1,297 & 317,487& 210,421 & 39,164 \\ 
+{\tt (diff)} & 1,590 &1,264 & 1,107 & 612  \\
+& & 29,087 	& 21,479 & 3,051 \\
+%{\tt (ldiff)} & 1,590 & 1,264 &  &   \\
+% & &28,882 &  &   \\
+\hline
+{\tt gmf} & 8,809 &  8,981,629 & 4,614,668& 512,108\\
+{\tt (diff)} &17,499 & 14,211 &  14, 323& 9,188 \\
+  & &  924,148 & 566,597& 25,093 \\
+%{\tt (ldiff)} & 8,809 & &  &   \\
+% & & &  &   \\
+\hline
+\hline\end{tabular}
+\end{table}
+
+Table~\ref{table:3} lists the size metrics of these programs. The metric `File(J)'  is the number of files stored in the repository; `Commit' is the number of commits or revisions from the CVS repositories; `LOC(X)' is the number of accumulated lines of code of all the revisions; `$\Delta$ LOC(X)' is the number of accumulated lines of changes detected by the {\tt diff} utility; and `$\Delta$ FIle(X)' is the number of their RCS revisions that has been found different from their previous revision according to {\tt diff}.
+
+All the size metrics show that  {\tt UArt16650} $<<$ {\tt JHotDraw} $<<$ {\tt GMF}, roughly by a magnitude of 10. 
+Taking out whitespaces/comments does help reduce the size to nearly a half, 
+indicating that the three open-source programs were all well-commented. 
+
+The Java API and Verilog Module Interface extraction (M) has a much larger size reduction effect. The absolute size of the normalised code LOC(M) is almost 10 times smaller than LOC(L), and $\Delta$ LOC(M) is also much smaller than the counterparts. As a result, in all the three examples, fewer file-level changes are found by {\tt diff}.
+
+The time it took for the experiment is shown in Table~\ref{table:time}, in the units of second. ``Time(J)'' is the time it took to compute {\tt diff} between pairs of consequent revisions of the original programs; ``Time(L)'' is  the time it took to first parse the programs using TXL (removing whitespaces/comments), then perform {\tt diff} on the results; ``Time(M)'' is the time it took to parse the program, normalise them and perform {\tt diff} on the results. Among these three, {\tt Time(M)} is the longest: on 
+average 1.36 seconds per revision. However, it is much faster than {\tt ldiff}, which takes on average 39 seconds per revision. 
+\begin{table}\centering
+\caption{Time Performance of diff tools\label{table:time}}
+\begin{tabular}{| r || r | r | r || r | r || r| r|  r || r | r | r |}\hline
+Program & \footnotesize  Time(J) & \footnotesize Time(L) & \footnotesize Time(M) & Time(ldiff) \\  \hline\hline
+{\tt uart16650} &  &\\\hline
+{\tt jhotdraw} & 21.7 & 43.6 & 123.4 & 633.5 \\\hline
+{\tt gmf} & 105.5  & 1038.7 & 23954.3 \\\hline
+\hline\end{tabular}
+\end{table}
+
+
 
 \begin{table}\centering
 \caption{Performance of clone removal versus {\tt diff}\label{table:3}}
@@ -230,17 +286,6 @@ On the other hand, the Java API and Verilog Module Interface extraction has a mu
 {\tt gmf} & 25,093 &\\\hline
 \hline\end{tabular}
 \end{table}
-
-\begin{table*}\centering
-\caption{Change of source programs with comments/whitespaces (J), w/o whitespaces/comments  (L) or after normalising to API (M)\label{table:3}}
-\hspace*{-0.5cm}\begin{tabular}{| r || r | r || r | r | r || r| r|  r || r | r | r |}\hline
-{\bf Program} & \footnotesize  File(J) & \footnotesize  $\Delta$File(J) & \footnotesize  LOC(J) & \footnotesize  LOC(L) & \footnotesize  LOC(M) & \footnotesize  $\Delta$ File(J)  & \footnotesize  \footnotesize $\Delta$ File(L) & \footnotesize  $\Delta$ File(M) & \footnotesize  $\Delta$ LOC(J) & \footnotesize  $\Delta$ LOC(L) & \footnotesize  $\Delta$ LOC(M) \\  \hline\hline
-{\tt uart16650} & 12 & 128 & 51,601 & 28,805 & 28,582 & 62 & 53 & 52 & 1,864 & 879 & 1,001 \\\hline
-{\tt jhotdraw} & 1,297 & 1,590 & 		317,487& 210,421 & 39,164 & 1,264 & 1,107 & 612 &	29,087 	& 21,479 & 3,051 \\\hline
-{\tt gmf} & 8,809 & 17,499 & 8,981,629 & 4,614,668& 512,108& 14,211 &  14, 323& 9,188 & 924,148 & 566,597& 25,093 \\\hline
-\hline\end{tabular}
-\end{table*}
-
 
 
 \section{Related work}\label{sec:related}
