@@ -2,11 +2,17 @@
 \IEEEoverridecommandlockouts
 \usepackage{graphicx}
 \usepackage{color}
+\definecolor{listinggray}{rgb}{0.95,0.95,0.95}
+\definecolor{keywordcolor}{rgb}{0.5,0,0.1}
+\definecolor{commentcolor}{rgb}{0,0.3,0.1}
+\definecolor{stringcolor}{rgb}{0,0,1}
 \usepackage{balance}
 \usepackage{multirow}
 \usepackage{version}
 \excludeversion{ldiff}
 \usepackage{listings}
+\usepackage{lstlang1}
+\usepackage{hyperref}
 \newtheorem{property}{Property}
 \lstset{breaklines=true, basicstyle=\scriptsize, %frame=single, 
   keywordstyle=\color{blue}, commentstyle=\color{green},
@@ -15,6 +21,37 @@
   language=Java, numberfirstline=true,
 %  frameround=false, frame=trBL
 }
+\lstdefinelanguage{TXL}
+{morekeywords={all,assert,attr,by,comments,compounds,construct,deconstruct,define,each,end,export,external,function,import,
+include,keys,list,match,not,...,],[,',opt,push,pop,redefine,repeat,replace,rule,see,skipping,tokens,where},
+ sensitive=true, morecomment=[l]{\%}, morecomment=[l]{\#}, identifierstyle=\color{cyan},
+ identifierstyle=\ttfamily, upquote=true,
+ morecomment=[s]{\%\{}{\}\%}, morecomment=[s]{\%\(}{\)\%},morestring=[b]{"},
+}
+
+\lstdefinelanguage{diff}{sensitive=true, morecomment=[l]{<}, morecomment=[l]{>}, 
+ morecomment=[s]{\%\{}{\}\%}, morecomment=[s]{\%\(}{\)\%},morestring=[b]{"},
+}
+
+\lstset{backgroundcolor=\color{listinggray}}
+\lstset{basicstyle=\scriptsize\ttfamily}
+\lstset{commentstyle=\itshape
+\color{commentcolor}
+\ttfamily}
+\lstset{stringstyle=
+\color{stringcolor}
+\ttfamily,  identifierstyle=\color{cyan}}
+\lstset{frameround=tttt}
+%\lstset{captionpos=b}
+\lstset{keywordstyle=
+\color{keywordcolor}
+\bfseries\ttfamily}
+\lstset{showstringspaces=false}
+\lstset{tabsize=2}
+\lstset{numbers=left,numberstyle=\scriptsize\ttfamily,stepnumber=1,numbersep=5pt}
+\lstset{language=TXL}
+\lstset{escapeinside={(*@}{@*)}}
+
 \title{Specifying and Detecting Relevant Changes\\ in Programs}
 \author{\IEEEauthorblockN{
 Yijun Yu\IEEEauthorrefmark{1},
@@ -66,10 +103,10 @@ The essence of meaningful change can be illustrated using a simple Java program 
 After some trivial changes, it is still the same program shown in Listing~\ref{listing:2}.
 Unix {\tt diff} utility~\cite{diff} reports these changes as 1 deletion and 1 modification of a big chuck in Listing~\ref{listing:3}. Applying a more advanced algorithm {\tt ldiff}~\cite{canfora09software} to this example, line-based changes are reported as 2 insertions, 1 deletion and 2 modifications. Each of the 5 changes is at most two lines for programmers to check. Note that we have applied both diff algorithm to ignore the whitespaces. 
 
-\lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld.java},label=listing:1]{code/HelloWorld-1.java}
-\lstinputlisting[numbers=left,caption={\tt cat -n HelloWorld-2.java},label=listing:2]{code/HelloWorld-2.java}
-\lstinputlisting[language=,identifierstyle=,caption={\tt diff -w HelloWorld.java HelloWorld-2.java},label=listing:3]{code/HelloWorld-2.diff}
-\lstinputlisting[language=,identifierstyle=,caption={\tt ldiff.pl -w -o diff HelloWorld.java HelloWorld-2.java},label=listing:ldiff]{code/HelloWorld-2.ldiff}
+\lstinputlisting[language=java,numbers=left,caption={\tt cat -n HelloWorld.java},label=listing:1]{code/HelloWorld-1.java}
+\lstinputlisting[language=java,numbers=left,caption={\tt cat -n HelloWorld-2.java},label=listing:2]{code/HelloWorld-2.java}
+\lstinputlisting[language=diff,identifierstyle=,caption={\tt diff -w HelloWorld.java HelloWorld-2.java},label=listing:3]{code/HelloWorld-2.diff}
+\lstinputlisting[language=diff,identifierstyle=,caption={\tt ldiff.pl -w -o diff HelloWorld.java HelloWorld-2.java},label=listing:ldiff]{code/HelloWorld-2.ldiff}
 
 \begin{figure}\centering
 \includegraphics[width=\columnwidth]{code/emfcompare.png}
@@ -148,8 +185,8 @@ Keep & Any non-terminal term & [\ldots kept ] & [class\_body\_declaration \emph{
 \subsection{A Running Example}\label{sec:example}
 To illustrate the features of our method, here we use the example of the Java 5 grammar provided by the TXL site\footnote{http://txl.ca}, with 970 lines of code. Listing~\ref{listing:java0} selects a few production rules, with line numbers of the original Java5 grammar. In the conventions of TXL meta-grammar, a non-terminal is enbraced by square brackets, and a production rule is defined by the `define...end define' blocks. TXL is a functional programming language in which a transformation is defined by either a non-recursive {\tt function} or a recursive {\tt rule}~\cite{txl}.
 
-\lstinputlisting[language=,identifierstyle=,caption={\tt cat -n java.grm},label=listing:java0]{code/java.rules0.grm}
-\lstinputlisting[language=,identifierstyle=,numbers=left,numbersep=3pt,caption={\tt cat -n java.annotated.grm},label=listing:java1]{code/java.rules1.grm}
+\lstinputlisting[language=TXL,identifierstyle=,numbers=none,caption={\tt cat -n java.grm},label=listing:java0]{code/java.rules0.grm}
+\lstinputlisting[language=TXL,identifierstyle=,numbers=left,numbersep=3pt,caption={\tt cat -n java.annotated.grm},label=listing:java1]{code/java.rules1.grm}
 
 Lines 151-153 define a {\tt program} as a single instance of package declaration; Lines 158-162 define each package declaration to have an optional description of the package header, zero to many import declaration(s), before zero to many type declaration(s). Lines 197-201 define a type declaration as either one of three alternatives for, namely a class, an interface or an enum type. In these lines, [NL], [IN] or [EX] are predefined indentation tokens which will be ignored by the parser, but will be inserted by the unparser to pretty print the transformed code.  NL, IN or EX are respectively for new line, increasing and decreasing indention levels. Therefore the output has two lines per import declaration. 
 
@@ -180,26 +217,26 @@ the production rule of {\tt method\_body} in the original grammar Lines 407-410 
 
 \subsection{Brief discussion about the implementation}
 The meaningful change detection tool {\tt mct} is implemented completely as a TXL program. The first part of the implementation is an extension to the TXL's metagrammar {\tt txl.grm}. Listing~\ref{listing:extend} shows the extension to the existing {\tt typeSpec} rule and the addition of four annotation rules {\tt orderedBy}, {\tt ignoredWhen}, {\tt preferred} and {\tt kept}.
-\lstinputlisting[language=,identifierstyle=,numbers=left,numbersep=2pt,caption={\tt cat -n norm.grm},label=listing:extend]{code/norm.grm}
+\lstinputlisting[language=TXL,identifierstyle=,numbers=left,numbersep=2pt,caption={\tt cat -n norm.grm},label=listing:extend]{code/norm.grm}
  
 The second part of the implementation is a specification of the normalisation transformations. Limited by space, here we only show a simplified Listing~\ref{listing:normalise} for the Order extension. It generates rules for eliminating {\tt ordered} annotations for the generated grammar to be recognizable by TXL at runtime, and for producing rules for ordering the
 terms parsed as {\tt [repeat X]}. 
 
 A TXL program can be understood top-down from the back. Lines 44-64 specify how to generate the transformation rules {\tt Rules} on the fly by checking every {\tt redefineStatement} in the TXL grammar such as those in Listings~\ref{listing:java1}.  For each occurrence of {\tt [repeat X ordered by F]}, the transformation in Lines 9-31 is invoked to generate a rule such as those instantiated in Lines 22-27. These rules have unique names constructed from the names of the {\tt redefineStatement} and the term {\tt X}. By the end of the main transformation, the rule in Lines 2-8 are applied to eliminate the Order annotations from the extended grammar.
-\lstinputlisting[language=,identifierstyle=,numbers=left,numbersep=2pt,caption={\tt cat -n norm.Txl},label=listing:normalise]{code/norm.Txl}
+\lstinputlisting[language=TXL,identifierstyle=,numbers=left,numbersep=2pt,caption={\tt cat -n norm.Txl},label=listing:normalise]{code/norm.Txl}
 \subsection{Generated normalisation transformation}
 The above generic implementation is done on the meta-grammar of TXL. When it is applied to a concrete TXL grammar, such as the one specified in Listing~\ref{listing:java1}, a concrete normalisation transformation is produced in the original syntax of TXL, as shown in Listing~\ref{listing:output}. Lines 1-9 are the same as the original rules in the Listing~\ref{listing:java0} because of the elimination rule. Lines 10-17 are generated from the {\tt [repeat method\_declaration]} of the {\tt orderedBy} annotations from Listing~\ref{listing:java1}, using the user-defined comparison function {\tt Descending}, which was listed in Lines 29-34 in Listing~\ref{listing:java1}. 
-\lstinputlisting[language=,identifierstyle=,numbers=left,caption={\tt cat -n java.Txl},label=listing:output]{code/java.Txl}
+\lstinputlisting[language=TXL,identifierstyle=,numbers=left,caption={\tt cat -n java.Txl},label=listing:output]{code/java.Txl}
 
 In brief, the above extension of Java5 grammar has 8 annotations added by the user, plus 1 user-defined string comparison rule for sorting the nodes in inverse alphabatical order and 1 user-defined function for selecting non-API members to be removed.
 \subsection{The normalised programs and relevant changes}
 We have implemented the processor of all the four types of elementary annotations using TXL, which generates a few transformation rules per annotated term. Applying the composed {\tt mct}  transformation to the two Java programs in Listings~\ref{listing:1} and~\ref{listing:2}, separately, the same result is obtained, as shown in in Listing~\ref{listing:result5}. Both {\tt hello} and {\tt world} members are removed because they are not public nor protected members of the class. The {\tt main} method has the modifiers ordered ascendingly as {\tt public static}, whilst its method body is replaced by the preferred simplification semicolon alternative. 
 
 When the same transformation is applied to the concatenated inputs of both programs, the clone removal step runs to correctly remove all the clones according to the terms annotated by ``kept''. As a result, their is no longer anything left after the clone removal, leaving the output empty as shown in Listing~\ref{listing:result4}.
-\lstinputlisting[numbers=left,caption={\tt mct HelloWorld.java},label=listing:result5]{code/HelloWorld-2.norm}
-\lstinputlisting[numbers=left,caption={\tt cat HelloWorld.java HelloWorld-2.java > HelloWorld-2.pair \\ mct HelloWorld-2.pair java.Txl},label=listing:result4]{code/HelloWorld-2.mct}
+\lstinputlisting[language=java,numbers=left,caption={\tt mct HelloWorld.java},label=listing:result5]{code/HelloWorld-2.norm}
+\lstinputlisting[language=java,numbers=left,caption={\tt cat HelloWorld.java HelloWorld-2.java > HelloWorld-2.pair \\ mct HelloWorld-2.pair java.Txl},label=listing:result4]{code/HelloWorld-2.mct}
 
-\section{Performance evaluation}\label{sec:experiment}
+\section{Experimental results}\label{sec:experiment}
 To evaluate the {\tt mct} tool, we experimented on three evolving programs, namely {\tt gmf}, {\tt jhotdraw} in Java and {\tt Uart16650} in Verilog. These benchmark programs are in the public domain: {\tt JHotDraw} is a  GUI framework for technical and structured Graphics, which was studied for the API evolution and refactoring opportunities~\cite{DBLP:journals/smr/DigJ06}; {\tt GMF} is a model-driven code generator for Eclipse Graph Editors, which was  studied for the evolution of the model/code co-evolution~\cite{DBLP:conf/sle/HerrmannsdoerferRW09}; {\tt OpenCores Uart16650} is a specification of FIFO queue for hardware, which was used for the study of Verilog Diff~\cite{Duley:2010:PDA:1858996.1859093}.
 
 To apply to these programs, we first defined the relevant changes based on their corresponding programming languages. Table~\ref{table:2} lists the size of the meta-grammar (txl.grm), Java 5 grammar (java5.Txl) and the Verilog grammars (v.Txl). The {\tt mct} tool is implemented as {\tt mct.Txl} as 19 additional rules that transform the 7 extended terms. The Java API normalisation tool is implemented by redefining 21 terms using 7 Keep, 17 Order, 1 Ignore and 2 Prefer annotations, and 1 user-defined rule in additional to the original grammar. As a result, 47 new transformation rules are generated, which also defines 6 new refined terms. The Verilog annotations include 4 Keep, 4 Order and 1 Ignore, which generates 11 additional transformation rules. On a laptop running Mac OSX 10.6.7, with 2.66GHz Intel i7 CPU, 4GB DDR 1067MHz memory, the automated generation of these normalisation rules takes no more than 0.02 seconds. The programming language grammars in TXL (L) and the generated normalisation transformation rules in TXL (M) will be used in the remaining experiments.
@@ -301,8 +338,11 @@ Brunet et at~\cite{brunet06gamma} defines some challenges in model mangements in
 
 Beyer et al~\cite{DBLP:journals/tse/BeyerNL04} present an efficient relational calculator {\tt crocopat} that can perform {\tt diff} calculation on two sets of tuples very efficiently, and thus has been widely used in {\em visualization} reverse engineered facts such as call graphs or inheritance/aggregation relationships. However, {\tt crocopat} treats all differences in sets rather than ordered lists. Therefore it is not suitable to check the differences among ordered structures such as statements or parameter lists.
 
+\cite{fluri07tse}
+
 There are several differencing tool working at the semantic level which may be complementary to us. Jackson and Ladd~\cite{Jackson:1994:SDT:645543.655704} use dependency between input and output variables of a procedure as a way to dectect certain changes. The depenedncy is represented as a graph and any difference in two graphs is taken as a change to the semantics of the procedure. There are, of course, changes that affect other kinds of semantics but not the dependency graph, such as the changes in constants. On the other hand, our tool present all the choices for the user to decide whether a change in constant should be ignored or not as a user-defined function.
-%Schmidt and Gloetzner~\cite{schmidt08icse} describe an approach that integrates the {\tt SiDiff} to detect semantic changes on the structures. 
+
+Schmidt and Gloetzner~\cite{schmidt08icse} describe an approach that integrates the {\tt SiDiff} to detect semantic changes on the structures. 
 
 Kawaguchi et al~\cite{Kawaguchietal2010} present a static semantic diff tool called {\tt SymDiff}, which uses the notion of partial/conditional equivalence where two versions of a program is equivalent for a subset of inputs.  The tool can infer certain conditions of equivalence, and therefore behavioural differences can be lazily computed. On the other hand, such dynamic structures are typically unspecified in the source programs. If it is possible to refine the program structures by annotating with dynamic input/output models, then it is possible to specify such changes as user-defined functions. 
 
@@ -310,31 +350,16 @@ Duley et al~\cite{Duley:2010:PDA:1858996.1859093} present VDiff for differencing
 
 Loh and Kim~\cite{Loh:2010:LPD:1810295.1810348} present the LSDiff tool which automatically identifies structural changes as logic rules. 
 
-\section{Conclusions and future work}\label{sec:conclude}
+Although our implementation is based on TXL~\cite{txl}, the concepts and implementations could be replaced using other generic transformation systems/ language engineering tools such as ADL/SDL\cite{klint05tosem}. 
 
-   Scalability
-   
-   Meta-changes: Changes to the Transformations
-   
-   We believe there is no need for infinite meta-levels. One example is `KM3` or `MOF`, although in principle there is always a possibility to ask for meta-level 
-   changes, typically the language is less likely to change than the program.
-   
-   How to make use of `iChange` for runtime adaptation?
-   
-   The deployed system also need to adapt dynamically to the changes in its environment at runtime.
-\cite{klint05tosem}  
-\cite{cordy02} 
-\cite{txl} 
-\cite{wenzel08icse} 
-\cite{xing05ase} 
-\cite{fluri07tse}
-\cite{schmidt08icse} 
-\cite{wenzel08icsm}
-\cite{brunet06gamma}
+\cite{wenzel08icse, wenzel08icsm}
+
 \cite{degenais08icse}
-\cite{canfora09software}
-%\bibliographystyle{plain}
-%\balancecolumns
+
+\section{Conclusions}\label{sec:conclude}
+
+In this paper, we presented a declarative approach to specify changes in programs that are relevant to different programming tasks. In particular, we demonstrated its use in extracting the changes at the API levels for evolving Java programs and hardware specifications. We show that four elementary annotations can account for all light-weight syntactical normalisations by default, and can be customized for more advanced semantical changes through user-defined functions. The generic specification approach is declarative and already works on several programming languages and domain-specific languages. The automated tool was implemented on top of a generic transformation system, TXL, and the results of detecting relevant differences in the three programs are evaluated and compared with other {\tt diff} utilities such as line-based {\tt diff}, showing more precise detection and acceptable scalability and time performance. The tool and results can be downloaded from the \href{http://sead1.open.ac.uk/mct}. 
+
 \begin{small}
 \balance
 \bibliographystyle{IEEEtran}
