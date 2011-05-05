@@ -1,0 +1,783 @@
+head	1.11;
+access;
+symbols
+	jhotdraw54b2-release:1.11
+	reorg_6x_split:1.11
+	MVC_PHASE1:1.11.0.4
+	NEW_ATTRIBUTES:1.11.0.2
+	DNOYEB1_ALPHA-2:1.8.4.6
+	release_JHD54b1:1.11
+	BUGFIX_670992:1.8.0.6
+	DNOYEB1_ALPHA-1:1.8.4.4
+	dnoyeb1:1.8.0.4
+	repack:1.8.0.2
+	Root_repack:1.8
+	Before_FigureVisitor:1.5
+	JHotDraw_5-3:1.2
+	JHotDraw_5-2_merged:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.11
+date	2003.01.30.00.27.33;	author mrfloppy;	state Exp;
+branches;
+next	1.10;
+
+1.10
+date	2003.01.26.01.11.39;	author dnoyeb;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2003.01.24.20.30.43;	author dnoyeb;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2002.10.16.22.30.19;	author mrfloppy;	state Exp;
+branches
+	1.8.4.1;
+next	1.7;
+
+1.7
+date	2002.09.23.07.47.26;	author mrfloppy;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2002.09.22.08.58.23;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2002.08.04.22.39.17;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2002.05.20.19.57.58;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2002.04.30.20.40.06;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.10.24.20.44.32;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.03.09.15.31.46;	author mrfloppy;	state Exp;
+branches;
+next	;
+
+1.8.4.1
+date	2003.01.04.15.20.46;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.2;
+
+1.8.4.2
+date	2003.01.08.22.12.49;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.3;
+
+1.8.4.3
+date	2003.01.13.03.13.59;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.4;
+
+1.8.4.4
+date	2003.01.14.18.20.43;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.5;
+
+1.8.4.5
+date	2003.01.24.20.19.20;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.6;
+
+1.8.4.6
+date	2003.01.26.00.50.48;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.11
+log
+@prepare for 5.4 release: various bug fixes
+@
+text
+@/*
+ * @@(#)GraphicalCompositeFigure.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package CH.ifa.draw.contrib;
+
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.standard.*;
+import CH.ifa.draw.util.*;
+import CH.ifa.draw.figures.*;
+import java.awt.*;
+import java.io.*;
+import java.util.List;
+
+/**
+ * The GraphicalCompositeFigure fills in the gap between a CompositeFigure
+ * and other figures which mainly have a presentation purpose. The
+ * GraphicalCompositeFigure can be configured with any Figure which
+ * takes over the task for rendering the graphical presentation for
+ * a CompositeFigure. Therefore, the GraphicalCompositeFigure manages
+ * contained figures like the CompositeFigure does, but delegates
+ * its graphical presentation to another (graphical) figure which
+ * purpose it is to draw the container for all contained figures.
+ *
+ * The GraphicalCompositeFigure adds to the {@@link CompositeFigure CompositeFigure}
+ * by containing a presentation figure by default which can not be removed.  Normally,
+ * the {@@link CompositeFigure CompositeFigure} can not be seen without containing a figure
+ * because it has no mechanism to draw itself.  It instead relies on its contained
+ * figures to draw themselves thereby giving the {@@link CompositeFigure CompositeFigure} its
+ * appearance.  However, the <b>GraphicalCompositeFigure</b>'s presentation figure
+ * can draw itself even when the <b>GraphicalCompositeFigure</b> contains no other figures.
+ * The <b>GraphicalCompositeFigure</b> also uses a {@@link Layouter Layouter} or layout
+ * its contained figures.
+ *
+ * @@author	Wolfram Kaiser
+ * @@version <$CURRENT_VERSION$>
+ */
+public class GraphicalCompositeFigure extends CompositeFigure implements Layoutable  {
+
+	/**
+	 * Figure which performs all presentation tasks for this
+	 * CompositeFigure as CompositeFigures usually don't have
+	 * an own presentation but present only the sum of all its
+	 * children.
+	 */
+	private Figure	myPresentationFigure;
+
+	/**
+	 * A Layouter determines how the CompositeFigure should
+	 * be laid out graphically.
+	 */
+	private Layouter myLayouter;
+
+	private static final long serialVersionUID = 1265742491024232713L;
+
+	/**
+	 * Default constructor which uses a RectangleFigure as presentation
+	 * figure. This constructor is needed by the Storable mechanism.
+	 */
+	public GraphicalCompositeFigure() {
+		this(new RectangleFigure());
+	}
+
+	/**
+	 * Constructor which creates a GraphicalCompositeFigure with
+	 * a given graphical figure for presenting it.
+	 *
+	 * @@param	newPresentationFigure	figure which renders the container
+	 */
+	public GraphicalCompositeFigure(Figure newPresentationFigure) {
+		super();
+		setPresentationFigure(newPresentationFigure);
+		initialize();
+	}
+
+	/**
+	 * This method performs additional initialization operations,
+	 * in this case setting the Layouter.
+	 * It is called from the constructors and the clone() method.
+	 * A StandardLayouter is set.
+	 */
+	protected void initialize() {
+		if (getLayouter() != null) {
+			// use prototype to create new instance
+			setLayouter(getLayouter().create(this));
+		}
+		else {
+			setLayouter(new StandardLayouter(this));
+		}
+	}
+
+	/**
+	 * Clones a figure and initializes it
+	 *
+	 * @@see Figure#clone
+	 */
+	public Object clone() {
+		Object cloneObject = super.clone();
+		((GraphicalCompositeFigure)cloneObject).initialize();
+		return cloneObject;
+	}
+
+	/**
+	 * Return the display area. This method is delegated to the encapsulated presentation figure.
+	 */
+	public Rectangle displayBox() {
+		return getPresentationFigure().displayBox();
+	}
+
+	/**
+	 * Standard presentation method which is delegated to the encapsulated presentation figure.
+	 */
+	public void basicDisplayBox(Point origin, Point corner) {
+		Rectangle r = getLayouter().layout(origin, corner);
+		 // Fix for bug request IDs 548000 and 548032
+		 // Previously was
+		 //     getPresentationFigure().basicDisplayBox(r.getLocation(), new Point(r.width, r.height));
+		 // The corner transferred to the presentation figure is wrong as it transfers
+		 // the dimension of the resulting rectangle from the layouter instead of the
+		 // lower right corner
+		getPresentationFigure().basicDisplayBox(r.getLocation(),
+			new Point((int)r.getMaxX(), (int)r.getMaxY()));
+	}
+
+	/**
+	 * Standard presentation method which is delegated to the encapsulated presentation figure.
+	 * The presentation figure is moved as well as all contained figures.
+	 */
+	protected void basicMoveBy(int dx, int dy) {
+		super.basicMoveBy(dx, dy);
+		getPresentationFigure().moveBy(dx, dy);
+	}
+
+	/**
+	 * Explicit update: an updated involves a layout for all contained figures.
+	 */
+	public void update() {
+		willChange();
+		layout();
+		change();
+		changed();
+	}
+
+	/**
+	 * Draw the figure. This method is delegated to the encapsulated presentation figure.
+	 */
+	public void draw(Graphics g) {
+		getPresentationFigure().draw(g);
+		super.draw(g);
+	}
+
+	/**
+	 * Return default handles from the presentation figure.
+	 */
+	public HandleEnumeration handles() {
+		List handles = CollectionsFactory.current().createList();
+		BoxHandleKit.addHandles(this, handles);
+		return new HandleEnumerator(handles);
+		//return getPresentationFigure().handles();
+	}
+
+	/**
+	 * Delegate capabilities for storing and retrieving attributes to a
+	 * CompositeFigure if the encapsulated presentation figure. If no
+	 * presentation figure is found then the superclass' getAttribute()
+	 * will be invoked (which currently returns always "null").
+	 *
+	 * @@param	name	name of the attribute whose value should be returned
+	 * @@return	value of the attribute with the given name
+	 *
+	 * @@deprecated use getAttribute(FigureAttributeConstant) instead
+	 */
+	public Object getAttribute(String name) {
+		if (getPresentationFigure() != null) {
+			return getPresentationFigure().getAttribute(name);
+		}
+		else {
+			return super.getAttribute(name);
+		}
+	}
+
+	/**
+	 * Delegate capabilities for storing and retrieving attributes to a
+	 * CompositeFigure if the encapsulated presentation figure. If no
+	 * presentation figure is found then the superclass' getAttribute()
+	 * will be invoked (which currently returns always "null").
+	 *
+	 * @@param	attributeConstant	attribute constant whose value should be returned
+	 * @@return	value of the attribute with the given name
+	 */
+	public Object getAttribute(FigureAttributeConstant attributeConstant) {
+		if (getPresentationFigure() != null) {
+			return getPresentationFigure().getAttribute(attributeConstant);
+		}
+		else {
+			return super.getAttribute(attributeConstant);
+		}
+	}
+
+	/**
+	 * Delegate capabilities for storing and retrieving attributes to a
+	 * CompositeFigure if the encapsulated presentation figure. If no
+	 * presentation figure is found then the superclass' setAttribute()
+	 * will be invoked (which currently does not set an attribute).
+	 *
+	 * @@param	name	name of the attribute
+	 * @@param	value	value associated with this attribute
+	 *
+	 * @@deprecated use setAttribute(FigureAttributeConstant, Object) instead
+	 */
+	public void setAttribute(String name, Object value) {
+		if (getPresentationFigure() != null) {
+			getPresentationFigure().setAttribute(name, value);
+		}
+		else {
+			super.setAttribute(name, value);
+		}
+	}
+
+	/**
+	 * Delegate capabilities for storing and retrieving attributes to a
+	 * CompositeFigure if the encapsulated presentation figure. If no
+	 * presentation figure is found then the superclass' setAttribute()
+	 * will be invoked (which currently does not set an attribute).
+	 *
+	 * @@param	attributeConstant	attribute constant
+	 * @@param	value	value associated with this attribute
+	 */
+	public void setAttribute(FigureAttributeConstant attributeConstant, Object value) {
+		if (getPresentationFigure() != null) {
+			getPresentationFigure().setAttribute(attributeConstant, value);
+		}
+		else {
+			super.setAttribute(attributeConstant, value);
+		}
+	}
+
+	/**
+	 * Set a figure which renders this CompositeFigure. The presentation
+	 * tasks for the CompositeFigure are delegated to this presentation
+	 * figure.
+	 *
+	 * @@param	newPresentationFigure	figure takes over the presentation tasks
+	 */
+	public void setPresentationFigure(Figure newPresentationFigure) {
+		myPresentationFigure = newPresentationFigure;
+	}
+
+	/**
+	 * Get a figure which renders this CompositeFigure. The presentation
+	 * tasks for the CompositeFigure are delegated to this presentation
+	 * figure.
+	 *
+	 * @@return	figure takes over the presentation tasks
+	 */
+	public Figure getPresentationFigure() {
+		return myPresentationFigure;
+	}
+
+	/**
+	 * A layout algorithm is used to define how the child components
+	 * should be laid out in relation to each other. The task for
+	 * layouting the child components for presentation is delegated
+	 * to a Layouter which can be plugged in at runtime.
+	 */
+	public void layout() {
+		if (getLayouter() != null) {
+			Rectangle r = getLayouter().calculateLayout(displayBox().getLocation(), displayBox().getLocation());
+			displayBox(r.getLocation(), new Point(r.x + r.width, r.y + r.height));
+		}
+	}
+
+	/**
+	 * Set a Layouter object which encapsulated a layout
+	 * algorithm for this figure. Typically, a Layouter
+	 * accesses the child components of this figure and arranges
+	 * their graphical presentation. It is a good idea to set
+	 * the Layouter in the protected initialize() method
+	 * so it can be recreated if a GraphicalCompositeFigure is
+	 * read and restored from a StorableInput stream.
+	 *
+	 * @@param	newLayouter	encapsulation of a layout algorithm.
+	 */
+	public void setLayouter(Layouter newLayouter) {
+		myLayouter = newLayouter;
+	}
+
+	/**
+	 * Get a Layouter object which encapsulated a layout
+	 * algorithm for this figure. Typically, a Layouter
+	 * accesses the child components of this figure and arranges
+	 * their graphical presentation.
+	 *
+	 * @@return	layout strategy used by this figure
+	 */
+	public Layouter getLayouter() {
+		return myLayouter;
+	}
+
+	/**
+	 * Notify the registered change listener if an exlicit change
+	 * to the component (or one of its child components has occurred).
+	 */
+	protected void change() {
+		if (listener() != null) {
+			listener().figureRequestUpdate(new FigureChangeEvent(this));
+		}
+	}
+
+	/**
+	 * Propagates the removeFromDrawing request up to the container.
+	 */
+	public void figureRequestRemove(FigureChangeEvent e) {
+		if (listener() != null) {
+			if (includes(e.getFigure())) {
+				Rectangle r = invalidateRectangle(displayBox());
+				listener().figureRequestRemove(new FigureChangeEvent(this, r, e));
+			}
+			else {
+				super.figureRequestRemove(e);
+			}
+		}
+	}
+
+	/**
+	 * Reads the contained figures from StorableInput. The
+	 * figure responsible for graphical presentation is read
+	 * together with all child components. The Layouter
+	 * is not stored and therefore not read.
+	 */
+	public void read(StorableInput dr) throws IOException {
+		super.read(dr);
+		setPresentationFigure((Figure)dr.readStorable());
+		setLayouter((Layouter)dr.readStorable());
+	}
+
+	/**
+	 * Writes the contained figures to the StorableOutput. The
+	 * figure responsible for graphical presentation is written
+	 * together with all child components. The Layouter
+	 * is not written.
+	 */
+	public void write(StorableOutput dw) {
+		super.write(dw);
+		dw.writeStorable(getPresentationFigure());
+		dw.writeStorable(getLayouter());
+	}
+}@
+
+
+1.10
+log
+@*** empty log message ***
+@
+text
+@d341 1
+a341 1
+		setLayouter( (Layouter)dr.readStorable());
+@
+
+
+1.9
+log
+@Fix [ 674243 ] GraphicalCompositeFigure not storing Layouter
+fix - SimpleLayouter not fully storable
+@
+text
+@d32 10
+@
+
+
+1.8
+log
+@no message
+@
+text
+@d331 1
+d343 1
+@
+
+
+1.8.4.1
+log
+@improved functionality of CompositeFigureCreationTool
+added comments to some files.(probably overdid it)
+@
+text
+@a31 10
+ * The GraphicalCompositeFigure adds to the {@@link CompositeFigure CompositeFigure}
+ * by containing a presentation figure by default which can not be removed.  Normally,
+ * the {@@link CompositeFigure CompositeFigure} can not be seen without containing a figure
+ * because it has no mechanism to draw itself.  It instead relies on its contained
+ * figures to draw themselves thereby giving the {@@link CompositeFigure CompositeFigure} its
+ * appearance.  However, the <b>GraphicalCompositeFigure</b>'s presentation figure
+ * can draw itself even when the <b>GraphicalCompositeFigure</b> contains no other figures.
+ * The <b>GraphicalCompositeFigure</b> also uses a {@@link Layouter Layouter} or layout
+ * its contained figures.  dnoyeb
+ *
+@
+
+
+1.8.4.2
+log
+@1.  Encapsulated the useage of FigureChangeListener on ContainerFigure.  ContainerFigure does no longer implement
+    FigureChangeListener, but has an inner class for that.  All of the FigureChangeListener methods on
+    the CompositeFigure class are now protected.  Subclasses as well.
+
+2.  Drawing no longer implements FigureChangeListener.  defers to implementatations to subclass or implement that.
+
+3.  FindFigureInside fixed.  waiting on better fix with Strategy Pattern from mrfloppy.
+@
+text
+@d320 1
+a320 1
+	protected void figureRequestRemove(FigureChangeEvent e) {
+@
+
+
+1.8.4.3
+log
+@1. javadoc comments and corrections and clarifications
+2. Drawing no longer exposes its drawing change listener, but has a method for those who want the drawing to request all views of it to be updated.
+3. all removeAll() methods in CompositeFigure now have single consistent implementation.
+4. standardDrawing unlock calls notify instead of notifyAll since only 1 can grab the lock anyway.
+@
+text
+@d308 1
+a308 1
+	 * Notify the registered change listener if an explicit change
+a309 3
+	 *
+	 * this seems out of place !!!dnoyeb!!!
+	 * the whole figureRequestUpdate event seems out of place.
+@
+
+
+1.8.4.4
+log
+@DecoratorFigure is 'changed'  I think it needs reworking.  not its only used durint draw(Graphics g) but I don't think
+that was its real intention?
+
+The Figure added or removed is nolonger changed during the add or remove process.  Thus add and remove do not return
+values.
+orphan is used internally to the drawing only.
+remove calls figure.remove() which intern orphans the figure.
+remove(Figure f) is still present and used but currently not needed.  call figure.remove() instead.
+perhaps we can add a method on the figure enumerator to 'remove' all the figures within it.
+Figure no longer exposes its listeners.  call methods on figure to send events.
+
+
+Serialization in every form needs cleanup now.  Some due to earlier changes made by myself like making listeners of
+inner classes, but not storing the listener when the figures are stored. (since the figures think the inner listener
+is their container.)
+@
+text
+@a57 1
+	 * needs to be stored !!!dnoyeb!!!
+d147 1
+a147 1
+		change();//this is causing redraw.  their can be improvement here ???dnoyeb???
+d311 2
+a312 2
+	 * this seems out of place ???dnoyeb???
+	 * the whole figureRequestUpdate event seems out of place here.
+d321 1
+a321 1
+	 *
+d323 11
+a333 12
+//	protected void figureRequestRemove(FigureChangeEvent e) {
+//		throw new JHotDrawRuntimeException("This method is no longer used.");
+//		if (listener() != null) {
+//			if (includes(e.getFigure())) {
+//				Rectangle r = invalidateRectangle(displayBox());
+//				listener().figureRequestRemove(new FigureChangeEvent(this, r, e));
+//			}
+//			else {
+//				super.figureRequestRemove(e);
+//			}
+//		}
+//	}
+d339 1
+a339 3
+	 * is not stored and therefore not read.  see setLayouter for contradicting statements.
+	 * Why is not the layouter stored? 
+	 * layout will change then upon load no? ???dnoyeb???
+@
+
+
+1.8.4.5
+log
+@Fix for [ 674243 ] GraphicalCompositeFigure not storing Layouter
+@
+text
+@a347 1
+		setLayouter((Layouter)dr.readStorable());
+a358 1
+		dw.writeStorable(getLayouter());
+@
+
+
+1.8.4.6
+log
+@CompositeFigure does not return figures from add, remove, orphan anymore
+new method, restore added to bring back orphaned figures
+compositeFigure keeps record of its orphans for the restore method
+NullFigures inserted as placeholders into the figureList
+dumps record and nullFigures when remove(figure) called. this safely restores
+figures to their old places.
+figureRequestRemove and figureRemove events eliminated.
+Group and Ungroup commands redone to respect these new ideas.
+have not done anything with delete, cut, copy, paste yet.
+NullFigure added 0,0 for its display box, else throwing exceptions
+@
+text
+@d322 16
+@
+
+
+1.7
+log
+@Fixed problem with TextArea figures + cascading FigureChangeEvent
+@
+text
+@d20 1
+d153 4
+a156 1
+		return getPresentationFigure().handles();
+@
+
+
+1.6
+log
+@introduce FigureVisitor for paste/delete commands
+@
+text
+@a18 1
+import java.util.*;
+d131 1
+a131 1
+	 * Expicit update: an updated involves a layout for all contained figures.
+a239 3
+		if (myPresentationFigure != null) {
+			myPresentationFigure.addDependendFigure(this);
+		}
+d309 2
+a310 1
+				listener().figureRequestRemove(new FigureChangeEvent(e.getFigure(), e.getInvalidatedRectangle()));
+a337 5
+	}
+
+	public void visit(FigureVisitor visitor) {
+		super.visit(visitor);
+//		getPresentationFigure().visit(visitor);
+@
+
+
+1.5
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d241 3
+d341 5
+@
+
+
+1.4
+log
+@various merges (TextArea, HTMLTextArea, CreationTool, MiniMap, bug fixes)
+@
+text
+@d152 1
+a152 1
+	public Vector handles() {
+d182 1
+a182 1
+	 * @@param	attribute constant	attribute constant whose value should be returned
+@
+
+
+1.3
+log
+@no message
+@
+text
+@d80 7
+a86 1
+		setLayouter(new StandardLayouter(this));
+@
+
+
+1.2
+log
+@before merge for version 5.3 (dnd, undo,...) - 3
+@
+text
+@d11 1
+a11 1
+ 
+d44 1
+a44 1
+	
+d52 1
+a52 1
+	
+d60 1
+a60 1
+	
+d106 8
+a113 1
+		getPresentationFigure().basicDisplayBox(r.getLocation(), new Point(r.width, r.height));
+d158 2
+d162 1
+a162 1
+		if (getPresentationFigure() != null) {	
+d173 18
+d196 2
+d209 18
+d287 1
+a287 1
+	
+@
+
+
+1.1
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@d2 1
+a2 1
+ * @@(#)GraphicalCompositeFigure.java 5.2
+d4 6
+d33 1
+d52 1
+a52 1
+    
+d83 10
+a92 10
+    /**
+     * Clones a figure and initializes it
+     *
+     * @@see Figure#clone
+     */
+    public Object clone() {
+    	Object cloneObject = super.clone();
+    	((GraphicalCompositeFigure)cloneObject).initialize();
+    	return cloneObject;
+    }
+d98 1
+a98 1
+	    return getPresentationFigure().displayBox();
+d247 2
+a248 2
+        	listener().figureRequestUpdate(new FigureChangeEvent(this));
+        }
+@
+

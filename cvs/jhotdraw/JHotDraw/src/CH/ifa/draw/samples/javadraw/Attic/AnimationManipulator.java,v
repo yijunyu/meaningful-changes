@@ -1,0 +1,167 @@
+head	1.1;
+access;
+symbols
+	jhotdraw54b2-release:1.1
+	DNOYEB1_ALPHA-2:1.1.2.1
+	DNOYEB1_ALPHA-1:1.1.2.1
+	dnoyeb1:1.1.0.2;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2003.01.15.22.12.08;	author dnoyeb;	state dead;
+branches
+	1.1.2.1;
+next	;
+
+1.1.2.1
+date	2003.01.15.22.12.08;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@file AnimationManipulator.java was initially added on branch dnoyeb1.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@
+Lets have a moment of silence for DecoratorFigure.....It was a good figure ;{
+
+Anything which happens inside the drawing after figure add must be undone before figure orphan.  It must also not
+be exposed to anyobject outside the drawing.
+Decorator figure retired in favor of a figureManipulator and the other functions being implemented by a composite
+figure(BorderDecorator).
+AdnimationDecorator retired in favor of AnimationManipulator.
+A figure can have only 1 container. This is making the border tool have a hard time.
+
+Lots of comments added
+
+next phase:
+orphan will disappear.  only add and remove remain.  All figure related resources belong to the figures and no other
+object should care about figure.release.
+split the figureListener into a figureContainer listener and a figureChangeListener.
+Fix BorderDecorator.
+Fix ConnectedText.
+view.checkDamage to call drawing.update()
+@
+text
+@a0 106
+/*
+ * @@(#)AnimationManipulator.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package CH.ifa.draw.samples.javadraw;
+
+import java.awt.*;
+import java.io.*;
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.standard.*;
+import CH.ifa.draw.util.*;
+
+/**
+ * This uses the <b>Adapter Pattern/b> in that it takes the <code>Figure</code> 
+ * interface and turns it into an <code>Animatable</code> interface.
+ *
+ * @@version <$CURRENT_VERSION$>
+ */
+public class AnimationManipulator implements FigureManipulator, Animatable {
+
+	private int fXVelocity;
+	private int fYVelocity;
+	private Figure figure;
+	/*
+	 * Serialization support.
+	 */
+	//private static final long serialVersionUID = 7894632974364110685L;
+	//private int animationDecoratorSerializedDataVersion = 1;
+
+	public AnimationManipulator() {
+		fXVelocity = 4;
+		fYVelocity = 4;
+	}
+
+	public void velocity(int xVelocity, int yVelocity) {
+		fXVelocity = xVelocity;
+		fYVelocity = yVelocity;
+	}
+
+	public Point velocity() {
+		return new Point(fXVelocity, fYVelocity);
+	}
+
+	public void animationStep() {
+		int xSpeed = fXVelocity;
+		int ySpeed = fYVelocity;
+		Rectangle box = figure.displayBox();
+
+		if ((box.x + box.width > 300) && (xSpeed > 0))
+			xSpeed = -xSpeed;
+
+		if ((box.y + box.height > 300) && (ySpeed > 0))
+			ySpeed = -ySpeed;
+
+		if ((box.x < 0) && (xSpeed < 0))
+			xSpeed = -xSpeed;
+
+		if ((box.y < 0) && (ySpeed < 0))
+			ySpeed = -ySpeed;
+
+		velocity(xSpeed, ySpeed);
+		figure.moveBy(xSpeed, ySpeed);
+	}
+
+	//-- store / load ----------------------------------------------
+
+	/**
+	 * @@todo verify implementation.
+	 */
+	private void writeObject(ObjectOutputStream s) throws IOException {
+		s.defaultWriteObject();
+	}
+
+	/**
+	 * @@todo verify this functionality
+	 */
+	private void readObject(ObjectInputStream s) throws ClassNotFoundException,
+	                                                    IOException {
+		s.defaultReadObject();
+	}
+
+	public void write(StorableOutput dw) {
+		dw.writeInt(fXVelocity);
+		dw.writeInt(fYVelocity);
+	}
+
+	public void read(StorableInput dr) throws IOException {
+		fXVelocity = dr.readInt();
+		fYVelocity = dr.readInt();
+	}
+	
+	public void AttachFigure(Figure figure) {
+		this.figure = figure;
+	}
+	public void DetachFigure(Figure figure) {
+		this.figure = null;
+	}
+}
+
+@
+

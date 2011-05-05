@@ -1,0 +1,310 @@
+head	1.7;
+access;
+symbols
+	jhotdraw54b2-release:1.7
+	reorg_6x_split:1.7
+	MVC_PHASE1:1.7.0.10
+	NEW_ATTRIBUTES:1.7.0.8
+	DNOYEB1_ALPHA-2:1.7.4.1
+	release_JHD54b1:1.7
+	BUGFIX_670992:1.7.0.6
+	DNOYEB1_ALPHA-1:1.7.4.1
+	dnoyeb1:1.7.0.4
+	repack:1.7.0.2
+	Root_repack:1.7
+	Before_FigureVisitor:1.7
+	JHotDraw_5-3:1.6
+	JHotDraw_5-2_merged:1.2
+	JHotDraw_5-1_initial:1.1
+	start:1.1.1.1
+	vendor:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.7
+date	2002.08.04.22.56.18;	author mrfloppy;	state Exp;
+branches
+	1.7.4.1;
+next	1.6;
+
+1.6
+date	2001.10.24.21.15.19;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2001.10.24.20.32.01;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2001.10.24.20.25.13;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.06.29.13.42.14;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.03.09.15.31.47;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches;
+next	;
+
+1.7.4.1
+date	2003.01.16.15.59.18;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.7
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@/*
+ * @@(#)DuplicateCommand.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package CH.ifa.draw.standard;
+
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.util.*;
+
+/**
+ * Duplicate the selection and select the duplicates.
+ *
+ * @@version <$CURRENT_VERSION$>
+ */
+public class DuplicateCommand extends FigureTransferCommand {
+
+   /**
+	* Constructs a duplicate command.
+	* @@param name the command name
+	 * @@param newDrawingEditor the DrawingEditor which manages the views
+	*/
+	public DuplicateCommand(String name, DrawingEditor newDrawingEditor) {
+		super(name, newDrawingEditor);
+	}
+
+	public void execute() {
+		super.execute();
+		setUndoActivity(createUndoActivity());
+		FigureSelection selection = view().getFigureSelection();
+
+		// create duplicate figure(s)
+		FigureEnumeration figures = (FigureEnumeration)selection.getData(StandardFigureSelection.TYPE);
+		getUndoActivity().setAffectedFigures(figures);
+
+		view().clearSelection();
+		getUndoActivity().setAffectedFigures(
+			insertFigures(getUndoActivity().getAffectedFigures(), 10, 10));
+		view().checkDamage();
+	}
+
+	protected boolean isExecutableWithView() {
+		return view().selectionCount() > 0;
+	}
+
+	/**
+	 * Factory method for undo activity
+	 */
+	protected Undoable createUndoActivity() {
+		return new PasteCommand.UndoActivity(view());
+	}
+}
+@
+
+
+1.7.4.1
+log
+@drawing.update() is called as opposed to view.checkDamage().  This causes all affected views
+to be updated as opposed to just the one.
+figure.Remove() now returns the container it was removed from.  This may assist undo/redo.
+@
+text
+@d45 1
+a45 1
+		view().drawing().update();
+@
+
+
+1.6
+log
+@merge dnd (before 5.3)
+@
+text
+@a15 1
+import java.util.*;
+@
+
+
+1.5
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d26 7
+a32 7
+    * Constructs a duplicate command.
+    * @@param name the command name
+    * @@param view the target view
+    */
+    public DuplicateCommand(String name, DrawingView view) {
+        super(name, view);
+    }
+d34 4
+a37 3
+    public void execute() {
+    	setUndoActivity(createUndoActivity());
+        FigureSelection selection = view().getFigureSelection();
+d43 5
+a47 5
+        view().clearSelection();
+        getUndoActivity().setAffectedFigures(
+        	insertFigures(getUndoActivity().getAffectedFigures(), 10, 10));
+        view().checkDamage();
+    }
+d49 3
+a51 3
+    public boolean isExecutable() {
+        return view().selectionCount() > 0;
+    }
+@
+
+
+1.4
+log
+@before merge for version 5.3 (dnd, undo,...)
+@
+text
+@d2 1
+a2 1
+ * @@(#)DuplicateCommand.java 5.2
+d4 6
+d14 2
+a16 2
+import CH.ifa.draw.util.*;
+import CH.ifa.draw.framework.*;
+d20 2
+d35 2
+a36 3
+        FigureSelection selection = fView.getFigureSelection();
+
+        fView.clearSelection();
+d38 8
+a45 3
+        Vector figures = (Vector)selection.getData(FigureSelection.TYPE);
+        insertFigures(figures, 10, 10);
+        fView.checkDamage();
+d49 1
+a49 1
+        return fView.selectionCount() > 0;
+d52 6
+a58 2
+
+
+@
+
+
+1.3
+log
+@- SelectionFigure is now an interface. The default implementation CH.ifa.draw.standard.StandardSelectionFigure
+- A FigureSelectionListener interface has been introduced in CH.ifa.draw.framework. An DrawingEditor
+  is now a FigureSelectionListener and the signature for all selectionChanged() methods has been
+  changed to figureSelectionChanged().
+- CH.ifa.draw.util.Command is now an interface. A AbstractCommand can be found in CH.ifa.draw.standard.
+- All commands used to have a fView field. This has been moved to CH.ifa.draw.standard.AbstactCommand
+- A CH.ifa.draw.standard.StandardDrawingView has now a paintComponents() method instead of a paint()
+  and update() method. This allows the CH.ifa.draw.util.FloatingTextField to be a javax.swing.JTextField
+  instead of a java.awt.TextField.
+- CH.ifa.draw.figures.AbstractLineDecorator has been missing
+- DrawApplet, DrawApplication and derived classes are now programmed towards the DrawingView interface
+  instead of using StandardDrawingView. That leads to occasional cast when some additional StandardDrawingView
+  functionality is required in some specialized cases. Applications that were derived from DrawApplication
+  and used to override the createContents() methods should now return a DrawingView as well
+@
+text
+@d27 1
+a27 1
+        FigureSelection selection = view().getFigureSelection();
+d29 1
+a29 1
+        view().clearSelection();
+d31 1
+a31 1
+        Vector figures = (Vector)selection.getData(StandardFigureSelection.TYPE);
+d33 1
+a33 1
+        view().checkDamage();
+d37 1
+a37 1
+        return view().selectionCount() > 0;
+@
+
+
+1.2
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@d27 1
+a27 1
+        FigureSelection selection = fView.getFigureSelection();
+d29 1
+a29 1
+        fView.clearSelection();
+d31 1
+a31 1
+        Vector figures = (Vector)selection.getData(FigureSelection.TYPE);
+d33 1
+a33 1
+        fView.checkDamage();
+d37 1
+a37 1
+        return fView.selectionCount() > 0;
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d2 1
+a2 1
+ * @@(#)DuplicateCommand.java 5.1
+@
+
+
+1.1.1.1
+log
+@
+Initial revision.
+@
+text
+@@

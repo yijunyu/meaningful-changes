@@ -1,0 +1,756 @@
+head	1.11;
+access;
+symbols
+	jhotdraw60b1-release:1.9
+	package_rename:1.9
+	directory_rename:1.8
+	reorg_6x_split_initial:1.8
+	MVC_PHASE1:1.5.0.10
+	NEW_ATTRIBUTES:1.5.0.8
+	DNOYEB1_ALPHA-2:1.5
+	release_JHD54b1:1.5
+	BUGFIX_670992:1.5.0.6
+	DNOYEB1_ALPHA-1:1.5
+	dnoyeb1:1.5.0.4
+	repack:1.5.0.2
+	Root_repack:1.5
+	Before_FigureVisitor:1.5
+	JHotDraw_5-3:1.4
+	JHotDraw_5-2_merged:1.2
+	JHotDraw_5-1_initial:1.1
+	start:1.1.1.1
+	vendor:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.11
+date	2004.03.06.14.36.53;	author mrfloppy;	state Exp;
+branches;
+next	1.10;
+
+1.10
+date	2004.02.23.05.06.57;	author cfm1;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2004.01.09.22.53.41;	author mrfloppy;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2003.11.09.21.18.46;	author mrfloppy;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2003.09.23.06.38.57;	author mtnygard;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2003.05.25.10.20.04;	author pleumann;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2002.08.04.22.56.18;	author mrfloppy;	state Exp;
+branches
+	1.5.4.1;
+next	1.4;
+
+1.4
+date	2001.10.24.21.15.19;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.10.24.20.32.01;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.03.09.15.31.47;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches;
+next	;
+
+1.5.4.1
+date	2003.03.14.19.01.27;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.11
+log
+@adjusted formatting
+@
+text
+@/*
+ * @@(#)ChangeConnectionHandle.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.standard;
+
+import org.jhotdraw.framework.*;
+import org.jhotdraw.util.Geom;
+import org.jhotdraw.util.Undoable;
+import org.jhotdraw.util.UndoableAdapter;
+import java.awt.*;
+
+/**
+ * ChangeConnectionHandle factors the common code for handles
+ * that can be used to reconnect connections.
+ *
+ * @@see ChangeConnectionEndHandle
+ * @@see ChangeConnectionStartHandle
+ *
+ * @@version <$CURRENT_VERSION$>
+ */
+public abstract class ChangeConnectionHandle extends AbstractHandle {
+
+	private Connector         fOriginalTarget;
+	private Figure            myTarget;
+	private ConnectionFigure  myConnection;
+	private Point             fStart;
+
+	/**
+	 * Initializes the change connection handle.
+	 */
+	protected ChangeConnectionHandle(ConnectionFigure owner) {
+		super(owner);
+		setConnection(owner);
+		setTargetFigure(null);
+	}
+
+	/**
+	 * Returns the target connector of the change.
+	 */
+	protected abstract Connector target();
+
+	/**
+	 * Disconnects the connection.
+	 */
+	protected abstract void disconnect();
+
+	/**
+	 * Connect the connection with the given figure.
+	 */
+	protected abstract void connect(Connector c);
+
+	/**
+	 * Sets the location of the target point.
+	 */
+	protected abstract void setPoint(int x, int y);
+
+	/**
+	 * Gets the side of the connection that is unaffected by
+	 * the change.
+	 */
+	protected Connector source() {
+		if (target() == getConnection().getStartConnector()) {
+			return getConnection().getEndConnector();
+		}
+		return getConnection().getStartConnector();
+	}
+
+	/**
+	 * Disconnects the connection.
+	 */
+	public void invokeStart(int  x, int  y, DrawingView view) {
+		fOriginalTarget = target();
+		fStart = new Point(x, y);
+
+		setUndoActivity(createUndoActivity(view));
+		((ChangeConnectionHandle.UndoActivity)getUndoActivity()).setOldConnector(target());
+
+		disconnect();
+	}
+
+	/**
+	 * Finds a new target of the connection.
+	 */
+	public void invokeStep (int x, int y, int anchorX, int anchorY, DrawingView view) {
+		Point p = new Point(x, y);
+		Figure f = findConnectableFigure(x, y, view.drawing());
+		// track the figure containing the mouse
+		if (f != getTargetFigure()) {
+			if (getTargetFigure() != null) {
+				getTargetFigure().connectorVisibility(false, null);
+			}
+			setTargetFigure(f);
+			if (getTargetFigure() != null) {
+				getTargetFigure().connectorVisibility(true, getConnection());
+			}
+		}
+
+		Connector target = findConnectionTarget(p.x, p.y, view.drawing());
+		if (target != null) {
+			p = Geom.center(target.displayBox());
+		}
+		setPoint(p.x, p.y);
+
+		if (target == fOriginalTarget) {
+			p = target.connectorMovedTo(x, y);
+			setPoint(p.x, p.y);
+		}
+	}
+
+	/**
+	 * Connects the figure to the new target. If there is no
+	 * new target the connection reverts to its original one.
+	 */
+	public void invokeEnd(int x, int y, int anchorX, int anchorY, DrawingView view) {
+		Connector target = findConnectionTarget(x, y, view.drawing());
+		if (target == null) {
+			target = fOriginalTarget;
+		}
+        
+		if (target == fOriginalTarget) {
+			Point p = target.connectorMovedTo(x, y);
+			x=p.x;
+			y=p.y;
+		}
+
+		setPoint(x, y);
+		connect(target);
+		getConnection().updateConnection();
+
+		Connector oldConnector = ((ChangeConnectionHandle.UndoActivity)
+			getUndoActivity()).getOldConnector();
+		// there has been no change so there is nothing to undo
+		if ((oldConnector == null)
+				|| (target() == null)
+				|| (oldConnector.owner() == target().owner())) {
+			setUndoActivity(null);
+		}
+		else {
+			getUndoActivity().setAffectedFigures(new SingleFigureEnumerator(getConnection()));
+		}
+
+		if (getTargetFigure() != null) {
+			getTargetFigure().connectorVisibility(false, null);
+			setTargetFigure(null);
+		}
+	}
+
+	private Connector findConnectionTarget(int x, int y, Drawing drawing) {
+		Figure target = findConnectableFigure(x, y, drawing);
+
+		if (target == fOriginalTarget.owner() && fOriginalTarget instanceof OffsetConnector) {
+			return fOriginalTarget;
+		}
+
+		if ((target != null)
+			&& target.canConnect()
+			 && target != fOriginalTarget
+			 && !target.includes(owner())
+            /*
+    		 * JP, 25-May-03: Fix for ignored direction when checking
+    		 * connectability. Old version didn't take direction of
+             * connection into account, which could result in incorrect
+             * drawing if syntax rules were a concern.
+             * 
+             * See also new canConnectTo() method below.
+             * 
+             * Was:
+             * 
+    		 * && getConnection().canConnect(source().owner(), target)) {
+    		 */
+			&& canConnectTo(target)) {
+				return findConnector(x, y, target);
+		}
+		return null;
+	}
+
+    /**
+     * Called to check whether this end of the connection can connect to the
+     * given target figure. Needs to be overriden by the start and end changers
+     * to take the connection's direction into account during the check. JHD 5.4
+     * beta and before did not do this.
+     */
+    protected abstract boolean canConnectTo(Figure figure);
+    
+	protected Connector findConnector(int x, int y, Figure f) {
+		return f.connectorAt(x, y);
+	}
+
+	/**
+	 * Draws this handle.
+	 */
+	public void draw(Graphics g) {
+		Rectangle r = displayBox();
+
+		g.setColor(Color.green);
+		g.fillRect(r.x, r.y, r.width, r.height);
+
+		g.setColor(Color.black);
+		g.drawRect(r.x, r.y, r.width, r.height);
+	}
+
+	private Figure findConnectableFigure(int x, int y, Drawing drawing) {
+		FigureEnumeration fe = drawing.figuresReverse();
+		while (fe.hasNextFigure()) {
+			Figure figure = fe.nextFigure();
+			if (!figure.includes(getConnection()) && figure.canConnect()) {
+				if (figure.containsPoint(x, y)) {
+					return figure;
+				}
+			}
+		}
+		return null;
+	}
+	
+	protected void setConnection(ConnectionFigure newConnection) {
+		myConnection = newConnection;
+	}
+	
+	protected ConnectionFigure getConnection() {
+		return myConnection;
+	}
+	
+	protected void setTargetFigure(Figure newTarget) {
+		myTarget = newTarget;
+	}
+	
+	protected Figure getTargetFigure() {
+		return myTarget;
+	}
+
+	/**
+	 * Factory method for undo activity. To be overriden by subclasses.
+	 */
+	protected abstract Undoable createUndoActivity(DrawingView newView);
+	
+	public static abstract class UndoActivity extends UndoableAdapter {
+		private Connector myOldConnector;
+		
+		public UndoActivity(DrawingView newView) {
+			super(newView);
+			setUndoable(true);
+			setRedoable(true);
+		}
+		
+		public boolean undo() {
+			if (!super.undo()) {
+				return false;
+			}
+
+			swapConnectors();
+			return true;
+		}
+	
+		public boolean redo() {
+			// do not call execute directly as the selection might has changed
+			if (!isRedoable()) {
+				return false;
+			}
+
+			swapConnectors();
+			return true;
+		}
+
+		private void swapConnectors() {
+			FigureEnumeration fe = getAffectedFigures();
+			if (fe.hasNextFigure()) {
+				ConnectionFigure connection = (ConnectionFigure)fe.nextFigure();
+				setOldConnector(replaceConnector(connection));
+				connection.updateConnection();
+			}
+		}
+
+		protected abstract Connector replaceConnector(ConnectionFigure connection);
+				
+		public void setOldConnector(Connector newOldConnector) {
+			myOldConnector = newOldConnector;
+		}
+		
+		public Connector getOldConnector() {
+			return myOldConnector;
+		}
+	}
+}
+@
+
+
+1.10
+log
+@OffsetConnectors added
+@
+text
+@d111 5
+a115 8
+
+//      cfm1 *******************************************************************      
+        if (target == fOriginalTarget) {
+           p = target.connectorMovedTo(x, y);
+           setPoint(p.x, p.y);
+        }
+//      cfm1 *******************************************************************            
+	
+d127 6
+a132 9
+        
+//      cfm1 *******************************************************************
+        if (target == fOriginalTarget) {
+            Point p = target.connectorMovedTo(x, y);
+            x=p.x;
+            y=p.y;
+        }
+//      cfm1 *******************************************************************
+
+d158 4
+a161 7
+
+//      cfm1 *******************************************************************
+         if (target == fOriginalTarget.owner() && fOriginalTarget instanceof OffsetConnector)
+              return fOriginalTarget;
+//      cfm1 *******************************************************************
+
+
+@
+
+
+1.9
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@d111 8
+d130 9
+d164 7
+@
+
+
+1.8
+log
+@TestSuite: adjusting auto-generated sourcecode (JunitDoclet) to coding style
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.standard;
+d14 4
+a17 4
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.util.Geom;
+import CH.ifa.draw.util.Undoable;
+import CH.ifa.draw.util.UndoableAdapter;
+@
+
+
+1.7
+log
+@All test cases now pass!
+@
+text
+@d7 1
+a7 1
+ * Copyright:	? by the original author(s) and all contributors
+d41 1
+a41 1
+		setConnection((ConnectionFigure) owner());
+@
+
+
+1.6
+log
+@Fix for findConnectionTarget() method of ChangeConnectionHandle. Old version didn't take direction of connection into account, which could result in incorrect drawings (if syntax rules and directional connections were a concern). New version solves this by abstract method which is overridden properly in ChangeConnectionStartHandle and ChangeConnectionEndHandle.
+@
+text
+@d7 1
+a7 1
+ * Copyright:	© by the original author(s) and all contributors
+d39 1
+a39 1
+	protected ChangeConnectionHandle(Figure owner) {
+@
+
+
+1.5
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d148 2
+a149 1
+		if ((target != null) && target.canConnect()
+d152 13
+a164 1
+			 && getConnection().canConnect(source().owner(), target)) {
+d170 8
+@
+
+
+1.5.4.1
+log
+@updated permissions
+@
+text
+@d145 1
+a145 1
+	protected Connector findConnectionTarget(int x, int y, Drawing drawing) {
+d174 1
+a174 1
+	protected Figure findConnectableFigure(int x, int y, Drawing drawing) {
+@
+
+
+1.4
+log
+@merge dnd (before 5.3)
+@
+text
+@d98 1
+a98 1
+				getTargetFigure().connectorVisibility(false);
+d102 1
+a102 1
+				getTargetFigure().connectorVisibility(true);
+d140 1
+a140 1
+			getTargetFigure().connectorVisibility(false);
+d175 3
+a177 3
+		FigureEnumeration k = drawing.figuresReverse();
+		while (k.hasMoreElements()) {
+			Figure figure = k.nextFigure();
+d238 1
+a238 1
+			if (fe.hasMoreElements()) {
+@
+
+
+1.3
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d42 1
+a42 1
+		setTarget(null);
+d83 1
+a83 1
+		setUndoActivity(createUndoActivity());
+d96 3
+a98 3
+		if (f != getTarget()) {
+			if (getTarget() != null) {
+				getTarget().connectorVisibility(false);
+d100 3
+a102 3
+			setTarget(f);
+			if (getTarget() != null) {
+				getTarget().connectorVisibility(true);
+d139 3
+a141 3
+		if (getTarget() != null) {
+			getTarget().connectorVisibility(false);
+			setTarget(null);
+d195 1
+a195 1
+	protected void setTarget(Figure newTarget) {
+d199 1
+a199 1
+	protected Figure getTarget() {
+d206 1
+a206 1
+	protected abstract Undoable createUndoActivity();
+d211 2
+a212 2
+		public UndoActivity() {
+			super(null);
+@
+
+
+1.2
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@d2 1
+a2 1
+ * @@(#)ChangeConnectionHandle.java 5.2
+d4 6
+a13 2
+import java.awt.*;
+
+d16 3
+d26 2
+d31 224
+a254 132
+    protected Connector         fOriginalTarget;
+    protected Figure            fTarget;
+    protected ConnectionFigure  fConnection;
+    protected Point             fStart;
+
+    /**
+     * Initializes the change connection handle.
+     */
+    protected ChangeConnectionHandle(Figure owner) {
+        super(owner);
+        fConnection = (ConnectionFigure) owner();
+        fTarget = null;
+    }
+
+    /**
+     * Returns the target connector of the change.
+     */
+    protected abstract Connector target();
+
+    /**
+     * Disconnects the connection.
+     */
+    protected abstract void disconnect();
+
+    /**
+     * Connect the connection with the given figure.
+     */
+    protected abstract void connect(Connector c);
+
+    /**
+     * Sets the location of the target point.
+     */
+    protected abstract void setPoint(int x, int y);
+
+    /**
+     * Gets the side of the connection that is unaffected by
+     * the change.
+     */
+    protected Connector source() {
+        if (target() == fConnection.start())
+            return fConnection.end();
+        return fConnection.start();
+    }
+
+    /**
+     * Disconnects the connection.
+     */
+    public void invokeStart(int  x, int  y, DrawingView view) {
+        fOriginalTarget = target();
+        fStart = new Point(x, y);
+        disconnect();
+    }
+
+    /**
+     * Finds a new target of the connection.
+     */
+    public void invokeStep (int x, int y, int anchorX, int anchorY, DrawingView view) {
+        Point p = new Point(x, y);
+        Figure f = findConnectableFigure(x, y, view.drawing());
+        // track the figure containing the mouse
+        if (f != fTarget) {
+            if (fTarget != null)
+                fTarget.connectorVisibility(false);
+            fTarget = f;
+            if (fTarget != null)
+                fTarget.connectorVisibility(true);
+        }
+
+        Connector target = findConnectionTarget(p.x, p.y, view.drawing());
+        if (target != null)
+            p = Geom.center(target.displayBox());
+        setPoint(p.x, p.y);
+    }
+
+    /**
+     * Connects the figure to the new target. If there is no
+     * new target the connection reverts to its original one.
+     */
+    public void invokeEnd(int x, int y, int anchorX, int anchorY, DrawingView view) {
+        Connector target = findConnectionTarget(x, y, view.drawing());
+        if (target == null)
+            target = fOriginalTarget;
+
+        setPoint(x, y);
+        connect(target);
+        fConnection.updateConnection();
+        if (fTarget != null) {
+            fTarget.connectorVisibility(false);
+            fTarget = null;
+        }
+    }
+
+    private Connector findConnectionTarget(int x, int y, Drawing drawing) {
+        Figure target = findConnectableFigure(x, y, drawing);
+
+        if ((target != null) && target.canConnect()
+             && target != fOriginalTarget
+             && !target.includes(owner())
+             && fConnection.canConnect(source().owner(), target)) {
+                return findConnector(x, y, target);
+        }
+        return null;
+    }
+
+    protected Connector findConnector(int x, int y, Figure f) {
+        return f.connectorAt(x, y);
+    }
+
+    /**
+     * Draws this handle.
+     */
+    public void draw(Graphics g) {
+        Rectangle r = displayBox();
+
+        g.setColor(Color.green);
+        g.fillRect(r.x, r.y, r.width, r.height);
+
+        g.setColor(Color.black);
+        g.drawRect(r.x, r.y, r.width, r.height);
+    }
+
+    private Figure findConnectableFigure(int x, int y, Drawing drawing) {
+        FigureEnumeration k = drawing.figuresReverse();
+        while (k.hasMoreElements()) {
+            Figure figure = k.nextFigure();
+            if (!figure.includes(fConnection) && figure.canConnect()) {
+                if (figure.containsPoint(x, y))
+                    return figure;
+            }
+        }
+        return null;
+    }
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d2 1
+a2 1
+ * @@(#)ChangeConnectionHandle.java 5.1
+@
+
+
+1.1.1.1
+log
+@
+Initial revision.
+@
+text
+@@

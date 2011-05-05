@@ -1,0 +1,623 @@
+head	1.11;
+access;
+symbols
+	jhotdraw54b2-release:1.11
+	reorg_6x_split:1.11
+	MVC_PHASE1:1.8.0.10
+	NEW_ATTRIBUTES:1.8.0.8
+	DNOYEB1_ALPHA-2:1.8.4.5
+	release_JHD54b1:1.8
+	BUGFIX_670992:1.8.0.6
+	DNOYEB1_ALPHA-1:1.8.4.4
+	dnoyeb1:1.8.0.4
+	repack:1.8.0.2
+	Root_repack:1.8
+	Before_FigureVisitor:1.8
+	JHotDraw_5-3:1.6
+	JHotDraw_5-2_merged:1.2
+	JHotDraw_5-1_initial:1.1
+	start:1.1.1.1
+	vendor:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.11
+date	2003.08.05.18.30.34;	author ricardo_padilha;	state Exp;
+branches;
+next	1.10;
+
+1.10
+date	2003.08.01.04.38.13;	author ricardo_padilha;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2003.07.14.17.42.12;	author ricardo_padilha;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2002.08.04.22.56.18;	author mrfloppy;	state Exp;
+branches
+	1.8.4.1;
+next	1.7;
+
+1.7
+date	2002.04.30.20.40.10;	author mrfloppy;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2001.10.24.21.15.19;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2001.10.24.20.32.01;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2001.10.24.20.25.13;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.06.29.13.42.14;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.03.09.15.31.47;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches;
+next	;
+
+1.8.4.1
+date	2003.01.15.21.04.21;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.2;
+
+1.8.4.2
+date	2003.01.16.15.59.18;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.3;
+
+1.8.4.3
+date	2003.01.16.22.38.46;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.4;
+
+1.8.4.4
+date	2003.01.17.02.33.40;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.5;
+
+1.8.4.5
+date	2003.01.26.00.51.16;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.6;
+
+1.8.4.6
+date	2003.02.02.16.54.09;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.11
+log
+@Bugfix for CutCommand and DeleteCommand.
+Both work now properly and their UndoActivity's work as expected.
+@
+text
+@/*
+ * @@(#)DeleteCommand.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package CH.ifa.draw.standard;
+
+import java.util.List;
+
+import CH.ifa.draw.framework.DrawingEditor;
+import CH.ifa.draw.framework.Figure;
+import CH.ifa.draw.framework.FigureEnumeration;
+import CH.ifa.draw.util.CollectionsFactory;
+import CH.ifa.draw.util.Undoable;
+import CH.ifa.draw.util.UndoableAdapter;
+
+/**
+ * Command to delete the selection.
+ *
+ * @@version <$CURRENT_VERSION$>
+ */
+public class DeleteCommand extends FigureTransferCommand {
+
+	/**
+	 * Constructs a delete command.
+	 * @@param name the command name
+	 * @@param newDrawingEditor the DrawingEditor which manages the views
+	 */
+	public DeleteCommand(String name, DrawingEditor newDrawingEditor) {
+		super(name, newDrawingEditor);
+	}
+
+	/**
+	 * @@see CH.ifa.draw.util.Command#execute()
+	 */
+	public void execute() {
+		super.execute();
+		setUndoActivity(createUndoActivity());
+		/* ricardo_padilha: bugfix for correct delete/undelete behavior
+		 * When enumerating the affected figures we must not forget the dependent
+		 * figures, since they are deleted as well! 
+		 */
+		FigureEnumeration fe = view().selection();
+		List affected = CollectionsFactory.current().createList();
+		Figure f;
+		FigureEnumeration dfe;
+		while (fe.hasNextFigure()) {
+			f = fe.nextFigure();
+			affected.add(0, f);
+			dfe = f.getDependendFigures();
+			if (dfe != null) {
+				while (dfe.hasNextFigure()) {
+					affected.add(0, dfe.nextFigure());
+				}
+			}
+		}
+		fe = new FigureEnumerator(affected);
+		getUndoActivity().setAffectedFigures(fe);
+		/* ricardo_padilha: end of bugfix */
+		deleteFigures(getUndoActivity().getAffectedFigures());
+		view().checkDamage();
+	}
+
+	/**
+	 * @@see CH.ifa.draw.standard.AbstractCommand#isExecutableWithView()
+	 */
+	protected boolean isExecutableWithView() {
+		return view().selectionCount() > 0;
+	}
+
+	/**
+	 * Factory method for undo activity
+	 * @@return Undoable
+	 */
+	protected Undoable createUndoActivity() {
+		return new DeleteCommand.UndoActivity(this);
+	}
+
+	public static class UndoActivity extends UndoableAdapter {
+
+		private FigureTransferCommand myCommand;
+
+		/**
+		 * Constructor for <code>UndoActivity</code>.
+		 * @@param newCommand parent command
+		 */
+		public UndoActivity(FigureTransferCommand newCommand) {
+			super(newCommand.view());
+			myCommand = newCommand;
+			setUndoable(true);
+			setRedoable(true);
+		}
+
+		/**
+		 * @@see CH.ifa.draw.util.Undoable#undo()
+		 */
+		public boolean undo() {
+			if (super.undo() && getAffectedFigures().hasNextFigure()) {
+				getDrawingView().clearSelection();
+				setAffectedFigures(
+					myCommand.insertFigures(getAffectedFiguresReversed(), 0, 0));
+				return true;
+			}
+			return false;
+		}
+
+		/**
+		 * @@see CH.ifa.draw.util.Undoable#redo()
+		 */
+		public boolean redo() {
+			// do not call execute directly as the selection might has changed
+			if (isRedoable()) {
+				myCommand.deleteFigures(getAffectedFigures());
+				getDrawingView().clearSelection();
+				return true;
+			}
+			return false;
+		}
+	}
+}
+@
+
+
+1.10
+log
+@Bug fix for ConcurrentModificationException when deleting connected figures.
+@
+text
+@d30 3
+a32 3
+   /**
+	* Constructs a delete command.
+	* @@param name the command name
+d34 1
+a34 1
+	*/
+d39 3
+d70 3
+d79 1
+d86 1
+d89 4
+d100 3
+d106 2
+a107 2
+				setAffectedFigures(myCommand.insertFigures(getAffectedFigures(), 0, 0));
+
+a109 1
+
+d113 3
+a120 1
+
+a122 1
+
+@
+
+
+1.9
+log
+@bugfix for correct delete/undelete behavior
+When enumerating the affected figures, we must not forget the dependent figures, since they are deleted as well!
+@
+text
+@d52 1
+a52 1
+			affected.add(f);
+d56 1
+a56 1
+					affected.add(dfe.nextFigure());
+@
+
+
+1.8
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d14 6
+a19 1
+import CH.ifa.draw.framework.*;
+d42 21
+a62 1
+		getUndoActivity().setAffectedFigures(view().selection());
+@
+
+
+1.8.4.1
+log
+@
+Lets have a moment of silence for DecoratorFigure.....It was a good figure ;{
+
+Anything which happens inside the drawing after figure add must be undone before figure orphan.  It must also not
+be exposed to anyobject outside the drawing.
+Decorator figure retired in favor of a figureManipulator and the other functions being implemented by a composite
+figure(BorderDecorator).
+AdnimationDecorator retired in favor of AnimationManipulator.
+A figure can have only 1 container. This is making the border tool have a hard time.
+
+Lots of comments added
+
+next phase:
+orphan will disappear.  only add and remove remain.  All figure related resources belong to the figures and no other
+object should care about figure.release.
+split the figureListener into a figureContainer listener and a figureChangeListener.
+Fix BorderDecorator.
+Fix ConnectedText.
+view.checkDamage to call drawing.update()
+@
+text
+@d39 1
+a39 1
+		view().checkDamage();//tools should call drawing().update so all views get updated !!!dnoyeb!!!
+@
+
+
+1.8.4.2
+log
+@drawing.update() is called as opposed to view.checkDamage().  This causes all affected views
+to be updated as opposed to just the one.
+figure.Remove() now returns the container it was removed from.  This may assist undo/redo.
+@
+text
+@d39 1
+a39 1
+		view().drawing().update();
+@
+
+
+1.8.4.3
+log
+@Various comments.
+Fixed undo bug which always restored dependent figures, even if they were deleted in a
+seperate operation.
+@
+text
+@d37 2
+a38 1
+		getUndoActivity().setAffectedFigures( deleteFigures( view().selection() ));
+@
+
+
+1.8.4.4
+log
+@Fix: [ 622363 ] UndoableAdapter.release() is broken
+Only deleting-type undoable actions release figures.
++ DND grabs figures from the visitor now. others need to do the same.
+@
+text
+@a83 10
+		/**
+		 * Releases all resources related to an undoable activity
+		 */
+		public void release() {
+			FigureEnumeration fe = getAffectedFigures();
+			while (fe.hasNextFigure()) {
+				fe.nextFigure().release();
+			}
+			setAffectedFigures(FigureEnumerator.getEmptyEnumeration());
+		}		
+@
+
+
+1.8.4.5
+log
+@CompositeFigure does not return figures from add, remove, orphan anymore
+new method, restore added to bring back orphaned figures
+compositeFigure keeps record of its orphans for the restore method
+NullFigures inserted as placeholders into the figureList
+dumps record and nullFigures when remove(figure) called. this safely restores
+figures to their old places.
+figureRequestRemove and figureRemove events eliminated.
+Group and Ungroup commands redone to respect these new ideas.
+have not done anything with delete, cut, copy, paste yet.
+NullFigure added 0,0 for its display box, else throwing exceptions
+@
+text
+@a85 1
+		 * what if undo was last action?
+@
+
+
+1.8.4.6
+log
+@figure.release() cleanup.  trying to make release work properly.
+@
+text
+@d54 1
+a54 1
+		private boolean undone = false;
+d66 1
+a66 1
+				undone = true;
+d78 1
+a78 1
+				undone = false;
+d86 1
+a86 3
+		 * Since cut duplicates the figures, it is ok to release the originals
+		 * because the pasted figures are completely new objects.
+		 * But we can only release if the action has not been undone.
+d89 3
+a91 7
+			if(undone == false){
+				FigureEnumeration fe = getAffectedFigures();
+				while (fe.hasNextFigure()) {
+					Figure f = fe.nextFigure();
+					getDrawingView().drawing().remove(f);
+					f.release();
+				}
+d93 1
+a93 1
+			super.release();
+@
+
+
+1.7
+log
+@no message
+@
+text
+@d37 1
+a37 1
+		getUndoActivity().setAffectedFigures(view().selectionElements());
+d64 1
+a64 1
+			if (super.undo() && getAffectedFigures().hasMoreElements()) {
+@
+
+
+1.6
+log
+@merge dnd (before 5.3)
+@
+text
+@d15 2
+a16 1
+import CH.ifa.draw.util.*;
+d55 1
+a55 1
+		
+d62 1
+a62 1
+		
+d67 1
+a67 1
+	
+d70 1
+a70 1
+			
+d73 1
+a73 1
+	
+d82 1
+a82 1
+			
+@
+
+
+1.5
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d25 7
+a31 7
+    * Constructs a delete command.
+    * @@param name the command name
+    * @@param view the target view
+    */
+    public DeleteCommand(String name, DrawingView view) {
+        super(name, view);
+    }
+d33 7
+a39 6
+    public void execute() {
+    	setUndoActivity(createUndoActivity());
+    	getUndoActivity().setAffectedFigures(view().selectionElements());
+        deleteFigures(getUndoActivity().getAffectedFigures());
+        view().checkDamage();
+    }
+d41 3
+a43 3
+    public boolean isExecutable() {
+        return view().selectionCount() > 0;
+    }
+d58 2
+a59 2
+	        setUndoable(true);
+	        setRedoable(true);
+d65 1
+a65 1
+		        setAffectedFigures(myCommand.insertFigures(getAffectedFigures(), 0, 0));
+d67 1
+a67 1
+			    return true;
+d70 1
+a70 1
+	        return false;
+d76 1
+a76 1
+	        	myCommand.deleteFigures(getAffectedFigures());
+@
+
+
+1.4
+log
+@before merge for version 5.3 (dnd, undo,...)
+@
+text
+@d2 1
+a2 1
+ * @@(#)DeleteCommand.java 5.2
+d4 6
+a13 2
+import java.util.*;
+import CH.ifa.draw.util.Command;
+d15 1
+d19 2
+d34 4
+a37 2
+        deleteSelection();
+        fView.checkDamage();
+d41 1
+a41 1
+        return fView.selectionCount() > 0;
+d44 40
+a84 2
+
+
+@
+
+
+1.3
+log
+@- SelectionFigure is now an interface. The default implementation CH.ifa.draw.standard.StandardSelectionFigure
+- A FigureSelectionListener interface has been introduced in CH.ifa.draw.framework. An DrawingEditor
+  is now a FigureSelectionListener and the signature for all selectionChanged() methods has been
+  changed to figureSelectionChanged().
+- CH.ifa.draw.util.Command is now an interface. A AbstractCommand can be found in CH.ifa.draw.standard.
+- All commands used to have a fView field. This has been moved to CH.ifa.draw.standard.AbstactCommand
+- A CH.ifa.draw.standard.StandardDrawingView has now a paintComponents() method instead of a paint()
+  and update() method. This allows the CH.ifa.draw.util.FloatingTextField to be a javax.swing.JTextField
+  instead of a java.awt.TextField.
+- CH.ifa.draw.figures.AbstractLineDecorator has been missing
+- DrawApplet, DrawApplication and derived classes are now programmed towards the DrawingView interface
+  instead of using StandardDrawingView. That leads to occasional cast when some additional StandardDrawingView
+  functionality is required in some specialized cases. Applications that were derived from DrawApplication
+  and used to override the createContents() methods should now return a DrawingView as well
+@
+text
+@d28 1
+a28 1
+        view().checkDamage();
+d32 1
+a32 1
+        return view().selectionCount() > 0;
+@
+
+
+1.2
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@d28 1
+a28 1
+        fView.checkDamage();
+d32 1
+a32 1
+        return fView.selectionCount() > 0;
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d2 1
+a2 1
+ * @@(#)DeleteCommand.java 5.1
+@
+
+
+1.1.1.1
+log
+@
+Initial revision.
+@
+text
+@@

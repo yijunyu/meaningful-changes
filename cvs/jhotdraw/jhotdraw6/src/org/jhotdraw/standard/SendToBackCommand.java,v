@@ -1,0 +1,455 @@
+head	1.8;
+access;
+symbols
+	jhotdraw60b1-release:1.8
+	package_rename:1.8
+	directory_rename:1.7
+	reorg_6x_split_initial:1.7
+	MVC_PHASE1:1.7.0.10
+	NEW_ATTRIBUTES:1.7.0.8
+	DNOYEB1_ALPHA-2:1.7.4.2
+	release_JHD54b1:1.7
+	BUGFIX_670992:1.7.0.6
+	DNOYEB1_ALPHA-1:1.7.4.1
+	dnoyeb1:1.7.0.4
+	repack:1.7.0.2
+	Root_repack:1.7
+	Before_FigureVisitor:1.7
+	JHotDraw_5-3:1.6
+	JHotDraw_5-2_merged:1.2
+	JHotDraw_5-1_initial:1.1
+	start:1.1.1.1
+	vendor:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.8
+date	2004.01.09.22.53.41;	author mrfloppy;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2002.08.04.22.56.18;	author mrfloppy;	state Exp;
+branches
+	1.7.4.1;
+next	1.6;
+
+1.6
+date	2001.10.24.21.15.19;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2001.10.24.20.32.01;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2001.10.24.20.25.13;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.06.29.13.42.14;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.03.09.15.31.47;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches;
+next	;
+
+1.7.4.1
+date	2003.01.16.15.59.18;	author dnoyeb;	state Exp;
+branches;
+next	1.7.4.2;
+
+1.7.4.2
+date	2003.01.29.04.41.13;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.8
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@/*
+ * @@(#)SendToBackCommand.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.standard;
+
+import org.jhotdraw.framework.*;
+import org.jhotdraw.util.UndoableAdapter;
+import org.jhotdraw.util.Undoable;
+import java.util.*;
+
+/**
+ * A command to send the selection to the back of the drawing.
+ *
+ * @@version <$CURRENT_VERSION$>
+ */ 
+public class SendToBackCommand extends AbstractCommand {
+
+	/**
+	 * Constructs a send to back command.
+	 * @@param name the command name
+	 * @@param newDrawingEditor the DrawingEditor which manages the views
+	 */
+	public SendToBackCommand(String name, DrawingEditor newDrawingEditor) {
+		super(name, newDrawingEditor);
+	}
+
+	public void execute() {
+		super.execute();
+		setUndoActivity(createUndoActivity());
+		getUndoActivity().setAffectedFigures(view().selectionZOrdered());
+		FigureEnumeration fe = getUndoActivity().getAffectedFigures();
+		while (fe.hasNextFigure()) {
+			view().drawing().sendToBack(fe.nextFigure());
+		}
+		view().checkDamage();
+	}
+
+	protected boolean isExecutableWithView() {
+		return view().selectionCount() > 0;
+	}
+
+	protected Undoable createUndoActivity() {
+		return new SendToBackCommand.UndoActivity(view());
+	}
+
+	public static class UndoActivity extends UndoableAdapter {
+		private Hashtable myOriginalLayers;
+		
+		public UndoActivity(DrawingView newDrawingView) {
+			super(newDrawingView);
+			myOriginalLayers = new Hashtable();
+			setUndoable(true);
+			setRedoable(true);
+		}
+		
+		public boolean undo() {
+			if (!super.undo()) {
+				return false;
+			}
+
+			FigureEnumeration fe = getAffectedFigures();
+			while (fe.hasNextFigure()) {
+				Figure currentFigure = fe.nextFigure();
+				int currentFigureLayer = getOriginalLayer(currentFigure);
+				getDrawingView().drawing().sendToLayer(currentFigure, currentFigureLayer);
+			}
+			
+			return true;
+		}
+		
+		public boolean redo() {
+			// do not call execute directly as the selection might has changed
+			if (!isRedoable()) {
+				return false;
+			}
+			
+			FigureEnumeration fe = getAffectedFigures();
+			while (fe.hasNextFigure()) {
+				sendToCommand(fe.nextFigure());
+			}
+			
+			return true;			
+		}
+
+		protected void sendToCommand(Figure f) {
+			getDrawingView().drawing().sendToBack(f);
+		}
+		
+		protected void addOriginalLayer(Figure affectedFigure, int newOriginalLayer) {
+			myOriginalLayers.put(affectedFigure, new Integer(newOriginalLayer));
+		}
+		
+		protected int getOriginalLayer(Figure lookupAffectedFigure) {
+			return ((Integer)myOriginalLayers.get(lookupAffectedFigure)).intValue();
+		}
+
+		public void setAffectedFigures(FigureEnumeration fe) {
+			// first make copy of FigureEnumeration in superclass
+			super.setAffectedFigures(fe);
+			// then get new FigureEnumeration of copy to save attributes
+			FigureEnumeration copyFe = getAffectedFigures();
+			while (copyFe.hasNextFigure()) {
+				Figure f = copyFe.nextFigure();
+				int originalLayer = getDrawingView().drawing().getLayer(f);
+				addOriginalLayer(f, originalLayer);
+			}
+		}
+	}
+}
+@
+
+
+1.7
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.standard;
+d14 3
+a16 3
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.util.UndoableAdapter;
+import CH.ifa.draw.util.Undoable;
+@
+
+
+1.7.4.1
+log
+@drawing.update() is called as opposed to view.checkDamage().  This causes all affected views
+to be updated as opposed to just the one.
+figure.Remove() now returns the container it was removed from.  This may assist undo/redo.
+@
+text
+@d43 1
+a43 1
+		view().drawing().update();
+@
+
+
+1.7.4.2
+log
+@Using List over ArrayList and Map over HashMap/WeakMap etc.
+@
+text
+@d55 1
+a55 1
+		private java.util.Map myOriginalLayers;
+@
+
+
+1.6
+log
+@merge dnd (before 5.3)
+@
+text
+@d38 1
+a38 1
+		getUndoActivity().setAffectedFigures(new ReverseFigureEnumerator(view().selectionZOrdered()));
+d40 1
+a40 1
+		while (fe.hasMoreElements()) {
+d70 1
+a70 1
+			while (fe.hasMoreElements()) {
+d86 1
+a86 1
+			while (fe.hasMoreElements()) {
+d110 1
+a110 1
+			while (copyFe.hasMoreElements()) {
+@
+
+
+1.5
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d26 13
+a38 12
+   /**
+    * Constructs a send to back command.
+    * @@param name the command name
+    * @@param view the target view
+    */
+    public SendToBackCommand(String name, DrawingView view) {
+        super(name, view);
+    }
+
+    public void execute() {
+    	setUndoActivity(createUndoActivity());
+    	getUndoActivity().setAffectedFigures(new ReverseFigureEnumerator(view().selectionZOrdered()));
+d40 9
+a48 9
+        while (fe.hasMoreElements()) {
+            view().drawing().sendToBack(fe.nextFigure());
+        }
+        view().checkDamage();
+    }
+
+    public boolean isExecutable() {
+        return view().selectionCount() > 0;
+    }
+d66 1
+a66 1
+	        	return false;
+a72 1
+System.out.println("CurrentFigure sendToBack: " + currentFigure + " .. " + currentFigureLayer);
+d76 1
+a76 1
+		    return true;
+d109 6
+a114 6
+	        FigureEnumeration copyFe = getAffectedFigures();
+	        while (copyFe.hasMoreElements()) {
+	            Figure f = copyFe.nextFigure();
+	            int originalLayer = getDrawingView().drawing().getLayer(f);
+            	addOriginalLayer(f, originalLayer);
+	        }
+@
+
+
+1.4
+log
+@before merge for version 5.3 (dnd, undo,...)
+@
+text
+@d2 1
+a2 1
+ * @@(#)SendToBackCommand.java 5.2
+d4 6
+d14 3
+a17 2
+import CH.ifa.draw.util.*;
+import CH.ifa.draw.framework.*;
+d21 4
+a24 4
+ */
+public class SendToBackCommand extends Command {
+
+    private DrawingView fView;
+d32 1
+a32 2
+        super(name);
+        fView = view;
+d36 5
+a40 3
+       FigureEnumeration k = new ReverseFigureEnumerator(fView.selectionZOrdered());
+       while (k.hasMoreElements()) {
+            fView.drawing().sendToBack(k.nextFigure());
+d42 1
+a42 1
+        fView.checkDamage();
+d46 1
+a46 1
+        return fView.selectionCount() > 0;
+d49 68
+a117 2
+
+
+@
+
+
+1.3
+log
+@- SelectionFigure is now an interface. The default implementation CH.ifa.draw.standard.StandardSelectionFigure
+- A FigureSelectionListener interface has been introduced in CH.ifa.draw.framework. An DrawingEditor
+  is now a FigureSelectionListener and the signature for all selectionChanged() methods has been
+  changed to figureSelectionChanged().
+- CH.ifa.draw.util.Command is now an interface. A AbstractCommand can be found in CH.ifa.draw.standard.
+- All commands used to have a fView field. This has been moved to CH.ifa.draw.standard.AbstactCommand
+- A CH.ifa.draw.standard.StandardDrawingView has now a paintComponents() method instead of a paint()
+  and update() method. This allows the CH.ifa.draw.util.FloatingTextField to be a javax.swing.JTextField
+  instead of a java.awt.TextField.
+- CH.ifa.draw.figures.AbstractLineDecorator has been missing
+- DrawApplet, DrawApplication and derived classes are now programmed towards the DrawingView interface
+  instead of using StandardDrawingView. That leads to occasional cast when some additional StandardDrawingView
+  functionality is required in some specialized cases. Applications that were derived from DrawApplication
+  and used to override the createContents() methods should now return a DrawingView as well
+@
+text
+@d9 1
+d15 3
+a17 1
+public class SendToBackCommand extends AbstractCommand {
+d25 2
+a26 1
+        super(name, view);
+d30 1
+a30 1
+       FigureEnumeration k = new ReverseFigureEnumerator(view().selectionZOrdered());
+d32 1
+a32 1
+            view().drawing().sendToBack(k.nextFigure());
+d34 1
+a34 1
+        view().checkDamage();
+d38 1
+a38 1
+        return view().selectionCount() > 0;
+@
+
+
+1.2
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@a8 1
+import CH.ifa.draw.util.*;
+d14 1
+a14 3
+public class SendToBackCommand extends Command {
+
+    private DrawingView fView;
+d22 1
+a22 2
+        super(name);
+        fView = view;
+d26 1
+a26 1
+       FigureEnumeration k = new ReverseFigureEnumerator(fView.selectionZOrdered());
+d28 1
+a28 1
+            fView.drawing().sendToBack(k.nextFigure());
+d30 1
+a30 1
+        fView.checkDamage();
+d34 1
+a34 1
+        return fView.selectionCount() > 0;
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d2 1
+a2 1
+ * @@(#)SendToBackCommand.java 5.1
+@
+
+
+1.1.1.1
+log
+@
+Initial revision.
+@
+text
+@@

@@ -1,0 +1,238 @@
+head	1.2;
+access;
+symbols
+	jhotdraw60b1-release:1.2
+	package_rename:1.2
+	directory_rename:1.1
+	reorg_6x_split_initial:1.1
+	MVC_PHASE1:1.1.0.10
+	NEW_ATTRIBUTES:1.1.0.8
+	DNOYEB1_ALPHA-2:1.1.4.5
+	release_JHD54b1:1.1
+	BUGFIX_670992:1.1.0.6
+	DNOYEB1_ALPHA-1:1.1.4.4
+	dnoyeb1:1.1.0.4
+	repack:1.1.0.2
+	Root_repack:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2004.01.09.22.53.41;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2002.09.22.08.58.22;	author mrfloppy;	state Exp;
+branches
+	1.1.4.1;
+next	;
+
+1.1.4.1
+date	2003.01.14.18.25.52;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.2;
+
+1.1.4.2
+date	2003.01.16.22.38.46;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.3;
+
+1.1.4.3
+date	2003.01.17.21.56.05;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.4;
+
+1.1.4.4
+date	2003.01.21.00.04.38;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.5;
+
+1.1.4.5
+date	2003.01.26.00.51.16;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@/*
+ * @@(#)InsertIntoDrawingVisitor.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.standard;
+
+import org.jhotdraw.framework.*;
+import org.jhotdraw.util.CollectionsFactory;
+
+import java.util.Set;
+
+/**
+ * @@author  Wolfram Kaiser <mrfloppy@@sourceforge.net>
+ * @@version <$CURRENT_VERSION$>
+ */
+public class InsertIntoDrawingVisitor implements FigureVisitor {
+	private Set myInsertedFigures;
+	private Drawing myDrawing;
+
+	public InsertIntoDrawingVisitor(Drawing newDrawing) {
+		myInsertedFigures = CollectionsFactory.current().createSet();
+		setDrawing(newDrawing);
+	}
+
+	private void setDrawing(Drawing newDrawing) {
+		myDrawing = newDrawing;
+	}
+
+	protected Drawing getDrawing() {
+		return myDrawing;
+	}
+
+	public void visitFigure(Figure hostFigure) {
+		if (!myInsertedFigures.contains(hostFigure) && !getDrawing().includes(hostFigure)) {
+			Figure addedFigure = getDrawing().add(hostFigure);
+			myInsertedFigures.add(addedFigure);
+		}
+	}
+
+	public void visitHandle(Handle hostHandle) {
+	}
+
+	public void visitFigureChangeListener(FigureChangeListener hostFigureChangeListener) {
+//		hostFigureChangeListener.visit(this);
+	}
+
+	public FigureEnumeration getInsertedFigures() {
+		return new FigureEnumerator(myInsertedFigures);
+	}
+}
+@
+
+
+1.1
+log
+@introduce FigureVisitor for paste/delete commands
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.standard;
+d14 2
+a15 2
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.util.CollectionsFactory;
+@
+
+
+1.1.4.1
+log
+@DecoratorFigure is 'changed'  I think it needs reworking.  not its only used durint draw(Graphics g) but I don't think
+that was its real intention?
+
+The Figure added or removed is nolonger changed during the add or remove process.  Thus add and remove do not return
+values.
+orphan is used internally to the drawing only.
+remove calls figure.remove() which intern orphans the figure.
+remove(Figure f) is still present and used but currently not needed.  call figure.remove() instead.
+perhaps we can add a method on the figure enumerator to 'remove' all the figures within it.
+Figure no longer exposes its listeners.  call methods on figure to send events.
+
+
+Serialization in every form needs cleanup now.  Some due to earlier changes made by myself like making listeners of
+inner classes, but not storing the listener when the figures are stored. (since the figures think the inner listener
+is their container.)
+@
+text
+@d42 2
+a43 4
+			getDrawing().add(hostFigure);
+			myInsertedFigures.add(hostFigure);
+			//Figure addedFigure = getDrawing().add(hostFigure);
+			//myInsertedFigures.add(addedFigure);
+@
+
+
+1.1.4.2
+log
+@Various comments.
+Fixed undo bug which always restored dependent figures, even if they were deleted in a
+seperate operation.
+@
+text
+@a58 5
+	/**
+	 * do nothing special with dependent figures.
+	 */
+	public void visitDependendFigure(Figure dependentFigure){
+	}
+@
+
+
+1.1.4.3
+log
+@view addToSelection used drawing.includes(figure) but selectionZOrdered uses figures()
+these are 2 different sets of figures.  changed addToSelection to use containsFigure()
+Added some experimental copy constructors that are not being used.
+some trivial comments.
+@
+text
+@d60 1
+a60 2
+	 * do nothing special with dependent figures.  The dependent figures should
+	 * already be mixed in with the main figures.  no need to visit them.
+@
+
+
+1.1.4.4
+log
+@Restored the ContainerFigure.  Its very problematic for tools, but I have a better understanding of the undo system now.
+As a result I have restored most of what was their again with explanations on how it works for the next traveler...
+Also fixed a few issues with grouping and ungrouping. since figures can no longer be in 2 containers at once the container
+hopping that was being done by the group command would fail.  I believe border tool did similar hopping by having a figure
+as part of the drawing and part of the borderFigure temporarily.  Cant do that anymore.
+@
+text
+@d42 4
+a45 2
+			Figure addedFigure = getDrawing().add(hostFigure);
+			myInsertedFigures.add(addedFigure);
+d58 6
+@
+
+
+1.1.4.5
+log
+@CompositeFigure does not return figures from add, remove, orphan anymore
+new method, restore added to bring back orphaned figures
+compositeFigure keeps record of its orphans for the restore method
+NullFigures inserted as placeholders into the figureList
+dumps record and nullFigures when remove(figure) called. this safely restores
+figures to their old places.
+figureRequestRemove and figureRemove events eliminated.
+Group and Ungroup commands redone to respect these new ideas.
+have not done anything with delete, cut, copy, paste yet.
+NullFigure added 0,0 for its display box, else throwing exceptions
+@
+text
+@d42 2
+a43 2
+			getDrawing().add(hostFigure);
+			myInsertedFigures.add(hostFigure);
+@
+
+

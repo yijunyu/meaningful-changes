@@ -1,0 +1,490 @@
+head	1.6;
+access;
+symbols
+	jhotdraw60b1-release:1.6
+	package_rename:1.6
+	directory_rename:1.5
+	reorg_6x_split_initial:1.5
+	MVC_PHASE1:1.5.0.4
+	NEW_ATTRIBUTES:1.5.0.2
+	DNOYEB1_ALPHA-2:1.4.4.2
+	release_JHD54b1:1.5
+	BUGFIX_670992:1.4.0.6
+	DNOYEB1_ALPHA-1:1.4.4.1
+	dnoyeb1:1.4.0.4
+	repack:1.4.0.2
+	Root_repack:1.4
+	Before_FigureVisitor:1.4
+	JHotDraw_5-3:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.6
+date	2004.01.09.22.53.40;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2003.01.30.00.27.34;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2002.08.21.08.06.00;	author mrfloppy;	state Exp;
+branches
+	1.4.4.1;
+next	1.3;
+
+1.3
+date	2002.08.04.23.01.49;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.10.24.21.15.19;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.10.24.20.37.15;	author mrfloppy;	state Exp;
+branches;
+next	;
+
+1.4.4.1
+date	2003.01.15.21.04.21;	author dnoyeb;	state Exp;
+branches;
+next	1.4.4.2;
+
+1.4.4.2
+date	2003.01.29.04.22.31;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@/*
+ * @@(#)UndoManager.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.util;
+
+import org.jhotdraw.framework.DrawingView;
+
+import java.util.List;
+import java.util.Iterator;
+
+/**
+ * This class manages all the undoable commands. It keeps track of all
+ * the modifications done through user interactions.
+ *
+ * @@author  Wolfram Kaiser <mrfloppy@@users.sourceforge.net>
+ * @@version <$CURRENT_VERSION$>
+ */
+public class UndoManager {
+	/**
+	 * Maximum default buffer size for undo and redo stack
+	 */
+	public static final int DEFAULT_BUFFER_SIZE = 20;
+
+	/**
+	 * Collection of undo activities
+	 */
+	private List redoStack;
+
+	/**
+	 * Collection of undo activities
+	 */
+	private List undoStack;
+	private int maxStackCapacity;
+
+	public UndoManager() {
+		this(DEFAULT_BUFFER_SIZE);
+	}
+
+	public UndoManager(int newUndoStackSize) {
+		maxStackCapacity = newUndoStackSize;
+		undoStack = CollectionsFactory.current().createList(maxStackCapacity);
+		redoStack = CollectionsFactory.current().createList(maxStackCapacity);
+	}
+
+	public void pushUndo(Undoable undoActivity) {
+		if (undoActivity.isUndoable()) {
+			removeFirstElementInFullList(undoStack);
+			undoStack.add(undoActivity);
+		}
+		else {
+			// a not undoable activity clears the stack because
+			// the last activity does not correspond with the
+			// last undo activity
+			undoStack = CollectionsFactory.current().createList(maxStackCapacity);
+		}
+	}
+
+	public void pushRedo(Undoable redoActivity) {
+		if (redoActivity.isRedoable()) {
+
+			removeFirstElementInFullList(redoStack);
+
+			// add redo activity only if it is not already the last
+			// one in the buffer
+			if ((getRedoSize() == 0) || (peekRedo() != redoActivity)) {
+				redoStack.add(redoActivity);
+			}
+		}
+		else {
+			// a not undoable activity clears the tack because
+			// the last activity does not correspond with the
+			// last undo activity
+			redoStack = CollectionsFactory.current().createList(maxStackCapacity);
+		}
+	}
+
+	/**
+	 * If buffersize exceeds, remove the oldest command
+	 */
+	private void removeFirstElementInFullList(List l) {
+		if (l.size() >= maxStackCapacity) {
+			Undoable removedActivity = (Undoable)l.remove(0);
+			removedActivity.release();
+		}
+	}
+
+	private Undoable getLastElement(List l) {
+		if (l.size() > 0) {
+			return (Undoable)l.get(l.size() - 1);
+		}
+		else {
+			return null;
+		}
+	}
+	public boolean isUndoable() {
+		if (getUndoSize() > 0) {
+			return getLastElement(undoStack).isUndoable();
+		}
+		else {
+			return false;
+		}
+	}
+
+	public boolean isRedoable() {
+		if (getRedoSize() > 0) {
+			return getLastElement(redoStack).isRedoable();
+		}
+		else {
+			return false;
+		}
+	}
+
+	protected Undoable peekUndo() {
+		if (getUndoSize() > 0) {
+			return getLastElement(undoStack);
+		}
+		else {
+			return null;
+		}
+	}
+
+	protected Undoable peekRedo() {
+		if (getRedoSize() > 0) {
+			return getLastElement(redoStack);
+		}
+		else {
+			return null;
+		}
+	}
+
+	/**
+	 * Returns the current size of undo buffer.
+	 */
+	public int getUndoSize() {
+		return undoStack.size();
+	}
+
+	/**
+	 * Returns the current size of redo buffer.
+	 */
+	public int getRedoSize() {
+		return redoStack.size();
+	}
+
+	/**
+	 * Throw NoSuchElementException if there is none
+	 */
+	public Undoable popUndo() {
+		// Get the last element - throw NoSuchElementException if there is none
+		Undoable lastUndoable = peekUndo();
+
+		// Remove it from undo collection
+		undoStack.remove(getUndoSize() - 1);
+
+		return lastUndoable;
+	}
+
+	/**
+	 * Throw NoSuchElementException if there is none
+	 */
+	public Undoable popRedo() {
+		// Get the last element - throw NoSuchElementException if there is none
+		Undoable lastUndoable = peekRedo();
+
+		// Remove it from undo collection
+		redoStack.remove(getRedoSize() - 1);
+
+		return lastUndoable;
+	}
+
+	public void clearUndos() {
+		clearStack(undoStack);
+	}
+
+	public void clearRedos() {
+		clearStack(redoStack);
+	}
+
+	protected void clearStack(List clearStack) {
+		clearStack.clear();
+	}
+
+	/**
+	 * Removes all undo activities that operate on the given DrawingView.
+	 * @@param checkDV DrawingView which is compared undo's DrawingView
+	 */
+	public void clearUndos(DrawingView checkDV) {
+		Iterator iter = undoStack.iterator();
+		while (iter.hasNext()) {
+			Undoable currentUndo = (Undoable)iter.next();
+			if (currentUndo.getDrawingView() == checkDV) {
+				iter.remove();
+			}
+		}
+	}
+
+	/**
+	 * Removes all redo activities that operate on the given DrawingView.
+	 * @@param checkDV DrawingView which is compared redo's DrawingView
+	 */
+	public void clearRedos(DrawingView checkDV) {
+		Iterator iter = redoStack.iterator();
+		while (iter.hasNext()) {
+			Undoable currentRedo = (Undoable)iter.next();
+			if (currentRedo.getDrawingView() == checkDV) {
+				iter.remove();
+			}
+		}
+	}
+}
+@
+
+
+1.5
+log
+@prepare for 5.4 release: various bug fixes
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.util;
+d14 1
+a14 1
+import CH.ifa.draw.framework.DrawingView;
+@
+
+
+1.4
+log
+@extended functionality for enumerations (reset, and-enumeration) and a few bug fixes
+@
+text
+@d14 2
+d17 1
+d23 1
+a23 1
+ * @@author  Wolfram Kaiser <mrfloppy@@sourceforge.net>
+d189 28
+@
+
+
+1.4.4.1
+log
+@
+Lets have a moment of silence for DecoratorFigure.....It was a good figure ;{
+
+Anything which happens inside the drawing after figure add must be undone before figure orphan.  It must also not
+be exposed to anyobject outside the drawing.
+Decorator figure retired in favor of a figureManipulator and the other functions being implemented by a composite
+figure(BorderDecorator).
+AdnimationDecorator retired in favor of AnimationManipulator.
+A figure can have only 1 container. This is making the border tool have a hard time.
+
+Lots of comments added
+
+next phase:
+orphan will disappear.  only add and remove remain.  All figure related resources belong to the figures and no other
+object should care about figure.release.
+split the figureListener into a figureContainer listener and a figureChangeListener.
+Fix BorderDecorator.
+Fix ConnectedText.
+view.checkDamage to call drawing.update()
+@
+text
+@d62 1
+a62 4
+	/**
+	 * Need a falling activity that if its the next one, it automatically gets
+	 * redone. !!!dnoyeb!!!
+	 */
+@
+
+
+1.4.4.2
+log
+@Undo clears when file saved.
+@
+text
+@a179 4
+		while(isUndoable()){
+			Undoable u = popUndo();
+			u.release();
+		}
+d182 1
+a183 4
+		while(isRedoable()){
+			Undoable r = popRedo();
+			r.release();
+		}
+d186 1
+@
+
+
+1.3
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d87 2
+a88 1
+			l.remove(0);
+@
+
+
+1.2
+log
+@merge dnd (before 5.3)
+@
+text
+@d14 1
+a14 2
+import CH.ifa.draw.framework.*;
+import java.util.*;
+d17 1
+a17 1
+ * This class manages all the undoable commands. It keeps track of all 
+d20 1
+d32 2
+a33 2
+	private Vector redoStack;
+		
+d37 1
+a37 1
+	private Vector undoStack;
+d39 1
+a39 1
+	
+d46 2
+a47 2
+		undoStack = new Vector(maxStackCapacity);
+		redoStack = new Vector(maxStackCapacity);
+d52 2
+a53 6
+			// If buffersize exceeds, remove the oldest command
+			if (getUndoSize() >= maxStackCapacity) {
+				undoStack.removeElementAt(0);
+			}
+		
+			undoStack.addElement(undoActivity);
+d59 1
+a59 1
+			undoStack = new Vector(maxStackCapacity);
+d65 3
+a67 5
+			// If buffersize exceeds, remove the oldest command
+			if (getRedoSize() >= maxStackCapacity) {
+				redoStack.removeElementAt(0);
+			}
+		
+d71 1
+a71 1
+				redoStack.addElement(redoActivity);
+d78 1
+a78 1
+			redoStack = new Vector(maxStackCapacity);
+d82 17
+d101 1
+a101 1
+			return ((Undoable)undoStack.lastElement()).isUndoable();
+d107 1
+a107 1
+	
+d110 1
+a110 1
+			return ((Undoable)redoStack.lastElement()).isRedoable();
+d119 1
+a119 1
+			return (Undoable) undoStack.lastElement();
+d128 1
+a128 1
+			return (Undoable) redoStack.lastElement();
+d157 2
+a158 2
+		undoStack.removeElementAt(getUndoSize() - 1);
+		
+d170 1
+a170 1
+		redoStack.removeElementAt(getRedoSize() - 1);
+d182 3
+a184 3
+	
+	protected void clearStack(Vector clearStack) {
+		clearStack.removeAllElements();
+@
+
+
+1.1
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@a53 1
+//				((Undoable)undoStack.elementAt(0)).release();
+a57 1
+System.out.println("pushUndo: " + undoStack.size() + " .. " + undoActivity);
+a70 1
+//				((Undoable)redoStack.elementAt(0)).release();
+a78 1
+System.out.println("pushRedo: " + redoStack.size() + " .. " + redoActivity);
+a169 1
+System.out.println("Redos cleared: " + redoStack.size());
+a172 5
+/*		Enumeration fe = clearStack.elements();
+		while (fe.hasMoreElements()) {
+			((Undoable)fe.nextElement()).release();
+		}
+*/
+@
+

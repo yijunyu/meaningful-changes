@@ -1,0 +1,1070 @@
+head	1.14;
+access;
+symbols
+	jhotdraw54b2-release:1.14
+	reorg_6x_split:1.14
+	MVC_PHASE1:1.14.0.4
+	NEW_ATTRIBUTES:1.14.0.2
+	DNOYEB1_ALPHA-2:1.11.4.2
+	release_JHD54b1:1.14
+	BUGFIX_670992:1.13.0.2
+	DNOYEB1_ALPHA-1:1.11.4.1
+	dnoyeb1:1.11.0.4
+	repack:1.11.0.2
+	Root_repack:1.11
+	Before_FigureVisitor:1.10
+	JHotDraw_5-3:1.6
+	JHotDraw_5-2_merged:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.14
+date	2003.01.30.00.27.33;	author mrfloppy;	state Exp;
+branches;
+next	1.13;
+
+1.13
+date	2003.01.12.20.21.16;	author dnoyeb;	state Exp;
+branches;
+next	1.12;
+
+1.12
+date	2003.01.03.00.55.32;	author dnoyeb;	state Exp;
+branches;
+next	1.11;
+
+1.11
+date	2002.09.22.08.58.23;	author mrfloppy;	state Exp;
+branches
+	1.11.4.1;
+next	1.10;
+
+1.10
+date	2002.08.14.09.01.58;	author mrfloppy;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2002.08.06.09.30.22;	author mrfloppy;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2002.08.04.22.39.17;	author mrfloppy;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2002.04.30.20.40.06;	author mrfloppy;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2002.01.19.18.31.31;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2001.10.24.21.15.18;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2001.10.24.20.32.00;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.10.24.20.25.12;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.06.29.13.42.13;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.03.09.15.31.46;	author mrfloppy;	state Exp;
+branches;
+next	;
+
+1.11.4.1
+date	2003.01.03.16.03.58;	author dnoyeb;	state Exp;
+branches;
+next	1.11.4.2;
+
+1.11.4.2
+date	2003.01.26.15.58.49;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.14
+log
+@prepare for 5.4 release: various bug fixes
+@
+text
+@/*
+ * @@(#)MDI_DrawApplication.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package CH.ifa.draw.contrib;
+
+import CH.ifa.draw.application.*;
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.standard.*;
+import CH.ifa.draw.contrib.dnd.DragNDropTool;
+
+import javax.swing.*;
+
+/**
+ * Many applications have the ability to deal with multiple internal windows.
+ * MDI_DrawApplications provides the basic facilities to make use of MDI in
+ * JHotDraw. Its main tasks are to create a content for DrawApplications, which
+ * is embedded in internal frames, to maintain a list with all internal frames
+ * and to manage the switching between them.
+ *
+ * @@author  Wolfram Kaiser <mrfloppy@@users.sourceforge.net>
+ * @@version <$CURRENT_VERSION$>
+ */
+public class MDI_DrawApplication extends DrawApplication {
+
+	/**
+	 * Constructs a drawing window with a default title.
+	 */
+	public MDI_DrawApplication() {
+		this("JHotDraw");
+	}
+
+	/**
+	 * Constructs a drawing window with the given title.
+	 */
+	public MDI_DrawApplication(String title) {
+		super(title);
+	}
+
+	/**
+	 * Factory method which can be overriden by subclasses to
+	 * create an instance of their type.
+	 *
+	 * @@return	newly created application
+	 */
+	protected DrawApplication createApplication() {
+		return new MDI_DrawApplication();
+	}
+
+	/**
+	 * Creates the tools. By default only the selection tool is added.
+	 * Override this method to add additional tools.
+	 * Call the inherited method to include the selection tool.
+	 * @@param palette the palette where the tools are added.
+	 */
+	protected void createTools(JToolBar palette) {
+		super.createTools(palette);
+		Tool tool = new DragNDropTool(this);
+		ToolButton tb = createToolButton(IMAGES+"SEL", "Drag N Drop Tool", tool);
+		palette.add( tb );
+	}
+
+	/**
+	 * Opens a new internal frame containing a new drawing.
+	 */
+	public void promptNew() {
+		newWindow(createDrawing());
+	}
+
+	/**
+	 * Method to create a new internal frame.  Applications that want
+	 * to create a new internal drawing view should call this method.
+	 */
+	public void newWindow(Drawing newDrawing) {
+		DrawingView newView = createDrawingView(newDrawing);
+		getDesktop().addToDesktop(newView, Desktop.PRIMARY);
+		toolDone();
+	}
+
+	/**
+	 * Create the DrawingView that is active when the application is started.
+	 * This initial DrawingView might be different from DrawingView created
+	 * by the application, so subclasses can override this method to provide
+	 * a special drawing view for application startup time, e.g. a NullDrawingView
+	 * which does not display an internal frame in a multiple document interface
+	 * (MDI) application.
+	 *
+	 * @@return drawing view that is active at application startup time
+	 */
+	protected DrawingView createInitialDrawingView() {
+		return NullDrawingView.getManagedDrawingView(this);
+	}
+
+	/**
+	 * Open a new view for this application containing a
+	 * view of the drawing of the currently activated window.
+	 */
+	public void newView() {
+		if (!view().isInteractive()) {
+			return;
+		}
+
+		// create new window with view to an existing drawing
+		newWindow(view().drawing());
+
+		String copyTitle = getDrawingTitle();
+		if (copyTitle != null) {
+			setDrawingTitle(copyTitle);
+		}
+		else {
+			setDrawingTitle(getDefaultDrawingTitle());
+		}
+	}
+
+	/**
+	 * Factory method to create a specialized desktop (manager) for MDI applications
+	 */
+	protected Desktop createDesktop() {
+		return new MDIDesktopPane(this);
+	}
+
+	/**
+	 * Returns all the views in the application
+	 */
+	public DrawingView[] views() {
+		return getDesktop().getAllFromDesktop(Desktop.PRIMARY);
+	}
+
+	public String getDefaultDrawingTitle() {
+		return super.getDefaultDrawingTitle() + views().length;
+	}
+
+	/**
+	 * Set the title of the currently selected drawing
+	 */
+	protected void setDrawingTitle(String drawingTitle) {
+		getDesktop().updateTitle(drawingTitle);
+	}
+}
+@
+
+
+1.13
+log
+@Clean up head to be what it was before i mistakenly committed my changes to it.
+My changes should have been committed to a branch, and let mrfloppy merge to the trunk.
+This will happen from now on.
+@
+text
+@d28 1
+a28 1
+ * @@author  Wolfram Kaiser <mrfloppy@@sourceforge.net>
+@
+
+
+1.12
+log
+@Improved drawing and application title handling.
+MDI was not setting activeDrawingView to null when last was closed.
+New drawingTitleChange event.
+@
+text
+@d71 7
+a103 1
+     * interesting to check for interactive here.  should be context menu catches that
+d106 1
+a106 1
+		if (!getDesktop().getActiveDrawingView().isInteractive()) {
+d109 1
+d111 9
+a119 1
+		newWindow(getDesktop().getActiveDrawingView().drawing());
+d126 1
+a126 1
+		return new MDIDesktopPane();
+d137 8
+a144 19
+		//return super.getDefaultDrawingTitle() + views().length;
+        DrawingView [] dvs = getDesktop().getAllFromDesktop(Desktop.PRIMARY);
+        int x=1;
+        while(true){
+            String name = super.getDefaultDrawingTitle() + x;
+            boolean good = true;
+            for(int i=0;i<dvs.length;i++){
+                if(dvs[i].drawing().getTitle().equals(name)){
+                    good = false;
+                    break;
+                }
+            }
+            if(good == true){
+                return name;
+            }
+            else {
+                x++;
+            }
+        }        
+@
+
+
+1.11
+log
+@introduce FigureVisitor for paste/delete commands
+@
+text
+@a70 7
+	 * Opens a new internal frame containing a new drawing.
+	 */
+	public void promptNew() {
+		newWindow(createDrawing());
+	}
+
+	/**
+d97 1
+d100 1
+a100 1
+		if (!view().isInteractive()) {
+a102 1
+
+d104 1
+a104 9
+		newWindow(view().drawing());
+
+		String copyTitle = getDrawingTitle();
+		if (copyTitle != null) {
+			setDrawingTitle(copyTitle);
+		}
+		else {
+			setDrawingTitle(getDefaultDrawingTitle());
+		}
+d111 1
+a111 1
+		return new MDIDesktopPane(this);
+d122 19
+a140 8
+		return super.getDefaultDrawingTitle() + views().length;
+	}
+
+	/**
+	 * Set the title of the currently selected drawing
+	 */
+	protected void setDrawingTitle(String drawingTitle) {
+		getDesktop().updateTitle(drawingTitle);
+@
+
+
+1.11.4.1
+log
+@Improved drawing and application title handling.
+MDI was not setting activeDrawingView to null when last was closed.
+New drawingTitleChange event.
+@
+text
+@d71 7
+a103 1
+     * interesting to check for interactive here.  should be context menu catches that
+d106 1
+a106 1
+		if (!getDesktop().getActiveDrawingView().isInteractive()) {
+d109 1
+d111 9
+a119 1
+		newWindow(getDesktop().getActiveDrawingView().drawing());
+d126 1
+a126 1
+		return new MDIDesktopPane();
+d137 8
+a144 19
+		//return super.getDefaultDrawingTitle() + views().length;
+        DrawingView [] dvs = getDesktop().getAllFromDesktop(Desktop.PRIMARY);
+        int x=1;
+        while(true){
+            String name = super.getDefaultDrawingTitle() + x;
+            boolean good = true;
+            for(int i=0;i<dvs.length;i++){
+                if(dvs[i].drawing().getTitle().equals(name)){
+                    good = false;
+                    break;
+                }
+            }
+            if(good == true){
+                return name;
+            }
+            else {
+                x++;
+            }
+        }        
+@
+
+
+1.11.4.2
+log
+@hack for [ 674973 ] Context Sensitive menu updates
+add used instead of restore since its easier for the CompositeFigure to decide wether to add or
+to restore.
+@
+text
+@d117 2
+a118 6
+	public DrawingView [] views() {
+		DrawingView [] dvs = getDesktop().getAllFromDesktop(Desktop.PRIMARY);
+		if(dvs.length == 0){
+			dvs = new DrawingView[] { NullDrawingView.getManagedDrawingView(this) };
+		}
+		return dvs;
+@
+
+
+1.10
+log
+@no message
+@
+text
+@d139 7
+@
+
+
+1.9
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d87 10
+d101 4
+d122 3
+d137 1
+a137 1
+		return super.getDefaultDrawingTitle() + getDesktop().getAllFromDesktop(0).length;
+@
+
+
+1.8
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d95 4
+a99 3
+		DrawingView newView = createDrawingView();
+		newView.setDrawing(view().drawing());
+		getDesktop().addToDesktop(newView, Desktop.PRIMARY);
+a105 1
+		toolDone();
+d117 4
+@
+
+
+1.7
+log
+@no message
+@
+text
+@d17 2
+a18 2
+import CH.ifa.draw.figures.*;
+import CH.ifa.draw.util.*;
+a19 3
+import javax.swing.event.*;
+import java.awt.*;
+import java.util.*;
+d28 1
+a28 1
+ * @@author  Wolfram Kaiser
+d31 1
+a31 12
+public class MDI_DrawApplication extends DrawApplication implements InternalFrameListener {
+
+	/**
+	 * Internal frame, which is currently activated. This frame receives all
+	 * mouse input and displays the Drawing to be manipulated.
+	 */
+	private MDI_InternalFrame currentFrame;
+
+	/**
+	 * This component acts as a desktop for the content.
+	 */
+	private JComponent desktop;
+d34 1
+a34 1
+	 * List of listeners which adhere to the InternalFrameListener interface
+a35 5
+	private Vector mdiListeners;
+
+	/**
+	* Constructs a drawing window with a default title.
+	*/
+d41 2
+a42 2
+	* Constructs a drawing window with the given title.
+	*/
+a44 4
+		setDesktop(new MDIDesktopPane());
+		getDesktop().setAlignmentX(JComponent.LEFT_ALIGNMENT);
+		mdiListeners = new Vector();
+		addInternalFrameListener(this);
+d65 1
+a65 1
+		Tool tool = new DragNDropTool( this );
+a68 52
+	
+	/**
+	* Creates the contents component of the application
+	* frame. By default the DrawingView is returned in
+	* a JScrollPane.
+	*/
+	protected JComponent createContents(DrawingView view) {
+		if (view.isInteractive()) {
+			MDI_InternalFrame internalFrame = createInternalFrame(view);
+			JComponent contents = super.createContents(view);
+			internalFrame.getContentPane().add(contents);
+			getDesktop().add(internalFrame);
+			internalFrame.setVisible(true);
+			try {
+				internalFrame.setSelected(true);
+			}
+			catch (java.beans.PropertyVetoException e) {
+				// ignore
+			}
+		}
+		// return container in which the internal frame is embedded
+		return getDesktop();
+
+	}
+
+	/**
+	 * Factory method which creates an internal frame. Subclasses may override this
+	 * method to provide their own implementations of MDI_InternalFrame
+	 */
+	protected MDI_InternalFrame createInternalFrame(DrawingView view) {
+		String applicationTitle = null;
+		if ((view == null) || (view.drawing() == null) || (view.drawing().getTitle() == null)) {
+			applicationTitle =  getApplicationName() + " - " + getDefaultDrawingTitle();
+		}
+		else {
+			applicationTitle =  getApplicationName() + " - " + view.drawing().getTitle();
+		}
+		MDI_InternalFrame internalFrame = new MDI_InternalFrame(applicationTitle, true, true, true, true);
+		internalFrame.setDrawingView(view);
+		internalFrame.setSize(200, 200);
+
+		// all registered listeners to the new internal frame
+		Enumeration enum = mdiListeners.elements();
+		while (enum.hasMoreElements()) {
+			internalFrame.addInternalFrameListener((InternalFrameListener)enum.nextElement());
+		}
+
+		fireViewCreatedEvent(view); // frame now has connection all the way to heavyweight component
+
+		// return container in which the internal frame is embedded
+		return internalFrame;
+	}
+d71 1
+a71 2
+	 * Resets the drawing to a new empty drawing. If no internal frame
+	 * exists then open a new internal frame.
+d74 1
+a74 6
+		if (hasInternalFrames()) {
+			super.promptNew();
+		}
+		else {
+			newWindow(createDrawing());
+		}
+d82 2
+a83 3
+		DrawingView newView = createDrawingView();
+		newView.setDrawing(newDrawing);
+		createContents(newView);
+d98 3
+a100 3
+		createContents(newView);
+		if(copyTitle != null ) {
+			setDrawingTitle(copyTitle + " (View)");
+d103 1
+a103 1
+			setDrawingTitle( getDefaultDrawingTitle() + " (View)");
+d108 2
+a109 146
+	/**
+	* Set the component, in which the content is embedded. This component
+	* acts as a desktop for the content.
+	*/
+	protected void setDesktop(JComponent newDesktop) {
+		desktop = newDesktop;
+	}
+
+	/**
+	* Get the component, in which the content is embedded. This component
+	* acts as a desktop for the content.
+	*/
+	public JComponent getDesktop() {
+		return desktop;
+	}
+
+	/**
+	 * Add a new listener to the applications internal frames. If a new internal
+	 * frame is created, all currently registered InternalFrameListeners are
+	 * added as listeners to that internal frame as well.
+	 *
+	 * @@param newMDIListener listener to be added
+	 */
+	public void addInternalFrameListener(InternalFrameListener newMDIListener) {
+		mdiListeners.addElement(newMDIListener);
+	}
+
+	/**
+	 * Remove a InternalFrameListeners from the application.
+	 *
+	 * @@param oldMDIListener listener to be removed
+	 */
+	public void removeInternalFrameListener(InternalFrameListener oldMDIListener) {
+		mdiListeners.removeElement(oldMDIListener);
+	}
+
+	/**
+	* Activate an internal frame upon which the selected tools operate.
+	* The currently activated DrawgingView is backed up for later restorage.
+	*/
+	public void activateFrame(MDI_InternalFrame newFrame) {
+		if (currentFrame != newFrame) {
+			// check, whether drawing has been already initialised
+			if (newFrame.getDrawingView().drawing() != null) {
+				newFrame.getDrawingView().unfreezeView();
+			}
+			if (currentFrame != null ) {
+				currentFrame.getDrawingView().freezeView();
+			}
+			currentFrame = newFrame;
+		}
+		setView( currentFrame.getDrawingView() );
+	}
+
+	/**
+	 * If the frame we are deactivating is the current frame, set the
+	 * currentFrame to null
+	 */
+	public void deactivateFrame(MDI_InternalFrame frame) {
+		if (frame != null) {
+			frame.getDrawingView().clearSelection();
+		}
+		if (currentFrame == frame ) {
+			currentFrame = null;
+		}
+	}
+
+	/**
+	* Notification method from InternalFrameListener, which is called
+	* if a internal frame gets selected.
+	*/
+	public void internalFrameActivated(InternalFrameEvent e) {
+		activateFrame((MDI_InternalFrame)e.getSource());
+	}
+
+	/**
+	 * Notification method from InternalFrameListener, which is called
+	 * if a internal frame is opend.
+	 */
+	public void internalFrameOpened(InternalFrameEvent e) {
+	}
+
+	/**
+	 * Notification method from InternalFrameListener, which is called
+	 * before a internal frame is closed.
+	 */
+	public void internalFrameClosing(InternalFrameEvent e) {
+		MDI_InternalFrame mdf = (MDI_InternalFrame)e.getSource();
+		DrawingView dv = mdf.getDrawingView();
+		fireViewDestroyingEvent( dv );
+		if( mdf == currentFrame) {
+			currentFrame = null;
+			setView(NullDrawingView.getManagedDrawingView(this));
+		}
+	}
+
+	/**
+	 * Notification method from InternalFrameListener, which is called
+	 * if a internal frame is closed.
+	 */
+	public void internalFrameClosed(InternalFrameEvent e) {
+	}
+
+	/**
+	 * Notification method from InternalFrameListener, which is called
+	 * if a internal frame gets iconified.
+	 */
+	public void internalFrameIconified(InternalFrameEvent e) {
+	}
+
+	/**
+	 * Notification method from InternalFrameListener, which is called
+	 * if a internal frame gets deiconified.
+	 */
+	public void internalFrameDeiconified(InternalFrameEvent e) {
+		//activateFrame((MDI_InternalFrame)e.getSource());
+	}
+
+	/**
+	 * Notification method from InternalFrameListener, which is called
+	 * if a internal frame gets deactivated.
+	 */
+	public void internalFrameDeactivated(InternalFrameEvent e) {
+		deactivateFrame((MDI_InternalFrame)e.getSource());
+	}
+
+	/**
+	 * Set the title for the drawing. The title also appears in the
+	 * internal frame title bar. A name is assigned when a drawing
+	 * saved or a saved drawing is loaded. The file name is the
+	 * drawing title. If the drawing has not been saved before then
+	 * the drawing title is "untitled".
+	 */
+	protected void setDrawingTitle(String newDrawingTitle) {
+		currentFrame.setTitle( getApplicationName() + " - " + newDrawingTitle );
+	}
+
+	/**
+	 * Get the title for the drawing.
+	 */
+	protected String getDrawingTitle() {
+		return currentFrame.getDrawing().getTitle();
+	}
+
+	public boolean hasInternalFrames() {
+		return ((JDesktopPane)getDesktop()).getAllFrames().length > 0;
+d116 1
+a116 16
+		DrawingView[] views;
+		ArrayList frames = new ArrayList();
+
+		JInternalFrame[] ifs = ((JDesktopPane)getDesktop()).getAllFrames();
+		for(int x=0; x < ifs.length ; x++) {
+			if( MDI_InternalFrame.class.isInstance( ifs[x] ) ) {
+				DrawingView dv = ((MDI_InternalFrame)ifs[x]).getDrawingView();
+				if( DrawingView.class.isInstance( dv ) ) {
+					frames.add( dv );
+				}
+			}
+	   }
+		views = new DrawingView[ frames.size() ];
+		frames.toArray( views );
+
+		return views;
+@
+
+
+1.6
+log
+@no message
+@
+text
+@d92 1
+d177 4
+a180 4
+		String copyTitle = view().drawing().getTitle();
+		DrawingView fView = createDrawingView();
+		fView.setDrawing( view().drawing() );
+		createContents(fView);
+d236 1
+a236 2
+			if(currentFrame != null )
+			{
+a237 1
+				currentFrame.getDrawingView().clearSelection();
+d243 1
+d249 4
+a252 1
+		if( currentFrame == frame ) {
+@
+
+
+1.5
+log
+@merge dnd (before 5.3)
+@
+text
+@d11 1
+a11 1
+ 
+d51 1
+a51 1
+	
+d103 1
+a103 1
+			internalFrame.setVisible(true);	//unsafe to set visible here since the desktopPane has not been added to desktop yet (and has no peer I don't believe)
+d156 1
+a156 1
+	
+d168 2
+a169 3
+/*	protected DrawingView createDrawingView() {
+		Dimension d = getDrawingViewSize();
+		return new StandardDrawingView(this, d.width, d.height);
+d171 1
+a171 1
+*/
+d188 1
+a188 1
+	
+d211 1
+a211 1
+	 */ 
+d215 1
+a215 1
+	
+d224 1
+a224 1
+	
+d253 1
+a253 1
+		
+d326 1
+a326 1
+	 */    
+a343 2
+			/* Can not use class.isInstance() here since DrawingView is an interface */
+			/* Can not use instanceof here since DrawingView is interface */
+@
+
+
+1.4
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@a42 6
+	 * If an internal frame gets activated, the StandardDrawingView is backed
+	 * up for later restorage.
+	 */
+	private DrawingView backupDrawingView;
+
+	/**
+d70 6
+a75 6
+    /**
+     * Factory method which can be overriden by subclasses to
+     * create an instance of their type.
+     *
+     * @@return	newly created application
+     */
+d79 13
+a91 1
+	
+d98 31
+a128 2
+		JComponent contents = super.createContents(view);
+		MDI_InternalFrame internalFrame = createInternalFrame();
+a130 5
+		internalFrame.getContentPane().add(contents);
+		if (currentFrame == null) {
+			currentFrame = internalFrame;
+			backupDrawingView = createDrawingView();
+		}
+d138 2
+a139 8
+		getDesktop().add(internalFrame);
+		try {
+			internalFrame.setSelected(true);
+		}
+		catch (java.beans.PropertyVetoException e) {
+			// ignore
+		}
+		internalFrame.setVisible(true);
+d141 1
+a141 1
+		return getDesktop();
+d145 2
+a146 2
+	 * Factory method which creates an internal frame. Subclasses may override this
+	 * method to provide their own implementations of MDI_InternalFrame
+d148 7
+a154 2
+	protected MDI_InternalFrame createInternalFrame() {
+		return new MDI_InternalFrame("untitled", true, true, true, true);
+d156 1
+a156 14
+
+    /**
+     * Resets the drawing to a new empty drawing. If no internal frame
+     * exists then open a new internal frame.
+     */
+    public void promptNew() {
+		if (hasInternalFrames()) {
+	    	super.promptNew();
+    	}
+    	else {
+    		newWindow();
+    	}
+    }
+    
+d161 29
+a189 17
+    public void newWindow() {
+        DrawingView newView = createDrawingView();
+        Drawing newDrawing = createDrawing();
+        newView.setDrawing(newDrawing);
+        createContents(newView);
+        toolDone();
+    }
+
+    public void newView() {
+    	String copyTitle = getDrawingTitle();
+        DrawingView newView = createDrawingView();
+        newView.setDrawing(drawing());
+        createContents(newView);
+		setDrawingTitle(copyTitle + " (View)");
+        toolDone();
+    }
+    
+d208 2
+a209 1
+	 * frame is created, all currently registered InternalFrameListeners are added.
+d236 5
+a240 6
+			backupDrawingView.setDrawing(view().drawing());
+			currentFrame.replaceDrawingView(backupDrawingView);
+			currentFrame.validate();
+			currentFrame.getDrawingView().freezeView();
+			setDrawing(newFrame.getDrawingView().drawing());
+			backupDrawingView = newFrame.replaceDrawingView(view());
+d243 10
+d275 7
+d303 1
+a303 1
+		activateFrame((MDI_InternalFrame)e.getSource());
+d311 1
+d321 3
+a323 3
+    protected void setDrawingTitle(String newDrawingTitle) {
+    	currentFrame.setTitle(newDrawingTitle);
+    }
+d328 3
+a330 3
+    protected String getDrawingTitle() {
+    	return currentFrame.getTitle();
+    }
+d334 24
+@
+
+
+1.3
+log
+@before merge for version 5.3 (dnd, undo,...)
+@
+text
+@d2 1
+a2 1
+ * @@(#)MDI_DrawApplication.java 5.2
+d4 6
+a13 2
+import javax.swing.*;
+import javax.swing.event.*;
+d19 2
+d32 1
+a32 1
+ * @@version JHotDraw 5.2    31.08.1999
+d46 1
+a46 1
+	private StandardDrawingView backupDrawingView;
+d70 2
+a71 2
+		setDesktop(new JDesktopPane());
+		getDesktop().setAlignmentX(LEFT_ALIGNMENT);
+d91 1
+a91 1
+	protected JComponent createContents(StandardDrawingView view) {
+d146 4
+a149 4
+        StandardDrawingView fView = createDrawingView();
+        Drawing fDrawing = createDrawing();
+        fView.setDrawing(fDrawing);
+        createContents(fView);
+d155 3
+a157 3
+        StandardDrawingView fView = createDrawingView();
+        fView.setDrawing(drawing());
+        createContents(fView);
+d212 1
+a212 1
+			backupDrawingView = newFrame.replaceDrawingView((StandardDrawingView)view());
+d289 1
+a289 1
+}@
+
+
+1.2
+log
+@- SelectionFigure is now an interface. The default implementation CH.ifa.draw.standard.StandardSelectionFigure
+- A FigureSelectionListener interface has been introduced in CH.ifa.draw.framework. An DrawingEditor
+  is now a FigureSelectionListener and the signature for all selectionChanged() methods has been
+  changed to figureSelectionChanged().
+- CH.ifa.draw.util.Command is now an interface. A AbstractCommand can be found in CH.ifa.draw.standard.
+- All commands used to have a fView field. This has been moved to CH.ifa.draw.standard.AbstactCommand
+- A CH.ifa.draw.standard.StandardDrawingView has now a paintComponents() method instead of a paint()
+  and update() method. This allows the CH.ifa.draw.util.FloatingTextField to be a javax.swing.JTextField
+  instead of a java.awt.TextField.
+- CH.ifa.draw.figures.AbstractLineDecorator has been missing
+- DrawApplet, DrawApplication and derived classes are now programmed towards the DrawingView interface
+  instead of using StandardDrawingView. That leads to occasional cast when some additional StandardDrawingView
+  functionality is required in some specialized cases. Applications that were derived from DrawApplication
+  and used to override the createContents() methods should now return a DrawingView as well
+@
+text
+@d8 2
+a9 4
+import javax.swing.JComponent;
+import javax.swing.JDesktopPane;
+import javax.swing.event.InternalFrameEvent;
+import javax.swing.event.InternalFrameListener;
+d40 1
+a40 1
+	private DrawingView backupDrawingView;
+d85 1
+a85 1
+	protected JComponent createContents(DrawingView view) {
+d140 1
+a140 1
+        DrawingView fView = createDrawingView();
+d149 1
+a149 1
+        DrawingView fView = createDrawingView();
+d206 1
+a206 1
+			backupDrawingView = newFrame.replaceDrawingView(view());
+@
+
+
+1.1
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@d8 4
+a11 2
+import javax.swing.*;
+import javax.swing.event.*;
+d42 1
+a42 1
+	private StandardDrawingView backupDrawingView;
+d87 1
+a87 1
+	protected JComponent createContents(StandardDrawingView view) {
+d142 1
+a142 1
+        StandardDrawingView fView = createDrawingView();
+d151 1
+a151 1
+        StandardDrawingView fView = createDrawingView();
+d208 1
+a208 1
+			backupDrawingView = newFrame.replaceDrawingView((StandardDrawingView)view());
+@
+

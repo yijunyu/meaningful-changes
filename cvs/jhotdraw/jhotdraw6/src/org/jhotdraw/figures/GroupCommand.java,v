@@ -1,0 +1,779 @@
+head	1.8;
+access;
+symbols
+	jhotdraw60b1-release:1.8
+	package_rename:1.8
+	directory_rename:1.7
+	reorg_6x_split_initial:1.7
+	MVC_PHASE1:1.7.0.10
+	NEW_ATTRIBUTES:1.7.0.8
+	DNOYEB1_ALPHA-2:1.7.4.6
+	release_JHD54b1:1.7
+	BUGFIX_670992:1.7.0.6
+	DNOYEB1_ALPHA-1:1.7.4.3
+	dnoyeb1:1.7.0.4
+	repack:1.7.0.2
+	Root_repack:1.7
+	Before_FigureVisitor:1.7
+	JHotDraw_5-3:1.6
+	JHotDraw_5-2_merged:1.2
+	JHotDraw_5-1_initial:1.1
+	start:1.1.1.1
+	vendor:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.8
+date	2004.01.09.22.53.41;	author mrfloppy;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2002.08.04.22.43.22;	author mrfloppy;	state Exp;
+branches
+	1.7.4.1;
+next	1.6;
+
+1.6
+date	2001.10.24.21.15.18;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2001.10.24.20.32.00;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2001.10.24.20.25.12;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.06.29.13.42.13;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.03.09.15.31.46;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.10.12.14.57.08;	author jeckel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.10.12.14.57.08;	author jeckel;	state Exp;
+branches;
+next	;
+
+1.7.4.1
+date	2003.01.14.18.21.23;	author dnoyeb;	state Exp;
+branches;
+next	1.7.4.2;
+
+1.7.4.2
+date	2003.01.16.15.58.50;	author dnoyeb;	state Exp;
+branches;
+next	1.7.4.3;
+
+1.7.4.3
+date	2003.01.21.00.04.09;	author dnoyeb;	state Exp;
+branches;
+next	1.7.4.4;
+
+1.7.4.4
+date	2003.01.26.00.50.50;	author dnoyeb;	state Exp;
+branches;
+next	1.7.4.5;
+
+1.7.4.5
+date	2003.01.26.15.58.49;	author dnoyeb;	state Exp;
+branches;
+next	1.7.4.6;
+
+1.7.4.6
+date	2003.01.27.17.56.48;	author dnoyeb;	state Exp;
+branches;
+next	1.7.4.7;
+
+1.7.4.7
+date	2003.02.02.16.54.05;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.8
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@/*
+ * @@(#)GroupCommand.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.figures;
+
+import org.jhotdraw.framework.*;
+import org.jhotdraw.standard.*;
+import org.jhotdraw.util.*;
+
+import java.util.List;
+
+/**
+ * Command to group the selection into a GroupFigure.
+ *
+ * @@see GroupFigure
+ *
+ * @@version <$CURRENT_VERSION$>
+ */
+public  class GroupCommand extends AbstractCommand {
+
+   /**
+	 * Constructs a group command.
+	 * @@param name the command name
+	 * @@param newDrawingEditor the DrawingEditor which manages the views
+	 */
+	public GroupCommand(String name, DrawingEditor newDrawingEditor) {
+		super(name, newDrawingEditor);
+	}
+
+	public void execute() {
+		super.execute();
+		setUndoActivity(createUndoActivity());
+		getUndoActivity().setAffectedFigures(view().selection());
+		((GroupCommand.UndoActivity)getUndoActivity()).groupFigures();
+		view().checkDamage();
+	}
+
+	public boolean isExecutableWithView() {
+		return view().selectionCount() > 1;
+	}
+
+	/**
+	 * Factory method for undo activity
+	 */
+	protected Undoable createUndoActivity() {
+		return new GroupCommand.UndoActivity(view());
+	}
+
+	public static class UndoActivity extends UndoableAdapter {
+		public UndoActivity(DrawingView newDrawingView) {
+			super(newDrawingView);
+			setUndoable(true);
+			setRedoable(true);
+		}
+
+		public boolean undo() {
+			if (!super.undo()) {
+				return false;
+			}
+
+			getDrawingView().clearSelection();
+
+			// orphan group figure(s)
+			getDrawingView().drawing().orphanAll(getAffectedFigures());
+
+			// create a new collection with the grouped figures as elements
+			List affectedFigures = CollectionsFactory.current().createList();
+
+			FigureEnumeration fe = getAffectedFigures();
+			while (fe.hasNextFigure()) {
+				Figure currentFigure = fe.nextFigure();
+				// add contained figures
+				getDrawingView().drawing().addAll(currentFigure.figures());
+				getDrawingView().addToSelectionAll(currentFigure.figures());
+
+				FigureEnumeration groupedFigures = currentFigure.figures();
+				while (groupedFigures.hasNextFigure()) {
+					affectedFigures.add(groupedFigures.nextFigure());
+				}
+			}
+
+			setAffectedFigures(new FigureEnumerator(affectedFigures));
+
+			return true;
+		}
+
+		public boolean redo() {
+			// do not call execute directly as the selection might has changed
+			if (isRedoable()) {
+				groupFigures();
+				return true;
+			}
+
+			return false;
+		}
+
+		public void groupFigures() {
+			getDrawingView().drawing().orphanAll(getAffectedFigures());
+			getDrawingView().clearSelection();
+
+			// add new group figure instead
+			GroupFigure group = new GroupFigure();
+			group.addAll(getAffectedFigures());
+
+			Figure figure = getDrawingView().drawing().add(group);
+			getDrawingView().addToSelection(figure);
+
+			// create a new collection with the new group figure as element
+			List affectedFigures = CollectionsFactory.current().createList();
+			affectedFigures.add(figure);
+			setAffectedFigures(new FigureEnumerator(affectedFigures));
+		}
+	}
+}
+@
+
+
+1.7
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.figures;
+d14 3
+a16 3
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.standard.*;
+import CH.ifa.draw.util.*;
+@
+
+
+1.7.4.1
+log
+@DecoratorFigure is 'changed'  I think it needs reworking.  not its only used durint draw(Graphics g) but I don't think
+that was its real intention?
+
+The Figure added or removed is nolonger changed during the add or remove process.  Thus add and remove do not return
+values.
+orphan is used internally to the drawing only.
+remove calls figure.remove() which intern orphans the figure.
+remove(Figure f) is still present and used but currently not needed.  call figure.remove() instead.
+perhaps we can add a method on the figure enumerator to 'remove' all the figures within it.
+Figure no longer exposes its listeners.  call methods on figure to send events.
+
+
+Serialization in every form needs cleanup now.  Some due to earlier changes made by myself like making listeners of
+inner classes, but not storing the listener when the figures are stored. (since the figures think the inner listener
+is their container.)
+@
+text
+@a72 2
+			//this tool is now responsible for the release or readd of the figures it removed
+			//!!!dnoyeb!!!
+a106 2
+			//this tool is now responsible for the release or readd of the figures it removed
+			//!!!dnoyeb!!!
+d113 2
+a114 2
+			getDrawingView().drawing().add(group);
+			getDrawingView().addToSelection(group);
+d118 1
+a118 1
+			affectedFigures.add(group);
+@
+
+
+1.7.4.2
+log
+@drawing.update() is called as opposed to view.checkDamage().  This causes all affected views
+to be updated as opposed to just the one.
+figure.Remove() now returns the container it was removed from.  This may assist undo/redo.
+@
+text
+@d43 1
+a43 1
+		view().drawing().update();
+@
+
+
+1.7.4.3
+log
+@Restored the ContainerFigure.  Its very problematic for tools, but I have a better understanding of the undo system now.
+As a result I have restored most of what was their again with explanations on how it works for the next traveler...
+Also fixed a few issues with grouping and ungrouping. since figures can no longer be in 2 containers at once the container
+hopping that was being done by the group command would fail.  I believe border tool did similar hopping by having a figure
+as part of the drawing and part of the borderFigure temporarily.  Cant do that anymore.
+@
+text
+@d82 7
+a88 18
+				//figures can not be in 2 containers at same time.
+				//copy figures for later use
+				if(currentFigure instanceof CompositeFigure){
+					FigureEnumeration feToRemove = currentFigure.figures();
+					FigureEnumeration feToAdd = currentFigure.figures();
+					FigureEnumeration feToSelect = currentFigure.figures();
+					FigureEnumeration groupedFigures = currentFigure.figures();
+					
+					//remove figures from currentFigure
+					((CompositeFigure)currentFigure).orphanAll( feToRemove );
+					// add contained figures to drawing
+					getDrawingView().drawing().addAll(feToAdd);
+					//select figures
+					getDrawingView().addToSelectionAll(feToSelect);
+					//set new affected figures
+					while (groupedFigures.hasNextFigure()) {
+						affectedFigures.add(groupedFigures.nextFigure());
+					}
+a89 1
+				setAffectedFigures(new FigureEnumerator(affectedFigures));
+d91 3
+d117 2
+a118 2
+			Figure figure = getDrawingView().drawing().add(group);
+			getDrawingView().addToSelection(figure);
+d122 1
+a122 1
+			affectedFigures.add(figure);
+@
+
+
+1.7.4.4
+log
+@CompositeFigure does not return figures from add, remove, orphan anymore
+new method, restore added to bring back orphaned figures
+compositeFigure keeps record of its orphans for the restore method
+NullFigures inserted as placeholders into the figureList
+dumps record and nullFigures when remove(figure) called. this safely restores
+figures to their old places.
+figureRequestRemove and figureRemove events eliminated.
+Group and Ungroup commands redone to respect these new ideas.
+have not done anything with delete, cut, copy, paste yet.
+NullFigure added 0,0 for its display box, else throwing exceptions
+@
+text
+@d17 1
+a17 2
+import java.util.*;
+import CH.ifa.draw.util.CollectionsFactory;
+a57 1
+		private GroupFigure fGroupFigure=null;
+d63 1
+a63 6
+		protected void setGroupFigure(GroupFigure figure){
+			fGroupFigure = figure;
+		}
+		protected GroupFigure getGroupFigure(){
+			return fGroupFigure;
+		}
+d68 1
+d70 7
+d78 24
+a101 17
+			// orphan group figure
+			getDrawingView().drawing().orphan(getGroupFigure());
+			//get the figures from within the group figure.
+			FigureEnumeration feToAdd = getGroupFigure().figures();
+			while(feToAdd.hasNextFigure()){
+				Figure addFig = feToAdd.nextFigure();
+				//orphan figure from group figure
+				getGroupFigure().orphan(addFig);
+				//remove figure permanently from group figure.  This is required
+				//because we recreate the GroupFigure for the groupFigures action
+				getGroupFigure().remove(addFig);	
+				//restore figure to the drawing
+				getDrawingView().drawing().restore(addFig);
+				//add figure to selection
+				getDrawingView().addToSelection(addFig);
+				//add figure to affected figures
+				affectedFigures.add(addFig);
+a102 5
+			//destroy the group figure since upon redo we create a new one
+			getDrawingView().drawing().remove( getGroupFigure() );
+			setGroupFigure(null);
+			//update affected figures for redo if necessary
+			setAffectedFigures(new FigureEnumerator(affectedFigures));
+d112 1
+d115 1
+a115 3
+		/**
+		 * Take selected figures and add to a GroupFigure
+		 */
+d117 3
+d121 1
+a121 3
+			//orphan all selected figures from the drawing
+			getDrawingView().drawing().orphanAll(getAffectedFigures());
+			FigureEnumeration fe = getAffectedFigures();
+d124 9
+a132 24
+			//add all the orphaned figures to the group figure
+			group.addAll(fe);
+			//add group figure to the drawing
+			getDrawingView().drawing().add(group);
+			//add group figure to the selection
+			getDrawingView().addToSelection(group);
+			//store groupFigure
+			setGroupFigure(group);
+		}
+		/**
+		 * If undo was last their should be nothing to release
+		 */
+		public void release() {
+			//1. if groupFigures/redo was our last action
+				//permanently remove all figures that were grouped from the drawing
+			//2. if undo undo was our last action and their are lots of figures in the drawing waiting to be regrouped by a redo
+				//nothing to do since its permanently removed in the undo action
+			
+			if(getGroupFigure() != null){
+				getDrawingView().drawing().removeAll(getAffectedFigures());
+			}
+			setDrawingView(null);
+			setGroupFigure(null);
+			setAffectedFigures(null);
+@
+
+
+1.7.4.5
+log
+@hack for [ 674973 ] Context Sensitive menu updates
+add used instead of restore since its easier for the CompositeFigure to decide wether to add or
+to restore.
+@
+text
+@d89 1
+a89 1
+				getDrawingView().drawing().add(addFig);
+@
+
+
+1.7.4.6
+log
+@Affected figures are not allowed to be null.  Use empty enumeration.
+@
+text
+@d144 1
+a144 1
+			setAffectedFigures(FigureEnumerator.getEmptyEnumeration());
+@
+
+
+1.7.4.7
+log
+@figure.release() cleanup.  trying to make release work properly.
+@
+text
+@a59 1
+		private boolean undone = false;
+a96 1
+			getGroupFigure().release();
+a99 1
+			undone = true;
+d104 1
+a104 1
+			// do not call execute directly as the selection might have changed
+a108 1
+			undone = false;
+d138 3
+a140 4
+			if(undone == false){
+				if(getGroupFigure() != null){
+					getDrawingView().drawing().removeAll(getAffectedFigures());
+				}
+d142 1
+a142 3
+//			else {
+//				//group figure destroyed in undo so nothing to do here
+//			}
+d144 1
+a144 1
+			super.release();
+@
+
+
+1.6
+log
+@merge dnd (before 5.3)
+@
+text
+@d16 3
+a18 3
+import CH.ifa.draw.util.UndoableAdapter;
+import CH.ifa.draw.util.Undoable;
+import java.util.*;
+d41 1
+a41 1
+		getUndoActivity().setAffectedFigures(view().selectionElements());
+d45 1
+a45 1
+	
+d68 1
+a68 1
+			
+d70 1
+a70 1
+	
+a72 3
+								
+			// create a new vector with the grouped figures as elements
+			Vector affectedFigures = new Vector();
+d74 5
+a78 2
+			FigureEnumeration fe =getAffectedFigures();
+			while (fe.hasMoreElements()) {
+d80 1
+a80 1
+				// add contained figures			
+d83 1
+a83 1
+	
+d85 2
+a86 2
+				while (groupedFigures.hasMoreElements()) {
+					affectedFigures.addElement(groupedFigures.nextFigure());
+d91 1
+a91 1
+	
+d94 1
+a94 1
+	
+d101 1
+a101 1
+			
+d108 1
+a108 1
+	
+d112 1
+a112 1
+	
+d115 4
+a118 4
+			
+			// create a new vector with the new group figure as element
+			Vector affectedFigures = new Vector();
+			affectedFigures.addElement(figure);
+@
+
+
+1.5
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d30 12
+a41 11
+    * Constructs a group command.
+    * @@param name the command name
+    * @@param view the target view
+    */
+    public GroupCommand(String name, DrawingView view) {
+        super(name, view);
+    }
+
+    public void execute() {
+    	setUndoActivity(createUndoActivity());
+        getUndoActivity().setAffectedFigures(view().selectionElements());
+d44 1
+a44 1
+    }
+d46 3
+a48 3
+    public boolean isExecutable() {
+        return view().selectionCount() > 1;
+    }
+a70 4
+			// duplicate before we orphan affected figures
+//			FigureEnumeration fe = StandardFigureSelection.duplicateFigures(
+//				getAffectedFigures(), getAffectedFiguresCount());
+	
+a71 1
+//			getDrawingView().drawing().removeAll(getAffectedFigures());
+d74 2
+a75 2
+	        // create a new vector with the grouped figures as elements
+	        Vector affectedFigures = new Vector();
+d86 1
+a86 1
+	            	affectedFigures.addElement(groupedFigures.nextFigure());
+d90 1
+a90 1
+	    	setAffectedFigures(new FigureEnumerator(affectedFigures));
+d92 1
+a92 1
+		    return true;
+d106 2
+a107 2
+		    getDrawingView().drawing().orphanAll(getAffectedFigures());
+	        getDrawingView().clearSelection();
+d110 2
+a111 2
+	        GroupFigure group = new GroupFigure();
+	        group.addAll(getAffectedFigures());
+d113 6
+a118 6
+	        Figure figure = getDrawingView().drawing().add(group);
+	        getDrawingView().addToSelection(figure);
+	        
+	        // create a new vector with the new group figure as element
+	        Vector affectedFigures = new Vector();
+	        affectedFigures.addElement(figure);
+a122 1
+ @
+
+
+1.4
+log
+@before merge for version 5.3 (dnd, undo,...)
+@
+text
+@d2 1
+a2 1
+ * @@(#)GroupCommand.java 5.2
+d4 6
+a13 2
+import java.util.*;
+import CH.ifa.draw.util.Command;
+d16 3
+d24 2
+d27 1
+a27 3
+public  class GroupCommand extends Command {
+
+    private DrawingView fView;
+d35 1
+a35 2
+        super(name);
+        fView = view;
+d39 4
+a42 11
+        Vector selected = fView.selectionZOrdered();
+        Drawing drawing = fView.drawing();
+        if (selected.size() > 0) {
+            fView.clearSelection();
+            drawing.orphanAll(selected);
+
+            GroupFigure group = new GroupFigure();
+            group.addAll(selected);
+            fView.addToSelection(drawing.add(group));
+        }
+        fView.checkDamage();
+d44 1
+a44 1
+
+d46 1
+a46 1
+        return fView.selectionCount() > 0;
+d49 77
+d127 1
+a127 2
+
+
+@
+
+
+1.3
+log
+@- SelectionFigure is now an interface. The default implementation CH.ifa.draw.standard.StandardSelectionFigure
+- A FigureSelectionListener interface has been introduced in CH.ifa.draw.framework. An DrawingEditor
+  is now a FigureSelectionListener and the signature for all selectionChanged() methods has been
+  changed to figureSelectionChanged().
+- CH.ifa.draw.util.Command is now an interface. A AbstractCommand can be found in CH.ifa.draw.standard.
+- All commands used to have a fView field. This has been moved to CH.ifa.draw.standard.AbstactCommand
+- A CH.ifa.draw.standard.StandardDrawingView has now a paintComponents() method instead of a paint()
+  and update() method. This allows the CH.ifa.draw.util.FloatingTextField to be a javax.swing.JTextField
+  instead of a java.awt.TextField.
+- CH.ifa.draw.figures.AbstractLineDecorator has been missing
+- DrawApplet, DrawApplication and derived classes are now programmed towards the DrawingView interface
+  instead of using StandardDrawingView. That leads to occasional cast when some additional StandardDrawingView
+  functionality is required in some specialized cases. Applications that were derived from DrawApplication
+  and used to override the createContents() methods should now return a DrawingView as well
+@
+text
+@d9 1
+d18 3
+a20 1
+public  class GroupCommand extends AbstractCommand {
+d28 2
+a29 1
+        super(name, view);
+d33 2
+a34 2
+        Vector selected = view().selectionZOrdered();
+        Drawing drawing = view().drawing();
+d36 1
+a36 1
+            view().clearSelection();
+d41 1
+a41 1
+            view().addToSelection(drawing.add(group));
+d43 1
+a43 1
+        view().checkDamage();
+d47 1
+a47 1
+        return view().selectionCount() > 0;
+@
+
+
+1.2
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@a8 1
+import CH.ifa.draw.util.Command;
+d17 1
+a17 3
+public  class GroupCommand extends Command {
+
+    private DrawingView fView;
+d25 1
+a25 2
+        super(name);
+        fView = view;
+d29 2
+a30 2
+        Vector selected = fView.selectionZOrdered();
+        Drawing drawing = fView.drawing();
+d32 1
+a32 1
+            fView.clearSelection();
+d37 1
+a37 1
+            fView.addToSelection(drawing.add(group));
+d39 1
+a39 1
+        fView.checkDamage();
+d43 1
+a43 1
+        return fView.selectionCount() > 0;
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d2 1
+a2 1
+ * @@(#)GroupCommand.java 5.1
+@
+
+
+1.1.1.1
+log
+@
+Initial revision.
+@
+text
+@@

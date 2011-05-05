@@ -1,0 +1,203 @@
+head	1.2;
+access;
+symbols
+	jhotdraw60b1-release:1.2
+	package_rename:1.2
+	directory_rename:1.1
+	reorg_6x_split_initial:1.1
+	MVC_PHASE1:1.1.0.10
+	NEW_ATTRIBUTES:1.1.0.8
+	DNOYEB1_ALPHA-2:1.1.4.3
+	release_JHD54b1:1.1
+	BUGFIX_670992:1.1.0.6
+	DNOYEB1_ALPHA-1:1.1.4.3
+	dnoyeb1:1.1.0.4
+	repack:1.1.0.2
+	Root_repack:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2004.01.09.22.53.41;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2002.09.22.08.58.22;	author mrfloppy;	state Exp;
+branches
+	1.1.4.1;
+next	;
+
+1.1.4.1
+date	2003.01.14.18.25.24;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.2;
+
+1.1.4.2
+date	2003.01.16.22.38.46;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.3;
+
+1.1.4.3
+date	2003.01.21.00.04.38;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@/*
+ * @@(#)DeleteFromDrawingVisitor.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.standard;
+
+import org.jhotdraw.framework.*;
+import org.jhotdraw.util.CollectionsFactory;
+
+import java.util.Set;
+
+/**
+ * @@author  Wolfram Kaiser <mrfloppy@@sourceforge.net>
+ * @@version <$CURRENT_VERSION$>
+ */
+public class DeleteFromDrawingVisitor implements FigureVisitor {
+	private Set myDeletedFigures;
+	private Drawing myDrawing;
+
+	public DeleteFromDrawingVisitor(Drawing newDrawing) {
+		myDeletedFigures = CollectionsFactory.current().createSet();
+		setDrawing(newDrawing);
+	}
+
+	private void setDrawing(Drawing newDrawing) {
+		myDrawing = newDrawing;
+	}
+
+	protected Drawing getDrawing() {
+		return myDrawing;
+	}
+
+	public void visitFigure(Figure hostFigure) {
+		if (!myDeletedFigures.contains(hostFigure) && getDrawing().containsFigure(hostFigure)) {
+			Figure orphanedFigure = getDrawing().orphan(hostFigure);
+			myDeletedFigures.add(orphanedFigure);
+		}
+	}
+
+	public void visitHandle(Handle hostHandle) {
+	}
+
+	public void visitFigureChangeListener(FigureChangeListener hostFigureChangeListener) {
+//		System.out.println("visitFigureChangeListener: " + hostFigureChangeListener);
+//		hostFigureChangeListener.visit(this);
+	}
+
+	public FigureEnumeration getDeletedFigures() {
+		return new FigureEnumerator(myDeletedFigures);
+	}
+}
+@
+
+
+1.1
+log
+@introduce FigureVisitor for paste/delete commands
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.standard;
+d14 2
+a15 2
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.util.CollectionsFactory;
+@
+
+
+1.1.4.1
+log
+@DecoratorFigure is 'changed'  I think it needs reworking.  not its only used durint draw(Graphics g) but I don't think
+that was its real intention?
+
+The Figure added or removed is nolonger changed during the add or remove process.  Thus add and remove do not return
+values.
+orphan is used internally to the drawing only.
+remove calls figure.remove() which intern orphans the figure.
+remove(Figure f) is still present and used but currently not needed.  call figure.remove() instead.
+perhaps we can add a method on the figure enumerator to 'remove' all the figures within it.
+Figure no longer exposes its listeners.  call methods on figure to send events.
+
+
+Serialization in every form needs cleanup now.  Some due to earlier changes made by myself like making listeners of
+inner classes, but not storing the listener when the figures are stored. (since the figures think the inner listener
+is their container.)
+@
+text
+@a19 4
+ * This class is only calling orphan on the figures but is not used for anything else.
+ * It is not providing a usefull service yet.  especially considering that the figures it
+ * has amassed are never retrieved.
+ *
+d42 2
+a43 4
+			hostFigure.remove();
+			myDeletedFigures.add(hostFigure);
+			//Figure orphanedFigure = getDrawing().orphan(hostFigure);
+			//myDeletedFigures.add(orphanedFigure);
+@
+
+
+1.1.4.2
+log
+@Various comments.
+Fixed undo bug which always restored dependent figures, even if they were deleted in a
+seperate operation.
+@
+text
+@a63 3
+	public void visitDependendFigure(Figure dependentFigure){
+		visitFigure(dependentFigure);
+	}
+@
+
+
+1.1.4.3
+log
+@Restored the ContainerFigure.  Its very problematic for tools, but I have a better understanding of the undo system now.
+As a result I have restored most of what was their again with explanations on how it works for the next traveler...
+Also fixed a few issues with grouping and ungrouping. since figures can no longer be in 2 containers at once the container
+hopping that was being done by the group command would fail.  I believe border tool did similar hopping by having a figure
+as part of the drawing and part of the borderFigure temporarily.  Cant do that anymore.
+@
+text
+@d20 3
+a22 5
+ * 1.  Visit all figures reachable from the hostFigure.
+ * 2.  Delete all figures directly contained in the drawing. <code>containsFigure()</code>
+ * 3.  Return a list of all deleted figures.
+ * Note: do not delete figures contained in other figures, only those directly
+ * contained in the drawing.
+d46 1
+a46 1
+			getDrawing().orphan(hostFigure);
+d48 2
+d63 3
+@
+
+

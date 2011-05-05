@@ -1,0 +1,549 @@
+head	1.6;
+access;
+symbols
+	jhotdraw54b2-release:1.6
+	reorg_6x_split:1.6
+	MVC_PHASE1:1.5.0.10
+	NEW_ATTRIBUTES:1.5.0.8
+	DNOYEB1_ALPHA-2:1.5
+	release_JHD54b1:1.5
+	BUGFIX_670992:1.5.0.6
+	DNOYEB1_ALPHA-1:1.5
+	dnoyeb1:1.5.0.4
+	repack:1.5.0.2
+	Root_repack:1.5
+	Before_FigureVisitor:1.5
+	JHotDraw_5-3:1.4
+	JHotDraw_5-2_merged:1.2
+	JHotDraw_5-1_initial:1.1
+	start:1.1.1.1
+	vendor:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.6
+date	2003.05.08.15.41.24;	author ricardo_padilha;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2002.08.04.22.56.18;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2001.10.24.21.15.19;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.10.24.20.32.01;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.03.09.15.31.47;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.10.12.14.57.10;	author jeckel;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@Refactoring of Cursor:
+- java.awt.Cursor (class) has been sistematically replaced with CH.ifa.draw.contrib.framework.Cursor (interface)
+- a new default implementation of Cursor (interface) has been added: CH.ifa.draw.contrib.standard.AWTCursor
+@
+text
+@/*
+ * @@(#)ConnectionHandle.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package CH.ifa.draw.standard;
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.util.Vector;
+
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.util.Geom;
+import CH.ifa.draw.util.Undoable;
+
+/**
+ * A handle to connect figures.
+ * The connection object to be created is specified by a prototype.
+ * <hr>
+ * <b>Design Patterns</b><P>
+ * <img src="images/red-ball-small.gif" width=6 height=6 alt=" o ">
+ * <b><a href=../pattlets/sld029.htm>Prototype</a></b><br>
+ * ConnectionHandle creates the connection by cloning a prototype.
+ * <hr>
+ *
+ * @@see ConnectionFigure
+ * @@see Object#clone
+ *
+ * @@version <$CURRENT_VERSION$>
+ */
+public  class ConnectionHandle extends LocatorHandle {
+
+	/**
+	 * the currently created connection
+	 */
+	private ConnectionFigure myConnection;
+
+	/**
+	 * the prototype of the connection to be created
+	 */
+	private ConnectionFigure fPrototype;
+
+	/**
+	 * the current target
+	 */
+	private Figure myTargetFigure;
+
+	/**
+	 * Constructs a handle with the given owner, locator, and connection prototype
+	 */
+	public ConnectionHandle(Figure owner, Locator l, ConnectionFigure prototype) {
+		super(owner, l);
+		fPrototype = prototype;
+	}
+
+	/**
+	 * Creates the connection
+	 */
+	public void invokeStart(int  x, int  y, DrawingView view) {
+		setConnection(createConnection());
+
+		setUndoActivity(createUndoActivity(view));
+		Vector v = new Vector();
+		v.add(getConnection());
+		getUndoActivity().setAffectedFigures(new FigureEnumerator(v));
+
+		Point p = locate();
+		getConnection().startPoint(p.x, p.y);
+		getConnection().endPoint(p.x, p.y);
+		view.drawing().add(getConnection());
+	}
+
+	/**
+	 * Tracks the connection.
+	 */
+	public void invokeStep (int x, int y, int anchorX, int anchorY, DrawingView view) {
+		Point p = new Point(x,y);
+		Figure f = findConnectableFigure(x, y, view.drawing());
+		// track the figure containing the mouse
+		if (f != getTargetFigure()) {
+			if (getTargetFigure() != null) {
+				getTargetFigure().connectorVisibility(false, null);
+			}
+			setTargetFigure(f);
+			if (getTargetFigure() != null) {
+				getTargetFigure().connectorVisibility(true, getConnection());
+			}
+		}
+
+		Connector target = findConnectionTarget(p.x, p.y, view.drawing());
+		if (target != null) {
+			p = Geom.center(target.displayBox());
+		}
+		getConnection().endPoint(p.x, p.y);
+	}
+
+	/**
+	 * Connects the figures if the mouse is released over another
+	 * figure.
+	 */
+	public void invokeEnd(int x, int y, int anchorX, int anchorY, DrawingView view) {
+		Connector target = findConnectionTarget(x, y, view.drawing());
+		if (target != null) {
+			getConnection().connectStart(startConnector());
+			getConnection().connectEnd(target);
+			getConnection().updateConnection();
+		}
+		else {
+			view.drawing().remove(getConnection());
+			setUndoActivity(null);
+		}
+		setConnection(null);
+		if (getTargetFigure() != null) {
+			getTargetFigure().connectorVisibility(false, null);
+			setTargetFigure(null);
+		}
+	}
+
+	private Connector startConnector() {
+		Point p = locate();
+		return owner().connectorAt(p.x, p.y);
+	}
+
+	/**
+	 * Creates the ConnectionFigure. By default the figure prototype is
+	 * cloned.
+	 */
+	protected ConnectionFigure createConnection() {
+		return (ConnectionFigure)fPrototype.clone();
+	}
+
+	/**
+	 * Factory method for undo activity.
+	 */
+	protected Undoable createUndoActivity(DrawingView view) {
+		return new PasteCommand.UndoActivity(view);
+	}
+
+	/**
+	 * Finds a connection end figure.
+	 */
+	protected Connector findConnectionTarget(int x, int y, Drawing drawing) {
+		Figure target = findConnectableFigure(x, y, drawing);
+		if ((target != null) && target.canConnect()
+			 && !target.includes(owner())
+			 && getConnection().canConnect(owner(), target)) {
+				return findConnector(x, y, target);
+		}
+		return null;
+	}
+
+	private Figure findConnectableFigure(int x, int y, Drawing drawing) {
+		FigureEnumeration fe = drawing.figuresReverse();
+		while (fe.hasNextFigure()) {
+			Figure figure = fe.nextFigure();
+			if (!figure.includes(getConnection()) && figure.canConnect() 
+				&& figure.containsPoint(x, y)) {
+				return figure;
+			}
+		}
+		return null;
+	}
+
+	protected Connector findConnector(int x, int y, Figure f) {
+		return f.connectorAt(x, y);
+	}
+
+
+	/**
+	 * Draws the connection handle, by default the outline of a
+	 * blue circle.
+	 */
+	public void draw(Graphics g) {
+		Rectangle r = displayBox();
+		g.setColor(Color.blue);
+		g.drawOval(r.x, r.y, r.width, r.height);
+	}
+
+	protected void setConnection(ConnectionFigure newConnection) {
+		myConnection = newConnection;
+	}
+	
+	protected ConnectionFigure getConnection() {
+		return myConnection;
+	}
+
+	protected Figure getTargetFigure() {
+		return myTargetFigure;
+	}
+
+	protected void setTargetFigure(Figure newTargetFigure) {
+		myTargetFigure = newTargetFigure;
+	}
+
+	/**
+	 * @@see CH.ifa.draw.framework.Handle#getCursor()
+	 */
+	public Cursor getCursor() {
+		return new AWTCursor(java.awt.Cursor.HAND_CURSOR);
+	}
+
+}
+@
+
+
+1.5
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d14 5
+a18 1
+import java.awt.*;
+d22 1
+a38 1
+
+d69 6
+d118 1
+d141 7
+d202 8
+@
+
+
+1.4
+log
+@merge dnd (before 5.3)
+@
+text
+@d50 1
+a50 1
+	private Figure fTarget = null;
+d78 3
+a80 3
+		if (f != fTarget) {
+			if (fTarget != null) {
+				fTarget.connectorVisibility(false);
+d82 3
+a84 3
+			fTarget = f;
+			if (fTarget != null) {
+				fTarget.connectorVisibility(true);
+d110 3
+a112 3
+		if (fTarget != null) {
+			fTarget.connectorVisibility(false);
+			fTarget = null;
+d143 3
+a145 3
+		FigureEnumeration k = drawing.figuresReverse();
+		while (k.hasMoreElements()) {
+			Figure figure = k.nextFigure();
+d175 8
+@
+
+
+1.3
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d37 131
+a167 131
+    /**
+     * the currently created connection
+     */
+    private ConnectionFigure myConnection;
+
+    /**
+     * the prototype of the connection to be created
+     */
+    private ConnectionFigure fPrototype;
+
+    /**
+     * the current target
+     */
+    private Figure fTarget = null;
+
+    /**
+     * Constructs a handle with the given owner, locator, and connection prototype
+     */
+    public ConnectionHandle(Figure owner, Locator l, ConnectionFigure prototype) {
+        super(owner, l);
+        fPrototype = prototype;
+    }
+
+    /**
+     * Creates the connection
+     */
+    public void invokeStart(int  x, int  y, DrawingView view) {
+        setConnection(createConnection());
+        Point p = locate();
+        getConnection().startPoint(p.x, p.y);
+        getConnection().endPoint(p.x, p.y);
+        view.drawing().add(getConnection());
+    }
+
+    /**
+     * Tracks the connection.
+     */
+    public void invokeStep (int x, int y, int anchorX, int anchorY, DrawingView view) {
+        Point p = new Point(x,y);
+        Figure f = findConnectableFigure(x, y, view.drawing());
+        // track the figure containing the mouse
+        if (f != fTarget) {
+            if (fTarget != null) {
+                fTarget.connectorVisibility(false);
+            }
+            fTarget = f;
+            if (fTarget != null) {
+                fTarget.connectorVisibility(true);
+            }
+        }
+
+        Connector target = findConnectionTarget(p.x, p.y, view.drawing());
+        if (target != null) {
+            p = Geom.center(target.displayBox());
+        }
+        getConnection().endPoint(p.x, p.y);
+    }
+
+    /**
+     * Connects the figures if the mouse is released over another
+     * figure.
+     */
+    public void invokeEnd(int x, int y, int anchorX, int anchorY, DrawingView view) {
+        Connector target = findConnectionTarget(x, y, view.drawing());
+        if (target != null) {
+            getConnection().connectStart(startConnector());
+            getConnection().connectEnd(target);
+            getConnection().updateConnection();
+        }
+        else {
+            view.drawing().remove(getConnection());
+        }
+        setConnection(null);
+        if (fTarget != null) {
+            fTarget.connectorVisibility(false);
+            fTarget = null;
+        }
+    }
+
+    private Connector startConnector() {
+        Point p = locate();
+        return owner().connectorAt(p.x, p.y);
+    }
+
+    /**
+     * Creates the ConnectionFigure. By default the figure prototype is
+     * cloned.
+     */
+    protected ConnectionFigure createConnection() {
+        return (ConnectionFigure)fPrototype.clone();
+    }
+
+    /**
+     * Finds a connection end figure.
+     */
+    protected Connector findConnectionTarget(int x, int y, Drawing drawing) {
+        Figure target = findConnectableFigure(x, y, drawing);
+        if ((target != null) && target.canConnect()
+             && !target.includes(owner())
+             && getConnection().canConnect(owner(), target)) {
+                return findConnector(x, y, target);
+        }
+        return null;
+    }
+
+    private Figure findConnectableFigure(int x, int y, Drawing drawing) {
+        FigureEnumeration k = drawing.figuresReverse();
+        while (k.hasMoreElements()) {
+            Figure figure = k.nextFigure();
+            if (!figure.includes(getConnection()) && figure.canConnect() 
+                && figure.containsPoint(x, y)) {
+                return figure;
+            }
+        }
+        return null;
+    }
+
+    protected Connector findConnector(int x, int y, Figure f) {
+        return f.connectorAt(x, y);
+    }
+
+
+    /**
+     * Draws the connection handle, by default the outline of a
+     * blue circle.
+     */
+    public void draw(Graphics g) {
+        Rectangle r = displayBox();
+        g.setColor(Color.blue);
+        g.drawOval(r.x, r.y, r.width, r.height);
+    }
+@
+
+
+1.2
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@d2 1
+a2 1
+ * @@(#)ConnectionHandle.java 5.2
+d4 6
+d31 2
+d40 1
+a40 1
+    private ConnectionFigure fConnection;
+d64 1
+a64 1
+        fConnection = createConnection();
+d66 3
+a68 3
+        fConnection.startPoint(p.x, p.y);
+        fConnection.endPoint(p.x, p.y);
+        view.drawing().add(fConnection);
+d79 1
+a79 1
+            if (fTarget != null)
+d81 1
+d83 1
+a83 1
+            if (fTarget != null)
+d85 1
+d89 1
+a89 1
+        if (target != null)
+d91 2
+a92 1
+        fConnection.endPoint(p.x, p.y);
+d102 8
+a109 6
+            fConnection.connectStart(startConnector());
+            fConnection.connectEnd(target);
+            fConnection.updateConnection();
+        } else
+            view.drawing().remove(fConnection);
+        fConnection = null;
+d136 1
+a136 1
+             && fConnection.canConnect(owner(), target)) {
+d146 3
+a148 3
+            if (!figure.includes(fConnection) && figure.canConnect()) {
+                if (figure.containsPoint(x, y))
+                    return figure;
+d169 7
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d2 1
+a2 1
+ * @@(#)ConnectionHandle.java 5.1
+@
+
+
+1.1.1.1
+log
+@
+Initial revision.
+@
+text
+@@

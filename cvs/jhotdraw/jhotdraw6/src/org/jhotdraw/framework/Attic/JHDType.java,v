@@ -1,0 +1,439 @@
+head	1.1;
+access;
+symbols
+	jhotdraw60b1-release:1.1
+	package_rename:1.1
+	directory_rename:1.1
+	reorg_6x_split_initial:1.1
+	dnoyeb1:1.1.0.4
+	NEW_ATTRIBUTES:1.1.0.2;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2003.02.23.16.00.44;	author dnoyeb;	state dead;
+branches
+	1.1.2.1
+	1.1.4.1;
+next	;
+
+1.1.2.1
+date	2003.02.23.16.00.44;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+1.1.4.1
+date	2003.03.12.15.16.45;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.2;
+
+1.1.4.2
+date	2003.03.15.15.13.42;	author dnoyeb;	state dead;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@file JHDType.java was initially added on branch NEW_ATTRIBUTES.
+@
+text
+@@
+
+
+1.1.4.1
+log
+@New attributes system.
+@
+text
+@a0 184
+/*
+ * @@(#)JHDType.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+package CH.ifa.draw.framework;
+
+import java.util.*;
+
+/**
+ * The current issue is that if you store your FigureAttributeConstant, you first
+ * store its name, then you store the object its mapped to based on the type of that object.
+ * but when you restore it, you first restore its name which is a string, but based on
+ * that name you have no idea how to restore the object because you cant tell what
+ * type it will be.  we must store more info so we can restore it later.
+ *
+ * Another issue is that this is a library.  external programs that make their
+ * own attributes then try to store them with us may have difficulty restoring
+ * them later.  thats because we don't know about their classes.
+ * Mainly because at startup FigureAttributeConstants of JHD are recreated so that
+ * during deserialization, one can compare existing attributes to the ones being
+ * deserailized and NOT create new ones where ones already exist, but just assign
+ * them.  Unfortunately one needs a way to ensure his attributeConstants were 
+ * also created at startup.  JHD creates theirs because they are static and loaded
+ * when JHD attribute class is loaded which is always necessary before deserialization
+ * but my own extended attribute class is not forced to load and my own attributes
+ * are not present then and end up getting duplicated which means they dont match.
+ *
+ * Furthermore, haveing constants which can be added too at runtime makes no sense
+ * unless the constants are typed so we know how to deserialize them.
+ * Else all constants must basically be Storeable
+ *
+ * This class is not thread safe.
+ *
+ * @@author CL Gilbert (dnoyeB@@users.sourceForge.net)
+ * @@version <$CURRENT_VERSION$>
+ */
+public class JHDType implements java.io.Serializable {
+    private transient       String          fName;
+    private                 int             fID;
+	private static final    Map             fTypes = new Hashtable();
+
+    protected JHDType(String name, int value){
+        fName = name;
+        fID = value;
+		checkForDupes(this);
+		addJHDType(this);
+    }
+	/**
+	 * Any Types that use auto numbering are at risk on not deserializing
+	 * properly.  For example, if the deserialization of the attribute occurs
+	 * before the loading of the class the attribute was originally defined in,
+	 * the deserialized attribute will take on its stored ID, and the originally
+	 * defined one will of course take on an incremental id when its loaded. 
+	 * Thus, they will not match as they should.
+	 *
+	 * @@deprecated Does not work well with end users deserialization of their
+	 *             own JHDType subtypes.  wholly Bad. Divest thyself.
+	 */
+    protected JHDType(String name){
+        fName = name;
+		fID = JHDType.getMaxValue(getClass()) + 1;
+		checkForDupes(this);//dupes only checks IDs and no way we can have dupe ID here.
+		addJHDType(this);
+    }
+	private final void addJHDType(JHDType type )
+    {
+        String className = type.getClass().getName();
+        Map values;
+
+		//two instances of the same subclass could both make a new Hashtable here
+		//then one would override the other if the Map were not thread safe...
+        synchronized( fTypes ){
+            values = (Map) fTypes.get( className );
+            if( values == null ){
+                values = new Hashtable();
+                fTypes.put( className, values );
+            }
+        }
+        values.put( new Integer( type.getID() ), type );//stores the new attribute constant
+    }
+    public static JHDType getConstant(Class classRef, int value ){
+        JHDType type = null;
+		String className = classRef.getName();
+
+        Map values = (Map) fTypes.get( className );
+        if( values != null ) {
+            type = (JHDType) values.get( new Integer( value ) );
+        }
+        return type;
+    }
+    public static JHDType getConstant(Class classRef, java.lang.String name ){
+        JHDType type = null;
+		String className = classRef.getName();
+
+        Map values = (Map) fTypes.get( className );
+        if( values != null ) {
+			java.util.Iterator it =   values.values().iterator();
+			while(it.hasNext()){
+				type = (JHDType) it.next();
+				if(type.toString().equals(name))
+					return type;
+			}
+        }
+        return null;
+    }
+	public static Iterator elements( Class classRef ){
+        String className = classRef.getName();
+        Map values = (Map) fTypes.get( className );
+        if( values != null ) {
+            return( values.values().iterator() );
+        }
+        else {
+            return null;
+        }
+    }
+    public static int getMaxValue(Class classRef ) {
+        int max = -1;
+        Iterator it = elements( classRef );
+		if(it != null){
+			while( it.hasNext()){
+				JHDType type = (JHDType) it.next();
+				int tmp = type.getID();
+				if( tmp > max ){
+					max = tmp;
+				}
+			}
+		}
+        return  max;
+    }
+    public int getID(){
+        return fID;
+    }
+
+    public String toString(){
+        return getName();
+    }
+	/**
+	 * Name is not serialized but restored during initialization.
+	 * thus during the serializing clone execution, name is lost.  However, the
+	 * original instance should still be in the map and should be able to get
+	 * name from it.
+	 */
+	public String getName(){
+		if(fName == null){
+			JHDType t = getConstant(getClass(),getID());
+			fName = t.getName();
+		}
+		return fName;
+	}
+    public boolean equals( Object obj ){
+        if( !( obj instanceof JHDType ) ){
+            return false;
+        }
+
+        if( this == obj ){
+            return true;
+        }
+
+        if( (getClass() == obj.getClass()) && (getID() == ((JHDType)obj).getID())){
+            return true;
+        }
+        return false;
+    }
+	/**
+	 * Each JHDType must have its own unique id.
+	 */
+    private final void checkForDupes( JHDType type ){
+        String className = type.getClass().getName();
+        Map values = (Map) fTypes.get( className );
+
+        if( values != null ){
+            if( values.get( new Integer( type.getID() ) ) != null ){
+                //System.err.println( "No Dupes Allowed: " + className + "=" + type );
+                throw( new JHotDrawRuntimeException("No Dupes Allowed: " + className + "=" + type) );
+            }
+        }
+    }
+}@
+
+
+1.1.4.2
+log
+@dont need.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@Adding new attributes system.
+@
+text
+@a0 184
+/*
+ * @@(#)JHDType.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+package CH.ifa.draw.framework;
+
+import java.util.*;
+
+/**
+ * The current issue is that if you store your FigureAttributeConstant, you first
+ * store its name, then you store the object its mapped to based on the type of that object.
+ * but when you restore it, you first restore its name which is a string, but based on
+ * that name you have no idea how to restore the object because you cant tell what
+ * type it will be.  we must store more info so we can restore it later.
+ *
+ * Another issue is that this is a library.  external programs that make their
+ * own attributes then try to store them with us may have difficulty restoring
+ * them later.  thats because we don't know about their classes.
+ * Mainly because at startup FigureAttributeConstants of JHD are recreated so that
+ * during deserialization, one can compare existing attributes to the ones being
+ * deserailized and NOT create new ones where ones already exist, but just assign
+ * them.  Unfortunately one needs a way to ensure his attributeConstants were 
+ * also created at startup.  JHD creates theirs because they are static and loaded
+ * when JHD attribute class is loaded which is always necessary before deserialization
+ * but my own extended attribute class is not forced to load and my own attributes
+ * are not present then and end up getting duplicated which means they dont match.
+ *
+ * Furthermore, haveing constants which can be added too at runtime makes no sense
+ * unless the constants are typed so we know how to deserialize them.
+ * Else all constants must basically be Storeable
+ *
+ * This class is not thread safe.
+ *
+ * @@author CL Gilbert (dnoyeB@@users.sourceForge.net)
+ * @@version <$CURRENT_VERSION$>
+ */
+public class JHDType implements java.io.Serializable {
+    private transient       String          fName;
+    private                 int             fID;
+	private static final    Map             fTypes = new Hashtable();
+
+    protected JHDType(String name, int value){
+        fName = name;
+        fID = value;
+		checkForDupes(this);
+		addJHDType(this);
+    }
+	/**
+	 * Any Types that use auto numbering are at risk on not deserializing
+	 * properly.  For example, if the deserialization of the attribute occurs
+	 * before the loading of the class the attribute was originally defined in,
+	 * the deserialized attribute will take on its stored ID, and the originally
+	 * defined one will of course take on an incremental id when its loaded. 
+	 * Thus, they will not match as they should.
+	 *
+	 * @@deprecated Does not work well with end users deserialization of their
+	 *             own JHDType subtypes.  wholly Bad. Divest thyself.
+	 */
+    protected JHDType(String name){
+        fName = name;
+		fID = JHDType.getMaxValue(getClass()) + 1;
+		checkForDupes(this);//dupes only checks IDs and no way we can have dupe ID here.
+		addJHDType(this);
+    }
+	private final void addJHDType(JHDType type )
+    {
+        String className = type.getClass().getName();
+        Map values;
+
+		//two instances of the same subclass could both make a new Hashtable here
+		//then one would override the other if the Map were not thread safe...
+        synchronized( fTypes ){
+            values = (Map) fTypes.get( className );
+            if( values == null ){
+                values = new Hashtable();
+                fTypes.put( className, values );
+            }
+        }
+        values.put( new Integer( type.getID() ), type );//stores the new attribute constant
+    }
+    public static JHDType getConstant(Class classRef, int value ){
+        JHDType type = null;
+		String className = classRef.getName();
+
+        Map values = (Map) fTypes.get( className );
+        if( values != null ) {
+            type = (JHDType) values.get( new Integer( value ) );
+        }
+        return type;
+    }
+    public static JHDType getConstant(Class classRef, java.lang.String name ){
+        JHDType type = null;
+		String className = classRef.getName();
+
+        Map values = (Map) fTypes.get( className );
+        if( values != null ) {
+			java.util.Iterator it =   values.values().iterator();
+			while(it.hasNext()){
+				type = (JHDType) it.next();
+				if(type.toString().equals(name))
+					return type;
+			}
+        }
+        return null;
+    }
+	public static Iterator elements( Class classRef ){
+        String className = classRef.getName();
+        Map values = (Map) fTypes.get( className );
+        if( values != null ) {
+            return( values.values().iterator() );
+        }
+        else {
+            return null;
+        }
+    }
+    public static int getMaxValue(Class classRef ) {
+        int max = -1;
+        Iterator it = elements( classRef );
+		if(it != null){
+			while( it.hasNext()){
+				JHDType type = (JHDType) it.next();
+				int tmp = type.getID();
+				if( tmp > max ){
+					max = tmp;
+				}
+			}
+		}
+        return  max;
+    }
+    public int getID(){
+        return fID;
+    }
+
+    public String toString(){
+        return getName();
+    }
+	/**
+	 * Name is not serialized but restored during initialization.
+	 * thus during the serializing clone execution, name is lost.  However, the
+	 * original instance should still be in the map and should be able to get
+	 * name from it.
+	 */
+	public String getName(){
+		if(fName == null){
+			JHDType t = getConstant(getClass(),getID());
+			fName = t.getName();
+		}
+		return fName;
+	}
+    public boolean equals( Object obj ){
+        if( !( obj instanceof JHDType ) ){
+            return false;
+        }
+
+        if( this == obj ){
+            return true;
+        }
+
+        if( (getClass() == obj.getClass()) && (getID() == ((JHDType)obj).getID())){
+            return true;
+        }
+        return false;
+    }
+	/**
+	 * Each JHDType must have its own unique id.
+	 */
+    private final void checkForDupes( JHDType type ){
+        String className = type.getClass().getName();
+        Map values = (Map) fTypes.get( className );
+
+        if( values != null ){
+            if( values.get( new Integer( type.getID() ) ) != null ){
+                //System.err.println( "No Dupes Allowed: " + className + "=" + type );
+                throw( new JHotDrawRuntimeException("No Dupes Allowed: " + className + "=" + type) );
+            }
+        }
+    }
+}@
+

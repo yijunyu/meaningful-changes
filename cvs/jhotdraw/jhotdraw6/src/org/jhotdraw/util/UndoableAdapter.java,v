@@ -1,0 +1,424 @@
+head	1.8;
+access;
+symbols
+	jhotdraw60b1-release:1.8
+	package_rename:1.8
+	directory_rename:1.7
+	reorg_6x_split_initial:1.7
+	MVC_PHASE1:1.4.0.10
+	NEW_ATTRIBUTES:1.4.0.8
+	DNOYEB1_ALPHA-2:1.4.4.2
+	release_JHD54b1:1.4
+	BUGFIX_670992:1.4.0.6
+	DNOYEB1_ALPHA-1:1.4.4.2
+	dnoyeb1:1.4.0.4
+	repack:1.4.0.2
+	Root_repack:1.4
+	Before_FigureVisitor:1.4
+	JHotDraw_5-3:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.8
+date	2004.01.09.22.53.40;	author mrfloppy;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2003.11.09.21.18.45;	author mrfloppy;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2003.09.23.06.38.57;	author mtnygard;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2003.08.05.18.30.29;	author ricardo_padilha;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2002.08.21.08.06.00;	author mrfloppy;	state Exp;
+branches
+	1.4.4.1;
+next	1.3;
+
+1.3
+date	2002.08.04.23.01.49;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.10.24.21.15.19;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.10.24.20.37.15;	author mrfloppy;	state Exp;
+branches;
+next	;
+
+1.4.4.1
+date	2003.01.15.21.04.21;	author dnoyeb;	state Exp;
+branches;
+next	1.4.4.2;
+
+1.4.4.2
+date	2003.01.17.02.33.40;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.8
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@/*
+ * @@(#)UndoableAdapter.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	? by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.util;
+
+import org.jhotdraw.framework.*;
+import org.jhotdraw.standard.FigureEnumerator;
+import org.jhotdraw.standard.ReverseFigureEnumerator;
+import org.jhotdraw.standard.StandardFigureSelection;
+
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Most basic implementation for an Undoable activity. Subclasses should override
+ * methods to provide specialized behaviour when necessary.
+ *
+ * @@author  Wolfram Kaiser <mrfloppy@@sourceforge.net>
+ * @@version <$CURRENT_VERSION$>
+ */
+public class UndoableAdapter implements Undoable {
+
+	private List   myAffectedFigures;
+	private boolean myIsUndoable;
+	private boolean myIsRedoable;
+	private DrawingView myDrawingView;
+
+	public UndoableAdapter(DrawingView newDrawingView) {
+		setDrawingView(newDrawingView);
+	}
+
+	/**
+	 * Undo the activity
+	 * @@return true if the activity could be undone, false otherwise
+	 */
+	public boolean undo() {
+		return isUndoable();
+	}
+
+	/**
+	 * Redo the activity
+	 * @@return true if the activity could be redone, false otherwise
+	 */
+	public boolean redo() {
+		return isRedoable();
+	}
+
+	public boolean isUndoable() {
+		return myIsUndoable;
+	}
+
+	public void setUndoable(boolean newIsUndoable) {
+		myIsUndoable = newIsUndoable;
+	}
+
+	public boolean isRedoable() {
+		return myIsRedoable;
+	}
+
+	public void setRedoable(boolean newIsRedoable) {
+		myIsRedoable = newIsRedoable;
+	}
+
+	public void setAffectedFigures(FigureEnumeration newAffectedFigures) {
+		// the enumeration is not reusable therefore a copy is made
+		// to be able to undo-redo the command several time
+		if(newAffectedFigures == null) {
+			throw new IllegalArgumentException();
+		}
+		rememberFigures(newAffectedFigures);
+	}
+
+	public FigureEnumeration getAffectedFigures() {
+		if(myAffectedFigures == null) {
+			return new FigureEnumerator(Collections.EMPTY_LIST);
+		}
+		else {
+			return new FigureEnumerator(CollectionsFactory.current().createList(myAffectedFigures));
+		}
+	}
+
+	public FigureEnumeration getAffectedFiguresReversed() {
+		return new ReverseFigureEnumerator(CollectionsFactory.current().createList(myAffectedFigures));
+	}
+
+	public int getAffectedFiguresCount() {
+		return myAffectedFigures.size();
+	}
+
+	protected void rememberFigures(FigureEnumeration toBeRemembered) {
+		myAffectedFigures = CollectionsFactory.current().createList();
+		while (toBeRemembered.hasNextFigure()) {
+			myAffectedFigures.add(toBeRemembered.nextFigure());
+		}
+	}
+
+	/**
+	 * Releases all resources related to an undoable activity
+	 */
+	public void release() {
+		FigureEnumeration fe = getAffectedFigures();
+		while (fe.hasNextFigure()) {
+			fe.nextFigure().release();
+		}
+		setAffectedFigures(FigureEnumerator.getEmptyEnumeration());
+	}
+
+	/**
+	 * Create new set of affected figures for redo operation because
+	 * deleting figures in an undo operation makes them unusable
+	 * Especially contained figures have been removed from their
+	 * observing container like CompositeFigure or DecoratorFigure.
+	 * Duplicating these figures re-establishes the dependencies.
+	 */
+	protected void duplicateAffectedFigures() {
+		setAffectedFigures(StandardFigureSelection.duplicateFigures(
+			getAffectedFigures(), getAffectedFiguresCount()));
+	}
+
+	public DrawingView getDrawingView() {
+		return myDrawingView;
+	}
+
+	protected void setDrawingView(DrawingView newDrawingView) {
+		myDrawingView = newDrawingView;
+	}
+}@
+
+
+1.7
+log
+@TestSuite: adjusting auto-generated sourcecode (JunitDoclet) to coding style
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.util;
+d14 4
+a17 4
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.standard.FigureEnumerator;
+import CH.ifa.draw.standard.ReverseFigureEnumerator;
+import CH.ifa.draw.standard.StandardFigureSelection;
+@
+
+
+1.6
+log
+@All test cases now pass!
+@
+text
+@d84 2
+a85 1
+		} else {
+@
+
+
+1.5
+log
+@Bugfix for CutCommand and DeleteCommand.
+Both work now properly and their UndoActivity's work as expected.
+@
+text
+@d7 1
+a7 1
+ * Copyright:	© by the original author(s) and all contributors
+d19 1
+d75 3
+d82 5
+a86 1
+		return new FigureEnumerator(CollectionsFactory.current().createList(myAffectedFigures));
+@
+
+
+1.4
+log
+@extended functionality for enumerations (reset, and-enumeration) and a few bug fixes
+@
+text
+@d16 1
+d38 1
+a38 1
+	
+d47 1
+a47 1
+	/*
+d54 1
+a54 1
+	
+d58 1
+a58 1
+	
+d62 1
+a62 1
+	
+d66 1
+a66 1
+	
+d70 1
+a70 1
+	
+d80 5
+a84 1
+	
+d88 1
+a88 1
+	
+d95 1
+a95 1
+	
+d118 1
+a118 1
+	
+d122 1
+a122 1
+	
+@
+
+
+1.4.4.1
+log
+@
+Lets have a moment of silence for DecoratorFigure.....It was a good figure ;{
+
+Anything which happens inside the drawing after figure add must be undone before figure orphan.  It must also not
+be exposed to anyobject outside the drawing.
+Decorator figure retired in favor of a figureManipulator and the other functions being implemented by a composite
+figure(BorderDecorator).
+AdnimationDecorator retired in favor of AnimationManipulator.
+A figure can have only 1 container. This is making the border tool have a hard time.
+
+Lots of comments added
+
+next phase:
+orphan will disappear.  only add and remove remain.  All figure related resources belong to the figures and no other
+object should care about figure.release.
+split the figureListener into a figureContainer listener and a figureChangeListener.
+Fix BorderDecorator.
+Fix ConnectedText.
+view.checkDamage to call drawing.update()
+@
+text
+@d106 1
+a106 1
+	 * observing container like CompositeFigure.
+@
+
+
+1.4.4.2
+log
+@Fix: [ 622363 ] UndoableAdapter.release() is broken
+Only deleting-type undoable actions release figures.
++ DND grabs figures from the visitor now. others need to do the same.
+@
+text
+@a92 2
+	 * Only resources that are no longer used in the application should be
+	 * released.
+d95 4
+a99 1
+		setDrawingView(null);
+@
+
+
+1.3
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@a29 1
+	private int    myAffectedFiguresCount;
+d81 1
+a81 1
+		return myAffectedFiguresCount;
+a85 1
+		myAffectedFiguresCount = 0;
+a87 1
+			myAffectedFiguresCount++;
+a98 1
+		myAffectedFiguresCount = 0;
+@
+
+
+1.2
+log
+@merge dnd (before 5.3)
+@
+text
+@d17 2
+a18 1
+import java.util.*;
+d24 1
+a24 1
+ * @@author Wolfram Kaiser
+d29 1
+a29 1
+	private Vector myAffectedFigures;
+d78 1
+a78 1
+		return new FigureEnumerator((Vector)myAffectedFigures.clone());
+d86 1
+a86 1
+		myAffectedFigures = new Vector();
+d88 2
+a89 2
+		while (toBeRemembered.hasMoreElements()) {
+			myAffectedFigures.addElement(toBeRemembered.nextElement());
+d99 1
+a99 1
+		while (fe.hasMoreElements()) {
+@
+
+
+1.1
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d28 5
+a32 5
+    private Vector myAffectedFigures;
+    private int    myAffectedFiguresCount;
+    private boolean myIsUndoable;
+    private boolean myIsRedoable;
+    private DrawingView myDrawingView;
+d117 1
+a117 1
+	protected DrawingView getDrawingView() {
+d121 1
+a121 1
+	private void setDrawingView(DrawingView newDrawingView) {
+@
+

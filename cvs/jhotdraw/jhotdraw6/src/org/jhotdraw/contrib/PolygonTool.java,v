@@ -1,0 +1,535 @@
+head	1.6;
+access;
+symbols
+	jhotdraw60b1-release:1.6
+	package_rename:1.6
+	directory_rename:1.5
+	reorg_6x_split_initial:1.5
+	MVC_PHASE1:1.5.0.4
+	NEW_ATTRIBUTES:1.5.0.2
+	DNOYEB1_ALPHA-2:1.4.4.5
+	release_JHD54b1:1.4
+	BUGFIX_670992:1.4.0.6
+	DNOYEB1_ALPHA-1:1.4.4.4
+	dnoyeb1:1.4.0.4
+	repack:1.4.0.2
+	Root_repack:1.4
+	Before_FigureVisitor:1.4
+	JHotDraw_5-3:1.3
+	JHotDraw_5-2_merged:1.1.1.1
+	JHotDraw_5-1_initial:1.1.1.1
+	start:1.1.1.1
+	vendor:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.6
+date	2004.01.09.22.53.40;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2003.02.04.05.30.12;	author ricardo_padilha;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2002.08.04.22.39.17;	author mrfloppy;	state Exp;
+branches
+	1.4.4.1;
+next	1.3;
+
+1.3
+date	2001.10.24.21.15.18;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.10.24.20.32.00;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.10.12.14.57.08;	author jeckel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.10.12.14.57.08;	author jeckel;	state Exp;
+branches;
+next	;
+
+1.4.4.1
+date	2003.01.10.04.54.31;	author dnoyeb;	state Exp;
+branches;
+next	1.4.4.2;
+
+1.4.4.2
+date	2003.01.14.18.20.51;	author dnoyeb;	state Exp;
+branches;
+next	1.4.4.3;
+
+1.4.4.3
+date	2003.01.16.15.58.49;	author dnoyeb;	state Exp;
+branches;
+next	1.4.4.4;
+
+1.4.4.4
+date	2003.01.21.00.04.07;	author dnoyeb;	state Exp;
+branches;
+next	1.4.4.5;
+
+1.4.4.5
+date	2003.01.26.00.50.48;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@/*
+ * @@(#)PolygonTool.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.contrib;
+
+import org.jhotdraw.framework.*;
+import org.jhotdraw.standard.*;
+import org.jhotdraw.util.Undoable;
+import java.awt.*;
+import java.awt.event.MouseEvent;
+
+/**
+ * Based on ScribbleTool
+ *
+ * @@author Doug Lea  (dl at gee) - Fri Feb 28 07:47:05 1997
+ * @@version <$CURRENT_VERSION$>
+ */
+public class PolygonTool extends AbstractTool {
+
+	private PolygonFigure  fPolygon;
+	private int            fLastX, fLastY;
+
+	/**
+	 * the figure that was actually added
+	 * Note, this can be a different figure from the one which has been created.
+	 */
+	private Figure myAddedFigure;
+
+	public PolygonTool(DrawingEditor newDrawingEditor) {
+		super(newDrawingEditor);
+	}
+
+	public void activate() {
+		super.activate();
+		fPolygon = null;
+	}
+
+	public void deactivate() {
+		if (fPolygon != null) {
+			fPolygon.smoothPoints();
+			if (fPolygon.pointCount() < 3 ||
+					fPolygon.size().width < 4 || fPolygon.size().height < 4) {
+				getActiveView().drawing().remove(fPolygon);
+				// nothing to undo
+				setUndoActivity(null);
+			}
+		}
+		fPolygon = null;
+		super.deactivate();
+	}
+
+	private void addPoint(int x, int y) {
+		if (fPolygon == null) {
+			fPolygon = new PolygonFigure(x, y);
+			setAddedFigure(view().add(fPolygon));
+			fPolygon.addPoint(x, y);
+		}
+		else if (fLastX != x || fLastY != y) {
+			fPolygon.addPoint(x, y);
+		}
+
+		fLastX = x;
+		fLastY = y;
+	}
+
+	public void mouseDown(MouseEvent e, int x, int y) {
+		super.mouseDown(e,x,y);
+		// replace pts by actual event pts
+		x = e.getX();
+		y = e.getY();
+
+		if (e.getClickCount() >= 2) {
+			if (fPolygon != null) {
+				fPolygon.smoothPoints();
+
+				// use undo activity from paste command...
+				setUndoActivity(createUndoActivity());
+
+				// put created figure into a figure enumeration
+				getUndoActivity().setAffectedFigures(new SingleFigureEnumerator(getAddedFigure()));
+
+				editor().toolDone();
+			}
+			fPolygon = null;
+
+		}
+		else {
+			// use original event coordinates to avoid
+			// supress that the scribble is constrained to
+			// the grid
+			addPoint(e.getX(), e.getY());
+		}
+	}
+
+	public void mouseMove(MouseEvent e, int x, int y) {
+		if (e.getSource() == getActiveView()) {
+			if (fPolygon != null) {
+				if (fPolygon.pointCount() > 1) {
+					fPolygon.setPointAt(new Point(x, y), fPolygon.pointCount()-1);
+					getActiveView().checkDamage();
+				}
+			}
+		}
+	}
+
+	public void mouseDrag(MouseEvent e, int x, int y) {
+		// replace pts by actual event pts
+		x = e.getX();
+		y = e.getY();
+		addPoint(x, y);
+	}
+
+	public void mouseUp(MouseEvent e, int x, int y) {
+	}
+
+	/**
+	 * Gets the figure that was actually added
+	 * Note, this can be a different figure from the one which has been created.
+	 */
+	protected Figure getAddedFigure() {
+		return myAddedFigure;
+	}
+
+	private void setAddedFigure(Figure newAddedFigure) {
+		myAddedFigure = newAddedFigure;
+	}
+
+	/**
+	 * Factory method for undo activity
+	 */
+	protected Undoable createUndoActivity() {
+		return new PasteCommand.UndoActivity(view());
+	}
+}
+@
+
+
+1.5
+log
+@Removed unused imports and local variables.
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.contrib;
+d14 3
+a16 3
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.standard.*;
+import CH.ifa.draw.util.Undoable;
+@
+
+
+1.4
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@a14 1
+import CH.ifa.draw.util.*;
+@
+
+
+1.4.4.1
+log
+@1.  Tool now accepts DrawingViewMouseEvent as opposed to java.awt.MouseEvent and x,y ints.
+2. compositeFigure now uses constrained mouse values throughout.
+3. nested CreationTOol was calling drawing() before it was setting the view.  should lead to NPE.  this tool still seems broken
+   i dont think its needed anymore?
+4. bug in splitConnectionTool mouse down. setEndConnector(findConnector(ex, ex, c)); needs to be ex and ey
+5. made some of StandardDrawingViews inner class listners protected.
+@
+text
+@d19 1
+a19 1
+
+d75 5
+a79 6
+	public void mouseDown(DrawingViewMouseEvent dvme) {
+		super.mouseDown(dvme);
+		// use event coordinates to supress any kind of
+		// transformations like constraining points to a grid
+		setAnchorX( dvme.getMouseEvent().getX() );
+		setAnchorY( dvme.getMouseEvent().getY() );
+d81 1
+a81 1
+		if (dvme.getMouseEvent().getClickCount() >= 2) {
+d100 1
+a100 1
+			addPoint( getAnchorX(), getAnchorY() );
+d104 2
+a105 2
+	public void mouseMove(DrawingViewMouseEvent dvme) {
+		if (dvme.getDrawingView() == getActiveView()) {
+d108 1
+a108 1
+					fPolygon.setPointAt(new Point(dvme.getX(), dvme.getY()), fPolygon.pointCount()-1);
+d115 1
+a115 1
+	public void mouseDrag(DrawingViewMouseEvent dvme) {
+d117 3
+a119 1
+		addPoint(dvme.getMouseEvent().getX(), dvme.getMouseEvent().getY());
+d122 1
+a122 1
+	public void mouseUp(DrawingViewMouseEvent dvme) {
+@
+
+
+1.4.4.2
+log
+@DecoratorFigure is 'changed'  I think it needs reworking.  not its only used durint draw(Graphics g) but I don't think
+that was its real intention?
+
+The Figure added or removed is nolonger changed during the add or remove process.  Thus add and remove do not return
+values.
+orphan is used internally to the drawing only.
+remove calls figure.remove() which intern orphans the figure.
+remove(Figure f) is still present and used but currently not needed.  call figure.remove() instead.
+perhaps we can add a method on the figure enumerator to 'remove' all the figures within it.
+Figure no longer exposes its listeners.  call methods on figure to send events.
+
+
+Serialization in every form needs cleanup now.  Some due to earlier changes made by myself like making listeners of
+inner classes, but not storing the listener when the figures are stored. (since the figures think the inner listener
+is their container.)
+@
+text
+@d64 1
+a64 2
+			view().add(fPolygon);
+			setAddedFigure(fPolygon);
+@
+
+
+1.4.4.3
+log
+@drawing.update() is called as opposed to view.checkDamage().  This causes all affected views
+to be updated as opposed to just the one.
+figure.Remove() now returns the container it was removed from.  This may assist undo/redo.
+@
+text
+@d111 1
+a111 1
+					view().drawing().update();
+@
+
+
+1.4.4.4
+log
+@Restored the ContainerFigure.  Its very problematic for tools, but I have a better understanding of the undo system now.
+As a result I have restored most of what was their again with explanations on how it works for the next traveler...
+Also fixed a few issues with grouping and ungrouping. since figures can no longer be in 2 containers at once the container
+hopping that was being done by the group command would fail.  I believe border tool did similar hopping by having a figure
+as part of the drawing and part of the borderFigure temporarily.  Cant do that anymore.
+@
+text
+@d64 2
+a65 1
+			setAddedFigure(view().add(fPolygon));
+@
+
+
+1.4.4.5
+log
+@CompositeFigure does not return figures from add, remove, orphan anymore
+new method, restore added to bring back orphaned figures
+compositeFigure keeps record of its orphans for the restore method
+NullFigures inserted as placeholders into the figureList
+dumps record and nullFigures when remove(figure) called. this safely restores
+figures to their old places.
+figureRequestRemove and figureRemove events eliminated.
+Group and Ungroup commands redone to respect these new ideas.
+have not done anything with delete, cut, copy, paste yet.
+NullFigure added 0,0 for its display box, else throwing exceptions
+@
+text
+@d64 1
+a64 2
+			view().add(fPolygon);
+			setAddedFigure(fPolygon);
+@
+
+
+1.3
+log
+@merge dnd (before 5.3)
+@
+text
+@a19 2
+import java.util.*;
+import java.io.IOException;
+d24 1
+a24 1
+ * @@author Doug Lea  (dl at gee) - Fri Feb 28 07:47:05 1997 
+d52 1
+a52 1
+				drawing().remove(fPolygon);
+d76 1
+d87 1
+a87 1
+				
+d105 6
+a110 4
+		if (fPolygon != null) {
+			if (fPolygon.pointCount() > 1) {
+				fPolygon.setPointAt(new Point(x, y), fPolygon.pointCount()-1);
+				view().checkDamage();
+@
+
+
+1.2
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d40 2
+a41 2
+	public PolygonTool(DrawingView view) {
+		super(view);
+a49 1
+		super.deactivate();
+d60 1
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d2 8
+a9 2
+ * Fri Feb 28 07:47:05 1997  Doug Lea  (dl at gee)
+ * Based on ScribbleTool
+d14 4
+a21 4
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.util.*;
+import CH.ifa.draw.standard.*;
+
+d24 4
+d31 2
+a32 74
+  private PolygonFigure  fPolygon;
+  private int            fLastX, fLastY;
+
+  public PolygonTool(DrawingView view) {
+    super(view);
+  }
+
+  public void activate() {
+    super.activate();
+    fPolygon = null;
+  }
+
+  public void deactivate() {
+    super.deactivate();
+    if (fPolygon != null) {
+      fPolygon.smoothPoints();
+      if (fPolygon.pointCount() < 3 ||
+          fPolygon.size().width < 4 || fPolygon.size().height < 4)
+        drawing().remove(fPolygon);
+    }
+    fPolygon = null;
+  }
+
+  private void addPoint(int x, int y) {
+      if (fPolygon == null) {
+          fPolygon = new PolygonFigure(x, y);
+          view().add(fPolygon);
+          fPolygon.addPoint(x, y);
+      } else if (fLastX != x || fLastY != y)
+          fPolygon.addPoint(x, y);
+
+      fLastX = x;
+      fLastY = y;
+  }
+
+  public void mouseDown(MouseEvent e, int x, int y) {
+    // replace pts by actual event pts
+    x = e.getX();
+    y = e.getY();
+
+    if (e.getClickCount() >= 2) {
+        if (fPolygon != null) {
+            fPolygon.smoothPoints();
+            editor().toolDone();
+        }
+        fPolygon = null;
+
+    } else {
+        // use original event coordinates to avoid
+        // supress that the scribble is constrained to
+        // the grid
+        addPoint(e.getX(), e.getY());
+    }
+  }
+
+  public void mouseMove(MouseEvent e, int x, int y) {
+    if (fPolygon != null) {
+       if (fPolygon.pointCount() > 1) {
+           fPolygon.setPointAt(new Point(x, y), fPolygon.pointCount()-1);
+           view().checkDamage();
+       }
+    }
+  }
+
+  public void mouseDrag(MouseEvent e, int x, int y) {
+    // replace pts by actual event pts
+    x = e.getX();
+    y = e.getY();
+    addPoint(x, y);
+  }
+
+
+  public void mouseUp(MouseEvent e, int x, int y) {
+  }
+d34 108
+@
+
+
+1.1.1.1
+log
+@
+Initial revision.
+@
+text
+@@

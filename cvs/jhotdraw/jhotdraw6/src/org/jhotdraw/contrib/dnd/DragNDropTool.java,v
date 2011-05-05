@@ -1,0 +1,1228 @@
+head	1.8;
+access;
+symbols
+	jhotdraw60b1-release:1.8
+	package_rename:1.8
+	directory_rename:1.7
+	reorg_6x_split_initial:1.7
+	MVC_PHASE1:1.5.0.2
+	NEW_ATTRIBUTES:1.4.0.2
+	DNOYEB1_ALPHA-2:1.1.4.7
+	release_JHD54b1:1.2
+	BUGFIX_670992:1.1.0.6
+	DNOYEB1_ALPHA-1:1.1.4.5
+	dnoyeb1:1.1.0.4
+	repack:1.1.0.2
+	Root_repack:1.1
+	Before_FigureVisitor:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.8
+date	2004.01.09.22.53.43;	author mrfloppy;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2003.11.09.21.18.46;	author mrfloppy;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2003.05.08.15.41.26;	author ricardo_padilha;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2003.02.23.00.29.36;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2003.02.17.15.58.30;	author dnoyeb;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2003.02.11.21.10.26;	author dnoyeb;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2003.01.30.00.27.33;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2002.08.04.22.48.51;	author mrfloppy;	state Exp;
+branches
+	1.1.4.1;
+next	;
+
+1.1.4.1
+date	2003.01.04.15.38.01;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.2;
+
+1.1.4.2
+date	2003.01.04.16.23.22;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.3;
+
+1.1.4.3
+date	2003.01.07.21.22.33;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.4;
+
+1.1.4.4
+date	2003.01.10.04.54.38;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.5;
+
+1.1.4.5
+date	2003.01.10.20.10.39;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.6;
+
+1.1.4.6
+date	2003.01.29.04.19.52;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.7;
+
+1.1.4.7
+date	2003.01.29.23.31.52;	author dnoyeb;	state Exp;
+branches;
+next	1.1.4.8;
+
+1.1.4.8
+date	2003.02.02.16.51.24;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.8
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@/*
+ * @@(#)DragNDropTool.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.contrib.dnd;
+
+import java.awt.Component;
+import java.awt.Point;
+import java.awt.dnd.DragGestureListener;
+import java.awt.event.MouseEvent;
+
+import javax.swing.JComponent;
+
+import org.jhotdraw.framework.*;
+import org.jhotdraw.standard.*;
+
+/**
+ * This is a tool which handles drag and drop between Components in
+ * JHotDraw and drags from JHotDraw.  It also indirectly
+ * handles management of Drops from extra-JVM sources.
+ *
+ *
+ * Drag and Drop is about information moving, not images or objects.  Its about
+ * moving a JHD rectangle to another application and that application understanding
+ * both its shape, color, attributes, and everything about it. not how it looks.
+ *
+ * There can be only 1 such tool in an application.  A view can be registered
+ * with only a single DropSource as far as I know (maybe not).
+ *
+ * @@todo    For intra JVM transfers we need to pass Point origin as well, and not
+ * assume it will be valid which currently will cause a null pointer exception.
+ * or worse, will be valid with some local value.
+ * The dropSource will prevent simultaneous drops.
+ *
+ * For a Container to be initialized to support Drag and Drop, it must first
+ * have a connection to a heavyweight component.  Or more precisely it must have
+ * a peer.  That means new Component() is not capable of being initiated until
+ * it has attachment to a top level component i.e. JFrame.add(comp);  If you add
+ * a Component to a Container, that Container must be the child of some
+ * Container which is added in its heirachy to a topmost Component.  I will
+ * refine this description with more appropriate terms as I think of new ways to
+ * express this.  It won't work until setVisible(true) is called.  then you can 
+ * initialize DND.
+ *
+ * note: if drop target is same as dragsource then we should draw the object.
+ *
+ *
+ * @@author C.L.Gilbert <dnoyeb@@sourceforge.net>
+ * @@version <$CURRENT_VERSION$>
+ */
+public class DragNDropTool extends AbstractTool {
+
+	private Tool            fChild;
+	private DragGestureListener dragGestureListener;
+	private boolean dragOn;
+
+	public DragNDropTool(DrawingEditor editor) {
+		super(editor);
+		setDragGestureListener(createDragGestureListener());
+		dragOn = false;
+	}
+
+	/**
+	 * Sent when a new view is created
+	 */
+	protected void viewCreated(DrawingView view) {
+		super.viewCreated(view);
+		if (DNDInterface.class.isInstance(view)) {
+			DNDInterface dndi = (DNDInterface)view;
+			dndi.DNDInitialize( getDragGestureListener() );
+		}
+	}
+
+	/**
+	 * Send when an existing view is about to be destroyed.
+	 */
+	protected void viewDestroying(DrawingView view) {
+		if (DNDInterface.class.isInstance(view)) {
+			DNDInterface dndi = (DNDInterface)view;
+			dndi.DNDDeinitialize();
+		}
+		super.viewDestroying(view);
+	}
+
+	/**
+	 * Turn on drag by adding a DragGestureRegognizer to all Views which are
+	 * based on Components.
+	 */
+	public void activate() {
+		super.activate();
+//		setDragSourceActive(true);
+		//System.out.println("DNDTool Activation");
+		setDragOn(true);
+	}
+
+	public void deactivate() {
+		//System.out.println("DNDTool deactivation.");
+		setDragOn(false);
+//		setDragSourceActive(false);//if its not turned off other tools will have problems since drag will start
+		super.deactivate();
+	}
+
+//	private void setDragSourceActive(boolean newState) {
+//		Iterator it = comps.iterator();
+//		while (it.hasNext()) {
+//			DNDInterface dndi = (DNDInterface)it.next();
+//			dndi.setDragSourceState(newState);
+//		}
+//	}
+
+	/**
+	 * Sets the type of cursor based on what is under the coordinates in the
+	 * active view.
+	 */
+	public static void setCursor(int x, int y, DrawingView view) {
+		if (view == null) {   //shouldnt need this
+			return;
+		}
+		Handle handle = view.findHandle(x, y);
+		Figure figure = view.drawing().findFigure(x, y);
+
+		if (handle != null) {
+			view.setCursor(handle.getCursor());
+		}
+		else if (figure != null) {
+			view.setCursor(new AWTCursor(java.awt.Cursor.MOVE_CURSOR));
+		}
+		else {
+			view.setCursor(new AWTCursor(java.awt.Cursor.DEFAULT_CURSOR));
+		}
+	}
+
+	/**
+	 * Handles mouse moves (if the mouse button is up).
+	 * Switches the cursors depending on whats under them.
+     * Don't use x, y use getX and getY so get the real unlimited position
+	 * Part of the Tool interface.
+	 */
+	public void mouseMove(MouseEvent evt, int x, int y) {
+		if (evt.getSource() == getActiveView()) {
+			setCursor(x, y, getActiveView());
+		}
+	}
+
+	/**
+	 * Handles mouse up events. The events are forwarded to the
+	 * current tracker.
+	 * Part of the Tool interface.
+	 */
+	public void mouseUp(MouseEvent e, int x, int y) {
+		if (fChild != null) { // JDK1.1 doesn't guarantee mouseDown, mouseDrag, mouseUp
+			fChild.mouseUp(e, x, y);
+			fChild = null;
+		}
+		setDragOn(true);
+		view().unfreezeView();
+		//get undo actions and push into undo stack?
+	}
+
+	/**
+	 * Handles mouse down events and starts the corresponding tracker.
+	 * Part of the Tool interface.
+	 */
+	public void mouseDown(MouseEvent e, int x, int y) {
+		super.mouseDown(e, x, y);
+		// on MS-Windows NT: AWT generates additional mouse down events
+		// when the left button is down && right button is clicked.
+		// To avoid dead locks we ignore such events
+		if (fChild != null) {
+			return;
+		}
+
+		view().freezeView();
+
+		Handle handle = view().findHandle(getAnchorX(), getAnchorY());
+		if (handle != null) {
+			//Turn off DND
+			setDragOn(false);
+			fChild = createHandleTracker(handle);
+		}
+		else {
+			Figure figure = drawing().findFigure(getAnchorX(), getAnchorY());
+			if (figure != null) {
+				//fChild = createDragTracker(editor(), figure);
+				//fChild.activate();
+				fChild = null;
+				if (e.isShiftDown()) {
+				   view().toggleSelection(figure);
+				}
+				else if (!view().isFigureSelected(figure)) {
+					view().clearSelection();
+					view().addToSelection(figure);
+				}
+			}
+			else {
+				//Turn off DND
+				setDragOn(false);
+				if (!e.isShiftDown()) {
+					view().clearSelection();
+				}
+				fChild = createAreaTracker();
+			}
+		}
+		if (fChild != null) {
+			fChild.mouseDown(e, x, y);
+		}
+	}
+
+	/**
+	 * Handles mouse drag events. The events are forwarded to the
+	 * current tracker.
+	 * Part of the Tool interface.
+	 */
+	public void mouseDrag(MouseEvent e, int x, int y) {
+		if (fChild != null) { // JDK1.1 doesn't guarantee mouseDown, mouseDrag, mouseUp
+			fChild.mouseDrag(e, x, y);
+		}
+	}
+
+	/**
+	 * Factory method to create an area tracker. It is used to select an
+	 * area.
+	 */
+	protected Tool createAreaTracker() {
+		return new SelectAreaTracker(editor());
+	}
+
+	/**
+	 * Factory method to create a Drag tracker. It is used to drag a figure.
+	 */
+	protected Tool createDragTracker(DrawingEditor editor, Figure f) {
+		return new DragTracker(editor, f);
+	}
+
+	/**
+	 * Factory method to create a Handle tracker. It is used to track a handle.
+	 */
+	protected Tool createHandleTracker(Handle handle) {
+		return new HandleTracker(editor(), handle);
+	}
+
+	private DragGestureListener getDragGestureListener(){
+		return dragGestureListener;
+	}
+
+	private void setDragGestureListener(DragGestureListener dragGestureListener){
+		this.dragGestureListener = dragGestureListener;
+	}
+
+	protected boolean isDragOn(){
+		return dragOn;
+	}
+
+	protected void setDragOn(boolean isNewDragOn){
+		this.dragOn = isNewDragOn;
+	}
+
+	private DragGestureListener createDragGestureListener() {
+		
+		return new DragGestureListener() {
+			
+			public void dragGestureRecognized(final java.awt.dnd.DragGestureEvent dge) {
+				Component c = dge.getComponent();
+				//System.out.println("Drag Gesture Recognized for " + c);
+				if (isDragOn() == false) {
+					return;
+				}
+
+				if (c instanceof DrawingView) {
+					boolean found = false;
+					DrawingView dv = (DrawingView)c;
+					/* Send the drawing view which inspired the action a mouseUp to clean
+					up its current tool.  This is because mouse up will otherwise never
+					be sent and the tool will be stuck with only mouse down which means
+					it will likely stay activated.  solve later for now just make
+					but report. */
+					/* this is a list of cloned figures */
+					FigureEnumeration selectedElements = dv.selection();
+
+					if (selectedElements.hasNextFigure() == false) {
+						return;
+					}
+
+					Point p = dge.getDragOrigin();
+		//				System.out.println("origin at " + p);
+					while (selectedElements.hasNextFigure()) {
+						Figure f = selectedElements.nextFigure();
+						if (f.containsPoint(p.x, p.y)) {
+		/*              Rectangle r = figgy.displayBox();
+							sx = r.width;
+							sy = r.height;*/
+							//System.out.println("figure is " + figgy);
+							found = true;
+							break;
+						}
+					}
+					if (found == true) {
+						DNDFigures dndff = new DNDFigures(dv.selection(), p);
+						DNDFiguresTransferable trans = new DNDFiguresTransferable(dndff);
+
+						/* SAVE FOR FUTURE DRAG IMAGE SUPPORT */
+						/* drag image support that I need to test on some supporting platform.
+						windows is not supporting this on NT so far. Ill test 98 and 2K next
+
+						boolean support = dragSource.isDragImageSupported();
+						java.awt.image.BufferedImage  bi = new BufferedImage(sx,sy,BufferedImage.TYPE_INT_RGB);
+						Graphics2D g = bi.createGraphics();
+						Iterator itr2 = selectedElements.iterator();
+						while ( itr2.hasNext() ) {
+							Figure fig = (Figure) itr2.next();
+							fig = (Figure)fig.clone();
+							Rectangle rold = fig.displayBox();
+							fig.moveBy(-rold.x,-rold.y);
+							fig.draw(g);
+						}
+						g.setBackground(Color.red);
+						dge.getDragSource().startDrag(
+										dge,
+										DragSource.DefaultMoveDrop,
+										bi,
+										new Point(0,0),
+										trans,
+										this);
+						*/
+						if (c instanceof JComponent) {
+							((JComponent)c).setAutoscrolls(false);
+						}
+						dge.getDragSource().startDrag(
+										dge,
+										null,
+										trans,
+										((DNDInterface)dv).getDragSourceListener());
+					}
+				}
+			}
+		};
+	}
+}
+@
+
+
+1.7
+log
+@TestSuite: adjusting auto-generated sourcecode (JunitDoclet) to coding style
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.contrib.dnd;
+d21 2
+a22 2
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.standard.*;
+@
+
+
+1.6
+log
+@Refactoring of Cursor:
+- java.awt.Cursor (class) has been sistematically replaced with CH.ifa.draw.contrib.framework.Cursor (interface)
+- a new default implementation of Cursor (interface) has been added: CH.ifa.draw.contrib.standard.AWTCursor
+@
+text
+@d261 2
+a262 2
+	protected void setDragOn(boolean dragOn){
+		this.dragOn = dragOn;
+@
+
+
+1.5
+log
+@no message
+@
+text
+@d14 1
+a14 4
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.standard.*;
+
+import java.awt.Cursor;
+a15 1
+import java.awt.Component;
+d18 1
+d21 3
+d59 1
+d130 1
+a130 31
+			if (LocatorHandle.class.isInstance(handle)) {
+				LocatorHandle lh = (LocatorHandle)handle;
+				Locator loc = lh.getLocator();
+				if (RelativeLocator.class.isInstance(loc)) {
+					RelativeLocator rl = (RelativeLocator) loc;
+					if (rl.equals( RelativeLocator.north())) {
+						view.setCursor(new Cursor(Cursor.N_RESIZE_CURSOR));
+					}
+					else if (rl.equals(RelativeLocator.northEast())) {
+						view.setCursor(new Cursor(Cursor.NE_RESIZE_CURSOR));
+					}
+					else if (rl.equals(RelativeLocator.east())) {
+						view.setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
+					}
+					else if (rl.equals(RelativeLocator.southEast())) {
+						view.setCursor(new Cursor(Cursor.SE_RESIZE_CURSOR));
+					}
+					else if (rl.equals(RelativeLocator.south())) {
+						view.setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
+					}
+					else if (rl.equals(RelativeLocator.southWest())) {
+						view.setCursor(new Cursor(Cursor.SW_RESIZE_CURSOR));
+					}
+					else if (rl.equals(RelativeLocator.west())) {
+						view.setCursor(new Cursor(Cursor.W_RESIZE_CURSOR));
+					}
+					else if (rl.equals(RelativeLocator.northWest())) {
+						view.setCursor(new Cursor(Cursor.NW_RESIZE_CURSOR));
+					}
+				}
+			}
+d133 1
+a133 1
+			view.setCursor(new Cursor(Cursor.MOVE_CURSOR));
+d136 1
+a136 1
+			view.setCursor(Cursor.getDefaultCursor());
+@
+
+
+1.4
+log
+@
+Aggregrating as opposed to extending the ViewChangeListener
+changed inherited methods to protected as opposed to public.  Adds a level of
+safety.
+
+CH\ifa\draw/contrib/dnd/DragNDropTool.java
+CH\ifa\draw/standard/AbstractCommand.java
+CH\ifa\draw/standard/AbstractTool.java
+@
+text
+@d16 1
+d18 2
+d21 1
+a23 2
+//import CH.ifa.draw.util.CollectionsFactory;
+
+d58 1
+a58 1
+public class DragNDropTool extends CH.ifa.draw.standard.AbstractTool {
+a59 1
+//	private java.util.List       comps;
+a61 1
+	
+a64 1
+//		comps = CollectionsFactory.current().createList();
+d74 1
+a74 1
+		if (view instanceof DNDInterface) {
+a76 1
+//			comps.add(dndi);
+d84 1
+a84 1
+		if (view instanceof DNDInterface) {
+a86 1
+//			comps.remove(dndi);
+d131 1
+a131 1
+				CH.ifa.draw.framework.Locator loc = lh.getLocator();
+d175 2
+a176 2
+	public void mouseMove(java.awt.event.MouseEvent e, int x, int y) {
+		if (e.getSource() == getActiveView()) {
+d186 1
+a186 1
+	public void mouseUp(java.awt.event.MouseEvent e, int x, int y) {
+d188 1
+a188 1
+			fChild.mouseUp(e,x,y);
+d200 2
+a201 2
+	public void mouseDown(java.awt.event.MouseEvent e, int x, int y) {
+		super.mouseDown(e,x,y);
+d241 1
+a241 1
+			fChild.mouseDown(e,x,y);
+d250 1
+a250 1
+	public void mouseDrag(java.awt.event.MouseEvent e, int x, int y) {
+d252 1
+a252 1
+			fChild.mouseDrag(e,x,y);
+d261 1
+a261 1
+		return new CH.ifa.draw.standard.SelectAreaTracker(editor());
+d268 1
+a268 1
+		return new CH.ifa.draw.standard.DragTracker(editor, f);
+d275 1
+a275 1
+		return new CH.ifa.draw.standard.HandleTracker(editor(), handle);
+a276 17
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+d281 1
+d285 1
+d289 1
+d293 1
+d299 1
+a299 1
+				java.awt.Component c = dge.getComponent();
+d301 1
+a301 1
+				if(isDragOn() == false) {
+d314 1
+a314 1
+					CH.ifa.draw.framework.FigureEnumeration selectedElements = dv.selection();
+d320 1
+a320 1
+					java.awt.Point p = dge.getDragOrigin();
+a373 11
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+@
+
+
+1.3
+log
+@DND Update.  Hopefully this allows easier DND manipulation with the added
+function seperation.
+@
+text
+@d73 1
+a73 1
+	public void viewCreated(DrawingView view) {
+d85 1
+a85 1
+	public void viewDestroying(DrawingView view) {
+@
+
+
+1.2
+log
+@prepare for 5.4 release: various bug fixes
+@
+text
+@a13 6
+import CH.ifa.draw.standard.AbstractTool;
+import java.util.List;
+import java.awt.event.MouseEvent;
+import java.awt.*;
+import java.util.Iterator;
+
+d16 5
+a20 1
+import CH.ifa.draw.util.CollectionsFactory;
+d47 2
+a48 1
+ * express this.
+d56 1
+a56 1
+public class DragNDropTool extends AbstractTool {
+d58 4
+a61 1
+	private List            comps;
+d65 3
+a67 1
+		comps = CollectionsFactory.current().createList();
+d75 1
+a75 1
+		if (DNDInterface.class.isInstance(view)) {
+d77 2
+a78 3
+			dndi.setDropTargetActive(true);
+			dndi.setDragSourceActive(false);
+			comps.add(dndi);
+d86 1
+a86 1
+		if (DNDInterface.class.isInstance(view)) {
+d88 2
+a89 3
+			dndi.setDropTargetActive(false);
+			dndi.setDragSourceActive(false);
+			comps.remove(dndi);
+d100 3
+a102 3
+		System.out.println("DNDTool Activation");
+
+		setDragSourceActive(true);
+d106 3
+a108 2
+		System.out.println("DNDTool deactivation.");
+		setDragSourceActive(false);
+d112 7
+a118 7
+	private void setDragSourceActive(boolean newState) {
+		Iterator it = comps.iterator();
+		while (it.hasNext()) {
+			DNDInterface dndi = (DNDInterface)it.next();
+			dndi.setDragSourceActive(newState);
+		}
+	}
+d134 1
+a134 1
+				Locator loc = lh.getLocator();
+d178 3
+a180 3
+	public void mouseMove(MouseEvent evt, int x, int y) {
+		if (evt.getSource() == getActiveView()) {
+			setCursor(evt.getX(), evt.getY(), getActiveView());
+d189 1
+a189 1
+	public void mouseUp(MouseEvent e, int x, int y) {
+d191 2
+a192 1
+			fChild.mouseUp(e, x, y);
+d194 1
+a194 1
+		fChild = null;
+d196 1
+d203 2
+a204 2
+	public void mouseDown(MouseEvent e, int x, int y) {
+		super.mouseDown(e, x, y);
+d214 1
+a214 1
+		Handle handle = view().findHandle(e.getX(), e.getY());
+d216 2
+d221 1
+a221 1
+			Figure figure = drawing().findFigure(e.getX(), e.getY());
+d235 2
+d244 1
+a244 1
+			fChild.mouseDown(e, x, y);
+d253 1
+a253 1
+	public void mouseDrag(MouseEvent e, int x, int y) {
+d255 1
+a255 1
+			fChild.mouseDrag(e, x, y);
+d264 1
+a264 1
+		return new SelectAreaTracker(editor());
+d271 1
+a271 1
+		return new DragTracker(editor, f);
+d278 111
+a388 1
+		return new HandleTracker(editor(), handle);
+d390 11
+@
+
+
+1.1
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d15 2
+a17 2
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+d22 1
+d59 1
+a59 1
+	private ArrayList       comps;
+d63 1
+a63 1
+		comps = new ArrayList();
+@
+
+
+1.1.4.1
+log
+@Modified ViewChangeListener
+ViewCreated -> ViewActivated
+ViewDestroying -> ViewDeactivated
+@
+text
+@d68 2
+a69 2
+	public void viewActivated(DrawingView view) {
+		super.viewActivated(view);
+d81 1
+a81 1
+	public void viewDeactivated(DrawingView view) {
+d88 1
+a88 1
+		super.viewDeactivated(view);
+@
+
+
+1.1.4.2
+log
+@AbstractTool now contains as opposed to inherits ViewChangeListener
+So the ViewChangeListener methods are not exposed as public from AbstractTool.
+Methods of the same name exist, but they are now protected.
+@
+text
+@d68 1
+a68 1
+	protected void viewActivated(DrawingView view) {
+d81 1
+a81 1
+	protected void viewDeactivated(DrawingView view) {
+@
+
+
+1.1.4.3
+log
+@1. Added getDesktop to the DrawingEditor.  added null returns to all Classes that dont fully support
+   the Desktop architecture yet, like the applets.
+
+2. Added a figureSelection listener to the DrawingEditor so one can register with the DrawingEditor to
+   hear figure selection events.  You can still register with the individual DrawingViews if you wish.
+   The DrawingEditor will guarantee that it only fires this event on the active view, so it saves a listener
+   from having to register and unregister with views to hear this event each time the activeView changes.
+   All Commands were doing this register/unregister dance.
+
+3. AbstractCommand now registers for figureSelectionEvents with the drawingEditor as opposed to the
+   DrawingView.
+
+4. Went back to viewCreated and viewDestroying naming.  flip flopping.  Its actually more accurate.  the
+   real issue is that 2 events are missing, viewDestroyed and viewCreating.  dont need them yet, but
+   they may materialize in the future.
+
+5. Went back to Tool CompositeTool being enabled even when no figure is selected.
+
+6. FigureSelectionListener now extends java.util.EventListener now because I am too lazy to write
+   an event handler just yet.
+
+7. implemented new findFigureInside() fix.  needs testing.
+
+8. standardDrawingView selectionZordered now returns figures in the proper order(not reversed).
+@
+text
+@d68 2
+a69 2
+	protected void viewCreated(DrawingView view) {
+		super.viewCreated(view);
+d81 1
+a81 1
+	protected void viewDestroying(DrawingView view) {
+d88 1
+a88 1
+		super.viewDestroying(view);
+@
+
+
+1.1.4.4
+log
+@1.  Tool now accepts DrawingViewMouseEvent as opposed to java.awt.MouseEvent and x,y ints.
+2. compositeFigure now uses constrained mouse values throughout.
+3. nested CreationTOol was calling drawing() before it was setting the view.  should lead to NPE.  this tool still seems broken
+   i dont think its needed anymore?
+4. bug in splitConnectionTool mouse down. setEndConnector(findConnector(ex, ex, c)); needs to be ex and ey
+5. made some of StandardDrawingViews inner class listners protected.
+@
+text
+@d16 1
+a16 1
+
+d174 3
+a176 3
+	public void mouseMove(DrawingViewMouseEvent dvme) {
+		if (dvme.getDrawingView() == getActiveView()) {
+			setCursor(dvme.getX(), dvme.getY(), getActiveView());
+d185 1
+a185 1
+	public void mouseUp(DrawingViewMouseEvent dvme) {
+d187 1
+a187 1
+			fChild.mouseUp(dvme);
+d197 2
+a198 2
+	public void mouseDown(DrawingViewMouseEvent dvme) {
+		super.mouseDown(dvme);
+d208 1
+a208 1
+		Handle handle = view().findHandle(getAnchorX(), getAnchorY());
+d213 1
+a213 1
+			Figure figure = drawing().findFigure(getAnchorX(), getAnchorY());
+d218 1
+a218 1
+				if (dvme.getMouseEvent().isShiftDown()) {
+d227 1
+a227 1
+				if (!dvme.getMouseEvent().isShiftDown()) {
+d234 1
+a234 1
+			fChild.mouseDown(dvme);
+d243 1
+a243 1
+	public void mouseDrag(DrawingViewMouseEvent dvme) {
+d245 1
+a245 1
+			fChild.mouseDrag(dvme);
+@
+
+
+1.1.4.5
+log
+@DND now 'almost' implements Undo/Redo.
+It works but its 2 seperate actions, so it takes 2 actions to undo
+and 2 actions to redo.  havent found out how to remedy this yet.
+Since the Drag gesture may be different on different platforms one must
+either implement a JHD drag gesture recognizer, which is not the correct approach.
+Or one must make the tool sufficietly generic to handle and undo drags from all platforms.
+
+shooting for the latter.  DND needs some work.  But its still working.
+@
+text
+@d70 1
+a70 1
+		if (view instanceof DNDInterface) {
+d82 1
+a82 1
+		if (view instanceof DNDInterface) {
+d97 2
+a99 1
+		//System.out.println("DNDTool Activation");
+d103 1
+a103 1
+		//System.out.println("DNDTool deactivation.");
+a187 5
+			fChild = null;
+			if (dvme.getDrawingView() instanceof DNDInterface) {
+				DNDInterface dndi = (DNDInterface)dvme.getDrawingView();
+				dndi.setDragSourceActive(true);
+			}
+d189 1
+a190 1
+		//get undo actions and push into undo stack?
+a210 5
+			//Turn off DND
+			if (dvme.getDrawingView() instanceof DNDInterface) {
+				DNDInterface dndi = (DNDInterface)dvme.getDrawingView();
+				dndi.setDragSourceActive(false);
+			}
+@
+
+
+1.1.4.6
+log
+@DND Improvements in OO and Efficiency
+@
+text
+@d17 1
+d19 1
+a19 2
+import javax.swing.JComponent;
+import java.awt.dnd.*;
+a21 1
+//import CH.ifa.draw.util.CollectionsFactory;
+d48 1
+a48 2
+ * express this.  It won't work until setVisible(true) is called.  then you can 
+ * initialize DND.
+d58 1
+a58 4
+//	private java.util.List       comps;
+	private DragGestureListener dragGestureListener;
+	private boolean dragOn;
+	
+d62 1
+a62 3
+//		comps = CollectionsFactory.current().createList();
+		setDragGestureListener(createDragGestureListener());
+		dragOn = false;
+d72 3
+a74 2
+			dndi.DNDInitialize( getDragGestureListener() );
+//			comps.add(dndi);
+d84 3
+a86 2
+			dndi.DNDDeinitialize();
+//			comps.remove(dndi);
+d97 1
+a97 1
+//		setDragSourceActive(true);
+a98 1
+		setDragOn(true);
+d103 1
+a103 2
+		setDragOn(false);
+//		setDragSourceActive(false);//if its not turned off other tools will have problems since drag will start
+d107 7
+a113 7
+//	private void setDragSourceActive(boolean newState) {
+//		Iterator it = comps.iterator();
+//		while (it.hasNext()) {
+//			DNDInterface dndi = (DNDInterface)it.next();
+//			dndi.setDragSourceState(newState);
+//		}
+//	}
+d188 4
+a192 1
+		setDragOn(true);
+d214 1
+d216 4
+a219 2
+			setDragOn(false);
+			fChild = createHandleTracker(handle);
+a235 2
+				//Turn off DND
+				setDragOn(false);
+a278 120
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+
+	private DragGestureListener getDragGestureListener(){
+		return dragGestureListener;
+	}
+	private void setDragGestureListener(DragGestureListener dragGestureListener){
+		this.dragGestureListener = dragGestureListener;
+	}
+	protected boolean isDragOn(){
+		return dragOn;
+	}
+	protected void setDragOn(boolean dragOn){
+		this.dragOn = dragOn;
+	}
+	private DragGestureListener createDragGestureListener() {
+		
+		return new DragGestureListener() {
+			
+			public void dragGestureRecognized(final DragGestureEvent dge) {
+				Component c = dge.getComponent();
+				System.out.println("recognized for " + c);				
+				if(isDragOn() == false)
+					return;
+
+				if (c instanceof DrawingView) {
+					boolean found = false;
+					DrawingView dv = (DrawingView)c;
+					/* Send the drawing view which inspired the action a mouseUp to clean
+					up its current tool.  This is because mouse up will otherwise never
+					be sent and the tool will be stuck with only mouse down which means
+					it will likely stay activated.  solve later for now just make
+					but report. */
+					/* this is a list of cloned figures */
+					FigureEnumeration selectedElements = dv.selection();
+
+					if (selectedElements.hasNextFigure() == false) {
+						return;
+					}
+
+					Point p = dge.getDragOrigin();
+		//				System.out.println("origin at " + p);
+					while (selectedElements.hasNextFigure()) {
+						Figure f = selectedElements.nextFigure();
+						if (f.containsPoint(p.x, p.y)) {
+		/*              Rectangle r = figgy.displayBox();
+							sx = r.width;
+							sy = r.height;*/
+							//System.out.println("figure is " + figgy);
+							found = true;
+							break;
+						}
+					}
+					if (found == true) {
+						DNDFigures dndff = new DNDFigures(dv.selection(), p);
+						DNDFiguresTransferable trans = new DNDFiguresTransferable(dndff);
+
+						/* SAVE FOR FUTURE DRAG IMAGE SUPPORT */
+						/* drag image support that I need to test on some supporting platform.
+						windows is not supporting this on NT so far. Ill test 98 and 2K next
+
+						boolean support = dragSource.isDragImageSupported();
+						java.awt.image.BufferedImage  bi = new BufferedImage(sx,sy,BufferedImage.TYPE_INT_RGB);
+						Graphics2D g = bi.createGraphics();
+						Iterator itr2 = selectedElements.iterator();
+						while ( itr2.hasNext() ) {
+							Figure fig = (Figure) itr2.next();
+							fig = (Figure)fig.clone();
+							Rectangle rold = fig.displayBox();
+							fig.moveBy(-rold.x,-rold.y);
+							fig.draw(g);
+						}
+						g.setBackground(Color.red);
+						dge.getDragSource().startDrag(
+										dge,
+										DragSource.DefaultMoveDrop,
+										bi,
+										new Point(0,0),
+										trans,
+										this);
+						*/
+						if (c instanceof JComponent) {
+							((JComponent)c).setAutoscrolls(false);
+						}
+						dge.getDragSource().startDrag(
+										dge,
+										null,
+										trans,
+										((DNDInterface)dv).getDragSourceListener());
+					}
+				}
+			}
+		};
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+@
+
+
+1.1.4.7
+log
+@Dnd rework
+@
+text
+@d318 1
+a318 1
+				//System.out.println("Drag Gesture Recognized for " + c);				
+@
+
+
+1.1.4.8
+log
+@OO improvements and a few bug fixes.
+@
+text
+@d14 6
+a21 4
+import java.awt.Cursor;
+import java.awt.dnd.DragGestureListener;
+import javax.swing.JComponent;
+
+d58 1
+a58 1
+public class DragNDropTool extends CH.ifa.draw.standard.AbstractTool {
+d136 1
+a136 1
+				CH.ifa.draw.framework.Locator loc = lh.getLocator();
+d266 1
+a266 1
+		return new CH.ifa.draw.standard.SelectAreaTracker(editor());
+d273 1
+a273 1
+		return new CH.ifa.draw.standard.DragTracker(editor, f);
+d280 1
+a280 1
+		return new CH.ifa.draw.standard.HandleTracker(editor(), handle);
+d316 4
+a319 4
+			public void dragGestureRecognized(final java.awt.dnd.DragGestureEvent dge) {
+				java.awt.Component c = dge.getComponent();
+				//System.out.println("Drag Gesture Recognized for " + c);
+				if(isDragOn() == false) {
+a320 1
+				}
+d331 1
+a331 1
+					CH.ifa.draw.framework.FigureEnumeration selectedElements = dv.selection();
+d337 1
+a337 1
+					java.awt.Point p = dge.getDragOrigin();
+@
+
+

@@ -1,0 +1,595 @@
+head	1.11;
+access;
+symbols
+	jhotdraw60b1-release:1.10
+	package_rename:1.10
+	directory_rename:1.9
+	reorg_6x_split_initial:1.9
+	MVC_PHASE1:1.9.0.10
+	NEW_ATTRIBUTES:1.9.0.8
+	DNOYEB1_ALPHA-2:1.9.4.1
+	release_JHD54b1:1.9
+	BUGFIX_670992:1.9.0.6
+	DNOYEB1_ALPHA-1:1.9.4.1
+	dnoyeb1:1.9.0.4
+	repack:1.9.0.2
+	Root_repack:1.9
+	Before_FigureVisitor:1.9
+	JHotDraw_5-3:1.6
+	JHotDraw_5-2_merged:1.2
+	JHotDraw_5-1_initial:1.1
+	start:1.1.1.1
+	vendor:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.11
+date	2004.05.25.13.35.25;	author pmorch;	state Exp;
+branches;
+next	1.10;
+
+1.10
+date	2004.01.09.22.53.41;	author mrfloppy;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2002.08.14.09.01.58;	author mrfloppy;	state Exp;
+branches
+	1.9.4.1;
+next	1.8;
+
+1.8
+date	2002.08.04.22.43.22;	author mrfloppy;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2002.05.20.19.57.58;	author mrfloppy;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2001.10.24.21.15.18;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2001.10.24.20.32.00;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2001.10.24.20.25.12;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.06.29.13.42.13;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.03.09.15.31.46;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.10.12.14.57.08;	author jeckel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.10.12.14.57.08;	author jeckel;	state Exp;
+branches;
+next	;
+
+1.9.4.1
+date	2003.01.15.21.04.11;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.11
+log
+@Iconkit modified to deprecate duplicate and redundant methods as
+described in:
+https://sourceforge.net/forum/forum.php?thread_id=1034601&forum_id=39886
+@
+text
+@/*
+ * @@(#)ImageFigure.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package org.jhotdraw.figures;
+
+import java.awt.*;
+import java.io.*;
+import java.util.List;
+import java.awt.image.ImageObserver;
+import org.jhotdraw.framework.*;
+import org.jhotdraw.standard.*;
+import org.jhotdraw.util.*;
+
+/**
+ * A Figure that shows an Image.
+ * Images shown by an image figure are shared by using the Iconkit.
+ *
+ * @@see Iconkit
+ *
+ * @@version <$CURRENT_VERSION$>
+ */
+public  class ImageFigure
+		extends AttributeFigure implements ImageObserver {
+
+	private String   fFileName;
+	private transient Image fImage;
+	private Rectangle fDisplayBox;
+	/*
+	 * Serialization support.
+	 */
+	private static final long serialVersionUID = 148012030121282439L;
+	private int imageFigureSerializedDataVersion = 1;
+
+	public ImageFigure() {
+		fFileName = null;
+		fImage = null;
+		fDisplayBox = null;
+	}
+
+	public ImageFigure(Image image, String fileName, Point origin) {
+		fFileName = fileName;
+		fImage = image;
+		// fix for bug-id: 593080 (ImageFigure calculates the image rectangle wrongly)
+		basicDisplayBox(origin, new Point(origin.x + fImage.getWidth(this), origin.y + fImage.getHeight(this)));
+	}
+
+	public void basicDisplayBox(Point origin, Point corner) {
+		fDisplayBox = new Rectangle(origin);
+		fDisplayBox.add(corner);
+	}
+
+	public HandleEnumeration handles() {
+		List handles = CollectionsFactory.current().createList();
+		BoxHandleKit.addHandles(this, handles);
+		return new HandleEnumerator(handles);
+	}
+
+	public Rectangle displayBox() {
+		return new Rectangle(
+			fDisplayBox.x,
+			fDisplayBox.y,
+			fDisplayBox.width,
+			fDisplayBox.height);
+	}
+
+	protected void basicMoveBy(int x, int y) {
+		fDisplayBox.translate(x,y);
+	}
+
+	public void draw(Graphics g) {
+		if (fImage == null) {
+			fImage = Iconkit.instance().loadImage(fFileName,true);
+		}
+		if (fImage != null) {
+			g.drawImage(fImage, fDisplayBox.x, fDisplayBox.y, fDisplayBox.width, fDisplayBox.height, this);
+		}
+		else {
+			drawGhost(g);
+		}
+	}
+
+	private void drawGhost(Graphics g) {
+		g.setColor(Color.gray);
+		g.fillRect(fDisplayBox.x, fDisplayBox.y, fDisplayBox.width, fDisplayBox.height);
+	}
+
+   /**
+	* Handles asynchroneous image updates.
+	*/
+	public boolean imageUpdate(Image img, int flags, int x, int y, int w, int h) {
+		if ((flags & (FRAMEBITS|ALLBITS)) != 0) {
+			invalidate();
+			if (listener() != null) {
+				listener().figureRequestUpdate(new FigureChangeEvent(this));
+			}
+		}
+		return (flags & (ALLBITS|ABORT)) == 0;
+	}
+
+	/**
+	 * Releases a figure's resources. Release is called when
+	 * a figure is removed from a drawing. Informs the listeners that
+	 * the figure is removed by calling figureRemoved.
+	 */
+	public void release() {
+		fImage.flush();
+	}
+
+   /**
+	* Writes the ImageFigure to a StorableOutput. Only a reference to the
+	* image, that is its pathname is saved.
+	*/
+	public void write(StorableOutput dw) {
+		super.write(dw);
+		dw.writeInt(fDisplayBox.x);
+		dw.writeInt(fDisplayBox.y);
+		dw.writeInt(fDisplayBox.width);
+		dw.writeInt(fDisplayBox.height);
+		dw.writeString(fFileName);
+	}
+
+   /**
+	* Reads the ImageFigure from a StorableInput. It registers the
+	* referenced figure to be loaded from the Iconkit.
+	* @@see Iconkit#registerImage
+	*/
+	public void read(StorableInput dr) throws IOException {
+		super.read(dr);
+		fDisplayBox = new Rectangle(
+			dr.readInt(),
+			dr.readInt(),
+			dr.readInt(),
+			dr.readInt());
+		fFileName = dr.readString();
+		Iconkit.instance().registerImage(fFileName);
+	}
+
+	private void readObject(ObjectInputStream s)
+		throws ClassNotFoundException, IOException {
+
+		s.defaultReadObject();
+		Iconkit.instance().registerImage(fFileName);
+		fImage = null;
+	}
+}
+@
+
+
+1.10
+log
+@After renaming the CH.ifa.draw to org.jhotdraw
+@
+text
+@d80 1
+a80 1
+			fImage = Iconkit.instance().getImage(fFileName);
+@
+
+
+1.9
+log
+@no message
+@
+text
+@d12 1
+a12 1
+package CH.ifa.draw.figures;
+d18 3
+a20 3
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.standard.*;
+import CH.ifa.draw.util.*;
+@
+
+
+1.9.4.1
+log
+@
+Lets have a moment of silence for DecoratorFigure.....It was a good figure ;{
+
+Anything which happens inside the drawing after figure add must be undone before figure orphan.  It must also not
+be exposed to anyobject outside the drawing.
+Decorator figure retired in favor of a figureManipulator and the other functions being implemented by a composite
+figure(BorderDecorator).
+AdnimationDecorator retired in favor of AnimationManipulator.
+A figure can have only 1 container. This is making the border tool have a hard time.
+
+Lots of comments added
+
+next phase:
+orphan will disappear.  only add and remove remain.  All figure related resources belong to the figures and no other
+object should care about figure.release.
+split the figureListener into a figureContainer listener and a figureChangeListener.
+Fix BorderDecorator.
+Fix ConnectedText.
+view.checkDamage to call drawing.update()
+@
+text
+@d109 3
+a111 1
+	 *
+@
+
+
+1.8
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d51 2
+a52 1
+		basicDisplayBox(origin, new Point(fImage.getWidth(this), fImage.getHeight(this)));
+@
+
+
+1.7
+log
+@various merges (TextArea, HTMLTextArea, CreationTool, MiniMap, bug fixes)
+@
+text
+@d16 1
+a16 1
+import java.util.Vector;
+d59 2
+a60 2
+	public Vector handles() {
+		Vector handles = new Vector();
+d62 1
+a62 1
+		return handles;
+a77 1
+//		((Graphics2D)g).drawImage(fImage, null, null);
+@
+
+
+1.6
+log
+@merge dnd (before 5.3)
+@
+text
+@d51 1
+a51 3
+		fDisplayBox = new Rectangle(origin.x, origin.y, 0, 0);
+		fDisplayBox.width = fImage.getWidth(this);
+		fDisplayBox.height = fImage.getHeight(this);
+d78 1
+@
+
+
+1.5
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d31 1
+a31 1
+        extends AttributeFigure implements ImageObserver {
+d33 62
+a94 62
+    private String   fFileName;
+    private transient Image fImage;
+    private Rectangle fDisplayBox;
+    /*
+     * Serialization support.
+     */
+    private static final long serialVersionUID = 148012030121282439L;
+    private int imageFigureSerializedDataVersion = 1;
+
+    public ImageFigure() {
+        fFileName = null;
+        fImage = null;
+        fDisplayBox = null;
+    }
+
+    public ImageFigure(Image image, String fileName, Point origin) {
+        fFileName = fileName;
+        fImage = image;
+        fDisplayBox = new Rectangle(origin.x, origin.y, 0, 0);
+        fDisplayBox.width = fImage.getWidth(this);
+        fDisplayBox.height = fImage.getHeight(this);
+    }
+
+    public void basicDisplayBox(Point origin, Point corner) {
+        fDisplayBox = new Rectangle(origin);
+        fDisplayBox.add(corner);
+    }
+
+    public Vector handles() {
+        Vector handles = new Vector();
+        BoxHandleKit.addHandles(this, handles);
+        return handles;
+    }
+
+    public Rectangle displayBox() {
+        return new Rectangle(
+            fDisplayBox.x,
+            fDisplayBox.y,
+            fDisplayBox.width,
+            fDisplayBox.height);
+    }
+
+    protected void basicMoveBy(int x, int y) {
+        fDisplayBox.translate(x,y);
+    }
+
+    public void draw(Graphics g) {
+        if (fImage == null) {
+            fImage = Iconkit.instance().getImage(fFileName);
+        }
+        if (fImage != null) {
+            g.drawImage(fImage, fDisplayBox.x, fDisplayBox.y, fDisplayBox.width, fDisplayBox.height, this);
+        }
+        else {
+            drawGhost(g);
+        }
+    }
+
+    private void drawGhost(Graphics g) {
+        g.setColor(Color.gray);
+        g.fillRect(fDisplayBox.x, fDisplayBox.y, fDisplayBox.width, fDisplayBox.height);
+    }
+d97 20
+a116 20
+    * Handles asynchroneous image updates.
+    */
+    public boolean imageUpdate(Image img, int flags, int x, int y, int w, int h) {
+	    if ((flags & (FRAMEBITS|ALLBITS)) != 0) {
+	        invalidate();
+	        if (listener() != null) {
+	            listener().figureRequestUpdate(new FigureChangeEvent(this));
+	        }
+	    }
+	    return (flags & (ALLBITS|ABORT)) == 0;
+    }
+
+    /**
+     * Releases a figure's resources. Release is called when
+     * a figure is removed from a drawing. Informs the listeners that
+     * the figure is removed by calling figureRemoved.
+     */
+    public void release() {
+    	fImage.flush();
+    }
+d119 11
+a129 11
+    * Writes the ImageFigure to a StorableOutput. Only a reference to the
+    * image, that is its pathname is saved.
+    */
+    public void write(StorableOutput dw) {
+        super.write(dw);
+        dw.writeInt(fDisplayBox.x);
+        dw.writeInt(fDisplayBox.y);
+        dw.writeInt(fDisplayBox.width);
+        dw.writeInt(fDisplayBox.height);
+        dw.writeString(fFileName);
+    }
+d132 22
+a153 22
+    * Reads the ImageFigure from a StorableInput. It registers the
+    * referenced figure to be loaded from the Iconkit.
+    * @@see Iconkit#registerImage
+    */
+    public void read(StorableInput dr) throws IOException {
+        super.read(dr);
+        fDisplayBox = new Rectangle(
+            dr.readInt(),
+            dr.readInt(),
+            dr.readInt(),
+            dr.readInt());
+        fFileName = dr.readString();
+        Iconkit.instance().registerImage(fFileName);
+    }
+
+    private void readObject(ObjectInputStream s)
+        throws ClassNotFoundException, IOException {
+
+        s.defaultReadObject();
+        Iconkit.instance().registerImage(fFileName);
+        fImage = null;
+    }
+@
+
+
+1.4
+log
+@before merge for version 5.3 (dnd, undo,...)
+@
+text
+@d2 1
+a2 1
+ * @@(#)ImageFigure.java 5.2
+d4 6
+d25 1
+d27 2
+d80 1
+a80 1
+        if (fImage == null)
+d82 2
+a83 1
+        if (fImage != null)
+d85 2
+a86 1
+        else
+d88 1
+d102 1
+a102 1
+	        if (listener() != null)
+d104 1
+d107 9
+@
+
+
+1.3
+log
+@- SelectionFigure is now an interface. The default implementation CH.ifa.draw.standard.StandardSelectionFigure
+- A FigureSelectionListener interface has been introduced in CH.ifa.draw.framework. An DrawingEditor
+  is now a FigureSelectionListener and the signature for all selectionChanged() methods has been
+  changed to figureSelectionChanged().
+- CH.ifa.draw.util.Command is now an interface. A AbstractCommand can be found in CH.ifa.draw.standard.
+- All commands used to have a fView field. This has been moved to CH.ifa.draw.standard.AbstactCommand
+- A CH.ifa.draw.standard.StandardDrawingView has now a paintComponents() method instead of a paint()
+  and update() method. This allows the CH.ifa.draw.util.FloatingTextField to be a javax.swing.JTextField
+  instead of a java.awt.TextField.
+- CH.ifa.draw.figures.AbstractLineDecorator has been missing
+- DrawApplet, DrawApplication and derived classes are now programmed towards the DrawingView interface
+  instead of using StandardDrawingView. That leads to occasional cast when some additional StandardDrawingView
+  functionality is required in some specialized cases. Applications that were derived from DrawApplication
+  and used to override the createContents() methods should now return a DrawingView as well
+@
+text
+@d71 1
+a71 1
+        if (fImage == null) {
+d73 1
+a73 2
+        }
+        if (fImage != null) {
+d75 1
+a75 2
+        }
+        else {
+a76 1
+        }
+@
+
+
+1.2
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@d71 1
+a71 1
+        if (fImage == null)
+d73 2
+a74 1
+        if (fImage != null)
+d76 2
+a77 1
+        else
+d79 1
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d2 1
+a2 1
+ * @@(#)ImageFigure.java 5.1
+@
+
+
+1.1.1.1
+log
+@
+Initial revision.
+@
+text
+@@

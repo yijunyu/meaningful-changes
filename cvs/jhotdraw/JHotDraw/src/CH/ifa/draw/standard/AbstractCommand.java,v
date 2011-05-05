@@ -1,0 +1,714 @@
+head	1.8;
+access;
+symbols
+	jhotdraw54b2-release:1.8
+	reorg_6x_split:1.8
+	MVC_PHASE1:1.7.0.2
+	NEW_ATTRIBUTES:1.6.0.2
+	DNOYEB1_ALPHA-2:1.5.4.3
+	release_JHD54b1:1.5
+	BUGFIX_670992:1.5.0.6
+	DNOYEB1_ALPHA-1:1.5.4.3
+	dnoyeb1:1.5.0.4
+	repack:1.5.0.2
+	Root_repack:1.5
+	Before_FigureVisitor:1.5
+	JHotDraw_5-3:1.4;
+locks; strict;
+comment	@# @;
+
+
+1.8
+date	2003.11.09.21.18.46;	author mrfloppy;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2003.02.23.00.29.35;	author mrfloppy;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2003.02.17.15.58.33;	author dnoyeb;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2002.08.04.22.56.17;	author mrfloppy;	state Exp;
+branches
+	1.5.4.1;
+next	1.4;
+
+1.4
+date	2002.01.19.18.31.31;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.10.24.21.15.19;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.10.24.20.32.00;	author mrfloppy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.07.02.08.04.35;	author mrfloppy;	state Exp;
+branches;
+next	;
+
+1.5.4.1
+date	2003.01.04.15.38.01;	author dnoyeb;	state Exp;
+branches;
+next	1.5.4.2;
+
+1.5.4.2
+date	2003.01.07.21.23.17;	author dnoyeb;	state Exp;
+branches;
+next	1.5.4.3;
+
+1.5.4.3
+date	2003.01.16.17.13.56;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.8
+log
+@TestSuite: adjusting auto-generated sourcecode (JunitDoclet) to coding style
+@
+text
+@/*
+ * @@(#)AbstractCommand.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package CH.ifa.draw.standard;
+
+import CH.ifa.draw.framework.*;
+import CH.ifa.draw.util.Command;
+import CH.ifa.draw.util.CommandListener;
+import CH.ifa.draw.util.Undoable;
+import CH.ifa.draw.util.CollectionsFactory;
+
+import java.util.*;
+
+/**
+ * @@author Helge Horch
+ * @@author Wolfram Kaiser
+ * @@version <$CURRENT_VERSION$>
+ */
+public abstract class AbstractCommand implements Command, FigureSelectionListener {
+
+	private String  myName;
+	private Undoable myUndoableActivity;
+	private boolean myIsViewRequired;
+	private AbstractCommand.EventDispatcher myEventDispatcher;
+
+	/**
+	 * the DrawingEditor this command applies to
+	 */
+	private DrawingEditor myDrawingEditor;
+
+	/**
+	 * Constructs a command with the given name that applies to the given view.
+	 * @@param newName java.lang.String
+	 * @@param newDrawingEditor the DrawingEditor which manages the views
+	 */
+	public AbstractCommand(String newName, DrawingEditor newDrawingEditor) {
+		this(newName, newDrawingEditor, true);
+	}
+
+	public AbstractCommand(String newName, DrawingEditor newDrawingEditor, boolean newIsViewRequired) {
+		setName(newName);
+		setDrawingEditor(newDrawingEditor);
+		getDrawingEditor().addViewChangeListener(createViewChangeListener());
+		myIsViewRequired = newIsViewRequired;
+		setEventDispatcher(createEventDispatcher());
+	}
+
+	protected void viewSelectionChanged(DrawingView oldView, DrawingView newView) {
+		if (oldView != null) {
+			oldView.removeFigureSelectionListener(this);
+		}
+		if (newView != null) {
+			newView.addFigureSelectionListener(this);
+		}
+		if (isViewRequired()) {
+			boolean isOldViewInteractive = (oldView != null) && oldView.isInteractive();
+			boolean isNewViewInteractive = (newView != null) && newView.isInteractive();
+			// old view was not interactive aware while new view is now interactive aware
+			if (!isOldViewInteractive && isNewViewInteractive) {
+				getEventDispatcher().fireCommandExecutableEvent();
+			}
+			// old view was interactive aware while new view is not
+			else if (isOldViewInteractive && !isNewViewInteractive) {
+				getEventDispatcher().fireCommandNotExecutableEvent();
+			}
+		}
+	}
+
+	/**
+	 * Sent when a new view is created
+	 */
+	protected void viewCreated(DrawingView view) {
+	}
+
+	/**
+	 * Send when an existing view is about to be destroyed.
+	 */
+	protected void viewDestroying(DrawingView view) {
+	}
+
+	/**
+	 * @@param view a DrawingView
+	 */
+	public void figureSelectionChanged(DrawingView view) {
+	}
+
+	/**
+	 * @@return DrawingEditor associated with this command
+	 */
+	public DrawingEditor getDrawingEditor() {
+		return myDrawingEditor;
+	}
+
+	private void setDrawingEditor(DrawingEditor newDrawingEditor) {
+		myDrawingEditor = newDrawingEditor;
+	}
+
+	/**
+	 * Convenience method
+	 *
+	 * @@return DrawingView currently active in the editor
+	 */
+	public DrawingView view() {
+		return getDrawingEditor().view();
+	}
+
+	/**
+	 * Gets the command name.
+	 */
+	public String name() {
+		return myName;
+	}
+
+	public void setName(String newName) {
+		myName = newName;
+	}
+
+	/**
+	 * Releases resources associated with this command
+	 */
+	public void dispose() {
+		if (view() != null) {
+			view().removeFigureSelectionListener(this);
+		}
+	}
+
+	/**
+	 * Executes the command.
+	 */
+	public void execute() {
+		if (view() == null) {
+			throw new JHotDrawRuntimeException("execute should NOT be getting called when view() == null");
+		}
+	}
+
+	/**
+	 * Tests if the command can be executed. The view must be valid when this is
+	 * called. Per default, a command is executable if at
+	 * least one figure is selected in the current activated
+	 * view.
+	 */
+	public boolean isExecutable() {
+		// test whether there is a view required and whether an existing view
+		// accepts user input
+		if (isViewRequired()) {
+			if ((view() == null) || !view().isInteractive()) {
+				return false;
+			}
+		}
+		return isExecutableWithView();
+	}
+
+	protected boolean isViewRequired() {
+		return myIsViewRequired;
+	}
+
+	protected boolean isExecutableWithView() {
+		return true;
+	}
+
+	public Undoable getUndoActivity() {
+		return myUndoableActivity;
+	}
+
+	public void setUndoActivity(Undoable newUndoableActivity) {
+		myUndoableActivity = newUndoableActivity;
+	}
+
+	public void addCommandListener(CommandListener newCommandListener) {
+		getEventDispatcher().addCommandListener(newCommandListener);
+	}
+
+	public void removeCommandListener(CommandListener oldCommandListener) {
+		getEventDispatcher().removeCommandListener(oldCommandListener);
+	}
+
+	private void setEventDispatcher(AbstractCommand.EventDispatcher newEventDispatcher) {
+		myEventDispatcher = newEventDispatcher;
+	}
+
+	protected AbstractCommand.EventDispatcher getEventDispatcher() {
+		return myEventDispatcher;
+	}
+
+	protected AbstractCommand.EventDispatcher createEventDispatcher() {
+		return new AbstractCommand.EventDispatcher(this);
+	}
+
+    protected ViewChangeListener createViewChangeListener() {
+        return new ViewChangeListener() {
+            public void viewSelectionChanged(DrawingView oldView, DrawingView newView){
+                AbstractCommand.this.viewSelectionChanged(oldView, newView);
+            }
+            public void viewCreated(DrawingView view){
+                AbstractCommand.this.viewCreated(view);
+            }
+            public void viewDestroying(DrawingView view){
+                AbstractCommand.this.viewDestroying(view);
+            }
+        };
+    }
+
+	public static class EventDispatcher {
+		private List myRegisteredListeners;
+		private Command myObservedCommand;
+
+		public EventDispatcher(Command newObservedCommand) {
+			myRegisteredListeners = CollectionsFactory.current().createList();
+			myObservedCommand = newObservedCommand;
+		}
+
+		public void fireCommandExecutedEvent() {
+			Iterator iter = myRegisteredListeners.iterator();
+			while (iter.hasNext()) {
+				((CommandListener)iter.next()).commandExecuted(new EventObject(myObservedCommand));
+			}
+		}
+
+		public void fireCommandExecutableEvent() {
+			Iterator iter = myRegisteredListeners.iterator();
+			while (iter.hasNext()) {
+				((CommandListener)iter.next()).commandExecutable(new EventObject(myObservedCommand));
+			}
+		}
+
+		public void fireCommandNotExecutableEvent() {
+			Iterator iter = myRegisteredListeners.iterator();
+			while (iter.hasNext()) {
+				((CommandListener)iter.next()).commandNotExecutable(new EventObject(myObservedCommand));
+			}
+		}
+
+		public void addCommandListener(CommandListener newCommandListener) {
+			if (!myRegisteredListeners.contains(newCommandListener)) {
+				myRegisteredListeners.add(newCommandListener);
+			}
+		}
+
+		public void removeCommandListener(CommandListener oldCommandListener) {
+			if (myRegisteredListeners.contains(oldCommandListener)) {
+				myRegisteredListeners.remove(oldCommandListener);
+			}
+		}
+	}
+}@
+
+
+1.7
+log
+@no message
+@
+text
+@d141 1
+a141 1
+		};
+@
+
+
+1.6
+log
+@
+Aggregrating as opposed to extending the ViewChangeListener
+changed inherited methods to protected as opposed to public.  Adds a level of
+safety.
+
+CH\ifa\draw/contrib/dnd/DragNDropTool.java
+CH\ifa\draw/standard/AbstractCommand.java
+CH\ifa\draw/standard/AbstractTool.java
+@
+text
+@d38 1
+a38 12
+	
+	private final ViewChangeListener myViewChangeListener = new ViewChangeListener() {
+		public void viewSelectionChanged(DrawingView oldView, DrawingView newView){
+			AbstractCommand.this.viewSelectionChanged(oldView, newView);
+		}
+		public void viewCreated(DrawingView view){
+			AbstractCommand.this.viewCreated(view);
+		}
+		public void viewDestroying(DrawingView view){
+			AbstractCommand.this.viewDestroying(view);
+		}
+	};
+d51 1
+a51 1
+		getDrawingEditor().addViewChangeListener(myViewChangeListener);
+d193 1
+a193 1
+	public AbstractCommand.EventDispatcher createEventDispatcher() {
+d196 14
+@
+
+
+1.5
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@d27 1
+a27 1
+public abstract class AbstractCommand implements Command, FigureSelectionListener, ViewChangeListener {
+d38 12
+a49 1
+
+d62 1
+a62 1
+		getDrawingEditor().addViewChangeListener(this);
+d67 1
+a67 1
+	public void viewSelectionChanged(DrawingView oldView, DrawingView newView) {
+d91 1
+a91 1
+	public void viewCreated(DrawingView view) {
+d97 1
+a97 1
+	public void viewDestroying(DrawingView view) {
+@
+
+
+1.5.4.1
+log
+@Modified ViewChangeListener
+ViewCreated -> ViewActivated
+ViewDestroying -> ViewDeactivated
+@
+text
+@d80 1
+a80 1
+	public void viewActivated(DrawingView view) {
+d86 1
+a86 1
+	public void viewDeactivated(DrawingView view) {
+@
+
+
+1.5.4.2
+log
+@1. Added getDesktop to the DrawingEditor.  added null returns to all Classes that dont fully support
+   the Desktop architecture yet, like the applets.
+
+2. Added a figureSelection listener to the DrawingEditor so one can register with the DrawingEditor to
+   hear figure selection events.  You can still register with the individual DrawingViews if you wish.
+   The DrawingEditor will guarantee that it only fires this event on the active view, so it saves a listener
+   from having to register and unregister with views to hear this event each time the activeView changes.
+   All Commands were doing this register/unregister dance.
+
+3. AbstractCommand now registers for figureSelectionEvents with the drawingEditor as opposed to the
+   DrawingView.
+
+4. Went back to viewCreated and viewDestroying naming.  flip flopping.  Its actually more accurate.  the
+   real issue is that 2 events are missing, viewDestroyed and viewCreating.  dont need them yet, but
+   they may materialize in the future.
+
+5. Went back to Tool CompositeTool being enabled even when no figure is selected.
+
+6. FigureSelectionListener now extends java.util.EventListener now because I am too lazy to write
+   an event handler just yet.
+
+7. implemented new findFigureInside() fix.  needs testing.
+
+8. standardDrawingView selectionZordered now returns figures in the proper order(not reversed).
+@
+text
+@a51 1
+		getDrawingEditor().addFigureSelectionListener(this);
+d57 1
+a57 1
+		/*if (oldView != null) {
+d62 1
+a62 1
+		}*/
+d80 1
+a80 1
+	public void viewCreated(DrawingView view) {
+d86 1
+a86 1
+	public void viewDestroying(DrawingView view) {
+@
+
+
+1.5.4.3
+log
+@Debugging exceptions added / cleanedup
+@
+text
+@d141 1
+a141 3
+			//This will become ASSERT in JDK 1.4
+			//This represents an avoidable error on the programmers part.			
+			throw new JHotDrawRuntimeException("View is null, exexute should have been called.");
+@
+
+
+1.4
+log
+@no message
+@
+text
+@d18 2
+d23 2
+a24 1
+ * @@author: Helge Horch, Wolfram Kaiser
+d33 1
+a33 1
+		
+d41 1
+a41 1
+	 * @@param name java.lang.String
+d97 1
+a97 1
+	 */	
+d101 1
+a101 1
+	
+d114 1
+a114 1
+	
+d121 1
+a121 1
+	
+d125 1
+a125 1
+	
+d151 1
+a151 1
+		// test whether there is a view required and whether an existing view 
+d168 1
+a168 1
+	
+d180 1
+a180 1
+	
+d198 1
+a198 1
+		private Vector myRegisteredListeners;
+d200 1
+a200 1
+		
+d202 1
+a202 1
+			myRegisteredListeners = new Vector();
+d205 1
+a205 1
+		
+d207 3
+a209 3
+			Enumeration le = myRegisteredListeners.elements();
+			while (le.hasMoreElements()) {
+				((CommandListener)le.nextElement()).commandExecuted(new EventObject(myObservedCommand));
+d212 1
+a212 1
+		
+d214 3
+a216 3
+			Enumeration le = myRegisteredListeners.elements();
+			while (le.hasMoreElements()) {
+				((CommandListener)le.nextElement()).commandExecutable(new EventObject(myObservedCommand));
+d221 3
+a223 3
+			Enumeration le = myRegisteredListeners.elements();
+			while (le.hasMoreElements()) {
+				((CommandListener)le.nextElement()).commandNotExecutable(new EventObject(myObservedCommand));
+d232 1
+a232 1
+		
+@
+
+
+1.3
+log
+@merge dnd (before 5.3)
+@
+text
+@d60 12
+a71 1
+		checkExecutable();
+a85 9
+	protected void checkExecutable() {
+		if (isExecutable()) {
+			getEventDispatcher().fireCommandExecutableEvent();
+		}
+		else {
+			getEventDispatcher().fireCommandNotExecutableEvent();
+		}
+	}
+	
+d127 3
+a129 1
+		view().removeFigureSelectionListener(this);
+d148 6
+a153 8
+		if (view() == null) {
+			return false;
+		}
+		else if (isExecutableWithView()) {
+			return view().isInteractive();
+		}
+		else {
+			return true;
+d155 5
+d163 1
+a163 1
+		return myIsViewRequired;
+@
+
+
+1.2
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d16 1
+d24 1
+a24 1
+public abstract class AbstractCommand implements Command, FigureSelectionListener {
+d26 1
+a26 1
+    private String  myName;
+d28 3
+a30 1
+	
+d32 1
+a32 1
+	 * the DrawingView this command applies to
+d34 1
+a34 1
+	private DrawingView fView;
+d39 1
+d41 5
+a45 1
+	public AbstractCommand(String newName, DrawingView newView) {
+d47 26
+a72 2
+		setView(newView);
+		view().addFigureSelectionListener(this);
+d75 9
+d91 1
+a91 1
+	 * @@return view associated with this command
+d93 13
+d107 8
+a114 1
+		return fView;
+d117 2
+a118 2
+	private void setView(DrawingView newView) {
+		fView = newView;
+d120 1
+a120 12
+
+    /**
+     * Gets the command name.
+     */
+    public String name() {
+        return myName;
+    }
+    
+    public void setName(String newName) {
+    	myName = newName;
+    }
+    
+d128 26
+a153 11
+    /**
+     * Executes the command.
+     */
+    public abstract void execute();
+
+    /**
+     * Tests if the command can be executed.
+     */
+    public boolean isExecutable() {
+        return true;
+    }
+d155 4
+d165 63
+@
+
+
+1.1
+log
+@added missing files (CH.ifa.draw.standard.AbstractCommand)
+@
+text
+@d1 11
+d14 1
+a14 2
+import CH.ifa.draw.framework.DrawingView;
+import CH.ifa.draw.framework.FigureSelectionListener;
+d16 2
+d20 2
+a21 2
+ * Creation date: (18.07.2000 13:23:20)
+ * @@author: Helge Horch
+d25 2
+a26 1
+    private String  fName;
+d28 3
+a30 1
+	/** the DrawingView this command applies to */
+d44 1
+a44 1
+	 * @@param view jhotdraw.framework.DrawingView
+d64 1
+a64 1
+        return fName;
+d67 2
+a68 3
+    private void setName(String newName)
+    {
+    	fName = newName;
+d72 1
+a72 1
+	 * Insert the method's description here.
+d90 8
+a97 1
+}
+@
+

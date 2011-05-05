@@ -1,0 +1,978 @@
+head	1.8;
+access;
+symbols
+	jhotdraw54b2-release:1.8
+	reorg_6x_split:1.8
+	MVC_PHASE1:1.8.0.10
+	NEW_ATTRIBUTES:1.8.0.8
+	DNOYEB1_ALPHA-2:1.8.4.6
+	release_JHD54b1:1.8
+	BUGFIX_670992:1.8.0.6
+	DNOYEB1_ALPHA-1:1.8.4.4
+	dnoyeb1:1.8.0.4
+	repack:1.8.0.2
+	Root_repack:1.8
+	Before_FigureVisitor:1.7
+	JHotDraw_5-3:1.5
+	JHotDraw_5-2_merged:1.3
+	JHotDraw_5-1_initial:1.2
+	start:1.1.1.1
+	vendor:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.8
+date	2002.09.22.08.58.23;	author mrfloppy;	state Exp;
+branches
+	1.8.4.1;
+next	1.7;
+
+1.7
+date	2002.08.21.08.05.55;	author mrfloppy;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2002.08.04.22.45.17;	author mrfloppy;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2001.10.24.21.15.18;	author mrfloppy;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2001.10.24.20.32.00;	author mrfloppy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.03.09.15.31.46;	author mrfloppy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2000.10.12.15.57.14;	author jeckel;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.10.12.14.57.08;	author jeckel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.10.12.14.57.08;	author jeckel;	state Exp;
+branches;
+next	;
+
+1.8.4.1
+date	2003.01.08.22.12.54;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.2;
+
+1.8.4.2
+date	2003.01.13.03.14.03;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.3;
+
+1.8.4.3
+date	2003.01.14.18.22.45;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.4;
+
+1.8.4.4
+date	2003.01.21.00.04.10;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.5;
+
+1.8.4.5
+date	2003.01.26.00.50.51;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.6;
+
+1.8.4.6
+date	2003.01.26.15.58.49;	author dnoyeb;	state Exp;
+branches;
+next	1.8.4.7;
+
+1.8.4.7
+date	2003.02.02.16.54.08;	author dnoyeb;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.8
+log
+@introduce FigureVisitor for paste/delete commands
+@
+text
+@/*
+ * @@(#)Drawing.java
+ *
+ * Project:		JHotdraw - a GUI framework for technical drawings
+ *				http://www.jhotdraw.org
+ *				http://jhotdraw.sourceforge.net
+ * Copyright:	© by the original author(s) and all contributors
+ * License:		Lesser GNU Public License (LGPL)
+ *				http://www.opensource.org/licenses/lgpl-license.html
+ */
+
+package CH.ifa.draw.framework;
+
+import CH.ifa.draw.util.*;
+import java.awt.*;
+import java.util.*;
+import java.util.List;
+import java.io.Serializable;
+
+/**
+ * Drawing is a container for figures.
+ * <p>
+ * Drawing sends out DrawingChanged events to DrawingChangeListeners
+ * whenever a part of its area was invalidated.
+ * <hr>
+ * <b>Design Patterns</b><P>
+ * <img src="images/red-ball-small.gif" width=6 height=6 alt=" o ">
+ * <b><a href=../pattlets/sld026.htm>Observer</a></b><br>
+ * The Observer pattern is used to decouple the Drawing from its views and
+ * to enable multiple views.<hr>
+ *
+ * @@see Figure
+ * @@see DrawingView
+ * @@see FigureChangeListener
+ *
+ * @@author Wolfram Kaiser
+ * @@version <$CURRENT_VERSION$>
+ */
+
+public interface Drawing
+		extends Storable, FigureChangeListener, Serializable {
+
+	/**
+	 * Releases the drawing and its contained figures.
+	 */
+	public void release();
+
+	/**
+	 * Returns an enumeration to iterate in
+	 * Z-order back to front over the figures.
+	 */
+	public FigureEnumeration figures();
+
+	/**
+	 * Returns an enumeration to iterate in
+	 * Z-order back to front over the figures
+	 * that lie within the absolute bounds.
+	 */
+	public FigureEnumeration figures(Rectangle viewRectangle);
+
+	/**
+	 * Returns an enumeration to iterate in
+	 * Z-order front to back over the figures.
+	 */
+	public FigureEnumeration figuresReverse();
+
+	/**
+	 * Finds a top level Figure. Use this call for hit detection that
+	 * should not descend into the figure's children.
+	 */
+	public Figure findFigure(int x, int y);
+
+	/**
+	 * Finds a top level Figure that intersects the given rectangle.
+	 */
+	public Figure findFigure(Rectangle r);
+
+	/**
+	 * Finds a top level Figure, but supresses the passed
+	 * in figure. Use this method to ignore a figure
+	 * that is temporarily inserted into the drawing.
+	 * @@param x the x coordinate
+	 * @@param y the y coordinate
+	 * @@param without the figure to be ignored during
+	 * the find.
+	 */
+	public Figure findFigureWithout(int x, int y, Figure without);
+
+	/**
+	 * Finds a top level Figure that intersects the given rectangle.
+	 * It supresses the passed
+	 * in figure. Use this method to ignore a figure
+	 * that is temporarily inserted into the drawing.
+	 */
+	public Figure findFigure(Rectangle r, Figure without);
+
+	/**
+	 * Finds a figure but descends into a figure's
+	 * children. Use this method to implement <i>click-through</i>
+	 * hit detection, that is, you want to detect the inner most
+	 * figure containing the given point.
+	 */
+	public Figure findFigureInside(int x, int y);
+
+	/**
+	 * Finds a figure but descends into a figure's
+	 * children. It supresses the passed
+	 * in figure. Use this method to ignore a figure
+	 * that is temporarily inserted into the drawing.
+	 * @@param x the x coordinate
+	 * @@param y the y coordinate
+	 * @@param without the figure to be ignored during
+	 * the find.
+	 */
+	public Figure findFigureInsideWithout(int x, int y, Figure without);
+
+	/**
+	 * Checks if the composite figure has the argument as one of
+	 * its children.
+	 *
+	 * @@param figure figure to be searched in all descendants
+	 * @@return true if the figure is part of this Drawing, else otherwise
+	 */
+	public boolean includes(Figure figure);
+
+	/**
+	 * Check whether a given figure is a (direct) child figure of this CompositeFigure.
+	 *
+	 * @@param figure figure to be searched in all direct descendents
+	 * @@return true if the figure is a direct child of this Drawing, else otherwise
+	 */
+	public boolean containsFigure(Figure figure);
+
+	/**
+	 * Adds a listener for this drawing.
+	 */
+	public void addDrawingChangeListener(DrawingChangeListener listener);
+
+	/**
+	 * Removes a listener from this drawing.
+	 */
+	public void removeDrawingChangeListener(DrawingChangeListener listener);
+
+	/**
+	 * Gets the listeners of a drawing.
+	 *
+	 * @@return new iterator of all registered change listener
+	 */
+	public Iterator drawingChangeListeners();
+
+	/**
+	 * Adds a figure and sets its container to refer to this drawing.
+	 *
+	 * @@param figure to be added to the drawing
+	 * @@return the figure that was inserted (might be different from the figure specified).
+	 */
+	public Figure add(Figure figure);
+
+	/**
+	 * Adds a list of figures.
+	 *
+	 * @@deprecated use addAll(FigureEnumeration) instead
+	 */
+	public void addAll(List newFigures);
+
+	/**
+	 * Adds a FigureEnumeration of figures.
+	 *
+	 * @@param fe (unused) enumeration containing all figures to be added
+	 * @@see #add
+	 */
+	public void addAll(FigureEnumeration fe);
+
+	/**
+	 * Removes the figure from the drawing and releases it.
+	 *
+	 * @@param figure that is part of the drawing and should be removed
+	 * @@return the figure that has been removed (might be different from the figure specified)
+	 */
+	public Figure remove(Figure figure);
+
+	/**
+	 * Removes a figure from the figure list, but
+	 * doesn't release it. Use this method to temporarily
+	 * manipulate a figure outside of the drawing.
+	 *
+	 * @@param figure that is part of the drawing and should be added
+	 */
+	public Figure orphan(Figure figure);
+
+	/**
+	 * Removes a list of figures from the figure's list
+	 * without releasing the figures.
+	 *
+	 * @@see #orphan
+	 * @@deprecated use orphanAll(FigureEnumeration) instead
+	 */
+	public void orphanAll(List orphanFigures);
+
+	/**
+	 * Removes a FigureEnumeration of figures from the figure's list
+	 * without releasing the figures.
+	 * @@see #orphan
+	 */
+	public void orphanAll(FigureEnumeration fe);
+
+	/**
+	 * Removes a list of figures .
+	 *
+	 * @@see #remove
+	 * @@deprecated use removeAll(FigureEnumeration) instead
+	 */
+	public void removeAll(List figures);
+
+	/**
+	 * Removes a FigureEnumeration of figures.
+	 * @@see #remove
+	 */
+	public void removeAll(FigureEnumeration fe);
+
+	/**
+	 * Replaces a figure in the drawing without removing it from the drawing.
+	 * The figure to be replaced must be part of the drawing.
+	 *
+	 * @@param figure figure to be replaced
+	 * @@param replacement figure that should replace the specified figure
+	 * @@return the figure that has been inserted (might be different from the figure specified)
+	 */
+	public Figure replace(Figure figure, Figure replacement);
+
+	/**
+	 * Sends a figure to the back of the drawing.
+	 *
+	 * @@param figure that is part of the drawing
+	 */
+	public void sendToBack(Figure figure);
+
+	/**
+	 * Brings a figure to the front.
+	 *
+	 * @@param figure that is part of the drawing
+	 */
+	public void bringToFront(Figure figure);
+
+	/**
+	 * Sends a figure to a certain layer within a drawing. Each figure
+	 * lays in a unique layer and the layering order decides which
+	 * figure is drawn on top of another figure. Figures with a higher
+	 * layer number have usually been added later and may overlay
+	 * figures in lower layers. Layers are counted from to (the number
+	 * of figures - 1).
+	 * The figure is removed from its current layer (if it has been already
+	 * part of this drawing) and is transferred to the specified layers after
+	 * all figures between the original layer and the new layer are shifted to
+	 * one layer below to fill the layer sequence. It is not possible to skip a
+	 * layer number and if the figure is sent to a layer beyond the latest layer
+	 * it will be added as the last figure to the drawing and its layer number
+	 * will be set to the be the one beyond the latest layer so far.
+	 *
+	 * @@param figure figure to be sent to a certain layer
+	 * @@param layerNr target layer of the figure
+	 */
+	public void sendToLayer(Figure figure, int layerNr);
+
+	/**
+	 * Gets the layer for a certain figure (first occurrence). The number
+	 * returned is the number of the layer in which the figure is placed.
+	 *
+	 * @@param figure figure to be queried for its layering place
+	 * @@return number of the layer in which the figure is placed and -1 if the
+	 *			figure could not be found.
+	 * @@see #sendToLayer
+	 */
+	public int getLayer(Figure figure);
+
+	/**
+	 * Gets the figure from a certain layer.
+	 *
+	 * @@param layerNr number of the layer which figure should be returned
+	 * @@return figure from the layer specified, null, if the layer nr was outside
+	 *			the number of possible layer (0...(number of figures - 1))
+	 * @@see #sendToLayer
+	 */
+	public Figure getFigureFromLayer(int layerNr);
+
+	/**
+	 * Draws all the figures back to front.
+	 */
+	public void draw(Graphics g);
+
+	/**
+	 * Draws only the given figures.
+	 */
+	public void draw(Graphics g, FigureEnumeration fe);
+
+	/**
+	 * Acquires the drawing lock.
+	 */
+	public void lock();
+
+	/**
+	 * Releases the drawing lock.
+	 */
+	public void unlock();
+
+	/**
+	 * Used to optimize rendering.  Rendering of many objects may
+	 * be slow until this method is called.  The view rectangle
+	 * should at least approximately enclose the CompositeFigure.
+	 * If the view rectangle is too small or too large, performance
+	 * may suffer.
+	 */
+	public void init(Rectangle viewRectangle);
+
+	public String getTitle();
+	public void setTitle(String name);
+}
+@
+
+
+1.8.4.1
+log
+@1.  Encapsulated the useage of FigureChangeListener on ContainerFigure.  ContainerFigure does no longer implement
+    FigureChangeListener, but has an inner class for that.  All of the FigureChangeListener methods on
+    the CompositeFigure class are now protected.  Subclasses as well.
+
+2.  Drawing no longer implements FigureChangeListener.  defers to implementatations to subclass or implement that.
+
+3.  FindFigureInside fixed.  waiting on better fix with Strategy Pattern from mrfloppy.
+@
+text
+@d41 1
+a41 1
+		extends Storable/*, FigureChangeListener*/, Serializable {
+@
+
+
+1.8.4.2
+log
+@1. javadoc comments and corrections and clarifications
+2. Drawing no longer exposes its drawing change listener, but has a method for those who want the drawing to request all views of it to be updated.
+3. all removeAll() methods in CompositeFigure now have single consistent implementation.
+4. standardDrawing unlock calls notify instead of notifyAll since only 1 can grab the lock anyway.
+@
+text
+@d149 2
+a150 9
+	//public Iterator drawingChangeListeners();
+	
+	/**
+	 * Causes the drawing to nofity its listeners that it wishes to be redrawn.
+	 * This is accomplished by way of <code>requestUpdate</code>
+	 * @@see DrawingChangeListener#drawingRequestUpdate
+	 */
+	public void update();
+	
+@
+
+
+1.8.4.3
+log
+@DecoratorFigure is 'changed'  I think it needs reworking.  not its only used durint draw(Graphics g) but I don't think
+that was its real intention?
+
+The Figure added or removed is nolonger changed during the add or remove process.  Thus add and remove do not return
+values.
+orphan is used internally to the drawing only.
+remove calls figure.remove() which intern orphans the figure.
+remove(Figure f) is still present and used but currently not needed.  call figure.remove() instead.
+perhaps we can add a method on the figure enumerator to 'remove' all the figures within it.
+Figure no longer exposes its listeners.  call methods on figure to send events.
+
+
+Serialization in every form needs cleanup now.  Some due to earlier changes made by myself like making listeners of
+inner classes, but not storing the listener when the figures are stored. (since the figures think the inner listener
+is their container.)
+@
+text
+@d164 1
+a164 1
+	public void add(Figure figure);
+d182 1
+a182 7
+	 * Removes and releases the figure from the drawing.  It can no longer be
+	 * used.
+	 * Preferred way is to call 
+	 * <PRE>
+	 * figure.remove();
+	 * figure.release();
+	 * </PRE>
+a183 2
+	 * @@see Figure#remove
+	 * @@see Figure#release
+d187 1
+a187 1
+	public void remove(Figure figure);
+d194 1
+a194 1
+	 * Preferred way is to call {@@link Figure#remove() Figure.remove()}.
+d196 1
+a196 1
+	public void orphan(Figure figure);
+d199 5
+a203 2
+	 * @@deprecated use {@@link #orphanAll(FigureEnumeration fe) 
+	 *             orphanAll(FigureEnumeration fe)} instead
+d208 3
+a210 1
+	 * Preferred way is to call {@@link Figure#remove() Figure.remove()}.
+d218 1
+a218 2
+	 * @@deprecated use {@@link #removeAll(FigureEnumeration) removeAll(FigureEnumeration fe)}
+	 *             instead.
+@
+
+
+1.8.4.4
+log
+@Restored the ContainerFigure.  Its very problematic for tools, but I have a better understanding of the undo system now.
+As a result I have restored most of what was their again with explanations on how it works for the next traveler...
+Also fixed a few issues with grouping and ungrouping. since figures can no longer be in 2 containers at once the container
+hopping that was being done by the group command would fail.  I believe border tool did similar hopping by having a figure
+as part of the drawing and part of the borderFigure temporarily.  Cant do that anymore.
+@
+text
+@d164 1
+a164 1
+	public Figure add(Figure figure);
+d179 1
+a179 1
+	public FigureEnumeration addAll(FigureEnumeration fe);
+d195 1
+a195 1
+	public Figure remove(Figure figure);
+d230 1
+a230 1
+	public FigureEnumeration removeAll(FigureEnumeration fe);
+@
+
+
+1.8.4.5
+log
+@CompositeFigure does not return figures from add, remove, orphan anymore
+new method, restore added to bring back orphaned figures
+compositeFigure keeps record of its orphans for the restore method
+NullFigures inserted as placeholders into the figureList
+dumps record and nullFigures when remove(figure) called. this safely restores
+figures to their old places.
+figureRequestRemove and figureRemove events eliminated.
+Group and Ungroup commands redone to respect these new ideas.
+have not done anything with delete, cut, copy, paste yet.
+NullFigure added 0,0 for its display box, else throwing exceptions
+@
+text
+@d40 1
+a40 1
+ public interface Drawing
+d164 1
+a164 1
+	public void add(Figure figure);
+d179 1
+a179 1
+	public void addAll(FigureEnumeration fe);
+d195 1
+a195 1
+	public void remove(Figure figure);
+d202 1
+a202 1
+	 * {@@link Figure#remove() Figure.remove()}.
+a206 6
+	 * adds this figure back to the drawing after it has been orphaned.  This
+	 * figure must have been orphaned from this drawing or an exception will be
+	 * thrown. JHDIllegalStateException extends JHDRuntimeException
+	 */
+	public void restore(Figure figure);
+	/**
+d213 1
+a213 1
+	 * {@@link Figure#remove() Figure.remove()}.
+d230 1
+a230 1
+	public void removeAll(FigureEnumeration fe);
+@
+
+
+1.8.4.6
+log
+@hack for [ 674973 ] Context Sensitive menu updates
+add used instead of restore since its easier for the CompositeFigure to decide wether to add or
+to restore.
+@
+text
+@d207 6
+@
+
+
+1.8.4.7
+log
+@figure.release() cleanup.  trying to make release work properly.
+@
+text
+@d182 7
+a188 3
+	 * Removes a figure permanently from the drawing.  It is the remover's 
+	 * responsibility to call {@@link #release release()} on the figure when
+	 * finished with it.
+d190 2
+d202 1
+d213 1
+a213 1
+	 *
+@
+
+
+1.7
+log
+@extended functionality for enumerations (reset, and-enumeration) and a few bug fixes
+@
+text
+@d120 2
+d125 8
+@
+
+
+1.6
+log
+@after variou merges... (before 5.4 release)
+@
+text
+@a286 18
+	 * Invalidates a rectangle and merges it with the
+	 * existing damaged area.
+	 */
+	public void figureInvalidated(FigureChangeEvent e);
+
+	/**
+	 * Forces an update of the drawing change listeners.
+	 */
+	public void figureRequestUpdate(FigureChangeEvent e);
+
+	/**
+	 * Handles a removeFrfigureRequestRemove request that
+	 * is passed up the figure container hierarchy.
+	 * @@see FigureChangeListener
+	 */
+	public void figureRequestRemove(FigureChangeEvent e);
+
+	/**
+@
+
+
+1.5
+log
+@merge dnd (before 5.3)
+@
+text
+@d17 1
+d137 1
+a137 1
+	 * @@return new enumeration of all registered change listener
+d139 1
+a139 1
+	public Enumeration drawingChangeListeners();
+d150 1
+a150 1
+	 * Adds a vector of figures.
+d154 1
+a154 1
+	public void addAll(Vector newFigures);
+d182 1
+a182 1
+	 * Removes a vector of figures from the figure's list
+d188 1
+a188 1
+	public void orphanAll(Vector orphanFigures);
+d196 1
+a196 1
+	
+d198 1
+a198 1
+	 * Removes a vector of figures .
+d203 1
+a203 1
+	public void removeAll(Vector figures);
+d210 1
+a210 1
+	
+d222 1
+a222 1
+	 * Sends a figure to the back of the drawing. 
+d242 1
+a242 1
+	 * The figure is removed from its current layer (if it has been already 
+d245 1
+a245 1
+	 * one layer below to fill the layer sequence. It is not possible to skip a 
+d256 1
+a256 1
+	 * Gets the layer for a certain figure (first occurrence). The number 
+@
+
+
+1.4
+log
+@before merge for version 5.3 (dnd, undo,...) - 2
+@
+text
+@d321 3
+@
+
+
+1.3
+log
+@Merge to JHotDraw 5.2 (using JFC/Swing GUI components)
+@
+text
+@d2 1
+a2 1
+ * @@(#)Drawing.java 5.2
+d4 6
+d17 1
+a17 1
+import java.io.*;
+d34 3
+d40 1
+a40 1
+        extends Storable, FigureChangeListener, Serializable {
+d42 279
+a320 188
+    /**
+     * Releases the drawing and its contained figures.
+     */
+    public void release();
+
+    /**
+     * Returns an enumeration to iterate in
+     * Z-order back to front over the figures.
+     */
+    public FigureEnumeration figures();
+
+    /**
+     * Returns an enumeration to iterate in
+     * Z-order back to front over the figures
+     * that lie within the absolute bounds.
+     */
+    public FigureEnumeration figures(Rectangle viewRectangle);
+
+    /**
+     * Returns an enumeration to iterate in
+     * Z-order front to back over the figures.
+     */
+    public FigureEnumeration figuresReverse();
+
+    /**
+     * Finds a top level Figure. Use this call for hit detection that
+     * should not descend into the figure's children.
+     */
+    public Figure findFigure(int x, int y);
+
+    /**
+     * Finds a top level Figure that intersects the given rectangle.
+     */
+    public Figure findFigure(Rectangle r);
+
+    /**
+     * Finds a top level Figure, but supresses the passed
+     * in figure. Use this method to ignore a figure
+     * that is temporarily inserted into the drawing.
+     * @@param x the x coordinate
+     * @@param y the y coordinate
+     * @@param without the figure to be ignored during
+     * the find.
+     */
+    public Figure findFigureWithout(int x, int y, Figure without);
+
+    /**
+     * Finds a top level Figure that intersects the given rectangle.
+     * It supresses the passed
+     * in figure. Use this method to ignore a figure
+     * that is temporarily inserted into the drawing.
+     */
+    public Figure findFigure(Rectangle r, Figure without);
+
+    /**
+     * Finds a figure but descends into a figure's
+     * children. Use this method to implement <i>click-through</i>
+     * hit detection, that is, you want to detect the inner most
+     * figure containing the given point.
+     */
+    public Figure findFigureInside(int x, int y);
+
+    /**
+     * Finds a figure but descends into a figure's
+     * children. It supresses the passed
+     * in figure. Use this method to ignore a figure
+     * that is temporarily inserted into the drawing.
+     * @@param x the x coordinate
+     * @@param y the y coordinate
+     * @@param without the figure to be ignored during
+     * the find.
+     */
+    public Figure findFigureInsideWithout(int x, int y, Figure without);
+
+    /**
+     * Adds a listener for this drawing.
+     */
+    public void addDrawingChangeListener(DrawingChangeListener listener);
+
+    /**
+     * Removes a listener from this drawing.
+     */
+    public void removeDrawingChangeListener(DrawingChangeListener listener);
+
+    /**
+     * Gets the listeners of a drawing.
+     */
+    public Enumeration drawingChangeListeners();
+
+    /**
+     * Adds a figure and sets its container to refer
+     * to this drawing.
+     * @@return the figure that was inserted.
+     */
+    public Figure add(Figure figure);
+
+    /**
+     * Adds a vector of figures.
+     */
+    public void addAll(Vector newFigures);
+
+    /**
+     * Removes the figure from the drawing and releases it.
+     */
+    public Figure remove(Figure figure);
+
+    /**
+     * Removes a figure from the figure list, but
+     * doesn't release it. Use this method to temporarily
+     * manipulate a figure outside of the drawing.
+     */
+    public Figure orphan(Figure figure);
+
+    /**
+     * Removes a vector of figures from the figure's list
+     * without releasing the figures.
+     * @@see #orphan
+     */
+    public void orphanAll(Vector newFigures);
+
+    /**
+     * Removes a vector of figures .
+     * @@see #remove
+     */
+    public void removeAll(Vector figures);
+
+    /**
+     * Replaces a figure in the drawing without
+     * removing it from the drawing.
+     */
+    public void replace(Figure figure, Figure replacement);
+
+    /**
+     * Sends a figure to the back of the drawing.
+     */
+    public void sendToBack(Figure figure);
+
+    /**
+     * Brings a figure to the front.
+     */
+    public void bringToFront(Figure figure);
+
+    /**
+     * Draws all the figures back to front.
+     */
+    public void draw(Graphics g);
+
+    /**
+     * Draws only the given figures.
+     */
+    public void draw(Graphics g, FigureEnumeration fe);
+
+    /**
+     * Invalidates a rectangle and merges it with the
+     * existing damaged area.
+     */
+    public void figureInvalidated(FigureChangeEvent e);
+
+    /**
+     * Forces an update of the drawing change listeners.
+     */
+    public void figureRequestUpdate(FigureChangeEvent e);
+
+    /**
+     * Handles a removeFrfigureRequestRemove request that
+     * is passed up the figure container hierarchy.
+     * @@see FigureChangeListener
+     */
+    public void figureRequestRemove(FigureChangeEvent e);
+
+    /**
+     * Acquires the drawing lock.
+     */
+    public void lock();
+
+    /**
+     * Releases the drawing lock.
+     */
+    public void unlock();
+
+    /**
+     * Used to optimize rendering.  Rendering of many objects may
+     * be slow until this method is called.  The view rectangle
+     * should at least approximately enclose the CompositeFigure.
+     * If the view rectangle is too small or too large, performance
+     * may suffer.
+     */
+    public void init(Rectangle viewRectangle);
+@
+
+
+1.2
+log
+@some additions to enable optimized drawing
+@
+text
+@d2 1
+a2 1
+ * @@(#)Drawing.java 5.1
+d49 1
+a49 2
+    public FigureEnumeration figures(Rectangle
+     viewRectangle);
+d149 1
+a149 1
+     * @@see orphan
+d155 1
+a155 1
+     * @@see remove
+a220 2
+
+
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d46 8
+d182 5
+d213 10
+@
+
+
+1.1.1.1
+log
+@
+Initial revision.
+@
+text
+@@
