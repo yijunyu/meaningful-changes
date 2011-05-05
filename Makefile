@@ -14,7 +14,7 @@ example+=$(source)
 results+=$(source:source/%=result/%)
 results+=$(source:source/v/%=result/verilog/%)
 example+=$(results)
-target+=$(bin)/normc $(bin)/java5cc $(program) $(results)
+target+=$(bin)/normc $(bin)/api_clone_javac $(program) $(results)
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
@@ -60,7 +60,8 @@ Txl/%.Txl: $(bin)/normc norm/%.norm
 	sed -e 's/\/\*//' t.t | sed -e 's/*\//\/* *\//g' > $@
 	rm -f t.t
 
-install: $(package)
+install: $(package) 
+	echo README.html $(program) $(norm) $(source) $(target) cvs
 $(package): README.html $(program) $(norm) $(source) $(target) cvs
 	rm -rf $(dir $(package))
 	mkdir -p  $(dir $(package))
