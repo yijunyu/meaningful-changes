@@ -20,6 +20,7 @@ grep "preferred" $1 | wc
 }
 make Txl/java.Txl
 make Txl/verilog.Txl
+make Txl/verilog2.Txl
 extend Txl/txl.grm
 extend Txl/norm.Txl
 extend Txl/java.grm
@@ -29,6 +30,8 @@ extend norm/java.norm
 extend Txl/v.grm
 extend norm/verilog.norm
 extend Txl/verilog.Txl
+extend norm/verilog2.norm
+extend Txl/verilog2.Txl
 
 annotate norm/java.norm
-annotate norm/verilog.norm
+annotate norm/verilog2.norm
