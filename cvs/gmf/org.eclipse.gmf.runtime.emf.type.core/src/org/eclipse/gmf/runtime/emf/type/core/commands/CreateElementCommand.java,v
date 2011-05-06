@@ -1,0 +1,566 @@
+head	1.7;
+access;
+symbols
+	v20081020-0700:1.7
+	v20080807-1333:1.7
+	v20080807-1325:1.7
+	v20080731-1520:1.7
+	v20080725-1738:1.7
+	v20080722-1827:1.7
+	R2_1_maintenance:1.7.0.6
+	Root_R2_1_maintenance:1.7
+	R2_1_0:1.7
+	v20080425-1959:1.7
+	v20080328-1605:1.7
+	v20080222-1200:1.7
+	v20080114-2222:1.7
+	v20080107-1111:1.7
+	v20071130-1111:1.7
+	v20071124-0000:1.7
+	v20070809-0000:1.7
+	R2_0_maintenance:1.7.0.4
+	R2_0:1.7
+	R4_20:1.7
+	RC3_20:1.7
+	v20070601-1400:1.7
+	v20070518-1300:1.7
+	v20070403-1500:1.7
+	v20070330-1300:1.7
+	v20070208-1800:1.7
+	M4_20:1.7
+	v20061214-0000:1.7
+	M3_20:1.7
+	v20061117-0800:1.7
+	v20061013-1330:1.7
+	v20060919-0800:1.7
+	v20060907-1100:1.7
+	M1_20:1.7
+	v20060831-1500:1.7
+	v20060817-1500:1.7
+	v20060803-1200:1.7
+	v20060721-1130:1.7
+	v20060713-1700:1.7
+	R1_0_maintenance:1.7.0.2
+	R1_0:1.7
+	v20060627-1200:1.7
+	v20060616-1200:1.7
+	v20060609-1400:1.7
+	v20060531-1730:1.7
+	v20060530-1930:1.7
+	v20060526-1200:1.7
+	v20060519-0800:1.5
+	I20060505-1400:1.5
+	I20060428-1300:1.5
+	I20060424-0500:1.4
+	I20060424-0300:1.4
+	M6_10:1.4
+	I20060407-1200:1.4
+	I20060331-1000:1.4
+	I20060324-0300:1.4
+	I20060317-1300:1.4
+	I20060317-1200:1.4
+	I20060316-1300:1.4
+	I20060309-1300:1.4
+	M5_10:1.4
+	S20060303-1600:1.4
+	I20060227-1730:1.4
+	I20060216-1945:1.4
+	I20060210-1715:1.3
+	I20060209-1815:1.3
+	I20060203-0830:1.3
+	I20060129-1145:1.3
+	I20060127-0900:1.3
+	I20060120-1530:1.3
+	I20060113-1700:1.3
+	M4_10:1.3
+	I20060107-1100:1.3
+	I20060105-1630:1.3
+	I20051230-1230:1.3
+	I20051223-1100:1.3
+	M3_10:1.3
+	I20051118-1245:1.3
+	I20051111-1800:1.3
+	I20051106-0900:1.3
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.7
+date	2006.05.23.17.27.18;	author ldamus;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2006.05.23.17.20.13;	author ldamus;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.04.27.19.52.29;	author ldamus;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.02.13.19.12.20;	author ldamus;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.11.01.17.04.42;	author ldamus;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.26.55;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.43;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.7
+log
+@[137617] gmf_head ldamus 060523 add null EClass check to CreateElementCommand.getContainmentFeature
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2005, 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.emf.type.core.commands;
+
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+import org.eclipse.gmf.runtime.emf.core.util.PackageUtil;
+import org.eclipse.gmf.runtime.emf.type.core.ElementTypeRegistry;
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+import org.eclipse.gmf.runtime.emf.type.core.requests.ConfigureRequest;
+import org.eclipse.gmf.runtime.emf.type.core.requests.CreateElementRequest;
+
+/**
+ * Command to create a new model element.
+ * 
+ * @@author ldamus
+ */
+public class CreateElementCommand extends EditElementCommand {
+
+	/**
+	 * The newly created element.
+	 */
+	private EObject newElement;
+
+	/**
+	 * The element type to be created.
+	 */
+	private final IElementType elementType;
+
+	/**
+	 * The containment feature in which the new element will be created.
+	 */
+	private EReference containmentFeature;
+
+	/**
+	 * Constructs a new element creation command for the <code>request</code>.
+	 * 
+	 * @@param request
+	 *            the element creation request
+	 */
+	public CreateElementCommand(CreateElementRequest request) {
+
+		super(request.getLabel(), null, request);
+
+		elementType = request.getElementType();
+
+		containmentFeature = request.getContainmentFeature();
+	}
+
+	protected CommandResult doExecuteWithResult(IProgressMonitor monitor,
+            IAdaptable info)
+        throws ExecutionException {
+
+        // Do the default element creation
+        newElement = doDefaultElementCreation();
+
+        // Configure the new element
+        ConfigureRequest configureRequest = createConfigureRequest();
+
+        ICommand configureCommand = elementType
+            .getEditCommand(configureRequest);
+        
+        IStatus configureStatus = null;
+        
+        if (configureCommand != null && configureCommand.canExecute()) {
+        	configureStatus = configureCommand.execute(monitor, info);
+        }
+
+        // Put the newly created element in the request so that the
+        // 'after' commands have access to it.
+        getCreateRequest().setNewElement(newElement);
+
+        return (configureStatus == null) ? 
+        		CommandResult.newOKCommandResult(newElement) : 
+        		new CommandResult(configureStatus, newElement);
+	}
+
+	/**
+	 * Creates the request to configure the new element.
+	 * 
+	 * @@return the request
+	 */
+	protected ConfigureRequest createConfigureRequest() {
+
+		ConfigureRequest configureRequest = new ConfigureRequest(
+            getEditingDomain(), newElement, getElementType());
+        
+		// pass along the client context
+		configureRequest.setClientContext(getCreateRequest().getClientContext());
+		
+        configureRequest.addParameters(getRequest().getParameters());
+
+		return configureRequest;
+	}
+
+	/**
+	 * Subclasses should implement this to override the basic element creation.
+	 * 
+	 * @@return the new model element that has been created
+	 */
+	protected EObject doDefaultElementCreation() {
+		EReference containment = getContainmentFeature();
+		EClass eClass = getElementType().getEClass();
+
+		if (containment != null) {
+			EObject element = getElementToEdit();
+
+			if (element != null)
+				return EMFCoreUtil.create(element, containment, eClass);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Initializes the container of the new element by asking the create to
+	 * create the container, if necessary.
+	 */
+	protected EObject getElementToEdit() {
+
+		if (super.getElementToEdit() == null) {
+			CreateElementRequest request = (CreateElementRequest) getRequest();
+			setElementToEdit(request.createContainer());
+		}
+		return super.getElementToEdit();
+	}
+
+	/**
+	 * Gets the EClass of the element to be edited.
+	 * 
+	 * @@return the EClass
+	 */
+	protected EClass getEClassToEdit() {
+
+		CreateElementRequest request = (CreateElementRequest) getRequest();
+
+		Object context = request.getEditHelperContext();
+
+		if (context instanceof EObject) {
+			return ((EObject) context).eClass();
+
+		} else {
+			IElementType type = ElementTypeRegistry.getInstance()
+					.getElementType(context);
+
+			if (type != null) {
+				return type.getEClass();
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Gets the containment feature for the new element.
+	 * 
+	 * @@return the containment feature
+	 */
+	protected EReference getContainmentFeature() {
+
+		if (containmentFeature == null) {
+			EClass classToEdit = getEClassToEdit();
+
+			if (classToEdit != null) {
+				IElementType type = getElementType();
+
+				if (type != null && type.getEClass() != null) {
+					containmentFeature = PackageUtil.findFeature(classToEdit,
+							type.getEClass());
+				}
+			}
+		}
+
+		return containmentFeature;
+	}
+
+	/**
+	 * Sets the containment feature for the new element.
+	 * 
+	 * @@param containmentFeature
+	 *            the containment feature for the new element
+	 */
+	protected void setContainmentFeature(EReference containmentFeature) {
+		this.containmentFeature = containmentFeature;
+	}
+
+	/**
+	 * Gets the element type for the new element.
+	 * 
+	 * @@return the element type
+	 */
+	protected IElementType getElementType() {
+		return elementType;
+	}
+
+	/**
+	 * Gets the create request.
+	 * 
+	 * @@return the create request
+	 */
+	public CreateElementRequest getCreateRequest() {
+		return (CreateElementRequest) getRequest();
+	}
+
+	public boolean canExecute() {
+
+		if (getEClassToEdit() == null) {
+			return false;
+		}
+
+		if (getContainmentFeature() != null) {
+			EClassifier eClassifier = getContainmentFeature().getEType();
+			boolean result = true;
+
+			if (eClassifier instanceof EClass) {
+				result = ((EClass) eClassifier).isSuperTypeOf(getElementType()
+						.getEClass());
+			}
+
+			result = result
+					&& PackageUtil.canContain(getEClassToEdit(),
+							getContainmentFeature(), getElementType()
+									.getEClass(), false);
+
+			return result && super.canExecute();
+		}
+		return false;
+	}
+
+	/**
+	 * Gets the new element that was created by this command. Will be
+	 * <code>null</code> if the command has not been executed.
+	 * 
+	 * @@return the new element
+	 */
+	public EObject getNewElement() {
+		return newElement;
+	}
+
+}@
+
+
+1.6
+log
+@[139736] gmf_head ldamus 060523 CreateElementCommand should return result that reflects the status of configuring the new element
+@
+text
+@d184 1
+a184 1
+				if (type != null) {
+@
+
+
+1.5
+log
+@[136760] gmf_head ldamus 060427  Infer client context from element type in create request if not explicitly set
+@
+text
+@d17 1
+d80 3
+a82 1
+
+d84 1
+a84 1
+            configureCommand.execute(monitor, info);
+d91 4
+a94 2
+        return CommandResult.newOKCommandResult(newElement);
+    }
+@
+
+
+1.4
+log
+@[112826] gmf_head ldamus 060213 Adopt Eclipse 3.1 Operation History Framework
+@
+text
+@d101 3
+@
+
+
+1.3
+log
+@Bugzilla Bug 114566 ldamus 051101 CreateElementCommand is executable even though no container has been specified
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005 IBM Corporation and others.
+d14 2
+a15 2
+import java.util.Collection;
+
+a20 1
+
+d23 2
+d35 1
+a35 2
+public class CreateElementCommand
+	extends EditElementCommand {
+d67 3
+a69 3
+	protected CommandResult doExecute(IProgressMonitor progressMonitor) {
+		// Do the default element creation
+		newElement = doDefaultElementCreation();
+d71 2
+a72 2
+		// Configure the new element
+		ConfigureRequest configureRequest = createConfigureRequest();
+d74 2
+a75 2
+		ICommand configureCommand = elementType
+			.getEditCommand(configureRequest);
+d77 6
+a82 3
+		if (configureCommand != null && configureCommand.isExecutable()) {
+			configureCommand.execute(progressMonitor);
+		}
+d84 3
+a86 3
+		// Put the newly created element in the request so that the
+		// 'after' commands have access to it.
+		getCreateRequest().setNewElement(newElement);
+d88 2
+a89 2
+		return newOKCommandResult(newElement);
+	}
+d98 4
+a101 3
+		ConfigureRequest configureRequest = new ConfigureRequest(newElement,
+			getElementType());
+		configureRequest.addParameters(getRequest().getParameters());
+d112 1
+a112 1
+
+d115 2
+a116 2
+		EObject element = eClass.getEPackage().getEFactoryInstance().create(
+			eClass);
+d118 2
+a119 12
+		if (getContainmentFeature() != null) {
+			EObject container = getElementToEdit();
+
+			if (container != null) {
+				if (getContainmentFeature().isMany()) {
+					((Collection) container.eGet(getContainmentFeature()))
+						.add(element);
+
+				} else {
+					container.eSet(getContainmentFeature(), element);
+				}
+			}
+d122 1
+a122 1
+		return element;
+d154 1
+a154 1
+				.getElementType(context);
+d169 14
+d214 1
+a214 6
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.core.command.AbstractCommand#isExecutable()
+	 */
+	public boolean isExecutable() {
+d219 1
+a219 1
+		
+d223 1
+a223 1
+			
+d226 1
+a226 1
+					.getEClass());
+d228 7
+a234 1
+			return result && super.isExecutable();
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d213 4
+a216 2
+		boolean result = true;
+
+d219 2
+a220 1
+
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2005.  All Rights Reserved.                    |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

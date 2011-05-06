@@ -1,0 +1,648 @@
+head	1.13;
+access;
+symbols
+	v20080813-1520:1.13
+	v20080807-1333:1.13
+	v20080806-1520:1.13
+	v20080731-1520:1.13
+	v20080722-1827:1.13
+	R2_1_maintenance:1.13.0.4
+	Root_R2_1_maintenance:1.13
+	R2_1_0:1.13
+	v20080528-1052:1.13
+	v20080417-1610:1.13
+	v20080222-1200:1.13
+	v20080215-1500:1.13
+	v20080207-0207:1.13
+	v20071214-1111:1.13
+	v20071108-0000:1.13
+	v20071003-0000:1.13
+	v20070809-0000:1.13
+	R2_0_maintenance:1.13.0.2
+	R2_0:1.13
+	R4_20:1.13
+	v20070621-0000:1.13
+	RC3_20:1.13
+	v20070608-1300:1.13
+	v20070605-1400:1.12
+	v20070601-1400:1.12
+	v20070518-1300:1.11
+	v20070330-1300:1.10
+	v20060316-0600:1.10
+	v20070307-0700:1.9
+	v20070228-2000:1.9
+	v20070208-1800:1.6
+	M4_20:1.6
+	v20061214-0000:1.6
+	M3_20:1.6
+	v20061117-0800:1.6
+	v20061027-1200:1.5
+	v20061013-1330:1.5
+	v20060925-1700:1.5
+	v20060919-0800:1.5
+	M1_20:1.5
+	v20060904-1500:1.5
+	v20060713-1700:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	v20060627-1200:1.5
+	v20060626-1420:1.5
+	v20060616-1200:1.5
+	v20060531-1730:1.5
+	v20060530-1930:1.5
+	v20060526-1200:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.13
+date	2007.06.08.18.32.20;	author atikhomirov;	state Exp;
+branches;
+next	1.12;
+commitid	1624669a0b34567;
+
+1.12
+date	2007.05.28.13.33.47;	author atikhomirov;	state Exp;
+branches;
+next	1.11;
+commitid	3e69465ada3a4567;
+
+1.11
+date	2007.05.17.22.14.20;	author atikhomirov;	state Exp;
+branches;
+next	1.10;
+commitid	640b464cd3bb4567;
+
+1.10
+date	2007.03.14.12.59.52;	author atikhomirov;	state Exp;
+branches;
+next	1.9;
+commitid	123445f7f1c74567;
+
+1.9
+date	2007.02.27.19.23.13;	author atikhomirov;	state Exp;
+branches;
+next	1.8;
+commitid	533845e485214567;
+
+1.8
+date	2007.02.27.19.14.05;	author atikhomirov;	state Exp;
+branches;
+next	1.7;
+commitid	167645e482fd4567;
+
+1.7
+date	2007.02.27.19.11.49;	author atikhomirov;	state Exp;
+branches;
+next	1.6;
+commitid	13b545e482754567;
+
+1.6
+date	2006.10.16.15.03.37;	author ashatalin;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.05.30.19.00.34;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.05.30.13.25.55;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.05.30.13.04.45;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.05.24.14.57.46;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.05.23.21.09.44;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.13
+log
+@[191707] Mirrored gmfgraph model incorrectly references original gmfmap
+@
+text
+@/*
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.graphdef.codegen;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedList;
+
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.gmf.gmfgraph.Canvas;
+import org.eclipse.gmf.gmfgraph.ChildAccess;
+import org.eclipse.gmf.gmfgraph.Compartment;
+import org.eclipse.gmf.gmfgraph.Connection;
+import org.eclipse.gmf.gmfgraph.CustomFigure;
+import org.eclipse.gmf.gmfgraph.DiagramLabel;
+import org.eclipse.gmf.gmfgraph.FigureAccessor;
+import org.eclipse.gmf.gmfgraph.FigureDescriptor;
+import org.eclipse.gmf.gmfgraph.FigureGallery;
+import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+import org.eclipse.gmf.gmfgraph.GMFGraphPackage;
+import org.eclipse.gmf.gmfgraph.Node;
+import org.eclipse.gmf.gmfgraph.RealFigure;
+import org.eclipse.gmf.gmfgraph.util.FigureQualifiedNameSwitch;
+import org.eclipse.gmf.graphdef.codegen.StandaloneGenerator.Config;
+import org.eclipse.gmf.graphdef.codegen.StandaloneGenerator.Processor;
+import org.eclipse.gmf.graphdef.codegen.StandaloneGenerator.ProcessorCallback;
+
+public class CanvasProcessor extends Processor {
+	private final DiagramElementsCopier myElementCopier;
+	private ProcessorCallback myCallback;
+	final Canvas myInput;
+	private Canvas myOutcome;
+	private FigureGallery myOutcomeGallery; 
+
+	public CanvasProcessor(Canvas input) {
+		assert input != null;
+		myInput = input;
+		myElementCopier = new DiagramElementsCopier();
+	}
+
+	public Canvas getOutcome() {
+		return myOutcome;
+	}
+
+	public void go(ProcessorCallback callback, Config config) throws InterruptedException {
+		myCallback = callback;
+		myOutcomeGallery = GMFGraphFactory.eINSTANCE.createFigureGallery();
+		myOutcomeGallery.setName(myInput.getFigures().size() == 1 ? myInput.getFigures().get(0).getName() : "GeneratedGallery");
+		// TODO respect implementation from original FigureGallery, see (#x#) 
+		myOutcomeGallery.setImplementationBundle(config.getPluginID());
+		handleNodes();
+		handleLinks();
+		handleCompartments();
+		handleLabels();
+		// can't use 
+		// = (Canvas) diagramElementCopier.copy(myInput);
+		// here because Copier.copy doesn't respect already copied elements
+		myOutcome = GMFGraphFactory.eINSTANCE.createCanvas();
+		myOutcome.setName(myInput.getName());
+		myOutcome.getFigures().add(myOutcomeGallery);
+
+		myOutcome.getCompartments().addAll(myElementCopier.copyAll(myInput.getCompartments()));
+		myOutcome.getLabels().addAll(myElementCopier.copyAll(myInput.getLabels()));
+		myOutcome.getNodes().addAll(myElementCopier.copyAll(myInput.getNodes()));
+		myOutcome.getConnections().addAll(myElementCopier.copyAll(myInput.getConnections()));
+
+		if (!myOutcome.eContents().isEmpty()) {
+			myElementCopier.copyReferences();
+		}
+		myCallback = null;
+	}
+
+	public String[] getRequiredBundles(FigureQualifiedNameSwitch fqnSwitch) {
+		HashSet<String> rv = new HashSet<String>();
+		for (FigureGallery next : myInput.getFigures()) {
+			if (next.getImplementationBundle() != null && next.getImplementationBundle().trim().length() > 0) {
+				// need this for a while, though this should be done in the fqnswitch. But as I'm trying to get rid of the
+				// switch, that's a temp hack to pass through
+				rv.add(next.getImplementationBundle());
+			}
+			if (fqnSwitch != null) {
+				rv.addAll(Arrays.asList(fqnSwitch.getDependencies(next)));
+			}
+		}
+		return rv.toArray(new String[rv.size()]);
+	}
+
+	private void handleNodes() throws InterruptedException {
+		for (Node next : myInput.getNodes()) {
+			handleFigure(next.getFigure());
+		}
+	}
+
+	private void handleLinks() throws InterruptedException {
+		for (Connection next : myInput.getConnections()) {
+			handleFigure(next.getFigure());
+		}
+	}
+
+	private void handleCompartments() throws InterruptedException {
+		for (Compartment next : myInput.getCompartments()) {
+			FigureDescriptor nextFigure = next.getFigure();
+			if (nextFigure == null){
+				throw new NullPointerException("Compartment without figure : " + next);
+			}
+			handleFigure(nextFigure);
+		}
+	}
+
+	private void handleLabels() throws InterruptedException {
+		for (DiagramLabel next : myInput.getLabels()) {
+			if (next.getAccessor() == null) {
+				handleFigure(next.getFigure());
+			}
+			// else nothing to do as child accessors will get copied as part of parent figure process
+		}
+	}
+
+	private void handleFigure(FigureDescriptor fd) throws InterruptedException {
+		if (myElementCopier.isSubstituted(fd)) {
+			// already processed, nothing to do
+			return;
+			// XXX originally CustomFigures do not get into history of elementCopier, 
+			// hence may still get copied more than once. Perhaps, makes sense to have separate 'History'
+			// to keep track of processed figures?
+		}
+		if (fd.getActualFigure() instanceof CustomFigure && isPlainBareCustomFigure((CustomFigure) fd.getActualFigure())) {
+			// XXX an implementationBundle might be an issue here (#x#),
+			// since myOutcomeGallery gonna get one we generate, while the original CustomFigure
+			// may have one specified in the ownining FigureGallery.
+			final CustomFigure f = (CustomFigure) fd.getActualFigure();
+			myOutcomeGallery.getFigures().add(myElementCopier.xcopy(f));
+		} else {
+			String fqn = myCallback.visitFigure(fd);
+			final FigureDescriptor newFD = createCustomFigure(fd, fqn);
+			myElementCopier.registerSubstitution(fd, newFD);
+			for (ChildAccess ca : fd.getAccessors()) {
+				FigureAccessor newFA = GMFGraphFactory.eINSTANCE.createFigureAccessor();
+				newFA.setAccessor(ca.getAccessor());
+				newFA.setTypedFigure(createReferencedFigure(ca));
+				((CustomFigure) newFD.getActualFigure()).getCustomChildren().add(newFA);
+				final ChildAccess newCA = myElementCopier.xcopy(ca);
+				newCA.setFigure(newFA.getTypedFigure());
+				newFD.getAccessors().add(newCA);
+			}
+		}
+	}
+
+
+	/**
+	 * FIXME diplicates {@@link org.eclipse.gmf.bridge.genmodel.InnerClassViewmapProducer#isBareInstance}
+	 * Should be merged somehow.
+	 */
+	private static boolean isPlainBareCustomFigure(CustomFigure figure) {
+		if (!figure.getChildren().isEmpty()) {
+			return false;
+		}
+		final LinkedList<EStructuralFeature> featuresToCheck = new LinkedList<EStructuralFeature>(figure.eClass().getEAllStructuralFeatures());
+		featuresToCheck.remove(GMFGraphPackage.eINSTANCE.getRealFigure_Name());
+		featuresToCheck.remove(GMFGraphPackage.eINSTANCE.getRealFigure_Children());
+
+		featuresToCheck.remove(GMFGraphPackage.eINSTANCE.getCustomClass_QualifiedClassName());
+		featuresToCheck.remove(GMFGraphPackage.eINSTANCE.getCustomFigure_CustomChildren());
+
+		for(EStructuralFeature next : featuresToCheck) {
+			if (next.isDerived()) {
+				continue;
+			}
+			if (figure.eIsSet(next)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private FigureDescriptor createCustomFigure(FigureDescriptor original, String fqn) {
+		CustomFigure cf = GalleryMirrorProcessor.createCustomFigure(original.getActualFigure());
+		cf.setQualifiedClassName(fqn);
+		FigureDescriptor fd = GMFGraphFactory.eINSTANCE.createFigureDescriptor();
+		fd.setName(original.getName());
+		fd.setActualFigure(cf);
+		myOutcomeGallery.getDescriptors().add(fd);
+		return fd;
+	}
+
+	private static RealFigure createReferencedFigure(ChildAccess ca) {
+		// XXX ca.getFigure() may be FigureRef, need to revisit this usecase
+		if (false == ca.getFigure() instanceof RealFigure) {
+			return null;
+		}
+		EClass eType = ca.getFigure().eClass();
+		// it's just a type holder, hence no need to copy any attribute/children but type only.
+		RealFigure copy = (RealFigure) eType.getEPackage().getEFactoryInstance().create(eType);
+		if (copy instanceof CustomFigure) {
+			((CustomFigure) copy).setQualifiedClassName(((CustomFigure) ca.getFigure()).getQualifiedClassName());
+		}
+		return copy;
+	}
+}@
+
+
+1.12
+log
+@FigureDescriptor with explicit means to access children introduced into gmfgraph
+@
+text
+@d18 1
+d26 1
+d32 1
+d122 1
+a122 5
+			if (next.getAccessor() != null) {
+				// accessor
+				ChildAccess labelAccess = next.getAccessor();
+				// XXX nothing to do?
+			} else {
+d125 1
+d145 11
+a155 1
+			myElementCopier.registerSubstitution(fd, createCustomFigure(fd, fqn));
+d159 1
+d195 14
+@
+
+
+1.11
+log
+@moving towards not using fqnswitch and java to tell draw2d figure names; let toolsmith to control what draw2d classes are being used; fqnSwitch argument replaced with simple token indicator
+@
+text
+@a18 1
+import org.eclipse.emf.ecore.util.EcoreUtil;
+d20 1
+d25 1
+a25 2
+import org.eclipse.gmf.gmfgraph.Figure;
+import org.eclipse.gmf.gmfgraph.FigureAccessor;
+a26 1
+import org.eclipse.gmf.gmfgraph.FigureHandle;
+a30 1
+import org.eclipse.gmf.graphdef.codegen.NamingStrategy;
+d97 1
+a97 1
+			handleFigure(next.getNodeFigure());
+d103 1
+a103 1
+			handleFigure(next.getConnectionFigure());
+d109 1
+a109 1
+			FigureHandle nextFigure = next.getFigure();
+d113 1
+a113 5
+			if (nextFigure instanceof Figure) {
+				handleFigure((Figure) nextFigure);
+			} else {
+				throw new IllegalStateException("Don't support accessors for compartments yet");
+			}
+d119 4
+a122 2
+			if (next.getFigure() instanceof FigureAccessor) {
+				assert myElementCopier.containsKey(next.getFigure()) : "Should be copied as part of previously referenced CustomFigure";
+d124 1
+a124 27
+				assert next.getFigure() instanceof Figure;
+				Figure f = (Figure) next.getFigure(); 
+				if (isInsideProcessedFigure(f)) {
+					// obviously, fact we got here means f is !getReferencingElements().isEmpty()
+					// feedback.findAccessorFor(f)
+					FigureAccessor accessor = GMFGraphFactory.eINSTANCE.createFigureAccessor();
+					accessor.setAccessor(NamingStrategy.INSTANCE.getChildFigureGetterName(f));
+					myElementCopier.put(f, accessor);
+					// find closest ancestor figure
+					/* XXX assume there's no cases like
+					 * Node1 -->   Rect1
+					 * Node2 -->     |- Rect2
+					 * Label -->          |- gef.Label
+					 * and the Label we process is from Node1. 
+					 * With the current approach, we'll get mirrored Rect2 instead of mirrored Rect1.
+					 */
+					Figure parent = f;
+					do {
+						parent = parent.getParent();
+						// parent can't be null, as we checked isInsideProcessedFigure prior to that.
+					} while (!myElementCopier.containsKey(parent));
+					assert myElementCopier.get(parent) instanceof CustomFigure : "We used to keep custom figures only in the mirrored gallery";
+					((CustomFigure) myElementCopier.get(parent)).getCustomChildren().add(accessor);
+				} else {
+					handleFigure(f);
+				}
+				
+d129 2
+a130 6
+	private boolean isInsideProcessedFigure(Figure f) {
+		return EcoreUtil.isAncestor(myElementCopier.keySet(), f);
+	}
+
+	private void handleFigure(Figure figure) throws InterruptedException {
+		if (myElementCopier.isSubstituted(figure)) {
+d137 1
+a137 1
+		if (figure instanceof CustomFigure && isPlainBareCustomFigure((CustomFigure) figure)) {
+d140 3
+a142 2
+			// may have one specified in the ownining FigureGallery. 
+			myOutcomeGallery.getFigures().add((CustomFigure) myElementCopier.copy(figure));
+d144 2
+a145 2
+			String fqn = myCallback.visitFigure(figure);
+			myElementCopier.registerSubstitution(figure, createCustomFigure(figure, fqn));
+d158 2
+a159 4
+		featuresToCheck.remove(GMFGraphPackage.eINSTANCE.getIdentity_Name());
+		featuresToCheck.remove(GMFGraphPackage.eINSTANCE.getFigure_Children());
+		featuresToCheck.remove(GMFGraphPackage.eINSTANCE.getFigureMarker_Parent());
+		featuresToCheck.remove(GMFGraphPackage.eINSTANCE.getFigureHandle_ReferencingElements());
+a160 1
+		featuresToCheck.remove(GMFGraphPackage.eINSTANCE.getCustomClass_BundleName());
+d175 2
+a176 3
+	private CustomFigure createCustomFigure(Figure original, String fqn) {
+		CustomFigure cf = DiagramElementsCopier.createCustomFigure(original);
+		cf.setName(original.getName());
+d178 5
+a182 2
+		myOutcomeGallery.getFigures().add(cf);
+		return cf;
+@
+
+
+1.10
+log
+@Regenerated graphdef, tooldef and gmfmap models with EMF 2.3 M5 Generics, updated code to be "generified"
+@
+text
+@a13 1
+import java.util.ArrayList;
+d15 1
+d84 1
+a84 1
+		ArrayList<String> rv = new ArrayList<String>();
+d86 8
+a93 1
+			rv.addAll(Arrays.asList(fqnSwitch.getDependencies(next)));
+@
+
+
+1.9
+log
+@do not duplicate processed custom figures
+@
+text
+@a15 1
+import java.util.Iterator;
+d58 1
+a58 1
+		myOutcomeGallery.setName(myInput.getFigures().size() == 1 ? ((FigureGallery) myInput.getFigures().get(0)).getName() : "GeneratedGallery");
+d85 1
+a85 2
+		for (Iterator galleries = myInput.getFigures().iterator(); galleries.hasNext();) {
+			FigureGallery next = (FigureGallery) galleries.next();
+d92 1
+a92 2
+		for (Iterator it = myInput.getNodes().iterator(); it.hasNext();) {
+			Node next = (Node) it.next();
+d98 1
+a98 2
+		for (Iterator it = myInput.getConnections().iterator(); it.hasNext();) {
+			Connection next = (Connection) it.next();
+d104 1
+a104 2
+		for (Iterator it = myInput.getCompartments().iterator(); it.hasNext();) {
+			Compartment next = (Compartment) it.next();
+d118 1
+a118 2
+		for (Iterator it = myInput.getLabels().iterator(); it.hasNext();) {
+			DiagramLabel next = (DiagramLabel) it.next();
+d169 1
+a169 1
+			myOutcomeGallery.getFigures().add(myElementCopier.copy(figure));
+@
+
+
+1.8
+log
+@organized imports
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation
+d164 7
+@
+
+
+1.7
+log
+@use generics wherever possible
+@
+text
+@a15 1
+import java.util.Collection;
+@
+
+
+1.6
+log
+@[161042] mgolubev - [GMFGraph]: Correct error mesage in case if Compartment has no figure
+@
+text
+@d86 1
+a86 1
+		ArrayList/*<String>*/ rv = new ArrayList();
+d91 1
+a91 1
+		return (String[]) rv.toArray(new String[rv.size()]);
+d184 1
+a184 1
+		final Collection featuresToCheck = new LinkedList(figure.eClass().getEAllStructuralFeatures());
+d194 1
+a194 2
+		for(Iterator it = featuresToCheck.iterator(); it.hasNext();) {
+			final EStructuralFeature next = (EStructuralFeature) it.next();
+@
+
+
+1.5
+log
+@need to provide dependencies
+@
+text
+@d30 1
+d111 6
+a116 2
+			if (next.getFigure() instanceof Figure) {
+				handleFigure((Figure) next.getFigure());
+@
+
+
+1.4
+log
+@#131365 - mirror diagram elements and make them point to newly generated figures
+@
+text
+@d14 2
+d33 1
+d84 9
+@
+
+
+1.3
+log
+@Parts of #131365 - CanvasProcessor didn't assured original.CustomFigures were copied into mirrored.FigureGallery, plus, overlooked the fact FigureAccessors were not added into corresponding CustomFigure
+@
+text
+@d14 1
+d16 1
+d18 1
+d29 1
+d57 1
+d148 4
+a151 1
+		if (figure instanceof CustomFigure /* && isPlainBareFigureHandle()*/) {
+d159 30
+@
+
+
+1.2
+log
+@get rid of bogus config passing into ConverterOutcome
+@
+text
+@a15 1
+import org.eclipse.emf.codegen.util.CodeGenUtil;
+d27 1
+d113 1
+a113 1
+					accessor.setAccessor("get" + CodeGenUtil.capName(f.getName()));
+d115 15
+d144 1
+a144 1
+			myElementCopier.copy(figure);
+@
+
+
+1.1
+log
+@#140887 Remove Child interface from GMFGraph.
+Although the need to reference child figures persist, thus FigureHandle was introduced, to allow diagramElements to reference either *generateable* figures (Figure subclasses) or *just-use* figures (like CustomFigure and FigureAccessor).
+Refactoring performed with #131365 "Mirror GMFGraph model when generating standalone figure plugin" in mind
+@
+text
+@d28 1
+d49 1
+a49 1
+	public void go(ProcessorCallback callback) throws InterruptedException {
+d53 1
+@
+

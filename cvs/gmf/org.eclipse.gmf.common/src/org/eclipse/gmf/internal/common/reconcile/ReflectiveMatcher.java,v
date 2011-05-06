@@ -1,0 +1,221 @@
+head	1.3;
+access;
+symbols
+	v20081015-1925:1.3
+	v20080930-1130:1.3
+	v20080926-1245:1.3
+	v20080924-1925:1.3
+	v20080722-1827:1.2
+	v20080716-1642:1.2
+	R2_1_maintenance:1.2.0.6
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080610-1132:1.2
+	v20080521:1.2
+	v20080516-1143:1.2
+	v20080508-2000:1.2
+	v20080417-1610:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20071108-0000:1.2
+	v20070903-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.4
+	R2_0:1.2
+	R4_20:1.2
+	v20070621-0000:1.2
+	RC3_20:1.2
+	v20070605-1400:1.2
+	v20070601-1400:1.2
+	v20070525-1500:1.2
+	v20070520-1200:1.2
+	v20070518-1300:1.2
+	v20070427-0600:1.2
+	v20070420-1000:1.2
+	v20070413-1300:1.2
+	v20070405-1100:1.2
+	v20070330-1300:1.2
+	v20060330-1300:1.2
+	v20070322-1100:1.2
+	v20070307-0700:1.2
+	v20070301-1200:1.2
+	v20070228-2000:1.2
+	v20070221-1500:1.2
+	v20070208-1800:1.2
+	M4_20:1.2
+	v20061222-1800:1.2
+	v20061214-0000:1.2
+	v20061120-1300:1.2
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061013-1330:1.2
+	v20060925-1700:1.2
+	v20060919-0800:1.2
+	M1_20:1.2
+	v20060904-1500:1.2
+	v20060713-1700:1.2
+	R1_0_maintenance:1.2.0.2
+	R1_0:1.2
+	v20060627-1200:1.2
+	v20060626-1420:1.2
+	v20060616-1200:1.2
+	v20060609-1400:1.2
+	v20060531-1730:1.2
+	v20060530-1930:1.2
+	v20060526-1200:1.2
+	v20060519-1300:1.2
+	v20060519-0800:1.2
+	I20060424-0500:1.2
+	I20060424-0300:1.2
+	M6_10:1.2
+	I20060407-1200:1.2
+	I20060331-1000:1.2
+	I20060324-0300:1.1
+	I20060317-1300:1.1
+	I20060317-1200:1.1
+	I20060316-1300:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2008.09.23.15.23.15;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	27d3248d909e34567;
+
+1.2
+date	2006.03.30.14.18.50;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.03.15.15.16.59;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@refactored to get rid of useless concept
+@
+text
+@/*
+ * Copyright (c) 2006, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Michael Golubev (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.common.reconcile;
+
+import java.text.MessageFormat;
+
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+public class ReflectiveMatcher implements Matcher {
+	private final EStructuralFeature myFeature;
+	
+	public ReflectiveMatcher(EStructuralFeature feature) {
+		assert feature != null;
+		myFeature = feature;
+	}
+
+	public final boolean match(EObject current, EObject old) {
+		assertCompatible(current, old);
+		checkReflector(current.eClass());
+		Object currentValue = current.eGet(myFeature);
+		//do not allow match null against null
+		return currentValue != null && currentValue.equals(old.eGet(myFeature));
+	}
+	
+	private void assertCompatible(EObject current, EObject old) {
+		if (!current.eClass().equals(old.eClass())){
+			throw new IllegalStateException(MessageFormat.format("Objects not compatible: {0}, {1}", new Object[] {current, old}));
+		}
+	}
+	
+	private void checkReflector(EClass eClass) {
+		if (!myFeature.getEContainingClass().isSuperTypeOf(eClass)) {
+			// perhaps, we should respect case when same metamodel is loaded from different sources, and same
+			// metaclasses are not 'equal' in Java sense
+			throw new IllegalStateException(MessageFormat.format("EClass {0} is not compatible with expected class {1} ", new Object[] {eClass, myFeature.getEContainingClass()}));
+		}
+	}
+}
+@
+
+
+1.2
+log
+@[mgolubev] #133472 Reconcile GenCompartment boolean properties
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation
+d21 1
+a21 6
+	private EClass myOwner;
+	private Reflector myReflector;
+	
+	public interface Reflector {
+		public Object reflect(EObject target);
+	}
+d24 2
+a25 6
+		this(feature.getEContainingClass(), new StructuralFeatureReflector(feature));
+	}
+
+	public ReflectiveMatcher(EClass reflectorOwner, Reflector reflector) {
+		myOwner = reflectorOwner;
+		myReflector = reflector;
+d31 1
+a31 1
+		Object currentValue = myReflector.reflect(current);
+d33 1
+a33 1
+		return currentValue != null && currentValue.equals(myReflector.reflect(old));
+d43 1
+a43 1
+		if (!myOwner.isSuperTypeOf(eClass)) {
+d46 1
+a46 14
+			throw new IllegalStateException(MessageFormat.format("EClass {0} is not compatible with expected class {1} ", new Object[] {eClass, myOwner}));
+		}
+	}
+
+	public static class StructuralFeatureReflector implements Reflector {
+		private final EStructuralFeature myFeature;
+		
+		public StructuralFeatureReflector(EStructuralFeature feature) {
+			assert feature != null;
+			myFeature = feature;
+		}
+		
+		public Object reflect(EObject target) {
+			return target.eGet(myFeature);
+@
+
+
+1.1
+log
+@[mgolubev] #131762 preserve GenChildContainer properties
+@
+text
+@d29 1
+a29 1
+		this(feature.eClass(), new StructuralFeatureReflector(feature));
+@
+

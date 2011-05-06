@@ -1,0 +1,321 @@
+head	1.3;
+access;
+symbols
+	v20081022-1925:1.3
+	v20081020-0700:1.3
+	ocl_qvt:1.3.0.6
+	Root_ocl_qvt:1.3
+	v20080722-1827:1.3
+	v20080718-1731:1.3
+	v20080716-1600:1.3
+	v20080716-1642:1.3
+	R2_1_maintenance:1.3.0.4
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080528-1052:1.3
+	v20080516-1143:1.3
+	v20080417-1610:1.3
+	v20080322-0000:1.3
+	v20080222-1200:1.3
+	v20071130-1111:1.3
+	v20071124-0000:1.3
+	v20071108-0000:1.3
+	v20071003-0000:1.3
+	v20070921-0000:1.3
+	v20070903-0000:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.2
+	R2_0:1.3
+	R4_20:1.3
+	RC3_20:1.3
+	v20070608-1300:1.3
+	v20070605-1400:1.3
+	v20070601-1400:1.3
+	v20070518-1300:1.3
+	v20070420-1000:1.3
+	v20070405-1100:1.3
+	v20070403-1500:1.3
+	v20070330-1300:1.3
+	v20070208-1800:1.3
+	v20070103-0300:1.3
+	M4_20:1.3
+	M3_20:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.3
+date	2006.11.09.18.00.11;	author atikhomirov;	state Exp;
+branches
+	1.3.6.1;
+next	1.2;
+
+1.2
+date	2006.10.23.18.58.22;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.10.18.20.33.51;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.3.6.1
+date	2008.08.05.12.49.25;	author atikhomirov;	state Exp;
+branches;
+next	1.3.6.2;
+commitid	546c48984c4a4567;
+
+1.3.6.2
+date	2008.08.06.14.05.35;	author atikhomirov;	state Exp;
+branches;
+next	1.3.6.3;
+commitid	35b4899afa74567;
+
+1.3.6.3
+date	2008.08.07.23.23.37;	author atikhomirov;	state Exp;
+branches;
+next	1.3.6.4;
+commitid	55a7489b83f64567;
+
+1.3.6.4
+date	2008.08.08.18.15.51;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	51ea489c8d554567;
+
+
+desc
+@@
+
+
+1.3
+log
+@issue's type converted to enum, added decreased (warning) severity option toease development with xpand
+@
+text
+@/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.ast;
+
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.gmf.internal.xpand.BuiltinMetaModel;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.EvaluationException;
+import org.eclipse.gmf.internal.xpand.expression.ast.Expression;
+import org.eclipse.gmf.internal.xpand.expression.ast.Identifier;
+import org.eclipse.gmf.internal.xpand.model.XpandExecutionContext;
+
+/**
+ * @@author Sven Efftinge
+ */
+public class FileStatement extends Statement {
+
+    private final Expression fileName;
+
+    private final Statement[] body;
+
+    private final Identifier mode;
+
+    public FileStatement(final int start, final int end, final int line, final Expression fileName,
+            final Statement[] body, final Identifier mode) {
+        super(start, end, line);
+        this.fileName = fileName;
+        this.body = body;
+        this.mode = mode;
+    }
+
+    public Statement[] getBody() {
+        return body;
+    }
+
+    public Expression getTargetFileName() {
+        return fileName;
+    }
+
+    public Identifier getMode() {
+        return mode;
+    }
+
+    public void analyze(final XpandExecutionContext ctx, final Set<AnalysationIssue> issues) {
+        final EClassifier result = getTargetFileName().analyze(ctx, issues);
+        if (!BuiltinMetaModel.isAssignableFrom(EcorePackage.eINSTANCE.getEString(), result)) {
+            issues.add(new AnalysationIssue(AnalysationIssue.Type.INCOMPATIBLE_TYPES, "String expected!",
+                    getTargetFileName()));
+        }
+        for (Statement element : body) {
+            element.analyze(ctx, issues);
+        }
+    }
+
+    @@Override
+    public void evaluateInternal(final XpandExecutionContext ctx) {
+        final Object result = getTargetFileName().evaluate(ctx);
+        if (result == null) {
+			throw new EvaluationException("Nullevaluation", getTargetFileName());
+		}
+        final String fileName = result.toString();
+        String modeVal = null;
+        if (mode != null) {
+            modeVal = mode.getValue();
+        }
+        ctx.getOutput().openFile(fileName, modeVal);
+        for (Statement element : body) {
+            element.evaluate(ctx);
+        }
+        ctx.getOutput().closeFile();
+    }
+}
+@
+
+
+1.3.6.1
+log
+@[243154] Use OCL instead of home-grown expression language
+@
+text
+@d2 3
+a4 1
+ * Copyright (c) 2005, 2008 Sven Efftinge and others.
+d12 2
+a13 1
+ *     Artem Tikhomirov (Borland) - Migration to OCL expressions
+d24 1
+a26 2
+import org.eclipse.gmf.internal.xpand.ocl.ExpressionHelper;
+import org.eclipse.ocl.cst.OCLExpressionCS;
+d33 1
+a33 1
+    private final ExpressionHelper fileName;
+d39 2
+a40 1
+    public FileStatement(final int start, final int end, final int line, final OCLExpressionCS fileNameCS, final Statement[] body, final Identifier mode) {
+d42 1
+a42 1
+        this.fileName = new ExpressionHelper(fileNameCS);
+d47 12
+d60 1
+a60 1
+        final EClassifier result = fileName.analyze(ctx, issues);
+d62 2
+a63 1
+            issues.add(new AnalysationIssue(AnalysationIssue.Type.INCOMPATIBLE_TYPES, "String expected!", fileName));
+d72 1
+a72 1
+        final Object result = fileName.evaluate(ctx);
+d74 1
+a74 1
+			throw new EvaluationException("Nullevaluation", this, fileName.getCST());
+@
+
+
+1.3.6.2
+log
+@[243154] Use OCL instead of home-grown expression language. Refactored to eliminate context specific to expressions (moving towards using OCL environment for that), split modifiable (context-specific) and static execution data.
+@
+text
+@d19 2
+d22 1
+a22 3
+import org.eclipse.gmf.internal.xpand.model.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.model.EvaluationException;
+import org.eclipse.gmf.internal.xpand.model.ExecutionContext;
+d44 1
+a44 1
+    public void analyze(final ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+d55 1
+a55 1
+    public void evaluateInternal(final ExecutionContext ctx) {
+d65 1
+a65 1
+        ctx.getScope().getOutput().openFile(fileName, modeVal);
+d69 1
+a69 1
+        ctx.getScope().getOutput().closeFile();
+@
+
+
+1.3.6.3
+log
+@[243154] Use OCL instead of home-grown expression language - fixing and running tests.
+@
+text
+@a43 13
+    /**
+	 * FIXME next 3 methods are for tests only, shouldn't I refactor tests to avoid exposing internals?
+	 */
+    public ExpressionHelper getTargetFileName() {
+    	return fileName;
+    }
+	public Statement[] getBody() {
+		return body;
+	}
+	public Identifier getMode() {
+		return mode;
+	}
+
+@
+
+
+1.3.6.4
+log
+@[243154] Use OCL instead of home-grown expression language - AOP tests fixed, though with sort of hack to pass proceed() java method implementation to OCL
+@
+text
+@d17 2
+d59 1
+a59 1
+        if (ctx.getOCLEnvironment().getOCLStandardLibrary().getString() != result) {
+@
+
+
+1.2
+log
+@finals
+@
+text
+@d62 1
+a62 1
+            issues.add(new AnalysationIssue(AnalysationIssue.INCOMPATIBLE_TYPES, "String expected!",
+@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@d29 1
+a29 3
+ * *
+ * 
+ * @@author Sven Efftinge *
+d33 1
+a33 1
+    private Expression fileName;
+d35 1
+a35 1
+    private Statement[] body;
+d37 1
+a37 1
+    private Identifier mode;
+a86 1
+
+@
+

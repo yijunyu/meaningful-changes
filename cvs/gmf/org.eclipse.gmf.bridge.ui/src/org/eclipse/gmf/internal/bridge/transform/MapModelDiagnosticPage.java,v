@@ -1,0 +1,198 @@
+head	1.2;
+access;
+symbols
+	v20080924-1925:1.2
+	v20080722-1827:1.2
+	v20080716-1642:1.2
+	R2_1_maintenance:1.2.0.4
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080417-1610:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20080215-1500:1.2
+	v20080207-0207:1.2
+	v20071124-0000:1.2
+	v20071108-0000:1.2
+	v20070903-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	v20070621-0000:1.2
+	RC3_20:1.2
+	v20070608-1300:1.2
+	v20070605-1400:1.2
+	v20070601-1400:1.2
+	v20070520-1200:1.2
+	v20070518-1300:1.2
+	v20070420-1000:1.2
+	v20070413-1300:1.2
+	v20070405-2000:1.1
+	v20070330-1300:1.1
+	v20070322-1100:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2007.04.12.14.40.18;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	5f58461e44d04567;
+
+1.1
+date	2007.03.20.16.54.35;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	33aa460011ca4567;
+
+
+desc
+@@
+
+
+1.2
+log
+@[181896] afedorov - Allow transformation wizard to complete if there are errors in the resulting gmfgen model
+refactored not to define extra strings for page names, titles and descriptions moved to owning pages.
+@
+text
+@/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Fedorov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.bridge.transform;
+
+import org.eclipse.emf.common.util.Diagnostic;
+
+
+class MapModelDiagnosticPage extends ModelDiagnosticPage {
+	
+	MapModelDiagnosticPage(String pageName) {
+		super(pageName);
+		setTitle(Messages.TransformToGenModelWizard_title_mapdiagnostic);
+		setDescription(Messages.TransformToGenModelWizard_descr_mapdiagnostic);
+	}
+
+	@@Override
+	protected boolean getIgnoreOption() {
+		return getOperation().getOptions().getIgnoreMapModelValidation();
+	}
+
+	@@Override
+	protected Diagnostic getValidationResult() {
+		return getOperation().getMapmodelValidationResult();
+	}
+
+	@@Override
+	protected void setIgnoreOption(boolean ignore) {
+		getOperation().getOptions().setIgnoreMapModelValidation(ignore);
+	}
+
+}
+@
+
+
+1.1
+log
+@[175837] afedorov - Can't ignore validation errors in new "Create generator model" wizard
+@
+text
+@a13 1
+import org.eclipse.emf.common.ui.DiagnosticComposite;
+a14 7
+import org.eclipse.jface.wizard.WizardPage;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+d17 1
+a17 1
+class MapModelDiagnosticPage extends WizardPage {
+a18 4
+	private DiagnosticComposite myDiagnosticComposite;
+	private Button myIgnoreButton;
+
+
+d21 2
+d25 3
+a27 16
+	public void createControl(Composite parent) {
+		Composite plate = new Composite(parent, SWT.NONE);
+		{
+			GridLayout layout = new GridLayout();
+			plate.setLayout(layout);
+
+			GridData data = new GridData();
+			data.verticalAlignment = GridData.FILL;
+			data.horizontalAlignment = GridData.FILL;
+			data.grabExcessHorizontalSpace = true;
+			plate.setLayoutData(data);
+		}
+		createDiagnosticComposite(plate);
+		createIgnoreButton(plate);
+		setControl(plate);
+
+d30 3
+a32 21
+	private void createDiagnosticComposite(Composite parent) {
+		myDiagnosticComposite = new DiagnosticComposite(parent, SWT.NONE);
+		myDiagnosticComposite.initialize(null);
+		myDiagnosticComposite.setShowRootDiagnostic(true);
+		myDiagnosticComposite.setSeverityMask(Diagnostic.ERROR);
+		GridData data = new GridData(SWT.FILL, SWT.FILL, true, true);
+		myDiagnosticComposite.setLayoutData(data);
+	}
+	
+	private void createIgnoreButton(Composite parent) {
+		myIgnoreButton = new Button(parent, SWT.CHECK);
+		myIgnoreButton.setText(Messages.MapModelDiagnosticPage_btn_ignore_text);
+		setButtonLayoutData(myIgnoreButton);
+		myIgnoreButton.addSelectionListener(new SelectionAdapter(){
+			
+			@@Override
+			public void widgetSelected(org.eclipse.swt.events.SelectionEvent e) {
+				applyValidation();
+			}
+			
+		});
+d36 2
+a37 14
+	public void setVisible(boolean visible) {
+		if (visible) {
+			initControls();
+		}
+		super.setVisible(visible);
+	}
+	
+	private void initControls() {
+		TransformToGenModelOperation o = getOperation();
+		Diagnostic diagnostic = o.getMapmodelValidationResult();
+		myDiagnosticComposite.setDiagnostic(diagnostic);
+		boolean ignore = o.getOptions().getIgnoreMapModelValidation();
+		myIgnoreButton.setSelection(ignore);
+		setPageComplete(ignore);
+a39 10
+	TransformToGenModelOperation getOperation() {
+		TransformToGenModelWizard wizard = (TransformToGenModelWizard) getWizard();
+		return wizard.getTransformOperation();
+	}
+	
+	void applyValidation() {
+		boolean ignore = myIgnoreButton.getSelection();
+		getOperation().getOptions().setIgnoreMapModelValidation(ignore);
+		setPageComplete(ignore);
+	}
+@
+

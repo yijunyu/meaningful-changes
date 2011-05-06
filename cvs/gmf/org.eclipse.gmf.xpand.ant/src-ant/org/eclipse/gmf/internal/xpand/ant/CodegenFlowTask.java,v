@@ -1,0 +1,171 @@
+head	1.3;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.3
+date	2008.10.24.13.02.19;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	174dd4901c75b4567;
+
+1.2
+date	2008.10.24.12.50.31;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	149924901c4974567;
+
+1.1
+date	2008.10.22.17.25.32;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	2544748ff620b4567;
+
+
+desc
+@@
+
+
+1.3
+log
+@[251588] Ant integration for GMF-Xpand
+@
+text
+@/*
+ * Copyright (c) 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.xpand.ant;
+
+import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.StringTokenizer;
+
+import org.apache.tools.ant.BuildException;
+import org.apache.tools.ant.Task;
+import org.apache.tools.ant.TaskContainer;
+import org.apache.tools.ant.UnknownElement;
+
+public class CodegenFlowTask extends Task implements TaskContainer {
+
+	private final LinkedList<Task> myTasks = new LinkedList<Task>();
+	private String[] myTemplateRoots;
+
+	public CodegenFlowTask() {
+	}
+
+	public void addTask(Task task) {
+		myTasks.add(task);
+	}
+
+	public void setTemplateRoot(String root) {
+		ArrayList<String> roots = new ArrayList<String>();
+		for (StringTokenizer st = new StringTokenizer(root, ";, "); st.hasMoreTokens(); ) {
+			roots.add(st.nextToken().trim());
+		}
+		myTemplateRoots = roots.toArray(new String[roots.size()]);
+	}
+
+	public void setOutputRoot(String outputRoot) {
+	}
+
+	public void setInputModel(String input) {
+	}
+
+	@@Override
+	public void execute() throws BuildException {
+		ProgressSupport ps = new ProgressSupport(this);
+		ps.beginTask(getTaskName(), myTasks.size() + 2);
+		XpandFacade xf = createFacade();
+		for (Task t : myTasks) {
+			if (t instanceof UnknownElement) {
+				UnknownElement ue = (UnknownElement) t;
+				if ("eclipse.org/gmf/2008/xpand".equals(ue.getNamespace()) && "template".equals(ue.getTag())) {
+					t.maybeConfigure();
+					if (((UnknownElement) t).getTask() != null) {
+						t = ((UnknownElement) t).getTask();
+					}
+				}
+			}
+			if (t instanceof InvokeTemplateTask) {
+				((InvokeTemplateTask) t).setFacade(xf);
+			}
+		}
+		ps.worked(2);
+		try {
+			ps.pushSubProgress(myTasks.size());
+			for (Task t : myTasks) {
+				t.perform();
+			}
+		} finally {
+			ps.popSubProgress();
+			ps.done();
+		}
+	}
+
+	protected XpandFacade createFacade() throws BuildException {
+		try {
+			XpandFacade xf = new XpandFacade();
+			for (String r : myTemplateRoots) {
+				xf.addLocation(r);
+			}
+			return xf;
+		} catch (MalformedURLException ex) {
+			throw new BuildException(ex, getLocation());
+		}
+	}
+}
+@
+
+
+1.2
+log
+@[251588] Ant integration for GMF-Xpand
+@
+text
+@d22 1
+a26 1
+	private final LinkedList<InvokeTemplateTask> myTemplateInvocations = new LinkedList<InvokeTemplateTask>();
+a32 3
+		if (task instanceof InvokeTemplateTask) {
+			myTemplateInvocations.add((InvokeTemplateTask) task);
+		}
+d55 13
+a67 2
+		for (InvokeTemplateTask t : myTemplateInvocations) {
+			t.setFacade(xf);
+a73 1
+				ps.worked(1);
+@
+
+
+1.1
+log
+@[251588] Ant integration for GMF-Xpand
+@
+text
+@d14 2
+d17 1
+d26 2
+d34 1
+a34 1
+//			((InvokeTemplateTask) task).bindContext(this);
+d39 6
+a44 1
+	public void setTemplateRoot(String templateRoot) {
+d55 28
+a82 2
+		for (Task t : myTasks) {
+			t.perform();
+@
+

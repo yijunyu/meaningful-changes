@@ -1,0 +1,484 @@
+head	1.9;
+access;
+symbols
+	v20081015-1925:1.9
+	v20080924-1925:1.9
+	v20070518-1300:1.8
+	v20070427-0600:1.7
+	v20070420-1000:1.7
+	v20070413-1300:1.7
+	v20070405-1100:1.7
+	v20070330-1300:1.7
+	v20060330-1300:1.7
+	v20070322-1100:1.7
+	v20070307-0700:1.7
+	v20070301-1200:1.7
+	v20070228-2000:1.7
+	v20070221-1500:1.7
+	v20070208-1800:1.7
+	M4_20:1.7
+	v20061222-1800:1.7
+	v20061214-0000:1.7
+	v20061120-1300:1.7
+	M3_20:1.7
+	v20061117-0800:1.7
+	v20061013-1330:1.4
+	M1_20:1.2
+	v20060904-1500:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.9
+date	2007.05.18.20.39.13;	author atikhomirov;	state dead;
+branches;
+next	1.8;
+commitid	58f6464e0ef14567;
+
+1.8
+date	2007.05.10.13.55.22;	author atikhomirov;	state Exp;
+branches;
+next	1.7;
+commitid	14b9464324494567;
+
+1.7
+date	2006.10.20.16.22.22;	author dstadnik;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2006.10.18.14.21.15;	author dstadnik;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.10.17.15.49.17;	author dstadnik;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.09.21.13.16.01;	author radvorak;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.09.14.17.52.38;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.09.04.09.35.18;	author radvorak;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.08.29.17.46.28;	author radvorak;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.9
+log
+@[187811] akarjakina - Migration support refactored
+@
+text
+@/*
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0 which
+ * accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: Radek Dvorak (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.common.migrate;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.gmf.internal.common.migrate.MigrationResource.MigrationHandler;
+
+/**
+ * This class holds information used for upgrading existing model instance created with 
+ * older versions of its meta-model.<p>
+ * Use {@@linkplain MigrationConfig.Registry#INSTANCE} for individual migration config registration.<p>  
+ * <li>
+ * It is assumed that there is only the current (latest) version of the metamodel available in
+ * its binary form.</li>
+ * <li>
+ * Changes described by the config are to be applied to previous versions at loading time,
+ * resulting in model instance based on the latest meta-model version.</li> 
+ */
+public class MigrationConfig {
+
+	/**
+	 * Global registry of GMF meta-models migration configs
+	 */
+	public interface Registry {
+		/**
+		 * Retrieves migration config for the given model file
+		 * 
+		 * @@param extension model filename extension
+		 * @@return migration config or <code>null</code> if no config is registered for 
+		 * 		this extension
+		 */
+		MigrationConfig getConfig(String extension);
+		/**
+		 * Registers the given descriptor with this registry. If a descriptor for the
+		 * same file extension already exists, the latter one overrides it.
+		 *  
+		 * @@param descriptor migration config descriptor
+		 */
+		void register(Descriptor descriptor);
+		
+		/**
+		 * Global registry instance
+		 */
+		Registry INSTANCE = new RegistryImpl();		
+	}
+	
+	/**
+	 * A wrapper of MigrationConfig for use with {@@link MigrationConfig.Registry}.</p>
+	 * The main purpose of this interface is to enable on demand migration config creation.
+	 */
+	public interface Descriptor {
+		/**
+		 * Get file extension of models for which this descriptor is applicable
+		 * @@return extension string
+		 */
+		String getExtension();
+		/**
+		 * Gets config associated with this descriptor.
+		 * @@return non-null config object
+		 */
+		MigrationConfig getConfig();
+	}
+			
+	// instance fields
+	private final String metamodelURI;
+	private Set<String> backwardSupportedURIs = Collections.emptySet();
+	private final LinkedHashMap<FeatureKey, EClass> addedERefTypes = new LinkedHashMap<FeatureKey, EClass>();
+	private final Map<String, Set<EClass>> deletedAttributes = new HashMap<String, Set<EClass>>();
+
+	
+	/**
+	 * Constructs migration config for the given metamodel.
+	 * 
+	 * @@param metamodelNsURI namespace URI of the metamodel, migration of which is 
+	 * 	to be described by this config.
+	 * 
+	 * @@param backwardSupportedURIs set of namespace URIs of previous migratable versions
+	 */
+	public MigrationConfig(String metamodelNsURI, String[] backwardSupportedURIs) {
+		if(metamodelNsURI == null) {
+			throw new IllegalArgumentException("null metamodel"); //$NON-NLS-1$
+		}
+		this.metamodelURI = metamodelNsURI;
+		for (int i = 0; i < backwardSupportedURIs.length; i++) {
+			addBackwardSupportedNsURIs(backwardSupportedURIs[i]);
+		}
+	}
+	
+	/**
+	 * Gets the metamodel namespace URI representing its current version
+	 * @@return the uri string
+	 */
+	public String getMetamodelNsURI() {
+		return metamodelURI;
+	}
+	
+	/**
+	 * Gets namespace URIs of previous metamodel versions which are migratable to its latest state.
+	 * @@return set of URI strings
+	 */
+	public Set<String> backwardSupportedNsURIs() {
+		return Collections.unmodifiableSet(backwardSupportedURIs);
+	}	
+
+	/**
+	 * Avoid "Feature 'name' not found" exception while loading resources with objects holding deleted attributes.
+	 * 
+	 * <p>Though we could use XMLResource.OPTION_RECORD_UNKNOWN_FEATURE, it seems to have next drawbacks:
+	 * <ul>
+	 * <li>it's all-or-nothing approach
+	 * <li>attributes and values loaded this way will be preserved on save
+	 * </ul> 
+	 */
+	public void registerDeletedAttribute(EClass attributeOwner, String attrName) {
+		assert attributeOwner != null && attrName != null;
+		Set<EClass> known = deletedAttributes.get(attrName);
+		if (known == null) {
+			known = new HashSet<EClass>();
+			deletedAttributes.put(attrName, known);
+		}
+		known.add(attributeOwner);
+	}
+
+	/**
+	 * Counterpart to {@@link #registerDeletedAttribute(EClass, String)} that answers whether 
+	 * this migration config knows attribute with the name passed as an argument as deleted.
+	 */
+	public boolean shouldIgnoreAttribute(EObject object, String attrName) {
+		Set<EClass> known = deletedAttributes.get(attrName);
+		if (known == null) {
+			return false;
+		}
+		final EClass objClass = object.eClass();
+		for (EClass c : known) {
+			if (c.isSuperTypeOf(objClass)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Adds reference type narrowing migration patch.<p>
+	 * Ensures correct type narrowing of previosly saved referenced objects in case of missing
+	 * xsi/xmi:type info in existing serialized contents.
+	 * <p>
+	 * @@param reference the current version of migrated EReference in the metamodel. 
+	 * 		The newly introduced type must be conformant with the old reference type.
+	 * @@param oldReferenceType EClass representing the reference type used in the previous version. 
+	 * 		It must be a concrete class which is instantiated for old version referenced objects. 
+	 * 
+	 * @@see https://bugs.eclipse.org/bugs/show_bug.cgi?id=154712
+	 */
+	public void addNarrowReferenceType(EReference reference, EClass oldReferenceType) {
+		if(reference == null || oldReferenceType == null) {
+			throw new IllegalArgumentException("Null reference or old reference type"); //$NON-NLS-1$
+		}
+		if(!reference.getEReferenceType().isSuperTypeOf(oldReferenceType) ||
+			oldReferenceType.isAbstract() || oldReferenceType.isInterface()) {
+			throw new IllegalArgumentException("Non-compliant reference types"); //$NON-NLS-1$
+		}
+		if(reference.getEReferenceType() == oldReferenceType) {
+			throw new IllegalArgumentException("Identical reference types"); //$NON-NLS-1$
+		}
+		if(addedERefTypes.containsKey(reference)) {
+			throw new IllegalArgumentException("Reference already has a migration entry"); //$NON-NLS-1$
+		}
+		addedERefTypes.put(FeatureKey.create(reference), oldReferenceType);
+	}
+		
+	@@Override
+	public String toString() { 
+		return getClass().getSimpleName() + " : " + getMetamodelNsURI();//$NON-NLS-1$
+	}
+	
+	EClass getAddedTypeInfo(FeatureKey reference) {
+		return addedERefTypes.get(reference);
+	}
+	
+	private void addBackwardSupportedNsURIs(String nsURI) {
+		if(nsURI == null || nsURI.equals(metamodelURI)) {
+			throw new IllegalArgumentException();
+		}
+		
+		if(backwardSupportedURIs.isEmpty()) {
+			backwardSupportedURIs = new HashSet<String>();
+		}
+		backwardSupportedURIs.add(nsURI);		
+	}	
+
+	protected void handleResourceLoaded(Resource resource, Map<EObject, Map<String, String>> ignoredAttributes) {
+		// override
+	}
+
+	protected boolean handleCreateObject(MigrationHandler handler, EObject peekObject, EStructuralFeature feature) {
+		// override
+		return false;
+	}
+
+	protected boolean handleFeature(MigrationHandler handler, String prefix, String name) {
+		// override
+		return false;
+	}
+
+	protected boolean setAttribValue(MigrationHandler handler, EObject peekObject, String name, String value) {
+		// override
+		return false;
+	}
+	
+	/**
+	 * Migration config registry implementaion.
+	 */
+	private static class RegistryImpl extends HashMap<String, Object> implements Registry {
+	
+		RegistryImpl() {			
+		}
+		
+		public MigrationConfig getConfig(String ext) {
+			Object regEntry = get(ext);
+			if(regEntry instanceof MigrationConfig) {
+				return (MigrationConfig)regEntry;
+			} 
+			else if(regEntry instanceof Descriptor) {
+				Descriptor descriptor = (Descriptor)regEntry;
+				MigrationConfig migrationConfig = descriptor.getConfig();
+				this.put(ext, migrationConfig);
+				return migrationConfig;
+			}
+			return null;
+		}
+		
+		public void register(Descriptor descriptor) {
+			if(descriptor == null || descriptor.getExtension() == null) {
+				throw new IllegalArgumentException("null extension or descriptor"); //$NON-NLS-1$
+			}
+			put(descriptor.getExtension(), descriptor);
+		}		
+	}
+
+}
+@
+
+
+1.8
+log
+@[185372] akarjakina - Migration of gmfgen 1.0 models with GenAuditContainer and GenAuditRule structures
+@
+text
+@@
+
+
+1.7
+log
+@rename method that handles loaded resource
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation
+d224 5
+d257 2
+a258 1
+	}	
+@
+
+
+1.6
+log
+@#161380 simplify feature model facets
+@
+text
+@d210 1
+a210 1
+	protected void handleIgnoredAttributes(Resource resource, Map<EObject, Map<String, String>> ignoredAttributes) {
+@
+
+
+1.5
+log
+@#160894 support readOnly attribute migration
+@
+text
+@d23 1
+d25 1
+d214 10
+@
+
+
+1.4
+log
+@#157836 Feature-based model migration patches should NOT use object identity equals() on metamodel
+@
+text
+@d23 1
+d152 1
+a152 1
+			if (objClass.isSuperTypeOf(c)) {
+d207 5
+a211 1
+		
+@
+
+
+1.3
+log
+@migration utils updated to support clean processing of attributes removed from metamodel
+@
+text
+@d83 1
+a83 1
+	private final LinkedHashMap<EReference, EClass> addedERefTypes = new LinkedHashMap<EReference, EClass>();
+d184 1
+a184 1
+		addedERefTypes.put(reference, oldReferenceType);
+d187 1
+d192 1
+a192 1
+	EClass getAddedTypeInfo(EReference reference) {
+d210 1
+a210 1
+	private static class RegistryImpl extends HashMap<String, Descriptor> implements Registry {
+d216 11
+a226 2
+			Descriptor descriptor = get(ext);
+			return (descriptor != null) ? descriptor.getConfig() : null;
+@
+
+
+1.2
+log
+@Get rid of Java 5 type-safety warnings
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005 Borland Software Corporation
+d17 1
+d21 1
+d81 1
+a81 1
+	private String metamodelURI;
+d83 4
+a86 2
+	private LinkedHashMap<EReference, EClass> addedERefTypes = new LinkedHashMap<EReference, EClass>();
+		
+d120 38
+a157 1
+	
+@
+
+
+1.1
+log
+@#154698 Support migration of GMF tooling models in case of backward incomatible changes
+@
+text
+@d80 2
+a81 2
+	private Set backwardSupportedURIs = Collections.EMPTY_SET;
+	private LinkedHashMap addedERefTypes = new LinkedHashMap();
+d113 1
+a113 1
+	public Set backwardSupportedNsURIs() {
+d151 1
+a151 1
+		return (EClass)addedERefTypes.get(reference);
+d160 1
+a160 1
+			backwardSupportedURIs = new HashSet();
+d168 1
+a168 1
+	private static class RegistryImpl extends HashMap implements Registry {
+d174 1
+a174 1
+			Descriptor descriptor = (Descriptor)get(ext);
+@
+

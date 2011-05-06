@@ -1,0 +1,369 @@
+head	1.3;
+access;
+symbols
+	v20081020-0700:1.3
+	v20080807-1333:1.3
+	v20080807-1325:1.3
+	v20080731-1520:1.3
+	v20080725-1738:1.3
+	v20080722-1827:1.3
+	R2_1_maintenance:1.3.0.6
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080425-1959:1.3
+	v20080328-1605:1.3
+	v20080222-1200:1.3
+	v20080114-2222:1.3
+	v20080107-1111:1.3
+	v20071130-1111:1.3
+	v20071124-0000:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.4
+	R2_0:1.3
+	R4_20:1.3
+	RC3_20:1.3
+	v20070601-1400:1.3
+	v20070518-1300:1.3
+	v20070403-1500:1.3
+	v20070330-1300:1.3
+	v20070208-1800:1.3
+	M4_20:1.3
+	v20061214-0000:1.3
+	M3_20:1.3
+	v20061117-0800:1.3
+	v20061013-1330:1.3
+	v20060919-0800:1.3
+	v20060907-1100:1.3
+	M1_20:1.3
+	v20060831-1500:1.3
+	v20060817-1500:1.3
+	v20060803-1200:1.3
+	v20060721-1130:1.3
+	v20060713-1700:1.3
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3
+	v20060627-1200:1.3
+	v20060616-1200:1.3
+	v20060609-1400:1.3
+	v20060531-1730:1.3
+	v20060530-1930:1.3
+	v20060526-1200:1.3
+	v20060519-0800:1.3
+	I20060505-1400:1.3
+	I20060428-1300:1.2
+	I20060424-0500:1.2
+	I20060424-0300:1.2
+	M6_10:1.2
+	I20060407-1200:1.2
+	I20060331-1000:1.2
+	I20060324-0300:1.2
+	I20060317-1300:1.2
+	I20060317-1200:1.2
+	I20060316-1300:1.2
+	I20060309-1300:1.2
+	M5_10:1.2
+	S20060303-1600:1.2
+	I20060227-1730:1.2
+	I20060216-1945:1.2
+	I20060210-1715:1.1
+	I20060209-1815:1.1
+	I20060203-0830:1.1
+	I20060129-1145:1.1
+	I20060127-0900:1.1
+	I20060120-1530:1.1
+	I20060113-1700:1.1
+	M4_10:1.1
+	I20060107-1100:1.1
+	I20060105-1630:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2006.05.04.19.49.40;	author vramaswamy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.02.13.19.12.20;	author ldamus;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.01.04.15.55.25;	author ldamus;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@[131094] gmf_head cmcgee 060504 Sweep Code for EReference.isMany() calls
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2005, 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.emf.type.core.commands;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.emf.ecore.util.FeatureMapUtil;
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+import org.eclipse.gmf.runtime.emf.core.util.PackageUtil;
+import org.eclipse.gmf.runtime.emf.type.core.internal.l10n.EMFTypeCoreMessages;
+import org.eclipse.gmf.runtime.emf.type.core.requests.MoveRequest;
+
+/**
+ * Command to move model elements using the EMF action protocol.
+ * <P>
+ * If the target features are not specified in the request, and the features
+ * fomerly containing the moved elements exists in the target element, they will
+ * be used.
+ * 
+ * @@author ldamus
+ */
+public class MoveElementsCommand extends EditElementCommand {
+
+	/**
+	 * The map of <code>EObject</code>s to be moved. Keyed on
+	 * <code>EObject</code>. Each value is the <code>EReference</code>
+	 * feature in the target element into which the element should be moved.
+	 * <P>
+	 * If the feature is not specified for a given element, then a default
+	 * feature is found in the target.
+	 */
+	private final Map elementsToMove;
+
+	/**
+	 * The target container into which the element will be moved.
+	 */
+	private final EObject targetContainer;
+
+	/**
+	 * Constructs a new command to move a model element
+	 * 
+	 * @@param request
+	 *            the move element request
+	 */
+	public MoveElementsCommand(MoveRequest request) {
+
+		super(request.getLabel(), request.getTargetContainer(), request);
+		this.elementsToMove = request.getElementsToMove();
+		this.targetContainer = request.getTargetContainer();
+	}
+
+	protected CommandResult doExecuteWithResult(IProgressMonitor monitor, IAdaptable info)
+	    throws ExecutionException {
+
+		for (Iterator i = getElementsToMove().keySet().iterator(); i.hasNext();) {
+			EObject element = (EObject) i.next();
+			EReference feature = getTargetFeature(element);
+
+			if (feature != null) {
+				if (FeatureMapUtil.isMany(targetContainer, feature)) {
+					((Collection) targetContainer.eGet(feature)).add(element);
+
+				} else {
+					targetContainer.eSet(feature, element);
+				}
+			} else {
+				return CommandResult.newErrorCommandResult(EMFTypeCoreMessages.moveElementsCommand_noTargetFeature);
+			}
+		}
+
+		return CommandResult.newOKCommandResult();
+	}
+
+	/**
+	 * Gets the feature in the target element that should contain
+	 * <code>element</code> after it is moved.
+	 * <P>
+	 * Looks for the feature first in the elements map. If none is specified,
+	 * tries to use the same feature that contained the element in its old
+	 * location. If the old containment feature doesn't exist in the new target,
+	 * uses the MSL utility to find the first feature in the target that can
+	 * contain the element being moved.
+	 * 
+	 * @@param element
+	 *            the element to be moved
+	 * @@return the feature that will contain the element in the target
+	 */
+	protected EReference getTargetFeature(EObject element) {
+
+		EReference feature = (EReference) getElementsToMove().get(element);
+
+		if (feature == null) {
+			EReference oldContainmentFeature = element.eContainmentFeature();
+
+			if (getTargetContainer().eClass().getEAllReferences().contains(
+					oldContainmentFeature)) {
+				getElementsToMove().put(element, oldContainmentFeature);
+				feature = oldContainmentFeature;
+			}
+		}
+
+		if (feature == null) {
+			feature = PackageUtil.findFeature(getTargetContainer().eClass(),
+					element.eClass());
+			setTargetFeature(element, feature);
+		}
+
+		return feature;
+	}
+
+	/**
+	 * Gets the target container.
+	 * 
+	 * @@return the target container
+	 */
+	protected EObject getTargetContainer() {
+		return targetContainer;
+	}
+
+	/**
+	 * Gets the map of elements to be moved. Each entry in the map consists of
+	 * an <code>EObject</code> key, which is the element to be moved to the
+	 * new target, and an <code>EReference</code> value, which is the feature
+	 * in the new target that should contain the moved element.
+	 * 
+	 * @@return the map of elements to be moved
+	 */
+	protected Map getElementsToMove() {
+		return elementsToMove;
+	}
+
+	/**
+	 * Sets the reference feature into which an element should be moved.
+	 * 
+	 * @@param element
+	 *            the element to be moved
+	 * @@param targetFeature
+	 *            the target feature
+	 */
+	protected void setTargetFeature(EObject element, EReference targetFeature) {
+		getElementsToMove().put(element, targetFeature);
+	}
+
+	public boolean canExecute() {
+
+		EObject container = getTargetContainer();
+
+		if (container == null || elementsToMove == null
+				|| elementsToMove.isEmpty()) {
+			return false;
+		}
+
+		for (Iterator i = getElementsToMove().keySet().iterator(); i.hasNext();) {
+			EObject element = (EObject) i.next();
+			EReference feature = getTargetFeature(element);
+
+			if (feature == null
+					|| !container.eClass().getEAllReferences()
+							.contains(feature)) {
+				// If the target feature doesn't exist in the target container,
+				// don't allow the move.
+				return false;
+			}
+
+			// IF the element is already in the target container...
+			if (container.equals(element.eContainer())
+					&& feature == element.eContainmentFeature()) {
+				// Don't allow the reparenting
+				return false;
+			}
+
+			// IF the element is the parent of the target container...
+			if (EcoreUtil.isAncestor(element, getTargetContainer())) {
+				// Don't allow the reparenting
+				return false;
+			}
+
+			// IF the container can not contain the element...
+			if (!PackageUtil.canContain(getTargetContainer().eClass(),
+					feature, element.eClass(), false)) {
+				// Don't allow the reparenting
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+}@
+
+
+1.2
+log
+@[112826] gmf_head ldamus 060213 Adopt Eclipse 3.1 Operation History Framework
+@
+text
+@d24 1
+d77 1
+a77 1
+				if (feature.isMany()) {
+@
+
+
+1.1
+log
+@[112662] gmf_head ldamus 060104 MoveRequest should be able to deal with a list of elements
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005 IBM Corporation and others.
+d18 2
+d23 1
+d25 1
+d68 2
+a69 1
+	protected CommandResult doExecute(IProgressMonitor progressMonitor) {
+d78 1
+a78 1
+	
+d83 1
+a83 1
+				return newErrorCommandResult(EMFTypeCoreMessages.moveElementsCommand_noTargetFeature);
+d87 1
+a87 1
+		return newOKCommandResult();
+d96 3
+a98 1
+	 * location.
+d105 1
+d117 7
+d160 1
+a160 6
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.emf.commands.core.internal.commands.EditElementCommand#isExecutable()
+	 */
+	public boolean isExecutable() {
+d172 1
+a172 1
+			
+d187 13
+@
+

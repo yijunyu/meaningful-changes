@@ -1,0 +1,278 @@
+head	1.3;
+access;
+symbols
+	v20081023-2107:1.3
+	v20081022-1925:1.3
+	v20081022-1104:1.3
+	v20081020-0700:1.3
+	v20080722-1827:1.3
+	R2_1_maintenance:1.3.0.6
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080512-1200:1.3
+	v20080503-1740:1.3
+	v20080501-1739:1.3
+	v20080425-1959:1.3
+	v20080407-2250:1.3
+	v20080222-1200:1.3
+	v20080215-1500:1.3
+	v20071003-0000:1.3
+	v20070921-0000:1.3
+	v20070915-0000:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.4
+	R2_0:1.3
+	R4_20:1.3
+	RC3_20:1.3
+	v20070601-1400:1.3
+	v20070504-1000:1.3
+	v20070330-1300:1.3
+	v20070208-1800:1.3
+	M4_20:1.3
+	v20061218-1200:1.3
+	v20061214-0000:1.3
+	M3_20:1.3
+	v20061117-0800:1.3
+	v20061020-1000:1.3
+	v20061013-1330:1.3
+	v20061012-1100:1.3
+	v20060925-1700:1.3
+	v20060919-0800:1.3
+	M1_20:1.3
+	v20060824-1600:1.3
+	v20060803-1200:1.3
+	v20060728-0500:1.3
+	v20060721-1130:1.3
+	v20060713-1700:1.3
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3
+	v20060627-1200:1.3
+	v20060616-1200:1.3
+	v20060531-1730:1.3
+	v20060526-1200:1.3
+	I20060424-0500:1.3
+	I20060424-0300:1.3
+	M6_10:1.3
+	I20060407-1200:1.3
+	I20060331-1000:1.3
+	I20060324-0300:1.3
+	I20060317-1300:1.2
+	I20060317-1200:1.2
+	I20060316-1300:1.2
+	I20060309-1300:1.2
+	M5_10:1.2
+	S20060303-1600:1.2
+	I20060227-1730:1.2
+	I20060216-1945:1.2
+	I20060210-1715:1.2
+	I20060209-1815:1.2
+	I20060203-0830:1.2
+	I20060129-1145:1.2
+	I20060127-0900:1.2
+	I20060120-1530:1.2
+	I20060113-1700:1.2
+	M4_10:1.2
+	I20060107-1100:1.2
+	I20060105-1630:1.2
+	I20051230-1230:1.2
+	I20051223-1100:1.2
+	I20051217-0925:1.2
+	I20051124-2000:1.2
+	M3_10:1.2
+	I20051118-1245:1.2
+	I20051111-1800:1.2
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.3
+date	2006.03.23.19.54.44;	author ldamus;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.23.49;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.16.16;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@[128868] gmf_head ldamus 060323 Invalid thread access exception from SubStatusLineManager while using Eclipse
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2004, 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.common.ui.util;
+
+import org.eclipse.jface.action.IStatusLineManager;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorActionBarContributor;
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IViewPart;
+import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.part.EditorActionBarContributor;
+
+/**
+ * Utility class for outputting text to the status line
+ * 
+ * @@author myee
+ */
+public class StatusLineUtil {
+
+    private StatusLineUtil() {
+        /* private constructor */
+    }
+
+    /**
+     * Outputs an error message to the part's status line. Does nothing if the
+     * status line manager cannot be determined from the <code>part</code>.
+     * <P>
+     * Can be invoked from a non-UI thread.
+     * 
+     * @@param part
+     *            the part
+     * @@param errorMessage
+     *            the error message
+     */
+    public static void outputErrorMessage(IWorkbenchPart part,
+            final String errorMessage) {
+
+        final IStatusLineManager statusLineManager = getStatusLineManager(part);
+
+        if (statusLineManager == null) {
+            // can't find the status line manager
+            return;
+        }
+
+        final Display workbenchDisplay = PlatformUI.getWorkbench().getDisplay();
+
+        if (workbenchDisplay.getThread() == Thread.currentThread()) {
+            // we're already on the UI thread
+            statusLineManager.setErrorMessage(errorMessage);
+        } else {
+            // we're not on the UI thread
+            workbenchDisplay.asyncExec(new Runnable() {
+
+                public void run() {
+                    statusLineManager.setErrorMessage(errorMessage);
+                }
+            });
+        }
+    }
+
+    private static IStatusLineManager getStatusLineManager(IWorkbenchPart part) {
+
+        IStatusLineManager result = null;
+
+        if (part instanceof IViewPart) {
+            IViewPart viewPart = (IViewPart) part;
+            result = viewPart.getViewSite().getActionBars()
+                .getStatusLineManager();
+
+        } else if (part instanceof IEditorPart) {
+            IEditorPart editorPart = (IEditorPart) part;
+
+            IEditorActionBarContributor contributor = editorPart
+                .getEditorSite().getActionBarContributor();
+
+            if (contributor instanceof EditorActionBarContributor) {
+                result = ((EditorActionBarContributor) contributor)
+                    .getActionBars().getStatusLineManager();
+            }
+        }
+        return result;
+    }
+
+}
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2004 IBM Corporation and others.
+d15 1
+d20 1
+d29 64
+a92 34
+	private StatusLineUtil() {
+		 /* private constructor */
+	}
+
+	/**
+	 * Outputs an error message to the part's status line
+	 * 
+	 * @@param part the part
+	 * @@param errorMessage the error message
+	 */
+	public static void outputErrorMessage(IWorkbenchPart part, String errorMessage) {
+		if (part instanceof IViewPart) {
+			IViewPart viewPart = (IViewPart) part;
+
+			IStatusLineManager statusLineManager =
+				viewPart.getViewSite().getActionBars().getStatusLineManager();
+
+			statusLineManager.setErrorMessage(errorMessage);
+
+		} else if (part instanceof IEditorPart) {
+			IEditorPart editorPart = (IEditorPart) part;
+
+			IEditorActionBarContributor contributor =
+				editorPart.getEditorSite().getActionBarContributor();
+			if (contributor instanceof EditorActionBarContributor) {
+				IStatusLineManager statusLineManager =
+					((EditorActionBarContributor) contributor)
+						.getActionBars()
+						.getStatusLineManager();
+
+				statusLineManager.setMessage(errorMessage);
+			}
+		}
+	}
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2004.  All Rights Reserved.                    |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

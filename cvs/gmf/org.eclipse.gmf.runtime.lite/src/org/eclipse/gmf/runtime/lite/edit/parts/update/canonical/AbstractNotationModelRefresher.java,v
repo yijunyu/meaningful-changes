@@ -1,0 +1,246 @@
+head	1.3;
+access;
+symbols
+	v20080722-1827:1.3
+	R2_1_maintenance:1.3.0.2
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080425-1959:1.3
+	v20071108-0000:1.3
+	v20071003-0000:1.3
+	v20070921-0000:1.2
+	v20070903-0000:1.3
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	v20070621-0000:1.2
+	RC3_20:1.2
+	v20070601-1400:1.2
+	v20070525-1500:1.2
+	v20070518-1300:1.2
+	v20070427-0600:1.2
+	v20070420-1000:1.1
+	v20070413-1300:1.1
+	v20070405-1100:1.1
+	v20070330-1300:1.1
+	v20060330-1300:1.1
+	v20070322-1100:1.1
+	v20060316-0600:1.1
+	v20070307-0700:1.1
+	v20070228-2000:1.1
+	v20070208-1800:1.1
+	M4_20:1.1
+	v20061222-1800:1.1
+	v20061218-1200:1.1
+	v20061214-0000:1.1
+	v20061120-1300:1.1
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061013-1330:1.1
+	M1_20:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2007.08.13.14.11.05;	author bblajer;	state Exp;
+branches;
+next	1.2;
+commitid	660946c066784567;
+
+1.2
+date	2007.04.24.14.16.45;	author bblajer;	state Exp;
+branches;
+next	1.1;
+commitid	4252462e114b4567;
+
+1.1
+date	2006.09.01.16.14.11;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@1. Don't cache templates if dynamic templates option is on;
+2. [199747] Support shortcuts in the Lite diagrams (including notation model update for links between alien shortcuts);
+3. Decorations should be visible;
+4. TransactionalUpdateManager: more notifications to be dispatched to parents, make it possible to add more in subclasses;
+5. On element creation, it should be given an opportunity to contribute its notational update commands;
+6. [199749]: Delete from View supported (request, edit policy, command, UI action);
+7. Add @@generated tags where they were missing;
+8. ChildNotationModelRefresher: if the child feature is derived transient, notation model refresher should listen to containment feature.
+@
+text
+@/**
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.edit.parts.update.canonical;
+
+import java.util.Iterator;
+
+import org.eclipse.emf.common.command.Command;
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.transaction.NotificationFilter;
+import org.eclipse.emf.transaction.ResourceSetChangeEvent;
+import org.eclipse.emf.transaction.ResourceSetListenerImpl;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand;
+import org.eclipse.gmf.runtime.lite.edit.parts.update.TransactionalUpdateManager;
+import org.eclipse.gmf.runtime.notation.View;
+
+/**
+ * Listens to the given transactional editing domain in order to update the notational model to reflect changes in the domain model.
+ */
+public abstract class AbstractNotationModelRefresher extends ResourceSetListenerImpl implements INotationModelRefresher {
+	private NotificationFilter myFilter;
+	private TransactionalEditingDomain myEditingDomain;
+
+	public AbstractNotationModelRefresher() {
+		myFilter = createFilter();
+	}
+
+	public final View getView() {
+		return getHost();
+	}
+
+	/**
+	 * @@deprecated Use {@@link TransactionalUpdateManager}.
+	 */
+	public void install(TransactionalEditingDomain editingDomain) {
+		if (this.myEditingDomain != null && !this.myEditingDomain.equals(editingDomain)) {
+			throw new IllegalStateException("Already listening to another editing domain");
+		}
+		this.myEditingDomain = editingDomain;
+		this.myEditingDomain.addResourceSetListener(this);
+	}
+
+	/**
+	 * @@deprecated Use {@@link TransactionalUpdateManager}.
+	 */
+	public boolean isInstalled() {
+		return myEditingDomain != null;
+	}
+
+	/**
+	 * @@deprecated Use {@@link TransactionalUpdateManager}.
+	 */
+	public void uninstall() {
+		if (isInstalled()) {
+			myEditingDomain.removeResourceSetListener(this);
+			myEditingDomain = null;
+		}
+	}
+
+	public boolean isPrecommitOnly() {
+		return true;
+	}
+
+	public Command transactionAboutToCommit(ResourceSetChangeEvent event) {
+		if (shouldHandleNotification(event)) {
+			return buildRefreshNotationModelCommand();
+		}
+		return null;
+	}
+
+	public NotificationFilter getFilter() {
+		return myFilter;
+	}
+
+	/**
+	 * Creates and returns the command that will update the notational model to reflect changes in the domain model.
+	 */
+	public abstract Command buildRefreshNotationModelCommand();
+
+	private boolean shouldHandleNotification(ResourceSetChangeEvent event) {
+		if (getHost() == null || getHost().getElement() == null) {
+			return false;
+		}
+		for(Iterator<?> it = event.getNotifications().iterator(); it.hasNext(); ) {
+			Notification next = (Notification) it.next();
+			if (shouldHandleNotification(next)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * This method may be overridden in subclasses to filter unneeded notifications that passed the NotificationFilter.
+	 * By default, it is assumed that all notifications that passed through the NotificationFilter could trigger the update.
+	 */
+	protected boolean shouldHandleNotification(Notification nofitication) {
+		return true;
+	}
+
+	protected int getVisualID(View view) {
+		try {
+			return Integer.parseInt(view.getType());
+		} catch (NumberFormatException e) {
+			return -1;
+		}
+	}
+
+	/**
+	 * Returns a command that will create a notational element to represent the domain model element described by the given <code>ElementDescriptor</code>.
+	 */
+	protected abstract CreateNotationalElementCommand getCreateNotationalElementCommand(ElementDescriptor descriptor);
+
+	protected abstract NotificationFilter createFilter();
+
+	protected abstract boolean shouldCreateView(ElementDescriptor descriptor);
+
+	protected abstract View getHost();
+}
+@
+
+
+1.2
+log
+@CanonicalStyle is taken into account while refreshing notational model to reflect changes in underlying domain model;
+Update is now centralized and transactional;
+Changes to visibility are dispatched to the parent of the affected view as well (was: only to the view itself);
+Save options are not reused, for easy modification of the generated code;
+Side-affixed children are not considered direct children;
+Empty edit-patterns are treated the same way as null patterns (view pattern is used instead).
+@
+text
+@d23 1
+d41 3
+d52 3
+d59 3
+d93 1
+a93 1
+		for(Iterator it = event.getNotifications().iterator(); it.hasNext(); ) {
+@
+
+
+1.1
+log
+@[155040] bblajer - Common Lite runtime functionality moved to dedicated plugin
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Eclipse.org
+d28 1
+a28 1
+public abstract class AbstractNotationModelRefresher extends ResourceSetListenerImpl {
+d36 4
+d80 3
+@
+

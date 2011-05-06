@@ -1,0 +1,179 @@
+head	1.4;
+access;
+symbols
+	v20080813-1520:1.4
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	I20060424-0500:1.3
+	I20060424-0300:1.3
+	M6_10:1.3
+	I20060407-1200:1.3
+	I20060331-1000:1.3
+	I20060324-0300:1.3
+	I20060317-1300:1.3
+	I20060317-1200:1.3
+	I20060316-1300:1.3
+	I20060309-1300:1.3
+	M5_10:1.3
+	S20060303-1600:1.3
+	I20060227-1730:1.3
+	I20060216-1945:1.3
+	I20060210-1715:1.3
+	I20060209-1815:1.3
+	I20060203-0830:1.2
+	I20060129-1145:1.2
+	I20060127-0900:1.2
+	I20060120-1530:1.1
+	I20060113-1700:1.1
+	M4_10:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2006.04.26.17.55.01;	author ashatalin;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2006.02.06.11.52.41;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.01.24.20.47.27;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.01.12.16.05.54;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@#119034 Show only valid feature in "containment feature" property of ChildNodeMapping
+#138606 hide inappropriate entries in selection dialogs
+@
+text
+@/*
+ * Copyright (c) 2005 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.mappings.presentation;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.gmf.mappings.MappingEntry;
+
+/**
+ * @@author artem
+ *
+ */
+public class ScopeUtil {
+	private final MappingEntry entry;
+	private boolean myCouldBeUnsed;
+
+	public ScopeUtil(MappingEntry anEntry) {
+		this(anEntry, false);
+	}
+	
+	public ScopeUtil(MappingEntry anEntry, boolean couldBeUnset) {
+		entry = anEntry;
+		myCouldBeUnsed = couldBeUnset;
+	}
+
+	public boolean isDevisable() {
+		return entry.getDomainMetaElement() != null;
+	}
+
+	/**
+	 * XXX usability: produce ordered set of references, with cont.references from parent mapping's element first 
+	 * @@return collections of <code>EReference</code>s that are containment for entry's meta type
+	 */
+	public Collection/*<EReference>*/ getPossibleContainments() {
+		if (entry.getDomainMetaElement() != null) {
+			Set features = new LinkedHashSet();
+			Iterator wholeWorld;
+			if (entry.getDomainMetaElement().eResource() == null) {
+				wholeWorld = entry.getDomainMetaElement().getEPackage().eAllContents();
+			} else {
+				wholeWorld = entry.getDomainMetaElement().eResource().getResourceSet().getAllContents();
+			}
+			while (wholeWorld.hasNext()) {
+				Object next = wholeWorld.next();
+				if (next instanceof EReference) {
+					EReference ref = (EReference) next;
+					if (ref.isContainment() && ref.getEReferenceType().isSuperTypeOf(entry.getDomainMetaElement())) {
+						features.add(ref);
+					}
+				}
+			}
+			if (myCouldBeUnsed) {
+				features.add(null);
+			}
+			return features;
+		}
+		return Collections.EMPTY_LIST;
+	}
+}
+@
+
+
+1.3
+log
+@#126537
+Possibility to visualize child-parent relachipchip as a link implemented
+@
+text
+@@
+
+
+1.2
+log
+@handle domain models defined in separate packages (news, 15.01.2006)
+@
+text
+@a15 1
+import java.util.HashSet;
+d17 1
+d29 1
+d32 4
+d37 1
+d50 1
+a50 1
+			Set features = new HashSet();
+d66 3
+@
+
+
+1.1
+log
+@#123590 inherited containment features for linkMappings, refactoring
+@
+text
+@d45 8
+a52 3
+			// XXX perhaps, when mapping several domain models, should use resource.getResourceSet().getAllContent instead
+			for (Iterator it = entry.getDomainMetaElement().getEPackage().eAllContents(); it.hasNext(); ) {
+				Object next = it.next();
+@
+

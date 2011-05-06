@@ -1,0 +1,519 @@
+head	1.7;
+access;
+symbols
+	v20080722-1827:1.7
+	v20080716-1642:1.7
+	R2_1_maintenance:1.6.0.4
+	Root_R2_1_maintenance:1.6
+	R2_1_0:1.6
+	v20080425-1959:1.6
+	v20070809-0000:1.6
+	R2_0_maintenance:1.6.0.2
+	R2_0:1.6
+	R4_20:1.6
+	RC3_20:1.6
+	v20070605-1400:1.6
+	v20070601-1400:1.5
+	v20070413-1300:1.5
+	v20070330-1300:1.3
+	v20070208-1800:1.3
+	M4_20:1.3
+	v20061214-0000:1.3
+	M3_20:1.3
+	v20061117-0800:1.3
+	v20061013-1330:1.3
+	M1_20:1.1
+	v20060904-1500:1.1
+	v20060713-1700:1.1.2.1
+	R1_0_maintenance:1.1.0.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.7
+date	2008.07.10.12.29.39;	author ashatalin;	state Exp;
+branches;
+next	1.6;
+commitid	7c26487600b24567;
+
+1.6
+date	2007.06.05.12.03.17;	author ashatalin;	state Exp;
+branches;
+next	1.5;
+commitid	1155466551044567;
+
+1.5
+date	2007.04.10.13.15.13;	author ashatalin;	state Exp;
+branches;
+next	1.4;
+commitid	7598461b8de14567;
+
+1.4
+date	2007.04.06.17.10.38;	author ashatalin;	state Exp;
+branches;
+next	1.3;
+commitid	247846167f0c4567;
+
+1.3
+date	2006.10.02.16.44.08;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.10.02.10.33.48;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.07.10.18.06.01;	author ashatalin;	state Exp;
+branches
+	1.1.2.1;
+next	;
+
+1.1.2.1
+date	2006.07.11.12.35.53;	author ashatalin;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.7
+log
+@[217307] - "Add extension model" action: impossible use for additing nondeployed models
+@
+text
+@/**
+ * Copyright (c) 2006 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.bridge.trace;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.resource.ContentHandler;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
+import org.eclipse.emf.ecore.xmi.XMIResource;
+import org.eclipse.gmf.codegen.gmfgen.GenChildNode;
+import org.eclipse.gmf.codegen.gmfgen.GenCompartment;
+import org.eclipse.gmf.codegen.gmfgen.GenDiagram;
+import org.eclipse.gmf.codegen.gmfgen.GenLink;
+import org.eclipse.gmf.codegen.gmfgen.GenLinkLabel;
+import org.eclipse.gmf.codegen.gmfgen.GenNodeLabel;
+import org.eclipse.gmf.codegen.gmfgen.GenTopLevelNode;
+import org.eclipse.gmf.codegen.gmfgen.ToolGroup;
+import org.eclipse.gmf.internal.bridge.StatefulVisualIdentifierDispencer;
+import org.eclipse.ocl.ParserException;
+
+public class MergingIdentifierDispenser implements StatefulVisualIdentifierDispencer {
+	
+	private static final int CANVAS_COUNT_BASE = 1000;
+	private static final int TOP_NODE_COUNT_BASE = 2000;
+	private static final int CHILD_NODE_COUNT_BASE = 3000;
+	private static final int LINK_COUNT_BASE = 4000;
+	private static final int NODE_LABEL_COUNT_BASE = 5000;
+	private static final int LINK_LABEL_COUNT_BASE = 6000;
+	private static final int COMPARTMENT_COUNT_BASE = 7000;
+	private static final int OVERFLOW_COUNT_BASE = 8000;
+	
+	private static final int TOOL_GROUP_COUNT_BASE = 0;
+	
+	private int myTopNodeCount = TOP_NODE_COUNT_BASE;
+	private int myChildNodeCount = CHILD_NODE_COUNT_BASE;
+	private int myLinkCount = LINK_COUNT_BASE;
+	private int myNodeLabelCount = NODE_LABEL_COUNT_BASE;
+	private int myLinkLabelCount = LINK_LABEL_COUNT_BASE;
+	private int myCompartmentCount = COMPARTMENT_COUNT_BASE;
+	private int myToolGroupCount = TOOL_GROUP_COUNT_BASE;
+	private int myOverflowCount = OVERFLOW_COUNT_BASE;
+	
+	private TraceModel myTraceModel;
+	private Map<String, String> mySavingOptions;
+	
+	public void loadState(URI genModelFileURI) {
+		loadTraceModel(genModelFileURI);
+		initCounters();
+	}
+
+	public void saveState() {
+		myTraceModel.purgeUnprocessedTraces();
+		try {
+			myTraceModel.eResource().save(getSavingOptions());
+		} catch (IOException e) {
+			GmfTracePlugin.getInstance().logError("Unable to save trace model", e);
+		}
+		myTraceModel = null;
+	}
+	
+	private Map<?, ?> getSavingOptions() {
+		if (mySavingOptions == null) {
+			mySavingOptions = new HashMap<String, String>();
+			mySavingOptions.put(XMIResource.OPTION_ENCODING, "UTF-8");
+			mySavingOptions.put(Resource.OPTION_SAVE_ONLY_IF_CHANGED, Resource.OPTION_SAVE_ONLY_IF_CHANGED_MEMORY_BUFFER);
+		}
+		return mySavingOptions;
+	}
+	
+	private void loadTraceModel(URI genModelFileURI) {
+		URI traceModelURI = genModelFileURI.trimFileExtension().appendFileExtension("trace");
+		ResourceSet resSet = new ResourceSetImpl();
+		Resource traceRes;
+		try {
+			traceRes = resSet.getResource(traceModelURI, true);
+		} catch (RuntimeException e) {
+			traceRes = resSet.createResource(traceModelURI, ContentHandler.UNSPECIFIED_CONTENT_TYPE);
+		}
+
+		if (traceRes.getContents().size() > 0 && traceRes.getContents().get(0) instanceof TraceModel) {
+			myTraceModel = (TraceModel) traceRes.getContents().get(0);
+		} else {
+			myTraceModel = TraceFactory.eINSTANCE.createTraceModel();
+			traceRes.getContents().add(0, myTraceModel);
+		}
+	}
+
+	private void initCounters() {
+		myTopNodeCount = Math.max(myTopNodeCount, getMaxVid(myTraceModel.getNodeTraces()));
+		myChildNodeCount = Math.max(myChildNodeCount, getMaxVid(myTraceModel.getChildNodeTraces()));
+		myLinkCount = Math.max(myLinkCount, getMaxVid(myTraceModel.getLinkTraces()));
+		
+		initNodeChildrenCounters(myTraceModel.getNodeTraces());
+		initNodeChildrenCounters(myTraceModel.getChildNodeTraces());
+
+		for (GenLinkTrace trace : myTraceModel.getLinkTraces()) {
+			myLinkLabelCount = Math.max(myLinkLabelCount, getMaxVid(trace.getLinkLabelTraces()));
+		}
+		
+		myToolGroupCount = Math.max(myToolGroupCount, getMaxVid(myTraceModel.getToolGroupTraces()));
+	}
+	
+	private void initNodeChildrenCounters(Collection<? extends GenNodeTrace> nodeTraces) {
+		for (GenNodeTrace trace : nodeTraces) {
+			myNodeLabelCount = Math.max(myNodeLabelCount, getMaxVid(trace.getNodeLabelTraces()));
+			myCompartmentCount = Math.max(myCompartmentCount, getMaxVid(trace.getCompartmentTraces()));
+		}
+	}
+	
+	private int getMaxVid(Collection<? extends AbstractTrace> abstractTraces) {
+		int id = -1;
+		for (AbstractTrace trace : abstractTraces) {
+			id = Math.max(id, trace.getVisualID());
+			myOverflowCount = Math.max(myOverflowCount, trace.getVisualID());
+		}
+		return id;
+	}
+
+	public int get(GenDiagram diagram) {
+		return CANVAS_COUNT_BASE;
+	}
+
+	public int get(GenTopLevelNode node) {
+		int visualID = getMatchingVID(node, myTraceModel.getNodeTraces());
+		if (visualID > -1) {
+			return visualID;
+		}
+		
+		visualID = getNextTopNodeVID();
+		GenNodeTrace nodeTrace = TraceFactory.eINSTANCE.createGenNodeTrace();
+		nodeTrace.setVisualID(visualID);
+		nodeTrace.setContext(node);
+		nodeTrace.setProcessed(true);
+		myTraceModel.getNodeTraces().add(nodeTrace);
+		return visualID;
+	}
+
+	public int get(GenNodeLabel nodeLabel) {
+		GenNodeTrace nodeTrace = myTraceModel.getNodeTrace(nodeLabel.getNode().getVisualID());
+		int visualID = getMatchingVID(nodeLabel, nodeTrace.getNodeLabelTraces());
+		if (visualID > -1) {
+			return visualID;
+		}
+		
+		visualID = getNextNodeLabelVID();
+		GenNodeLabelTrace nodeLabelTrace = TraceFactory.eINSTANCE.createGenNodeLabelTrace();
+		nodeLabelTrace.setVisualID(visualID);
+		nodeTrace.getNodeLabelTraces().add(nodeLabelTrace);
+		nodeLabelTrace.setContext(nodeLabel);
+		nodeLabelTrace.setProcessed(true);
+		return visualID;
+	}
+
+	public int get(GenLink link) {
+		int visualID = getMatchingVID(link, myTraceModel.getLinkTraces());
+		if (visualID > -1) {
+			return visualID;
+		}
+		
+		visualID = getNextLinkVID();
+		GenLinkTrace nodeLabelTrace = TraceFactory.eINSTANCE.createGenLinkTrace();
+		nodeLabelTrace.setVisualID(visualID);
+		nodeLabelTrace.setContext(link);
+		myTraceModel.getLinkTraces().add(nodeLabelTrace);
+		nodeLabelTrace.setProcessed(true);
+		return visualID;
+	}
+
+	public int get(GenChildNode childNode) {
+		int visualID = getMatchingVID(childNode, myTraceModel.getChildNodeTraces());
+		if (visualID > -1) {
+			return visualID;
+		}
+		
+		visualID = getNextChildNodeVID();
+		GenChildNodeTrace childNodeTrace = TraceFactory.eINSTANCE.createGenChildNodeTrace();
+		childNodeTrace.setVisualID(visualID);
+		childNodeTrace.setContext(childNode);
+		myTraceModel.getChildNodeTraces().add(childNodeTrace);
+		childNodeTrace.setProcessed(true);
+		return visualID;
+	}
+
+	public int get(GenCompartment compartment) {
+		GenNodeTrace nodeTrace = myTraceModel.getNodeTrace(compartment.getNode().getVisualID());
+		int visualID = getMatchingVID(compartment, nodeTrace.getCompartmentTraces());
+		if (visualID > -1) {
+			return visualID;
+		}
+		
+		visualID = getNextCompartmentVID();
+		GenCompartmentTrace compartmentTrace = TraceFactory.eINSTANCE.createGenCompartmentTrace();
+		compartmentTrace.setVisualID(visualID);
+		nodeTrace.getCompartmentTraces().add(compartmentTrace);
+		compartmentTrace.setContext(compartment);
+		compartmentTrace.setProcessed(true);
+		return visualID;
+	}
+
+	public int get(GenLinkLabel label) {
+		GenLinkTrace linkTrace = myTraceModel.getLinkTrace(label.getLink().getVisualID());
+		int visualID = getMatchingVID(label, linkTrace.getLinkLabelTraces());
+		if (visualID > -1) {
+			return visualID;
+		}
+		
+		visualID = getNextLinkLabelVID();
+		GenLinkLabelTrace linkLabelTrace = TraceFactory.eINSTANCE.createGenLinkLabelTrace();
+		linkLabelTrace.setVisualID(visualID);
+		linkTrace.getLinkLabelTraces().add(linkLabelTrace);
+		linkLabelTrace.setContext(label);
+		linkLabelTrace.setProcessed(true);
+		return visualID;
+	}
+
+	public int get(ToolGroup toolGroup) {
+		int visualID = getMatchingVID(toolGroup, myTraceModel.getToolGroupTraces());
+		if (visualID > -1) {
+			return visualID;
+		}
+		
+		visualID = getNextToolVID();
+		ToolGroupTrace toolGroupTrace = TraceFactory.eINSTANCE.createToolGroupTrace();
+		toolGroupTrace.setVisualID(visualID);
+		toolGroupTrace.setContext(toolGroup);
+		myTraceModel.getToolGroupTraces().add(toolGroupTrace);
+		toolGroupTrace.setProcessed(true);
+		return visualID;
+	}
+
+	private int getMatchingVID(Object context, Collection<? extends MatchingTrace> matchingTraces) {
+		for (MatchingTrace trace : matchingTraces) {
+			if (trace.isProcessed()) {
+				continue;
+			}
+			try {
+				Object result = trace.getQuery().evaluate(context);
+				if (result instanceof Boolean && ((Boolean) result).booleanValue()) {
+					trace.setProcessed(true);
+					return trace.getVisualID();
+				}
+			} catch (ParserException e) {
+				GmfTracePlugin.getInstance().logError("Error while parcing expression body from trace", e);
+			}
+		}
+		return -1;
+	}
+
+	private int getNextToolVID() {
+		if (++myToolGroupCount < CANVAS_COUNT_BASE) {
+			GmfTracePlugin.getInstance().logDebugInfo("New tool visualID issued: " + myToolGroupCount);
+			return myToolGroupCount;
+		}
+		return ++myOverflowCount;
+	}
+	
+	private int getNextTopNodeVID() {
+		if (++myTopNodeCount < CHILD_NODE_COUNT_BASE) {
+			GmfTracePlugin.getInstance().logDebugInfo("New top node visualID issued: " + myTopNodeCount);
+			return myTopNodeCount;
+		}
+		return ++myOverflowCount;
+	}
+	
+	private int getNextChildNodeVID() {
+		if (++myChildNodeCount < LINK_COUNT_BASE) {
+			GmfTracePlugin.getInstance().logDebugInfo("New child node visualID issued: " + myChildNodeCount);
+			return myChildNodeCount;
+		}
+		return ++myOverflowCount;
+	}
+	
+	private int getNextLinkVID() {
+		if (++myLinkCount < NODE_LABEL_COUNT_BASE) {
+			GmfTracePlugin.getInstance().logDebugInfo("New link visualID issued: " + myLinkCount);
+			return myLinkCount;
+		}
+		return ++myOverflowCount;
+	}
+	
+	private int getNextNodeLabelVID() {
+		if (++myNodeLabelCount < LINK_LABEL_COUNT_BASE) {
+			GmfTracePlugin.getInstance().logDebugInfo("New node label visualID issued: " + myNodeLabelCount);
+			return myNodeLabelCount;
+		}
+		return ++myOverflowCount;
+	}
+	
+	private int getNextLinkLabelVID() {
+		if (++myLinkLabelCount < COMPARTMENT_COUNT_BASE) {
+			GmfTracePlugin.getInstance().logDebugInfo("New link label visualID issued: " + myLinkLabelCount);
+			return myLinkLabelCount;
+		}
+		return ++myOverflowCount;
+	}
+	
+	private int getNextCompartmentVID() {
+		if (++myCompartmentCount < OVERFLOW_COUNT_BASE) {
+			GmfTracePlugin.getInstance().logDebugInfo("New compartment visualID issued: " + myCompartmentCount);
+			return myCompartmentCount;
+		}
+		return ++myOverflowCount;
+	}
+
+}
+
+@
+
+
+1.6
+log
+@[190990] - Do not use deprecated org.eclipse.emf.ocl.query API in .bridge.trace plugin
+@
+text
+@d20 1
+d92 1
+a92 1
+			traceRes = resSet.createResource(traceModelURI);
+@
+
+
+1.5
+log
+@[181707] - Trace model file should not be marked as changed if it was not actually changed during transformation
+@
+text
+@d33 1
+d250 8
+a257 4
+			Object result = trace.getQuery().evaluate(context);
+			if (result instanceof Boolean && ((Boolean) result).booleanValue()) {
+				trace.setProcessed(true);
+				return trace.getVisualID();
+@
+
+
+1.4
+log
+@[181417] - Update org.eclipse.gmf.bridge.trace/model/trace.ecore to EMF M6 + regenerate the code.
+@
+text
+@a16 1
+import java.util.Iterator;
+d78 1
+@
+
+
+1.3
+log
+@[159163] - Legal Issue in MergingIdentifierDispenser
+@
+text
+@d58 1
+a58 1
+	private Map mySavingOptions;
+d75 1
+a75 1
+	private Map getSavingOptions() {
+d77 1
+a77 1
+			mySavingOptions = new HashMap();
+d109 1
+a109 2
+		for (Iterator it = myTraceModel.getLinkTraces().iterator(); it.hasNext();) {
+			GenLinkTrace trace = (GenLinkTrace) it.next();
+d116 2
+a117 3
+	private void initNodeChildrenCounters(Collection nodeTraces) {
+		for (Iterator it = nodeTraces.iterator(); it.hasNext();) {
+			GenNodeTrace trace = (GenNodeTrace) it.next();
+d123 1
+a123 1
+	private int getMaxVid(Collection abstractTraces) {
+d125 3
+a127 4
+		for (Iterator it = abstractTraces.iterator(); it.hasNext();) {
+			AbstractTrace nextTrace = (AbstractTrace) it.next();
+			id = Math.max(id, nextTrace.getVisualID());
+			myOverflowCount = Math.max(myOverflowCount, nextTrace.getVisualID());
+d244 2
+a245 3
+	private int getMatchingVID(Object context, Collection matchingTraces) {
+		for (Iterator it = matchingTraces.iterator(); it.hasNext();) {
+			MatchingTrace trace = (MatchingTrace) it.next();
+@
+
+
+1.2
+log
+@[159163] - Legal Issue in MergingIdentifierDispenser
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Eclipse.org
+@
+
+
+1.1
+log
+@#148651 Plugin bridge.trace uses wrong namespace
+@
+text
+@d10 1
+a10 1
+ *    vano - initial API and implementation
+@
+
+
+1.1.2.1
+log
+@#148651 Plugin bridge.trace uses wrong namespace
+@
+text
+@@
+

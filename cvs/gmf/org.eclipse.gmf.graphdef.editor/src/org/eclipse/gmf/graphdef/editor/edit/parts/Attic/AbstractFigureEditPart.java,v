@@ -1,0 +1,447 @@
+head	1.5;
+access;
+symbols
+	v20070221-1500:1.4
+	v20070208-1800:1.3
+	M4_20:1.3
+	v20061214-0000:1.3
+	M3_20:1.3
+	v20061013-1330:1.3
+	M1_20:1.3
+	v20060713-1700:1.3
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3
+	v20060627-1200:1.3
+	v20060616-1200:1.3
+	v20060609-1400:1.3
+	v20060531-1730:1.3
+	v20060530-1930:1.3
+	v20060526-1200:1.2
+	v20060519-0800:1.2
+	v20060512-1000:1.2
+	I20060512-1000:1.2
+	RC2_10:1.2
+	I20060505-1400:1.2
+	I20060428-1300:1.1
+	I20060424-0500:1.1
+	I20060424-0300:1.1
+	M6_10:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2007.03.02.18.36.49;	author atikhomirov;	state dead;
+branches;
+next	1.4;
+commitid	1b3945e86ec04567;
+
+1.4
+date	2007.02.09.20.08.31;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	179c45ccd4b34567;
+
+1.3
+date	2006.05.30.13.06.12;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.05.05.16.31.18;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.04.14.12.58.26;	author ashatalin;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@extract handcrafted code into separate source root from code being generated
+enforce java 1.4 compatibility
+@
+text
+@/**
+ * Copyright (c) 2006, 2007 Borland Software Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Borland Software Corporation - initial API and implementation
+ */
+package org.eclipse.gmf.graphdef.editor.edit.parts;
+
+import java.util.Collection;
+import java.util.Iterator;
+
+import org.eclipse.draw2d.Graphics;
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.LayoutManager;
+import org.eclipse.draw2d.StackLayout;
+import org.eclipse.draw2d.ToolbarLayout;
+import org.eclipse.draw2d.XYLayout;
+import org.eclipse.draw2d.geometry.PointList;
+import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.gef.EditPart;
+import org.eclipse.gmf.gmfgraph.Alignment;
+import org.eclipse.gmf.gmfgraph.BorderLayout;
+import org.eclipse.gmf.gmfgraph.BorderLayoutData;
+import org.eclipse.gmf.gmfgraph.FlowLayout;
+import org.eclipse.gmf.gmfgraph.GMFGraphPackage;
+import org.eclipse.gmf.gmfgraph.GridLayout;
+import org.eclipse.gmf.gmfgraph.Layout;
+import org.eclipse.gmf.gmfgraph.LayoutData;
+import org.eclipse.gmf.gmfgraph.Layoutable;
+import org.eclipse.gmf.gmfgraph.LineKind;
+import org.eclipse.gmf.gmfgraph.Point;
+import org.eclipse.gmf.gmfgraph.XYLayoutData;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.GraphicalEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ShapeNodeEditPart;
+import org.eclipse.gmf.runtime.notation.View;
+
+public abstract class AbstractFigureEditPart extends ShapeNodeEditPart {
+
+	public AbstractFigureEditPart(View view) {
+		super(view);
+	}
+
+	public Object getLayoutConstraint() {
+		Layoutable layoutable = (Layoutable) ((View) getModel()).getElement();
+		if (layoutable == null || layoutable.getLayoutData() == null) {
+			return null;
+		}
+		LayoutData layoutData = layoutable.getLayoutData();
+		switch (layoutData.eClass().getClassifierID()) {
+		case GMFGraphPackage.BORDER_LAYOUT_DATA: {
+			BorderLayoutData borderLayoutData = (BorderLayoutData) layoutData;
+			if (borderLayoutData.getAlignment() != null) {
+				switch (borderLayoutData.getAlignment().getValue()) {
+				case Alignment.CENTER:
+				case Alignment.FILL: {
+					return org.eclipse.draw2d.BorderLayout.CENTER;
+				}
+				case Alignment.BEGINNING: {
+					return borderLayoutData.isVertical() ? org.eclipse.draw2d.BorderLayout.TOP : org.eclipse.draw2d.BorderLayout.LEFT;
+				}
+				case Alignment.END: {
+					return borderLayoutData.isVertical() ? org.eclipse.draw2d.BorderLayout.BOTTOM : org.eclipse.draw2d.BorderLayout.RIGHT;
+				}
+				}
+			}
+			break;
+		}
+		case GMFGraphPackage.CUSTOM_LAYOUT_DATA: {
+			// TODO: implement custom layout
+			break;
+		}
+		case GMFGraphPackage.GRID_LAYOUT_DATA: {
+			// not implemented yet in .gmfgraph
+			break;
+		}
+		case GMFGraphPackage.XY_LAYOUT_DATA: {
+			final XYLayoutData xyLayoutData = (XYLayoutData) layoutData;
+			Rectangle result = new Rectangle();
+			if (xyLayoutData.getTopLeft() != null) {
+				result.setLocation(getMapMode().DPtoLP(xyLayoutData.getTopLeft().getX()), getMapMode().DPtoLP(xyLayoutData.getTopLeft().getY()));
+			}
+			if (xyLayoutData.getSize() != null) {
+				result.setSize(getMapMode().DPtoLP(xyLayoutData.getSize().getDx()), getMapMode().DPtoLP(xyLayoutData.getSize().getDy()));
+			}
+			return result;
+		}
+		}
+		return null;
+	}
+
+	protected void addChildVisual(EditPart childEditPart, int index) {
+		IFigure child = ((GraphicalEditPart) childEditPart).getFigure();
+		Object layoutConstraint = null;
+		if (childEditPart instanceof AbstractFigureEditPart) {
+			layoutConstraint = ((AbstractFigureEditPart) childEditPart).getLayoutConstraint();
+		}
+		LayoutManager layoutManager = getContentPane().getLayoutManager();
+		if (layoutManager instanceof org.eclipse.draw2d.BorderLayout) {
+			if (org.eclipse.draw2d.BorderLayout.BOTTOM != layoutConstraint && org.eclipse.draw2d.BorderLayout.CENTER != layoutConstraint && org.eclipse.draw2d.BorderLayout.LEFT != layoutConstraint
+					&& org.eclipse.draw2d.BorderLayout.RIGHT != layoutConstraint && org.eclipse.draw2d.BorderLayout.TOP != layoutConstraint) {
+				// TODO: put figure into special pain with unconstrained
+				// elements instead
+				layoutConstraint = null;
+			}
+		} else if (layoutManager instanceof GridLayout) {
+			// not implemented yet in .gmfgraph
+		} else if (layoutManager instanceof XYLayout) {
+			if (false == layoutConstraint instanceof Rectangle) {
+				// TODO: put figure into special pain with unconstrained
+				// elements instead
+				layoutConstraint = null;
+			}
+		}
+		getContentPane().add(child, layoutConstraint, index);
+	}
+
+	/**
+	 * This method will be called then new LayoutData object was associated with
+	 * this model element.
+	 * 
+	 * All the layout constraints (LayoutData objects) are actually stored in
+	 * model, so just calling <code>handleMajorSemanticChange()</code> to
+	 * re-create this EditPart and reload all the LayoutDatas from model
+	 * 
+	 */
+	protected void layoutDataChanged(LayoutData layoutData) {
+		if (isFigureRefreshAllowed()) {
+			handleMajorSemanticChange();
+		}
+	}
+
+	/**
+	 * This method will be called then layout was changed in model. The same
+	 * method will be called to initialize layout on creating figure.
+	 * 
+	 * The only one way to change layout is to change corresponding model
+	 * element now.
+	 */
+	protected void layoutChanged(Layout layout) {
+		if (layout == null) {
+			setFigureLayoutManager(null);
+			return;
+		}
+
+		switch (layout.eClass().getClassifierID()) {
+		case GMFGraphPackage.BORDER_LAYOUT: {
+			BorderLayout borderLayout = (BorderLayout) layout;
+			org.eclipse.draw2d.BorderLayout layoutManager;
+			if (getFigureLayoutManager() instanceof org.eclipse.draw2d.BorderLayout) {
+				layoutManager = (org.eclipse.draw2d.BorderLayout) getFigureLayoutManager();
+			} else {
+				layoutManager = new org.eclipse.draw2d.BorderLayout();
+				setFigureLayoutManager(layoutManager);
+			}
+			if (borderLayout.getSpacing() != null) {
+				layoutManager.setHorizontalSpacing(getMapMode().DPtoLP(borderLayout.getSpacing().getDx()));
+				layoutManager.setVerticalSpacing(getMapMode().DPtoLP(borderLayout.getSpacing().getDy()));
+			}
+			break;
+		}
+		case GMFGraphPackage.CUSTOM_LAYOUT: {
+			// TODO: implement custom layout
+			break;
+		}
+		case GMFGraphPackage.FLOW_LAYOUT: {
+			FlowLayout flowLayout = (FlowLayout) layout;
+			if (flowLayout.isForceSingleLine()) {
+				ToolbarLayout layoutManager;
+				if (getFigureLayoutManager() instanceof ToolbarLayout) {
+					layoutManager = (ToolbarLayout) getFigureLayoutManager();
+				} else {
+					layoutManager = new ToolbarLayout();
+					setFigureLayoutManager(layoutManager);
+				}
+				layoutManager.setStretchMinorAxis(flowLayout.isMatchMinorSize());
+				layoutManager.setMinorAlignment(getDraw2dAllignment(flowLayout.getMinorAlignment(), flowLayout.isForceSingleLine()));
+				layoutManager.setSpacing(flowLayout.getMajorSpacing());
+				layoutManager.setVertical(flowLayout.isVertical());
+			} else {
+				org.eclipse.draw2d.FlowLayout layoutManager;
+				if (getFigureLayoutManager() instanceof org.eclipse.draw2d.FlowLayout) {
+					layoutManager = (org.eclipse.draw2d.FlowLayout) getFigureLayoutManager();
+				} else {
+					layoutManager = new org.eclipse.draw2d.FlowLayout();
+					setFigureLayoutManager(layoutManager);
+				}
+				layoutManager.setStretchMinorAxis(flowLayout.isMatchMinorSize());
+				layoutManager.setMinorAlignment(getDraw2dAllignment(flowLayout.getMinorAlignment(), flowLayout.isForceSingleLine()));
+				layoutManager.setMajorAlignment(getDraw2dAllignment(flowLayout.getMajorAlignment(), flowLayout.isForceSingleLine()));
+				layoutManager.setMajorSpacing(flowLayout.getMajorSpacing());
+				layoutManager.setMinorSpacing(flowLayout.getMinorSpacing());
+				layoutManager.setHorizontal(!flowLayout.isVertical());
+			}
+			break;
+		}
+		case GMFGraphPackage.GRID_LAYOUT: {
+			// not implemented yet in .gmfgraph
+			// GridLayout gridLayout = (GridLayout) layout;
+			/*
+			 * < % =
+			 * importManager.getImportedName("org.eclipse.gmf.internal.codegen.draw2d.GridLayout")%>
+			 * layoutManager; if (myFigure.getLayoutManager() instanceof < % =
+			 * importManager.getImportedName("org.eclipse.gmf.internal.codegen.draw2d.GridLayout")%>) {
+			 * layoutManager = (< % =
+			 * importManager.getImportedName("org.eclipse.gmf.internal.codegen.draw2d.GridLayout")%>)
+			 * myFigure.getLayoutManager(); } else { layoutManager = new < % =
+			 * importManager.getImportedName("org.eclipse.gmf.internal.codegen.draw2d.GridLayout")%>();
+			 * myFigure.setLayoutManager(layoutManager); }
+			 */
+			break;
+		}
+		case GMFGraphPackage.STACK_LAYOUT: {
+			if (false == getFigureLayoutManager() instanceof StackLayout) {
+				setFigureLayoutManager(new StackLayout());
+			}
+			break;
+		}
+		case GMFGraphPackage.XY_LAYOUT: {
+			if (false == getFigureLayoutManager() instanceof XYLayout) {
+				setFigureLayoutManager(new XYLayout());
+			}
+			break;
+		}
+		}
+		if (isFigureRefreshAllowed()) {
+			handleMajorSemanticChange();
+		}
+	}
+
+	/**
+	 * Blocking refresh of figure if it was not finally created.
+	 */
+	private boolean isFigureRefreshAllowed() {
+		return figure != null;
+	}
+
+	protected abstract LayoutManager getFigureLayoutManager();
+
+	protected abstract void setFigureLayoutManager(LayoutManager layoutManager);
+
+	// ModelData transformers
+	private int getDraw2dAllignment(Alignment alignment, boolean isToolbar) {
+		switch (alignment.getValue()) {
+		case Alignment.BEGINNING:
+			return isToolbar ? ToolbarLayout.ALIGN_TOPLEFT : org.eclipse.draw2d.FlowLayout.ALIGN_LEFTTOP;
+		case Alignment.END:
+			return isToolbar ? ToolbarLayout.ALIGN_BOTTOMRIGHT : org.eclipse.draw2d.FlowLayout.ALIGN_RIGHTBOTTOM;
+		}
+		return isToolbar ? ToolbarLayout.ALIGN_CENTER : org.eclipse.draw2d.FlowLayout.ALIGN_CENTER;
+	}
+
+	protected int getLineStyle(LineKind lineKind) {
+		switch (lineKind.getValue()) {
+		case LineKind.LINE_DASH: {
+			return Graphics.LINE_DASH;
+		}
+		case LineKind.LINE_DOT: {
+			return Graphics.LINE_DOT;
+		}
+		case LineKind.LINE_DASHDOT: {
+			return Graphics.LINE_DASHDOT;
+		}
+		case LineKind.LINE_DASHDOTDOT: {
+			return Graphics.LINE_DASHDOTDOT;
+		}
+		case LineKind.LINE_CUSTOM: {
+			return Graphics.LINE_CUSTOM;
+		}
+		default: {
+			return Graphics.LINE_SOLID;
+		}
+		}
+	}
+
+	protected PointList getPointList(Collection template) {
+		PointList result = new PointList();
+		for (Iterator it = template.iterator(); it.hasNext();) {
+			Point nextPoint = (Point) it.next();
+			result.addPoint(new org.eclipse.draw2d.geometry.Point(getMapMode().DPtoLP(nextPoint.getX()), getMapMode().DPtoLP(nextPoint.getY())));
+		}
+		return result;
+	}
+
+}
+@
+
+
+1.4
+log
+@[173496] akarjakina - updated gmfgraph.editor bootstrap sample with recent GMF changes
+@
+text
+@@
+
+
+1.3
+log
+@[synch] Synchronizing with the templates
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation and others.
+@
+
+
+1.2
+log
+@Polylines partually supported.
+@
+text
+@d2 1
+a2 2
+ * Copyright (c) 2006 Eclipse.org
+ * 
+d9 1
+a9 1
+ *    vano - initial API and implementation
+@
+
+
+1.1
+log
+@.gmfgen model updated with new plugin name.
+@
+text
+@d14 4
+d23 1
+d35 2
+a122 12
+	 * This method will be called then some properties of LayoutData object was
+	 * changed in model.
+	 * 
+	 * All the layout constraints (LayoutData objects with properties) are
+	 * actually stores in model, so just calling
+	 * <code>layoutDataChanged()</code>
+	 */
+	protected void layoutDataPropertyChanged() {
+		layoutDataChanged();
+	}
+
+	/**
+d131 4
+a134 13
+	protected void layoutDataChanged() {
+		handleMajorSemanticChange();
+	}
+
+	/**
+	 * This method will be called then layout properties was changed in model.
+	 * 
+	 * All the layout constraints (LayoutData objects) are actually stored in
+	 * model, so just invore refresh and then all the corresponding values will
+	 * be queried from model.
+	 */
+	protected void layoutPropertyChanged(Layout layout) {
+		layoutChanged(layout, true);
+d144 1
+a144 1
+	protected void layoutChanged(Layout layout, boolean performRefresh) {
+d230 1
+a230 1
+		if (performRefresh) {
+d235 12
+d257 22
+a278 1
+	protected abstract LayoutManager getFigureLayoutManager();
+d280 8
+a287 1
+	protected abstract void setFigureLayoutManager(LayoutManager layoutManager);
+@
+

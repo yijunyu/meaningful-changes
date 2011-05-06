@@ -1,0 +1,241 @@
+head	1.2;
+access;
+symbols
+	v20081020-0700:1.2
+	v20080722-1827:1.2
+	R2_1_maintenance:1.2.0.2
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080425-1959:1.2
+	v20080402-1725:1.2
+	v20080328-1605:1.2
+	v20080222-1200:1.2
+	v20080215-1500:1.2
+	v20080201-2010:1.1
+	v20080118-1415:1.1
+	v20080118-1129:1.1
+	v20071108-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.4
+	R2_0:1.1
+	R4_20:1.1
+	RC3_20:1.1
+	v20070601-1400:1.1
+	v20070518-1300:1.1
+	v20070420-1000:1.1
+	v20070330-1300:1.1
+	v20070221-1500:1.1
+	v20070209-1900:1.1
+	v20060209-1900:1.1
+	v20070208-1800:1.1
+	v20070119-1200:1.1
+	M4_20:1.1
+	v20061214-0000:1.1
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061020-1000:1.1
+	v20061013-1330:1.1
+	v20060925-1700:1.1
+	v20060919-0800:1.1
+	v20060907-1100:1.1
+	M1_20:1.1
+	v20060824-1600:1.1
+	v20060810-1700:1.1
+	v20060803-1200:1.1
+	v20060728-0500:1.1
+	v20060721-1130:1.1
+	v20060713-1700:1.1
+	R1_0_maintenance:1.1.0.2
+	R1_0:1.1
+	v20060627-1200:1.1
+	v20060616-1200:1.1
+	v20060531-1730:1.1
+	v20060526-1200:1.1
+	I20060505-1400:1.1
+	I20060424-0500:1.1
+	I20060424-0300:1.1
+	M6_10:1.1
+	I20060407-1200:1.1
+	I20060331-1000:1.1
+	I20060324-0300:1.1
+	I20060317-1300:1.1
+	I20060317-1200:1.1
+	I20060316-1300:1.1
+	I20060309-1300:1.1
+	M5_10:1.1
+	S20060303-1600:1.1
+	I20060227-1730:1.1
+	I20060216-1945:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2008.02.08.21.42.39;	author ldamus;	state Exp;
+branches;
+next	1.1;
+commitid	38ce47accccf4567;
+
+1.1
+date	2006.02.13.19.11.59;	author ldamus;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@[212178] gmf_head jbruck 080208 GMF validation enhancements
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2006, 2008 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.common.core.command;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.gmf.runtime.common.core.internal.command.BaseModificationValidator;
+
+/**
+ * Static utility that approves the modification of files using an
+ * {@@link IModificationValidator}.
+ * <P>
+ * The modification validator can be set exactly once using
+ * {@@link #setModificationValidator(IModificationValidator)} before the first
+ * request to validate files.
+ * 
+ * @@author ldamus
+ */
+public class FileModificationValidator {
+
+	private static IModificationValidator validator;
+
+	private FileModificationValidator() {
+		// not to be instantiated
+	}
+
+	/**
+	 * Set the modification validator to be used to check that files can be
+	 * modified.
+	 * <P>
+	 * This method may only be called once, and must be called before any
+	 * request to validate files. Attempts to set the validator will be ignored
+	 * after it has been already set, or after a default one has been created.
+	 * 
+	 * @@param validator
+	 *            the modification validator
+	 */
+	public static void setModificationValidator(IModificationValidator v) {
+		if (validator == null) {
+			validator = v;
+		}
+	}
+
+	/**
+	 * Gets the validator.
+	 * 
+	 * @@return the validator
+	 */
+	private static IModificationValidator getValidator() {
+		if (validator == null) {
+			validator = new BaseModificationValidator();
+		}
+		return validator;
+	}
+
+	/**
+	 * Checks that the <code>files</code> may be modified.
+	 * 
+	 * @@return the approval status
+	 */
+	public static IStatus approveFileModification(IFile[] files) {
+		return getValidator().validateEdit(files);
+	}
+	
+	/**
+	 * This interface works in conjuction with the {@@link SyncExecHelper}
+	 * to bridge entities knowing of UI and those with knowledge of editing domains.
+	 * 
+	 * @@author James Bruck (jbruck@@ca.ibm.com)
+	 *
+	 */
+	public interface ISyncExecHelper {
+		
+		/**
+		 * Will wrap the input runnable with one that is thread safe.
+		 * 
+		 * @@param runnable
+		 */
+		public Runnable safeRunnable(Runnable runnable);
+	}
+
+	/**
+	 * 
+	 * Utility class that is used to bridge those entities that 
+	 * have knowledge of UI and those that have knowledge of editing domains.
+	 * Uses {@@link ISyncExecHelper}.
+	 * It is always initialized so we don't have to worry about null checking.
+	 * 
+	 * @@author James Bruck (jbruck@@ca.ibm.com)
+	 */
+	public static class SyncExecHelper implements ISyncExecHelper {
+
+		private static ISyncExecHelper INSTANCE;
+		static {
+			SyncExecHelper.setInstance(new SyncExecHelper());
+		}
+
+		/**
+		 * The result of this method is guaranteed to be 
+		 * non-null since we initialize it with a default implementation.
+		 * 
+		 * @@return the ISyncExecHelper instance
+		 */
+		public static synchronized ISyncExecHelper getInstance() {
+			return INSTANCE;
+		}
+		
+		private SyncExecHelper(){
+			// not intended to be called externally
+		}
+
+		public static synchronized void setInstance(ISyncExecHelper instance) {
+			SyncExecHelper.INSTANCE = instance;
+		}
+
+		/**
+		 * Provides a default implementation. 
+		 */
+		public Runnable safeRunnable(Runnable runnable) {
+			return runnable;
+		}
+	}
+
+}
+@
+
+
+1.1
+log
+@[112826] gmf_head ldamus 060213 Adopt Eclipse 3.1 Operation History Framework
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 IBM Corporation and others.
+d73 59
+@
+

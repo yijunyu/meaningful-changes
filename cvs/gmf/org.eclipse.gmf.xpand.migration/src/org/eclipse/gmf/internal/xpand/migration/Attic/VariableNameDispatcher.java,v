@@ -1,0 +1,316 @@
+head	1.1;
+access;
+symbols
+	ocl_qvt:1.1.0.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2008.08.26.14.20.54;	author ashatalin;	state dead;
+branches
+	1.1.2.1;
+next	;
+commitid	69bc48b411454567;
+
+1.1.2.1
+date	2008.08.26.14.20.54;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.2;
+commitid	69bc48b411454567;
+
+1.1.2.2
+date	2008.08.28.15.51.01;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.3;
+commitid	35c448b6c95d4567;
+
+1.1.2.3
+date	2008.09.17.18.09.46;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.4;
+commitid	22c4f48d147e94567;
+
+1.1.2.4
+date	2008.10.08.16.25.59;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	b10b48ecdf164567;
+
+
+desc
+@@
+
+
+1.1
+log
+@file VariableNameDispatcher.java was initially added on branch ocl_qvt.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ REfactoring a way to migrate collection operations.
+@
+text
+@a0 133
+/**
+ * Copyright (c) 2008 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.xpand.migration;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.eclipse.gmf.internal.xpand.expression.ast.BooleanOperation;
+import org.eclipse.gmf.internal.xpand.expression.ast.Case;
+import org.eclipse.gmf.internal.xpand.expression.ast.Cast;
+import org.eclipse.gmf.internal.xpand.expression.ast.ChainExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.CollectionExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.Expression;
+import org.eclipse.gmf.internal.xpand.expression.ast.FeatureCall;
+import org.eclipse.gmf.internal.xpand.expression.ast.IfExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.LetExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.ListLiteral;
+import org.eclipse.gmf.internal.xpand.expression.ast.OperationCall;
+import org.eclipse.gmf.internal.xpand.expression.ast.SwitchExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.TypeSelectExpression;
+import org.eclipse.gmf.internal.xpand.xtend.ast.ExpressionExtensionStatement;
+import org.eclipse.gmf.internal.xpand.xtend.ast.Extension;
+
+public class VariableNameDispatcher {
+
+	private static final String ITERATOR_PREFIX = "it";
+
+	private static final String VARIABLE_PREFIX = "tmpVar";
+
+	private Set<String> definedVariables;
+
+	public VariableNameDispatcher(Extension extension) {
+		definedVariables = new HashSet<String>();
+		initDefinedVariables(extension);
+	}
+
+	private void initDefinedVariables(Extension extension) {
+		for (String parameterName : extension.getParameterNames()) {
+			definedVariables.add(parameterName);
+		}
+		if (extension instanceof ExpressionExtensionStatement) {
+			initDefinedVariables(((ExpressionExtensionStatement) extension).getExpression());
+		}
+	}
+
+	private void initDefinedVariables(Expression expression) {
+		if (expression instanceof BooleanOperation) {
+			BooleanOperation booleanOperation = (BooleanOperation) expression;
+			initDefinedVariables(booleanOperation.getLeft());
+			initDefinedVariables(booleanOperation.getRight());
+		} else if (expression instanceof Cast) {
+			Cast cast = (Cast) expression;
+			initDefinedVariables(cast.getTarget());
+		} else if (expression instanceof ChainExpression) {
+			ChainExpression chainExpression = (ChainExpression) expression;
+			initDefinedVariables(chainExpression.getFirst());
+			initDefinedVariables(chainExpression.getNext());
+		} else if (expression instanceof CollectionExpression) {
+			CollectionExpression collectionExpression = (CollectionExpression) expression;
+			initDefinedVariables(collectionExpression.getClosure());
+			initDefinedVariablesOfTarget(collectionExpression);
+			definedVariables.add(collectionExpression.getElementName());
+		} else if (expression instanceof OperationCall) {
+			OperationCall operationCall = (OperationCall) expression;
+			initDefinedVariablesOfTarget(operationCall);
+			for (int i = 0; i < operationCall.getParams().length; i++) {
+				initDefinedVariables(operationCall.getParams()[i]);
+			}
+		} else if (expression instanceof TypeSelectExpression) {
+			TypeSelectExpression typeSelect = (TypeSelectExpression) expression;
+			initDefinedVariablesOfTarget(typeSelect);
+		} else if (expression instanceof FeatureCall) {
+			FeatureCall featureCall = (FeatureCall) expression;
+			initDefinedVariablesOfTarget(featureCall);
+		} else if (expression instanceof IfExpression) {
+			IfExpression ifExpression = (IfExpression) expression;
+			initDefinedVariables(ifExpression.getCondition());
+			initDefinedVariables(ifExpression.getThenPart());
+			initDefinedVariables(ifExpression.getElsePart());
+		} else if (expression instanceof LetExpression) {
+			LetExpression letExpression = (LetExpression) expression;
+			initDefinedVariables(letExpression.getVarExpression());
+			initDefinedVariables(letExpression.getTargetExpression());
+			definedVariables.add(letExpression.getVarName().getValue());
+		} else if (expression instanceof ListLiteral) {
+			ListLiteral listLiteral = (ListLiteral) expression;
+			for (int i = 0; i < listLiteral.getElements().length; i++) {
+				initDefinedVariables(listLiteral.getElements()[i]);
+			}
+		} else if (expression instanceof SwitchExpression) {
+			SwitchExpression switchExpression = (SwitchExpression) expression;
+			initDefinedVariables(switchExpression.getSwitchExpr());
+			initDefinedVariables(switchExpression.getDefaultExpr());
+			for (Case caseExpresion : switchExpression.getCases()) {
+				initDefinedVariables(caseExpresion.getCondition());
+				initDefinedVariables(caseExpresion.getThenPart());
+			}
+		}
+	}
+
+	private void initDefinedVariablesOfTarget(FeatureCall featrueCall) {
+		if (featrueCall.getTarget() != null) {
+			initDefinedVariables(featrueCall.getTarget());
+		}
+	}
+
+	public String getNextIteratorName() {
+		return getUniqueName(ITERATOR_PREFIX);
+	}
+
+	public String getNextVariableName() {
+		return getUniqueName(VARIABLE_PREFIX);
+	}
+
+	private String getUniqueName(String prefix) {
+		String iteratorName = prefix;
+		for (int i = 1; definedVariables.contains(iteratorName); i++) {
+			iteratorName = prefix + "_" + i;
+		}
+		definedVariables.add(iteratorName);
+		return iteratorName;
+	}
+
+}
+@
+
+
+1.1.2.2
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ First step toward .xpt migration.
+@
+text
+@a16 1
+import org.eclipse.gmf.internal.xpand.ast.AbstractDefinition;
+a45 4
+	public VariableNameDispatcher(AbstractDefinition definition) {
+		// TODO Auto-generated constructor stub
+	}
+
+@
+
+
+1.1.2.3
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ - Correctly initializing NullLiteral positions
+ - Initializing VariableNameDispatcher
+@
+text
+@a17 8
+import org.eclipse.gmf.internal.xpand.ast.ErrorStatement;
+import org.eclipse.gmf.internal.xpand.ast.ExpandStatement;
+import org.eclipse.gmf.internal.xpand.ast.ExpressionStatement;
+import org.eclipse.gmf.internal.xpand.ast.FileStatement;
+import org.eclipse.gmf.internal.xpand.ast.ForEachStatement;
+import org.eclipse.gmf.internal.xpand.ast.IfStatement;
+import org.eclipse.gmf.internal.xpand.ast.LetStatement;
+import org.eclipse.gmf.internal.xpand.ast.Statement;
+a22 1
+import org.eclipse.gmf.internal.xpand.expression.ast.DeclaredParameter;
+d48 1
+a48 64
+		definedVariables = new HashSet<String>();
+		initDefinedVariables(definition);
+	}
+
+	private void initDefinedVariables(AbstractDefinition definition) {
+		for (DeclaredParameter parameter : definition.getParams()) {
+			definedVariables.add(parameter.getName().getValue());
+		}
+		for (Statement statement : definition.getBody()) {
+			initDefinedVariables(statement);
+		}
+	}
+
+	private void initDefinedVariables(Statement statement) {
+		if (statement instanceof ExpressionStatement) {
+			ExpressionStatement expressionStatement = (ExpressionStatement) statement;
+			initDefinedVariables(expressionStatement.getExpression());
+		} else if (statement instanceof ErrorStatement) {
+			ErrorStatement errorStatement = (ErrorStatement) statement;
+			initDefinedVariables(errorStatement.getMessage());
+		} else if (statement instanceof ExpandStatement) {
+			ExpandStatement expandStatement = (ExpandStatement) statement;
+			for (Expression parameter : expandStatement.getParameters()) {
+				initDefinedVariables(parameter);
+			}
+			if (expandStatement.getTarget() != null) {
+				initDefinedVariables(expandStatement.getTarget());
+			}
+			if (expandStatement.getSeparator() != null) {
+				initDefinedVariables(expandStatement.getSeparator());
+			}
+		} else if (statement instanceof FileStatement) {
+			FileStatement fileStatement = (FileStatement) statement;
+			initDefinedVariables(fileStatement.getTargetFileName());
+			for (Statement bodyStatement : fileStatement.getBody()) {
+				initDefinedVariables(bodyStatement);
+			}
+		} else if (statement instanceof ForEachStatement) {
+			ForEachStatement forEach = (ForEachStatement) statement;
+			initDefinedVariables(forEach.getTarget());
+			if (forEach.getSeparator() != null) {
+				initDefinedVariables(forEach.getSeparator());	
+			}
+			for (Statement bodyStatement : forEach.getBody()) {
+				initDefinedVariables(bodyStatement);
+			}
+		} else if (statement instanceof IfStatement) {
+			IfStatement ifStatement = (IfStatement) statement;
+			if (ifStatement.getCondition() != null) {
+				initDefinedVariables(ifStatement.getCondition());
+			}
+			for (Statement thenStatement : ifStatement.getThenPart()) {
+				initDefinedVariables(thenStatement);
+			}
+			if (ifStatement.getElseIf() != null) {
+				initDefinedVariables(ifStatement.getElseIf());
+			}
+		} else if (statement instanceof LetStatement) {
+			LetStatement letStatement = (LetStatement) statement;
+			initDefinedVariables(letStatement.getVarValue());
+			for (Statement bodyStatement : letStatement.getBody()) {
+				initDefinedVariables(bodyStatement);
+			}
+		}
+@
+
+
+1.1.2.4
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ - Migrating string literals in import statements
+@
+text
+@d49 1
+a49 4
+	private Set<String> definedVariables = new HashSet<String>();
+	
+	public VariableNameDispatcher() {
+	}
+d52 1
+d57 1
+@
+
+

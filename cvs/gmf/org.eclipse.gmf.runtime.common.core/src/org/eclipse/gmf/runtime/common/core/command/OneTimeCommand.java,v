@@ -1,0 +1,210 @@
+head	1.1;
+access;
+symbols
+	v20081020-0700:1.1
+	v20080722-1827:1.1
+	R2_1_maintenance:1.1.0.6
+	Root_R2_1_maintenance:1.1
+	R2_1_0:1.1
+	v20080425-1959:1.1
+	v20080402-1725:1.1
+	v20080328-1605:1.1
+	v20080222-1200:1.1
+	v20080215-1500:1.1
+	v20080201-2010:1.1
+	v20080118-1415:1.1
+	v20080118-1129:1.1
+	v20071108-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.4
+	R2_0:1.1
+	R4_20:1.1
+	RC3_20:1.1
+	v20070601-1400:1.1
+	v20070518-1300:1.1
+	v20070420-1000:1.1
+	v20070330-1300:1.1
+	v20070221-1500:1.1
+	v20070209-1900:1.1
+	v20060209-1900:1.1
+	v20070208-1800:1.1
+	v20070119-1200:1.1
+	M4_20:1.1
+	v20061214-0000:1.1
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061020-1000:1.1
+	v20061013-1330:1.1
+	v20060925-1700:1.1
+	v20060919-0800:1.1
+	v20060907-1100:1.1
+	M1_20:1.1
+	v20060824-1600:1.1
+	v20060810-1700:1.1
+	v20060803-1200:1.1
+	v20060728-0500:1.1
+	v20060721-1130:1.1
+	v20060713-1700:1.1
+	R1_0_maintenance:1.1.0.2
+	R1_0:1.1
+	v20060627-1200:1.1
+	v20060616-1200:1.1
+	v20060531-1730:1.1
+	v20060526-1200:1.1
+	I20060505-1400:1.1
+	I20060424-0500:1.1
+	I20060424-0300:1.1
+	M6_10:1.1
+	I20060407-1200:1.1
+	I20060331-1000:1.1
+	I20060324-0300:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2006.03.20.16.40.57;	author ldamus;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@[132371] gmf_head ldamus 060320 Support commands whose execution has no effect on the operation history
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.common.core.command;
+
+import java.util.List;
+
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.commands.operations.IUndoContext;
+import org.eclipse.core.commands.operations.UndoContext;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.gmf.runtime.common.core.internal.CommonCoreDebugOptions;
+import org.eclipse.gmf.runtime.common.core.internal.CommonCorePlugin;
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+/**
+ * A command does its work once, and can never be undone or redone. It does not do
+ * any work that invalidates the undo history in a linear undo model.
+ * <P>
+ * By default, it is assigned the <code>NULL_CONTEXT</code> when it is
+ * constructed, and no other contexts can be added to it or removed from it.
+ * <P>
+ * This class is meant to be subclassed by clients who have work to do in a
+ * command that should have no effect on the operation history.
+ * 
+ * @@author ldamus
+ */
+public abstract class OneTimeCommand
+    extends AbstractCommand {
+
+    /**
+     * The null undo context.
+     */
+    protected final static IUndoContext NULL_CONTEXT = new UndoContext();
+
+    /**
+     * Initializes me with a label.
+     * 
+     * @@param label
+     *            the operation label
+     */
+    public OneTimeCommand(String label) {
+        this(label, null);
+    }
+
+    /**
+     * Initializes me with a label and a list of {@@link IFile}s that anticipate
+     * modifying when I am executed.
+     * 
+     * @@param label
+     *            the operation label
+     * @@param affectedFiles
+     *            the list of affected {@@link IFile}s; may be <code>null</code>
+     */
+    public OneTimeCommand(String label, List affectedFiles) {
+        super(label, affectedFiles);
+
+        // add a 'null' context to the operation (prevents memory leak in
+        // operation history)
+        super.addContext(NULL_CONTEXT);
+    }
+
+    /**
+     * Does nothing. The context will not be added to the operation.
+     */
+    public final void addContext(IUndoContext context) {
+        // ignore the request to add a context
+    }
+
+    /**
+     * Does nothing. The context will not be removed from the operation.
+     */
+    public final void removeContext(IUndoContext context) {
+        // ignore the request to remove a context
+    }
+
+    /**
+     * Not undoable. Returns <code>false</code>.
+     */
+    public final boolean canUndo() {
+        return false;
+    }
+
+    /**
+     * Not redoable. Returns <code>false</code>.
+     */
+    public final boolean canRedo() {
+        return false;
+    }
+
+    /**
+     * Not undoable. Throws an ExecutionException.
+     */
+    protected final CommandResult doUndoWithResult(
+            IProgressMonitor progressMonitor, IAdaptable info)
+        throws ExecutionException {
+
+        ExecutionException e = new ExecutionException("undo not supported"); //$NON-NLS-1$
+        Trace.throwing(CommonCorePlugin.getDefault(),
+            CommonCoreDebugOptions.EXCEPTIONS_THROWING, getClass(),
+            "doUndoWithResult", e); //$NON-NLS-1$
+
+        throw e;
+    }
+
+    /**
+     * Not redoable. Throws an ExecutionException.
+     */
+    protected final CommandResult doRedoWithResult(
+            IProgressMonitor progressMonitor, IAdaptable info)
+        throws ExecutionException {
+
+        ExecutionException e = new ExecutionException("redo not supported"); //$NON-NLS-1$
+        Trace.throwing(CommonCorePlugin.getDefault(),
+            CommonCoreDebugOptions.EXCEPTIONS_THROWING, getClass(),
+            "doRedoWithResult", e); //$NON-NLS-1$
+
+        throw e;
+    }
+}
+@

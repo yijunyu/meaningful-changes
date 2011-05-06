@@ -1,0 +1,396 @@
+head	1.6;
+access;
+symbols
+	R1_0_maintenance:1.6.0.2
+	R1_0:1.6
+	M6_10:1.5
+	I20060407-1200:1.5
+	I20060331-1000:1.5
+	I20060324-0300:1.5
+	I20060317-1300:1.5
+	I20060317-1200:1.5
+	I20060316-1300:1.5
+	I20060309-1300:1.5
+	M5_10:1.5
+	S20060303-1600:1.5
+	I20060227-1730:1.5
+	I20060216-1945:1.5
+	I20060210-1715:1.5
+	I20060209-1815:1.4
+	I20060203-0830:1.4
+	I20060129-1145:1.4
+	I20060127-0900:1.4
+	I20060120-1530:1.4
+	I20060113-1700:1.4
+	M4_10:1.4
+	I20060107-1100:1.4
+	I20060105-1630:1.4
+	I20051230-1230:1.4
+	I20051223-1100:1.4
+	I20051217-0925:1.4
+	I20051208-2000:1.4
+	I20051201-1800:1.4
+	I20051124-2000:1.3
+	M3_10:1.2
+	I20051118-1245:1.2
+	I20051111-1800:1.2
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.6
+date	2006.04.18.20.51.27;	author cmahoney;	state dead;
+branches;
+next	1.5;
+
+1.5
+date	2006.02.10.19.18.31;	author sshaw;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2005.11.29.16.33.55;	author sshaw;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.11.21.15.55.28;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.24.39;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.56;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@Bugzilla#109422 gmf_head cmahoney 060418 Remove deprecated API
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2004 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+
+package org.eclipse.gmf.runtime.draw2d.ui.render.image;
+
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.PaletteData;
+import org.eclipse.swt.graphics.RGB;
+import org.eclipse.ui.PlatformUI;
+
+/**
+ * This is a helper class used to convert an SWT Image into an AWT
+ * BufferedImage.
+ * 
+ * @@author Jody Schofield / sshaw
+ * @@deprecated Will be removed from public api.  GMF shouldn't have AWT based classes exposed in it's public api.
+ * This class will move to internal package org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.image.
+ * Clients of <code>RenderedImage</code> can use the <code>IAdapter</code> interface
+ */
+public class ImageConverter {
+
+	private static final PaletteData PALETTE_DATA = new PaletteData(0xFF0000, 0xFF00, 0xFF);
+	
+	/**
+	 * Converts an AWT based buffered image into an SWT <code>Image</code>.  This will always return an
+	 * <code>Image</code> that has 24 bit depth regardless of the type of AWT buffered image that is 
+	 * passed into the method.
+	 * 
+	 * @@param srcImage the {@@link java.awt.image.BufferedImage} to be converted to an <code>Image</code>
+	 * @@return an <code>Image</code> that represents the same image data as the AWT 
+	 * <code>BufferedImage</code> type.
+	 */
+	public static Image convert( BufferedImage srcImage) {
+		// We can force bitdepth to be 24 bit because BufferedImage getRGB allows us to always
+		// retrieve 24 bit data regardless of source color depth.
+		ImageData swtImageData =
+			new ImageData(srcImage.getWidth(), srcImage.getHeight(), 24, PALETTE_DATA);
+
+		// ensure scansize is aligned on 32 bit.
+		int scansize = (((srcImage.getWidth() * 3) + 3) * 4) / 4;
+		
+		WritableRaster alphaRaster = srcImage.getAlphaRaster();
+		byte[] alphaBytes = new byte[srcImage.getWidth()];
+			
+		for (int y=0; y<srcImage.getHeight(); y++) {
+			int[] buff = srcImage.getRGB(0, y, srcImage.getWidth(), 1, null, 0, scansize);
+			swtImageData.setPixels(0, y, srcImage.getWidth(), buff, 0);
+			
+			// check for alpha channel
+			if (alphaRaster != null) {
+				int[] alpha = alphaRaster.getPixels(0, y, srcImage.getWidth(), 1, (int[])null);
+				for (int i=0; i<srcImage.getWidth(); i++)
+					alphaBytes[i] = (byte)alpha[i];
+				swtImageData.setAlphas(0, y, srcImage.getWidth(), alphaBytes, 0);
+			}
+		}
+	
+		return new Image(PlatformUI.getWorkbench().getDisplay(), swtImageData);
+	}
+	
+	/**
+	 * Converts an swt based image into an AWT <code>BufferedImage</code>.  This will always return a
+	 * <code>BufferedImage</code> that is of type <code>BufferedImage.TYPE_INT_ARGB</code> regardless of
+	 * the type of swt image that is passed into the method.
+	 * 
+	 * @@param srcImage the {@@link org.eclipse.swt.graphics.Image} to be converted to a <code>BufferedImage</code>
+	 * @@return a <code>BufferedImage</code> that represents the same image data as the swt <code>Image</code>
+	 */
+	public static BufferedImage convert( Image srcImage ) {
+		
+		ImageData imageData = srcImage.getImageData();
+		int width = imageData.width;
+		int height = imageData.height;
+		ImageData maskData = null;
+		int alpha[] = new int[1];
+		
+		if (imageData.alphaData == null)
+			maskData = imageData.getTransparencyMask();
+		
+		// now we should have the image data for the bitmap, decompressed in imageData[0].data.
+		// Convert that to a Buffered Image.
+		BufferedImage image = new BufferedImage( imageData.width, imageData.height, BufferedImage.TYPE_INT_ARGB );
+	    
+	    WritableRaster alphaRaster = image.getAlphaRaster();
+
+		// loop over the imagedata and set each pixel in the BufferedImage to the appropriate color.
+		for( int y = 0; y < height; y++ )
+		{
+			for( int x = 0; x < width; x++ )
+			{
+				int color = imageData.getPixel( x, y );
+
+				color = translateColor( imageData, color );
+				image.setRGB( x, y, color );
+		
+				// check for alpha channel
+				if (alphaRaster != null) {
+					if( imageData.alphaData != null) {
+						alpha[0] = imageData.getAlpha( x, y );
+						alphaRaster.setPixel( x, y, alpha );
+					}
+					else {
+						// check for transparency mask
+						if( maskData != null) {
+							alpha[0] = maskData.getPixel( x, y ) == 0 ? 0 : 255;
+							alphaRaster.setPixel( x, y, alpha );
+						}
+					}
+				}
+			}
+		}
+
+		return image;
+	}
+
+
+	private static int translateColor( ImageData imageData, int color ) {
+
+		int bitCount = imageData.depth;
+		RGB[] rgb = imageData.getRGBs();
+
+		if( bitCount == 1 || bitCount == 4 || bitCount == 8 )
+		{
+			// Look up actual rgb value in the rgb array.
+			if( rgb != null )
+			{
+				java.awt.Color foo = new java.awt.Color( rgb[color].red, rgb[color].green, rgb[color].blue );
+				color = foo.getRGB();
+			}
+			else
+			{
+				color = 0;
+			}
+		}
+		else if( bitCount == 16 )
+		{
+			int		BLUE_MASK					= 0x1f;
+			int		GREEN_MASK					= 0x3e0;
+			int		RED_MASK					= 0x7C00;
+			
+			// Each word in the bitmap array represents a single pixels, 5 bits for each
+			// red, green and blue.
+			color = applyRGBMask( color, RED_MASK, GREEN_MASK, BLUE_MASK );
+		}
+		else if( bitCount == 24 )
+		{
+			// 3 8 bit color values.
+			int blue = (color & 0x00ff0000) >> 16;
+			int green = (color & 0x0000ff00) >> 8;
+			int red = (color & 0x000000ff);
+
+			java.awt.Color foo = new java.awt.Color( red, green, blue );
+			color = foo.getRGB();
+		}
+		else if( bitCount == 32 )
+		{	
+			int blue = (color & 0xff000000) >>> 24;
+			int green = (color & 0x00ff0000) >> 16;
+			int red = (color & 0x0000ff00) >> 8;
+
+			java.awt.Color foo = new java.awt.Color( red, green, blue );
+			color = foo.getRGB();
+		}
+
+		return color;
+	}
+
+	private static int applyRGBMask( int color, int redMask, int greenMask, int blueMask )
+	{
+		int shiftCount;
+		int maskSize;
+		int red;
+		int green;
+		int blue;
+		
+		shiftCount = getShiftCount( redMask );
+		maskSize = countBits( redMask );
+		red = ( color & redMask ) >>> shiftCount;
+		// Scale the color value to something between 0 and 255.
+		red = red * 255 / ( (int) Math.pow( 2, maskSize ) - 1 );
+		
+		shiftCount = getShiftCount( greenMask );
+		maskSize = countBits( greenMask );
+		green = ( color & greenMask ) >>> shiftCount;
+		// Scale the color value to something between 0 and 255.
+		green = green * 255 / ( (int) Math.pow( 2, maskSize ) - 1 );
+
+		shiftCount = getShiftCount( blueMask );
+		maskSize = countBits( blueMask );
+		blue = ( color & blueMask ) >>> shiftCount;
+		// Scale the color value to something between 0 and 255.
+		blue = blue * 255 / ( (int) Math.pow( 2, maskSize ) - 1 );
+		
+		java.awt.Color foo = new java.awt.Color( red, green, blue );
+		color = foo.getRGB();
+
+		return color;
+	}
+	
+	private static int getShiftCount( int mask )
+	{
+		int count = 0;
+		
+		while( mask != 0 && ( ( mask & 0x1 ) == 0 ) )
+		{
+			mask = mask >>> 1;
+			count++;
+		}
+		
+		return count;
+	}
+	
+	private static int countBits( int mask )
+	{
+		int count = 0;
+		for( int index = 0; index < 32; index++ )
+		{
+			if( ( mask & 0x1 ) != 0 )
+			{
+				count++;
+			}
+			mask = mask >>> 1;
+		}
+		
+		return count;
+	}
+
+}
+@
+
+
+1.5
+log
+@bugzilla 119319 gmf-head sshaw 060210 Support extensibility for RenderedImageFactory
+@
+text
+@@
+
+
+1.4
+log
+@bugzilla 111436 gmf-head sshaw 051128 Improve performance of SVG transcoder
+@
+text
+@d29 3
+a31 1
+ *
+@
+
+
+1.3
+log
+@bugzilla 116937 gmf-head sshaw 051117 SVG export ignores RenderedImage classes that aren't SVG
+@
+text
+@d20 1
+d22 1
+d28 1
+a28 1
+ * @@author Jody Schofield
+d33 38
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d45 6
+a50 1
+
+a68 2
+					int alpha[] = new int[1];
+					
+d71 1
+a74 1
+						ImageData maskData = imageData.getTransparencyMask();
+d77 1
+a79 2
+					
+					alphaRaster.setPixel( x, y, alpha );
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 7
+/***************************************************************************
+  Licensed Materials - Property of IBM
+  (C) Copyright IBM Corp. 2004.  All Rights Reserved.
+ 
+  US Government Users Restricted Rights - Use, duplication or disclosure
+  restricted by GSA ADP Schedule Contract with IBM Corp.                
+***************************************************************************/
+@
+

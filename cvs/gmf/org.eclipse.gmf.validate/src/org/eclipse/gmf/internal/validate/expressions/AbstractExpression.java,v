@@ -1,0 +1,367 @@
+head	1.4;
+access;
+symbols
+	v20080722-1827:1.4
+	R2_1_maintenance:1.4.0.4
+	Root_R2_1_maintenance:1.4
+	R2_1_0:1.4
+	v20080603-1553:1.4
+	v20080507-2230:1.4
+	v20080425-1959:1.4
+	v20080417-1610:1.4
+	v20080322-0000:1.4
+	v20080222-1200:1.4
+	v20080215-1500:1.4
+	v20070809-0000:1.4
+	R2_0_maintenance:1.4.0.2
+	R2_0:1.4
+	R4_20:1.4
+	v20070621-0000:1.4
+	RC3_20:1.3
+	v20070601-1400:1.3
+	v20070520-1200:1.3
+	v20070504-1000:1.3
+	v20070405-1100:1.3
+	v20070330-1300:1.3
+	v20070322-1100:1.3
+	v20060316-0600:1.3
+	v20070208-1800:1.2
+	M4_20:1.2
+	v20061218-1200:1.2
+	v20061214-0000:1.2
+	v20061120-1300:1.2
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061027-1200:1.1.2.1
+	v20061013-1330:1.1
+	v20060925-1700:1.1.2.1
+	v20060919-0800:1.1.2.1
+	M1_20:1.1
+	v20060904-1500:1.1
+	v20060831-1500:1.1
+	v20060803-1200:1.1
+	v20060713-1700:1.1
+	R1_0_maintenance:1.1.0.2
+	R1_0:1.1
+	v20060627-1200:1.1
+	v20060626-1420:1.1
+	v20060616-1200:1.1
+	v20060531-1730:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2007.06.21.14.09.59;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	1941467a86b54567;
+
+1.3
+date	2007.03.14.12.59.24;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	110745f7f1aa4567;
+
+1.2
+date	2006.11.20.17.30.41;	author radvorak;	state Exp;
+branches;
+next	1.1;
+commitid	1fc64561e63f4567;
+
+1.1
+date	2006.05.18.13.58.28;	author radvorak;	state Exp;
+branches
+	1.1.2.1;
+next	;
+
+1.1.2.1
+date	2006.09.13.23.07.18;	author rgronback;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@fix copyright years
+@
+text
+@/*
+ * Copyright (c) 2005, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0 which
+ * accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: 
+ *    Radek Dvorak (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.validate.expressions;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.ETypedElement;
+import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.gmf.internal.validate.DebugOptions;
+import org.eclipse.gmf.internal.validate.GMFValidationPlugin;
+import org.eclipse.gmf.internal.validate.LabelProvider;
+import org.eclipse.gmf.internal.validate.Messages;
+import org.eclipse.gmf.internal.validate.StatusCodes;
+import org.eclipse.gmf.internal.validate.Trace;
+
+/**
+ * This class represents the base for expression. Clients providing new types 
+ * of expression should sublass this class. 
+ */
+public abstract class AbstractExpression implements IModelExpression  {
+	private IStatus status;
+	private String body;
+	private EClassifier contextClassifier; 
+	private Map<String, EClassifier> extEnv;
+			
+	/**
+	 * Constructs expression from its body, with specified context.
+	 * 
+	 * @@param body
+	 *            specifies the evaluation logic in the language recognized by
+	 *            this expression.
+	 * @@param context
+	 *            the class in which context the expression is to be parsed
+	 * @@param extendedEnv
+	 *            additional parsing context information, can be
+	 *            <code>null</code>
+	 * @@throws IllegalArgumentException
+	 *             if any of the passed <code>body</code>,
+	 *             <code>contextClassifier</code> is <code>null</code>
+	 */
+	protected AbstractExpression(String body, EClassifier context, IParseEnvironment extendedEnv) {
+		if(body == null || context == null) {
+			throw new IllegalArgumentException("null body or context-class"); //$NON-NLS-1$
+		}
+		this.body = body;			
+		this.contextClassifier = context;
+		this.status = Status.OK_STATUS;
+		if(extendedEnv != null) {
+			this.extEnv = new HashMap<String, EClassifier>(5);			
+			for (String nextVar : extendedEnv.getVariableNames()) {
+				extEnv.put(nextVar, extendedEnv.getTypeOf(nextVar));
+			}
+		} else {
+			this.extEnv = Collections.emptyMap();
+		}
+	}
+	
+	protected Map<String, EClassifier> getExtEnvironment() {
+		return extEnv;
+	}
+	
+	public boolean isLooselyTyped() {
+		return true;
+	}
+	
+	protected void setStatus(IStatus status) {
+		this.status = status;
+	}
+	
+	/**
+	 * Performs evaluation of this expression in the context.
+	 * <p>
+	 * This method gets called by {@@link #evaluate(Object) } only if this
+	 * expression has <code>OK</code> status and the passed context is valid
+	 * 
+	 * @@param context
+	 *            the context instance for evaluation.
+	 * 
+	 * @@return result of this expression evalutation. In case this expression
+	 *         status is not <code>OK</code> status, <code>null</code> is
+	 *         returned.
+	 */
+	protected abstract Object doEvaluate(Object context);
+	
+	/**
+	 * Performs evaluation of this expression in the extended context.
+	 * <p>
+	 * This method gets called by {@@link #evaluate(Object) } only if this
+	 * expression has <code>OK</code> status and the passed context is valid
+	 * 
+	 * @@param context
+	 *            the context instance for evaluation.
+	 * @@param extendedEnv
+	 *            the environment with custom variables intialized for
+	 *            evaluation
+	 * 
+	 * @@return result of this expression evalutation. In case this expression
+	 *         status is not <code>OK</code> status, <code>null</code> is
+	 *         returned.
+	 */	
+	protected abstract Object doEvaluate(Object context, IEvaluationEnvironment extendedEnv);	
+		
+	public EClassifier getResultType() {
+		return EcorePackage.eINSTANCE.getEJavaObject();
+	}
+	
+	public abstract boolean isAssignableTo(EClassifier ecoreType);
+
+	public abstract boolean isAssignableToElement(ETypedElement typedElement);
+	
+	public abstract String getLanguage();	
+	
+	public final Object evaluate(Object context) {
+		return evaluate(context, null);
+	}
+
+	public final Object evaluate(Object contextInstance, IEvaluationEnvironment extendedEnv) {
+		if(contextInstance == null || !hasCompatibleContext(contextInstance)) {
+			throw new IllegalArgumentException("Invalid evaluation context:" + contextInstance); //$NON-NLS-1$
+		}
+		if(getStatus().isOK()) {
+			try {
+				if(extendedEnv != null) {
+					return doEvaluate(contextInstance, extendedEnv);
+				}
+				return doEvaluate(contextInstance);				
+			} catch (RuntimeException e) {
+				IStatus status = GMFValidationPlugin.createStatus(
+						IStatus.ERROR, StatusCodes.UNEXPECTED_EVALUATION_ERROR,
+						Messages.unexpectedExprEvalError, e); 
+				GMFValidationPlugin.log(status);
+				Trace.catching(DebugOptions.EXCEPTIONS_CATCHING, e);
+			}
+		}
+		return null;
+	}
+	
+	public IStatus getStatus() {
+		return status;
+	}
+
+	public String getBody() {
+		return body;
+	}
+	
+	public EClassifier getContext() {
+		return contextClassifier; 
+	}
+	
+	public String toString() {
+		return body + "context:[" + LabelProvider.INSTANCE.getObjectLabel(contextClassifier) + "] "; //$NON-NLS-1$ //$NON-NLS-2$
+	}
+	
+	private boolean hasCompatibleContext(Object ctxInstance) {
+		if(contextClassifier instanceof EClass) {
+			EClass contextClass = (EClass)contextClassifier;
+			return (ctxInstance instanceof EObject) ? 
+					contextClass.isSuperTypeOf(((EObject)ctxInstance).eClass()) : false;
+		} 
+		
+		return contextClassifier.isInstance(ctxInstance);
+	}	
+}
+@
+
+
+1.3
+log
+@Regenerated graphdef, tooldef and gmfmap models with EMF 2.3 M5 Generics, updated code to be "generified"
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005 Borland Software Corporation
+d179 1
+a179 1
+}@
+
+
+1.2
+log
+@[164840] Migrate 'org.eclipse.gmf.validate' plugin to Java 5
+@
+text
+@a15 1
+import java.util.Iterator;
+d66 1
+a66 2
+			for (Iterator it = extendedEnv.getVariableNames().iterator(); it.hasNext();) {
+				String nextVar = (String) it.next();
+d74 1
+a74 1
+	protected Map getExtEnvironment() {
+a77 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.validate.expressions.IModelExpression#isLooselyTyped()
+	 */
+a118 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.validate.expressions.IModelExpression#getResultType()
+	 */
+a122 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.validate.expressions.IModelExpression#isConformantTo(org.eclipse.emf.ecore.EClassifier)
+	 */
+a124 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.validate.expressions.IModelExpression#isConformantTo(org.eclipse.emf.ecore.ETypedElement)
+	 */
+a128 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.validate.expressions.IModelExpression#evaluate(org.eclipse.emf.ecore.EObject)
+	 */
+a132 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.validate.expressions.IModelExpression#evaluate(org.eclipse.emf.ecore.EObject, org.eclipse.gmf.validate.expressions.IEvaluationEnvironment)
+	 */	
+a153 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.validate.expressions.IModelExpression#getStatus()
+	 */
+a157 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.validate.expressions.IModelExpression#getBody()
+	 */
+a161 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.validate.expressions.IModelExpression#getContextClass()
+	 */
+@
+
+
+1.1
+log
+@gmf.validation plugin created
+@
+text
+@d41 1
+a41 1
+	private Map extEnv;
+d66 1
+a66 1
+			this.extEnv = new HashMap(5);			
+d72 1
+a72 1
+			this.extEnv = Collections.EMPTY_MAP;
+@
+
+
+1.1.2.1
+log
+@[153901] Updated copyright date from 2005 to 2005, 2006 for those changed in CVS in 2006 (based on Tom/Anthony's script).
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005, 2006 Borland Software Corporation
+@
+

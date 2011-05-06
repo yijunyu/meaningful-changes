@@ -1,0 +1,104 @@
+head	1.1;
+access;
+symbols
+	v20080722-1827:1.1
+	R2_1_maintenance:1.1.0.4
+	Root_R2_1_maintenance:1.1
+	R2_1_0:1.1
+	v20080425-1959:1.1
+	v20071108-0000:1.1
+	v20071003-0000:1.1
+	v20070921-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1
+	RC3_20:1.1
+	v20070601-1400:1.1
+	v20070525-1500:1.1
+	v20070518-1300:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2007.05.10.12.29.17;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	26ab4643101c4567;
+
+
+desc
+@@
+
+
+1.1
+log
+@[185782]: Support label text access methods in lite GMF runtime;
+FeatureLabelModelFacet: default view pattern is now LabelTextAccessMethod-dependent, thus moved to templates (both in full and lite versions)
+@
+text
+@/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.edit.parts.labels;
+
+import org.eclipse.emf.common.command.Command;
+import org.eclipse.emf.common.command.UnexecutableCommand;
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.jface.viewers.ICellEditorValidator;
+
+/**
+ * A label text displayer composed of two independent displayers, one for read-only operations (displaying labels) and one for 
+ * write-only operations (parsing the input and creating the associated command).
+ */
+public class CompositeLabelTextDisplayer extends AbstractLabelTextDisplayer {
+	private final ILabelTextDisplayer myReader;
+	private final ILabelTextDisplayer myWriter;
+
+	public CompositeLabelTextDisplayer(ILabelTextDisplayer reader, ILabelTextDisplayer writer) {
+		myReader = reader;
+		myWriter = writer;
+	}
+
+	@@Override
+	public Command getApplyCommand(EObject source, String newValue) {
+		if (myWriter == null) {
+			return UnexecutableCommand.INSTANCE;
+		}
+		return myWriter.getApplyCommand(source, newValue);
+	}
+
+	@@Override
+	public String getEditText(EObject source) {
+		return myReader.getEditText(source);
+	}
+
+	@@Override
+	public ICellEditorValidator getValidator() {
+		if (myWriter == null) {
+			return null;
+		}
+		return myWriter.getValidator();
+	}
+
+	public String getDisplayText(EObject source) {
+		return myReader.getDisplayText(source);
+	}
+
+	public boolean isAffectingEvent(Notification notification) {
+		return myReader.isAffectingEvent(notification);
+	}
+}
+@

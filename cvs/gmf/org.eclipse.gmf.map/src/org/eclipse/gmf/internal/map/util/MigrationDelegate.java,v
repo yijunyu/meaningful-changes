@@ -1,0 +1,410 @@
+head	1.7;
+access;
+symbols
+	v20080813-1520:1.7
+	v20080722-1827:1.7
+	v20080716-1642:1.7
+	R2_1_maintenance:1.7.0.2
+	Root_R2_1_maintenance:1.7
+	R2_1_0:1.7
+	v20080521:1.7
+	v20080425-1959:1.6
+	v20080417-1610:1.5
+	v20080322-0000:1.5
+	v20080222-1200:1.5
+	v20070809-0000:1.5
+	R2_0_maintenance:1.5.0.2
+	R2_0:1.5
+	R4_20:1.5
+	v20070621-0000:1.5
+	RC3_20:1.5
+	v20070608-1300:1.5
+	v20070605-1400:1.5
+	v20070601-1400:1.4
+	v20070525-1500:1.4
+	v20070520-1200:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.7
+date	2008.05.19.21.52.27;	author atikhomirov;	state Exp;
+branches;
+next	1.6;
+commitid	1c354831f69b4567;
+
+1.6
+date	2008.04.18.13.10.19;	author atikhomirov;	state Exp;
+branches;
+next	1.5;
+commitid	30ec48089dbb4567;
+
+1.5
+date	2007.06.04.18.09.52;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+commitid	1c72466455704567;
+
+1.4
+date	2007.05.24.09.34.40;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	4f7646555c304567;
+
+1.3
+date	2007.05.22.17.38.29;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	14b946532a954567;
+
+1.2
+date	2007.05.18.22.44.53;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	1b97464e2c654567;
+
+1.1
+date	2007.05.18.20.39.16;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	5912464e0ef24567;
+
+
+desc
+@@
+
+
+1.7
+log
+@[232299] refactor migration utils: gmfgraph migration done usign dynamic package for old metamodel, unused logic from MigrationHelper and MigrationDelegate was removed
+@
+text
+@/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0 which
+ * accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: Borland - initial API and implementation
+ */
+package org.eclipse.gmf.internal.map.util;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.eclipse.emf.common.util.EList;
+import org.eclipse.emf.ecore.EAttribute;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.gmf.internal.common.migrate.MigrationDelegateImpl;
+import org.eclipse.gmf.mappings.FeatureLabelMapping;
+import org.eclipse.gmf.mappings.FeatureValueSpec;
+import org.eclipse.gmf.mappings.GMFMapFactory;
+import org.eclipse.gmf.mappings.GMFMapPackage;
+import org.eclipse.gmf.mappings.LabelMapping;
+import org.eclipse.gmf.mappings.Language;
+import org.eclipse.gmf.mappings.MappingEntry;
+import org.eclipse.gmf.mappings.ValueExpression;
+
+class MigrationDelegate extends MigrationDelegateImpl {
+	private final Map<LabelMapping, FeatureLabelMapping> myLabelMappingMigrations;
+	private EAttribute myLabelMapping_ViewPattern;
+	private EAttribute myLabelMapping_EditPattern;
+	private EReference myLabelMapping_Features;
+	private EAttribute myFeatureValueSpec_Body;
+	private EAttribute myFeatureValueSpec_Language;
+	
+	MigrationDelegate() {
+		myLabelMappingMigrations = new HashMap<LabelMapping, FeatureLabelMapping>();
+	}
+
+	void init() {
+		//registerNarrowReferenceType(GMFMapPackage.eINSTANCE.getFeatureSeqInitializer_Initializers(), GMFMapPackage.eINSTANCE.getFeatureValueSpec());
+		// -->
+		registerNarrowedAbstractType("FeatureInitializer", GMFMapPackage.eINSTANCE.getFeatureValueSpec());
+		
+		//registerNarrowReferenceType(GMFMapPackage.eINSTANCE.getMappingEntry_LabelMappings(), GMFMapPackage.eINSTANCE.getFeatureLabelMapping());
+		// -->
+		myLabelMapping_Features = (EReference) EcoreUtil.copy(GMFMapPackage.eINSTANCE.getFeatureLabelMapping_Features());
+		myLabelMapping_ViewPattern = (EAttribute) EcoreUtil.copy(GMFMapPackage.eINSTANCE.getFeatureLabelMapping_ViewPattern());
+		myLabelMapping_EditPattern = (EAttribute) EcoreUtil.copy(GMFMapPackage.eINSTANCE.getFeatureLabelMapping_EditPattern());
+		{
+			Map<String, EStructuralFeature> renamings = new HashMap<String, EStructuralFeature>();
+			renamings.put(myLabelMapping_ViewPattern.getName(), myLabelMapping_ViewPattern);
+			renamings.put(myLabelMapping_EditPattern.getName(), myLabelMapping_EditPattern);
+			renamings.put(myLabelMapping_Features.getName(), myLabelMapping_Features);
+			registerRenamedAttributes(GMFMapPackage.eINSTANCE.getLabelMapping(), renamings);
+		}
+		
+		myFeatureValueSpec_Body = (EAttribute) EcoreUtil.copy(GMFMapPackage.eINSTANCE.getValueExpression_Body());
+		myFeatureValueSpec_Language = (EAttribute) EcoreUtil.copy(GMFMapPackage.eINSTANCE.getValueExpression_Language());
+		{
+			Map<String, EStructuralFeature> renamings = new HashMap<String, EStructuralFeature>();
+			renamings.put(myFeatureValueSpec_Body.getName(), myFeatureValueSpec_Body);
+			renamings.put(myFeatureValueSpec_Language.getName(), myFeatureValueSpec_Language);
+			registerRenamedAttributes(GMFMapPackage.eINSTANCE.getFeatureValueSpec(), renamings);
+		}
+	}
+
+	@@Override
+	public boolean setValue(EObject object, EStructuralFeature feature, Object value, int position) {
+		if (myLabelMapping_ViewPattern.equals(feature)) {
+			LabelMapping mapping = (LabelMapping) object;
+			String viewPattern = (String) value;
+			FeatureLabelMapping migratedMapping = saveFeatureLabelMappingFor(mapping);
+			migratedMapping.setViewPattern(viewPattern);
+			fireMigrationApplied(true);
+		} else if (myLabelMapping_EditPattern.equals(feature)) {
+			LabelMapping mapping = (LabelMapping) object;
+			String editPattern = (String) value;
+			FeatureLabelMapping migratedMapping = saveFeatureLabelMappingFor(mapping);
+			migratedMapping.setViewPattern(editPattern);
+			fireMigrationApplied(true);
+		} else if (myLabelMapping_Features.equals(feature)) {
+			LabelMapping mapping = (LabelMapping) object;
+			EAttribute attribute = (EAttribute) value;
+			FeatureLabelMapping migratedMapping = saveFeatureLabelMappingFor(mapping);
+			migratedMapping.getFeatures().add(attribute);
+			fireMigrationApplied(true);
+		} else if (myFeatureValueSpec_Body.equals(feature)) {
+			FeatureValueSpec featureRef = (FeatureValueSpec) object;
+			String body = (String) value;
+			ValueExpression constraint = getOrCreateValueExpression(featureRef);
+			constraint.setBody(body);
+			fireMigrationApplied(true);
+		} else if (myFeatureValueSpec_Language.equals(feature)) {
+			FeatureValueSpec featureRef = (FeatureValueSpec) object;
+			ValueExpression constraint = getOrCreateValueExpression(featureRef);
+			Language lang = Language.get((String) value);
+			constraint.setLanguage(lang);
+			fireMigrationApplied(true);
+		} else {
+			// other cases are would be processed as defaults
+			return super.setValue(object, feature, value, position);
+		}
+		return true;
+	}
+
+	private ValueExpression getOrCreateValueExpression(FeatureValueSpec featureRef) {
+		ValueExpression constraint = featureRef.getValue();
+		if (constraint == null) {
+			constraint = GMFMapFactory.eINSTANCE.createValueExpression();
+			featureRef.setValue(constraint);
+		}
+		return constraint;
+	}
+
+	private FeatureLabelMapping saveFeatureLabelMappingFor(LabelMapping labelMapping) {
+		FeatureLabelMapping migrated = myLabelMappingMigrations.get(labelMapping);
+		if (migrated == null) {
+			migrated = GMFMapFactory.eINSTANCE.createFeatureLabelMapping();
+			myLabelMappingMigrations.put(labelMapping, migrated);
+		}
+		return migrated;
+	}
+	
+	@@Override
+	public void preResolve() {
+		for (LabelMapping mapping : myLabelMappingMigrations.keySet()) {
+			FeatureLabelMapping migrated = myLabelMappingMigrations.get(mapping);
+			if (!migrated.getFeatures().isEmpty()) {
+				MappingEntry entry = mapping.getMapEntry();
+				EList<LabelMapping> labelMappings = entry.getLabelMappings();
+				int originalIndex = labelMappings.indexOf(mapping);
+				if (originalIndex != -1) {
+					migrated.setDiagramLabel(mapping.getDiagramLabel());
+					if (mapping.isReadOnly()) {
+						migrated.setReadOnly(true);
+					}
+					labelMappings.set(originalIndex, migrated);
+				}
+			}
+		}
+	}
+}
+@
+
+
+1.6
+log
+@[227506] migration for FeatureValueSpec->ValueExpression refactoring.
+Presently handled the same way as previous migrations, i.e. with load handling (not model transformation), thus dynamic_packages registration commented out
+Test for patch_137440 reverted to original state as it should not use 2008's model structure.
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2007 Borland Software Corporation
+d33 1
+a33 1
+	private Map<LabelMapping, FeatureLabelMapping> myLabelMappingMigrations;
+d41 1
+a69 2
+		
+		myLabelMappingMigrations = null;
+a120 3
+		if (myLabelMappingMigrations == null) {
+			myLabelMappingMigrations = new HashMap<LabelMapping, FeatureLabelMapping>();
+		}
+a128 4
+	private Map<LabelMapping, FeatureLabelMapping> getSavedLabelMappingMigrations() {
+		return myLabelMappingMigrations;
+	}
+
+d131 2
+a132 5
+		if (getSavedLabelMappingMigrations() == null) {
+			return;
+		}
+		for (LabelMapping mapping : getSavedLabelMappingMigrations().keySet()) {
+			FeatureLabelMapping migrated = getSavedLabelMappingMigrations().get(mapping);
+@
+
+
+1.5
+log
+@[189703] akarjakina - migration for gmfgraph, handle figure accessors
+@
+text
+@d24 1
+d28 1
+d30 1
+d37 2
+d61 9
+d93 12
+d112 9
+@
+
+
+1.4
+log
+@[188768] akarjakina - Migration should not rely solely on nsURIs;
+MIgrationHelperDelegate was renamed to MigrationDelegate
+@
+text
+@d103 1
+a103 1
+	public void postProcess() {
+@
+
+
+1.3
+log
+@[187811] akarjakina - migrating gmf 1.0 models to 2.0, refactoring, tests
+@
+text
+@d13 2
+a14 3
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+d17 1
+d19 4
+a22 1
+import org.eclipse.gmf.internal.common.migrate.MigrationHelperDelegateImpl;
+d24 1
+d29 5
+a33 3
+class MigrationDelegate extends MigrationHelperDelegateImpl {
+	private Collection<FeatureLabelMapping> myFeatureLabelMappings;
+	private Collection<String> myBackwardSupportedURIs;
+d39 18
+a56 3
+		registerNarrowReferenceType(GMFMapPackage.eINSTANCE.getFeatureSeqInitializer_Initializers(), GMFMapPackage.eINSTANCE.getFeatureValueSpec());
+		registerNarrowReferenceType(GMFMapPackage.eINSTANCE.getMappingEntry_LabelMappings(), GMFMapPackage.eINSTANCE.getFeatureLabelMapping());
+		myFeatureLabelMappings = null;
+d60 40
+a99 2
+	public boolean isOldVersionDetected(String uriString) {
+		return !getMetamodelNsURI().equals(uriString) && getBackwardSupportedURIs().contains(uriString);
+d104 1
+a104 1
+		if (myFeatureLabelMappings == null) {
+d107 3
+a109 2
+		for (FeatureLabelMapping mapping : getSavedFeatureLabelMappings()) {
+			if (mapping.getFeatures().isEmpty()) {
+d114 1
+a114 2
+					LabelMapping newMapping = GMFMapPackage.eINSTANCE.getGMFMapFactory().createLabelMapping();
+					newMapping.setDiagramLabel(mapping.getDiagramLabel());
+d116 1
+a116 1
+						newMapping.setReadOnly(true);
+d118 1
+a118 1
+					labelMappings.set(originalIndex, newMapping);
+a122 28
+
+	@@Override
+	public void processObject(EObject result) {
+		if (result instanceof FeatureLabelMapping) {
+			getSavedFeatureLabelMappings().add((FeatureLabelMapping) result);
+		}
+	}
+	
+	private Collection<FeatureLabelMapping> getSavedFeatureLabelMappings() {
+		if (myFeatureLabelMappings == null) {
+			myFeatureLabelMappings = new ArrayList<FeatureLabelMapping>();
+		}
+		return myFeatureLabelMappings;
+	}
+
+	protected Collection<String> getBackwardSupportedURIs() {
+		if (myBackwardSupportedURIs == null) {
+			myBackwardSupportedURIs = Arrays.asList(new String[] {
+					"http://www.eclipse.org/gmf/2005/mappings", //$NON-NLS-1$
+					"http://www.eclipse.org/gmf/2005/mappings/2.0" //$NON-NLS-1$
+			});
+		}
+		return myBackwardSupportedURIs;
+	}
+
+	protected String getMetamodelNsURI() {
+		return GMFMapPackage.eNS_URI;
+	}
+@
+
+
+1.2
+log
+@do not process up-to-date versions of the model, consult delegate only when old version was detected;
+moved base delegate impl out from helper class
+@
+text
+@d14 1
+d17 1
+d27 1
+d35 6
+d45 3
+d51 9
+a59 5
+				entry.getLabelMappings().remove(mapping);
+				LabelMapping newMapping = GMFMapPackage.eINSTANCE.getGMFMapFactory().createLabelMapping();
+				newMapping.setDiagramLabel(mapping.getDiagramLabel());
+				if (mapping.isReadOnly()) {
+					newMapping.setReadOnly(true);
+a60 1
+				entry.getLabelMappings().add(newMapping);
+d78 14
+@
+
+
+1.1
+log
+@[187811] akarjakina - Migration support refactored
+@
+text
+@d17 1
+a17 1
+import org.eclipse.gmf.internal.common.migrate.MigrationHelper;
+d23 1
+a23 1
+class MigrationDelegate extends MigrationHelper.MigrationHelperDelegateImpl {
+@
+

@@ -1,0 +1,955 @@
+head	1.9;
+access;
+symbols
+	R1_0_maintenance:1.9.0.2
+	R1_0:1.9
+	I20060227-1730:1.8
+	I20060216-1945:1.7
+	I20060210-1715:1.7
+	I20060209-1815:1.7
+	I20060203-0830:1.7
+	I20060129-1145:1.7
+	I20060127-0900:1.7
+	I20060120-1530:1.7;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.9
+date	2006.03.01.14.20.27;	author dstadnik;	state dead;
+branches;
+next	1.8;
+
+1.8
+date	2006.02.24.10.38.12;	author dstadnik;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2006.01.19.10.35.12;	author dstadnik;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2006.01.19.08.59.09;	author dstadnik;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.01.19.08.55.04;	author dstadnik;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.01.18.15.37.07;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.01.18.13.09.20;	author dstadnik;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.01.18.11.39.51;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.01.17.17.41.37;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.9
+log
+@#129930 move dashboard in separate plugin
+@
+text
+@/*
+ * Copyright (c) 2006 Eclipse.org
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    dstadnik - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.dashboard;
+
+import org.eclipse.draw2d.AbstractLayout;
+import org.eclipse.draw2d.ColorConstants;
+import org.eclipse.draw2d.Figure;
+import org.eclipse.draw2d.Graphics;
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.ImageFigure;
+import org.eclipse.draw2d.Label;
+import org.eclipse.draw2d.MarginBorder;
+import org.eclipse.draw2d.PolygonDecoration;
+import org.eclipse.draw2d.RectangleFigure;
+import org.eclipse.draw2d.ToolbarLayout;
+import org.eclipse.draw2d.geometry.Dimension;
+import org.eclipse.draw2d.geometry.Insets;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.draw2d.geometry.PointList;
+import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.gmf.internal.codegen.CodeGenUIPlugin;
+import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Image;
+
+/**
+ * @@author dstadnik
+ */
+public class DashboardFigure extends RectangleFigure {
+
+	private static final int LINE_WIDTH = 6;
+
+	private static final int TEXT_GAP = LINE_WIDTH + 3;
+
+	private static final Color DASHBOARD_BG = new Color(null, 113, 104, 209);
+
+	private static final Color DASHBOARD_FG = new Color(null, 169, 164, 227);
+
+	private static final Color MODEL_BG = ColorConstants.white;
+
+	private ImageFigure logoFigure;
+
+	private IFigure statusFigure;
+
+	// models
+
+	private ModelFigure gdmFigure;
+
+	private ModelFigure dmFigure;
+
+	private ModelFigure tdmFigure;
+
+	private ModelFigure mmFigure;
+
+	private ModelFigure gmFigure;
+
+	// flows
+
+	private FlowFigure dm2gdmFlow;
+
+	private FlowFigure dm2tdmFlow;
+
+	private FlowFigure dm2mmFlow;
+
+	private FlowFigure gdm2mmFlow;
+
+	private FlowFigure tdm2mmFlow;
+
+	private FlowFigure mm2gmFlow;
+
+	// flow actions
+
+	private FlowActionFigure dm2gdmFigure;
+
+	private FlowActionFigure dm2tdmFigure;
+
+	private FlowActionFigure dm2mmFigure;
+
+	private FlowActionFigure mm2gmFigure;
+
+	public DashboardFigure() {
+		add(logoFigure = new ImageFigure());
+		Image logoImage = CodeGenUIPlugin.getDefault().getImageRegistry().get(CodeGenUIPlugin.GMF_LOGO_IMAGE);
+		if (logoImage != null) {
+			logoFigure.setImage(logoImage);
+		}
+		add(gdmFigure = createModelFigure("Graphical Definition Model", CodeGenUIPlugin.GDM_ICON));
+		add(dmFigure = createModelFigure("Domain Model", CodeGenUIPlugin.DM_ICON));
+		add(tdmFigure = createModelFigure("Tooling Definition Model", CodeGenUIPlugin.TDM_ICON));
+		add(mmFigure = createModelFigure("Mapping Model", CodeGenUIPlugin.MM_ICON));
+		add(gmFigure = createModelFigure("Generation Model", CodeGenUIPlugin.GM_ICON));
+		add(dm2gdmFlow = createFlowFigure(true));
+		add(dm2tdmFlow = createFlowFigure(true));
+		add(dm2mmFlow = createFlowFigure(true));
+		add(gdm2mmFlow = createFlowFigure(false));
+		add(tdm2mmFlow = createFlowFigure(false));
+		add(mm2gmFlow = createFlowFigure(true));
+		add(dm2gdmFigure = createFlowActionFigure());
+		add(dm2tdmFigure = createFlowActionFigure());
+		add(dm2mmFigure = createFlowActionFigure());
+		add(mm2gmFigure = createFlowActionFigure());
+		add(statusFigure = new Figure());
+		statusFigure.setFont(JFaceResources.getBannerFont());
+		ToolbarLayout statusLayout = new ToolbarLayout();
+		statusLayout.setStretchMinorAxis(false);
+		statusFigure.setLayoutManager(statusLayout);
+		statusFigure.add(new Label());
+		statusFigure.add(new Label());
+		setLayoutManager(new DashboardLayout());
+		setBorder(new MarginBorder(10));
+		setBackgroundColor(DASHBOARD_BG);
+		setForegroundColor(DASHBOARD_FG);
+	}
+
+	public ModelFigure getGDMFigure() {
+		return gdmFigure;
+	}
+
+	public ModelFigure getDMFigure() {
+		return dmFigure;
+	}
+
+	public ModelFigure getTDMFigure() {
+		return tdmFigure;
+	}
+
+	public ModelFigure getMMFigure() {
+		return mmFigure;
+	}
+
+	public ModelFigure getGMFigure() {
+		return gmFigure;
+	}
+
+	public FlowActionFigure getDM2GDMFigure() {
+		return dm2gdmFigure;
+	}
+
+	public FlowActionFigure getDM2TDMFigure() {
+		return dm2tdmFigure;
+	}
+
+	public FlowActionFigure getDM2MMFigure() {
+		return dm2mmFigure;
+	}
+
+	public FlowActionFigure getMM2GMFigure() {
+		return mm2gmFigure;
+	}
+
+	public Label getStatusLine(int i) {
+		return (Label) statusFigure.getChildren().get(i);
+	}
+
+	protected ModelFigure createModelFigure(String description, String iconKey) {
+		ModelFigure modelFigure = new ModelFigure();
+		modelFigure.setDescription(description);
+		Image image = CodeGenUIPlugin.getDefault().getImageRegistry().get(iconKey);
+		if (image != null) {
+			modelFigure.setIcon(image);
+		}
+		modelFigure.setBackgroundColor(MODEL_BG);
+		modelFigure.setForegroundColor(DASHBOARD_FG);
+		modelFigure.setLineWidth(LINE_WIDTH);
+		modelFigure.setSpacing(TEXT_GAP);
+		return modelFigure;
+	}
+
+	protected FlowFigure createFlowFigure(boolean directed) {
+		FlowFigure flowFigure = new FlowFigure();
+		if (directed) {
+			PolygonDecoration decoration = new PolygonDecoration();
+			PointList template = new PointList();
+			template.addPoint(0, -LINE_WIDTH / 2);
+			template.addPoint(0, LINE_WIDTH / 2);
+			template.addPoint(-15, LINE_WIDTH / 2 + 10);
+			template.addPoint(-15, -(LINE_WIDTH / 2 + 10));
+			decoration.setTemplate(template);
+			decoration.setScale(1, 1);
+			flowFigure.setTargetDecoration(decoration);
+		}
+		flowFigure.setForegroundColor(DASHBOARD_FG);
+		flowFigure.setLineWidth(LINE_WIDTH);
+		return flowFigure;
+	}
+
+	protected FlowActionFigure createFlowActionFigure() {
+		FlowActionFigure flowActionFigure = new FlowActionFigure();
+		flowActionFigure.setLayoutManager(new ToolbarLayout());
+		flowActionFigure.setBackgroundColor(MODEL_BG);
+		flowActionFigure.setForegroundColor(DASHBOARD_FG);
+		flowActionFigure.setLineWidth(LINE_WIDTH / 3);
+		flowActionFigure.setBorder(new MarginBorder(TEXT_GAP / 2));
+		return flowActionFigure;
+	}
+
+	protected void outlineShape(Graphics graphics) {
+	}
+
+	private class DashboardLayout extends AbstractLayout {
+
+		private static final int MAX_BOX_WIDTH = 300;
+
+		private static final int BOX_SPACING = 30;
+
+		protected Dimension calculatePreferredSize(IFigure container, int wHint, int hHint) {
+			Dimension d = getLayoutData().getSize();
+			Insets insets = container.getInsets();
+			d = new Dimension(d.width + insets.getWidth(), d.height + insets.getHeight());
+			return d.union(getBorderPreferredSize(container));
+		}
+
+		public void layout(IFigure container) {
+			getLayoutData().apply(container.getClientArea().getLocation());
+		}
+
+		protected LayoutData getLayoutData() {
+			Dimension gdmSize = gdmFigure.getPreferredSize();
+			int dWidth = gdmSize.width;
+			Dimension dmSize = dmFigure.getPreferredSize();
+			dWidth = Math.max(dWidth, dmSize.width);
+			Dimension tdmSize = gdmFigure.getPreferredSize();
+			dWidth = Math.max(dWidth, tdmSize.width);
+			dWidth = Math.min(dWidth, MAX_BOX_WIDTH);
+			gdmSize.width = dWidth;
+			dmSize.width = dWidth;
+			tdmSize.width = dWidth;
+			Dimension mmSize = mmFigure.getPreferredSize();
+			mmSize.width = Math.min(mmSize.width, MAX_BOX_WIDTH);
+			Dimension gmSize = gmFigure.getPreferredSize();
+			gmSize.width = Math.min(gmSize.width, MAX_BOX_WIDTH);
+			Dimension dm2gdmSize = dm2gdmFigure.getPreferredSize();
+			Dimension dm2tdmSize = dm2tdmFigure.getPreferredSize();
+			Dimension dm2mmSize = dm2mmFigure.getPreferredSize();
+			Dimension mm2gmSize = mm2gmFigure.getPreferredSize();
+
+			LayoutData data = new LayoutData();
+
+			// boxes
+			data.gdmBox = new Rectangle(0, 0, gdmSize.width, gdmSize.height);
+			data.dm2gdmBox = new Rectangle((data.gdmBox.width - dm2gdmSize.width) / 2, data.gdmBox.y + data.gdmBox.height + BOX_SPACING, dm2gdmSize.width, dm2gdmSize.height);
+			data.dmBox = new Rectangle(0, data.dm2gdmBox.y + data.dm2gdmBox.height + BOX_SPACING, dmSize.width, dmSize.height);
+			data.dm2tdmBox = new Rectangle((data.dmBox.width - dm2tdmSize.width) / 2, data.dmBox.y + data.dmBox.height + BOX_SPACING, dm2tdmSize.width, dm2tdmSize.height);
+			data.tdmBox = new Rectangle(0, data.dm2tdmBox.y + data.dm2tdmBox.height + BOX_SPACING, tdmSize.width, tdmSize.height);
+			data.dm2mmBox = new Rectangle(data.dmBox.x + data.dmBox.width + BOX_SPACING, data.dmBox.y + (data.dmBox.height - dm2mmSize.height) / 2, dm2mmSize.width, dm2mmSize.height);
+			data.mmBox = new Rectangle(data.dm2mmBox.x + data.dm2mmBox.width + BOX_SPACING, data.dmBox.y, mmSize.width, mmSize.height);
+			data.mm2gmBox = new Rectangle(data.mmBox.x + data.mmBox.width + BOX_SPACING, data.mmBox.y + (data.mmBox.height - mm2gmSize.height) / 2, mm2gmSize.width, mm2gmSize.height);
+			data.gmBox = new Rectangle(data.mm2gmBox.x + data.mm2gmBox.width + BOX_SPACING, data.dmBox.y, gmSize.width, gmSize.height);
+
+			// points
+			int pointsX = data.dmBox.x + data.dmBox.width / 2;
+			data.dm2gdmPoints = new PointList(2);
+			data.dm2gdmPoints.addPoint(pointsX, data.dmBox.y);
+			data.dm2gdmPoints.addPoint(pointsX, data.gdmBox.y + data.gdmBox.height);
+			data.dm2tdmPoints = new PointList(2);
+			data.dm2tdmPoints.addPoint(pointsX, data.dmBox.y + data.dmBox.height);
+			data.dm2tdmPoints.addPoint(pointsX, data.tdmBox.y);
+			int pointsY = data.dmBox.y + data.dmBox.height / 2;
+			data.dm2mmPoints = new PointList(2);
+			data.dm2mmPoints.addPoint(data.dmBox.x + data.dmBox.width, pointsY);
+			data.dm2mmPoints.addPoint(data.mmBox.x, pointsY);
+			int crossX = data.dm2mmBox.x + data.dm2mmBox.width / 2;
+			data.gdm2mmPoints = new PointList(3);
+			data.gdm2mmPoints.addPoint(data.gdmBox.x + data.gdmBox.width, data.gdmBox.y + data.gdmBox.height / 2);
+			data.gdm2mmPoints.addPoint(crossX, data.gdmBox.y + data.gdmBox.height / 2);
+			data.gdm2mmPoints.addPoint(crossX, pointsY);
+			data.tdm2mmPoints = new PointList(3);
+			data.tdm2mmPoints.addPoint(data.tdmBox.x + data.tdmBox.width, data.tdmBox.y + data.tdmBox.height / 2);
+			data.tdm2mmPoints.addPoint(crossX, data.tdmBox.y + data.tdmBox.height / 2);
+			data.tdm2mmPoints.addPoint(crossX, pointsY);
+			data.mm2gmPoints = new PointList(2);
+			data.mm2gmPoints.addPoint(data.mmBox.x + data.mmBox.width, pointsY);
+			data.mm2gmPoints.addPoint(data.gmBox.x, pointsY);
+
+			// logo and status
+			Dimension logoSize = logoFigure.getPreferredSize();
+			int logoX = Math.max(data.mmBox.x, data.gmBox.x + data.gmBox.width - logoSize.width);
+			data.logoBox = new Rectangle(logoX, 0, logoSize.width, logoSize.height);
+			Dimension statusSize = statusFigure.getPreferredSize();
+			int statusRoof = Math.max(data.mmBox.y + data.mmBox.height, data.gmBox.y + data.gmBox.height) + TEXT_GAP;
+			data.statusBox = new Rectangle(data.mmBox.x, Math.max(statusRoof, data.tdmBox.y), statusSize.width, statusSize.height);
+
+			return data;
+		}
+
+		private class LayoutData {
+
+			public Rectangle logoBox;
+
+			public Rectangle statusBox;
+
+			public Rectangle gdmBox;
+
+			public Rectangle dmBox;
+
+			public Rectangle tdmBox;
+
+			public Rectangle mmBox;
+
+			public Rectangle gmBox;
+
+			public PointList dm2gdmPoints;
+
+			public PointList dm2tdmPoints;
+
+			public PointList dm2mmPoints;
+
+			public PointList gdm2mmPoints;
+
+			public PointList tdm2mmPoints;
+
+			public PointList mm2gmPoints;
+
+			public Rectangle dm2gdmBox;
+
+			public Rectangle dm2tdmBox;
+
+			public Rectangle dm2mmBox;
+
+			public Rectangle mm2gmBox;
+
+			public void apply(Point offset) {
+				logoFigure.setBounds(logoBox.getTranslated(offset));
+				statusFigure.setBounds(statusBox.getTranslated(offset));
+				gdmFigure.setBounds(gdmBox.getTranslated(offset));
+				dmFigure.setBounds(dmBox.getTranslated(offset));
+				tdmFigure.setBounds(tdmBox.getTranslated(offset));
+				mmFigure.setBounds(mmBox.getTranslated(offset));
+				gmFigure.setBounds(gmBox.getTranslated(offset));
+				dm2gdmFlow.setPoints(getTranslated(dm2gdmPoints, offset));
+				dm2tdmFlow.setPoints(getTranslated(dm2tdmPoints, offset));
+				dm2mmFlow.setPoints(getTranslated(dm2mmPoints, offset));
+				gdm2mmFlow.setPoints(getTranslated(gdm2mmPoints, offset));
+				tdm2mmFlow.setPoints(getTranslated(tdm2mmPoints, offset));
+				mm2gmFlow.setPoints(getTranslated(mm2gmPoints, offset));
+				dm2gdmFigure.setBounds(dm2gdmBox.getTranslated(offset));
+				dm2tdmFigure.setBounds(dm2tdmBox.getTranslated(offset));
+				dm2mmFigure.setBounds(dm2mmBox.getTranslated(offset));
+				mm2gmFigure.setBounds(mm2gmBox.getTranslated(offset));
+			}
+
+			private PointList getTranslated(PointList source, Point offset) {
+				PointList target = new PointList(source.size());
+				target.addAll(source);
+				target.translate(offset);
+				return target;
+			}
+
+			public Dimension getSize() {
+				Rectangle bounds = logoBox.getCopy();
+				bounds.union(statusBox);
+				bounds.union(gdmBox);
+				bounds.union(dmBox);
+				bounds.union(tdmBox);
+				bounds.union(mmBox);
+				bounds.union(gmBox);
+				return bounds.getSize();
+			}
+		}
+	}
+}
+@
+
+
+1.8
+log
+@use icons for node/link/label checkbox columns
+@
+text
+@@
+
+
+1.7
+log
+@refactor hyperlinks
+@
+text
+@d92 1
+a92 1
+		Image logoImage = CodeGenUIPlugin.getDefault().getImageRegistry().get(CodeGenUIPlugin.GMF_LOGO);
+@
+
+
+1.6
+log
+@place logo more to the right
+@
+text
+@a21 2
+import org.eclipse.draw2d.MouseEvent;
+import org.eclipse.draw2d.MouseListener;
+d160 4
+a205 40
+	public IFigure createLinkFigure(String text, final DashboardAction action) {
+		Label label = new Label() {
+
+			protected void paintFigure(Graphics graphics) {
+				Color color = graphics.getForegroundColor();
+				if (action.isEnabled()) {
+					graphics.setForegroundColor(ColorConstants.blue);
+				} else {
+					graphics.setForegroundColor(ColorConstants.gray);
+				}
+				super.paintFigure(graphics);
+				Rectangle bounds = getBounds();
+				int y = bounds.y + bounds.height - (getLineWidth());
+				graphics.drawLine(bounds.x, y, bounds.x + bounds.width, y);
+				graphics.setForegroundColor(color);
+			}
+		};
+		label.setText(text);
+		label.addMouseListener(new MouseListener() {
+
+			public void mouseDoubleClicked(MouseEvent me) {
+			}
+
+			public void mousePressed(MouseEvent me) {
+				if (action.isEnabled()) {
+					action.run();
+				}
+			}
+
+			public void mouseReleased(MouseEvent me) {
+			}
+
+		});
+		return label;
+	}
+
+	public Label getStatusLine(int i) {
+		return (Label) statusFigure.getChildren().get(i);
+	}
+
+d284 1
+@
+
+
+1.5
+log
+@make view more compact
+@
+text
+@d323 2
+a324 1
+			data.logoBox = new Rectangle(data.mmBox.x, 0, logoSize.width, logoSize.height);
+@
+
+
+1.4
+log
+@show model file names
+@
+text
+@d44 1
+a44 1
+	private static final int TEXT_GAP = LINE_WIDTH * 2;
+d121 1
+a121 1
+		setBorder(new MarginBorder(20));
+@
+
+
+1.3
+log
+@refactor dashboard figure (separate controller from view)
+@
+text
+@d98 5
+a102 5
+		add(gdmFigure = createModelFigure("Graphical Definition Model"));
+		add(dmFigure = createModelFigure("Domain Model"));
+		add(tdmFigure = createModelFigure("Tooling Definition Model"));
+		add(mmFigure = createModelFigure("Mapping Model"));
+		add(gmFigure = createModelFigure("Generation Model"));
+d162 1
+a162 1
+	protected ModelFigure createModelFigure(String description) {
+d165 4
+d249 1
+a249 1
+		private static final int MAX_BOX_WIDTH = 200;
+@
+
+
+1.2
+log
+@better presentation options
+@
+text
+@a13 3
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.Path;
+a31 3
+import org.eclipse.emf.ecore.presentation.EcoreModelWizard;
+import org.eclipse.gmf.codegen.gmfgen.presentation.GMFGenModelWizard;
+import org.eclipse.gmf.gmfgraph.presentation.GMFGraphModelWizard;
+a32 10
+import org.eclipse.gmf.internal.codegen.FileSelector;
+import org.eclipse.gmf.internal.codegen.popup.actions.ExecuteTemplatesAction;
+import org.eclipse.gmf.internal.codegen.popup.actions.TransformToGenModel;
+import org.eclipse.gmf.internal.codegen.wizards.GMFGraphSimpleModelWizard;
+import org.eclipse.gmf.internal.codegen.wizards.GMFToolSimpleModelWizard;
+import org.eclipse.gmf.internal.codegen.wizards.NewGMFMapModelWizard;
+import org.eclipse.gmf.mappings.presentation.GMFMapModelWizard;
+import org.eclipse.gmf.tooldef.presentation.GMFToolModelWizard;
+import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IAction;
+a33 4
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.wizard.IWizard;
+import org.eclipse.jface.wizard.WizardDialog;
+a35 4
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.IWorkbenchWizard;
+import org.eclipse.ui.PlatformUI;
+a51 6
+	private Shell shell;
+
+	private IProject project;
+
+	private DashboardState state;
+
+d92 1
+a92 3
+	public DashboardFigure(Shell shell) {
+		state = new DashboardState();
+		this.shell = shell;
+d98 5
+a102 117
+		final String gdmLabel = "Graphical Definition Model";
+		add(gdmFigure = createModelFigure(gdmLabel, new SelectFileAction() {
+
+			protected String getDescription() {
+				return gdmLabel;
+			}
+
+			protected String getFileName() {
+				return state.gdmFileName;
+			}
+
+			protected String setFileName(String fileName) {
+				return state.gdmFileName = fileName;
+			}
+		}, new RunWizardAction() {
+
+			protected IWizard createWizard() {
+				return new GMFGraphModelWizard();
+			}
+		}));
+		final String dmLabel = "Domain Model";
+		add(dmFigure = createModelFigure(dmLabel, new SelectFileAction() {
+
+			protected String getDescription() {
+				return dmLabel;
+			}
+
+			protected String getFileName() {
+				return state.dmFileName;
+			}
+
+			protected String setFileName(String fileName) {
+				return state.dmFileName = fileName;
+			}
+		}, new RunWizardAction() {
+
+			protected IWizard createWizard() {
+				return new EcoreModelWizard();
+			}
+		}));
+		final String tdmLabel = "Tooling Definition Model";
+		add(tdmFigure = createModelFigure(tdmLabel, new SelectFileAction() {
+
+			protected String getDescription() {
+				return tdmLabel;
+			}
+
+			protected String getFileName() {
+				return state.tdmFileName;
+			}
+
+			protected String setFileName(String fileName) {
+				return state.tdmFileName = fileName;
+			}
+		}, new RunWizardAction() {
+
+			protected IWizard createWizard() {
+				return new GMFToolModelWizard();
+			}
+		}));
+		final String mmLabel = "Mapping Model";
+		add(mmFigure = createModelFigure(mmLabel, new SelectFileAction() {
+
+			protected String getDescription() {
+				return mmLabel;
+			}
+
+			protected String getFileName() {
+				return state.mmFileName;
+			}
+
+			protected String setFileName(String fileName) {
+				return state.mmFileName = fileName;
+			}
+		}, new RunWizardAction() {
+
+			protected IWizard createWizard() {
+				return new GMFMapModelWizard();
+			}
+		}));
+		final String gmLabel = "Generation Model";
+		add(gmFigure = createModelFigure(gmLabel, new SelectFileAction() {
+
+			protected String getDescription() {
+				return gmLabel;
+			}
+
+			protected String getFileName() {
+				return state.gmFileName;
+			}
+
+			protected String setFileName(String fileName) {
+				return state.gmFileName = fileName;
+			}
+		}, new RunWizardAction() {
+
+			protected IWizard createWizard() {
+				return new GMFGenModelWizard();
+			}
+		}));
+		gmFigure.addAction(createLinkFigure("Generate diagram editor", new DashboardAction() {
+
+			public boolean isEnabled() {
+				return project != null && state.gmFileName != null;
+			}
+
+			public void run() {
+				IFile file = getFile(state.gmFileName);
+				ExecuteTemplatesAction action = new ExecuteTemplatesAction();
+				IAction uiAction = new Action() {
+				};
+				IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+				action.setActivePart(uiAction, window.getPartService().getActivePart());
+				action.selectionChanged(uiAction, new StructuredSelection(file));
+				action.run(uiAction);
+			}
+		}));
+d109 4
+a112 55
+		add(dm2gdmFigure = createFlowActionFigure(new RunWizardAction() {
+
+			public boolean isEnabled() {
+				return super.isEnabled() && state.dmFileName != null;
+			}
+
+			protected IWizard createWizard() {
+				return new GMFGraphSimpleModelWizard();
+			}
+
+			protected IStructuredSelection getSelection() {
+				return new StructuredSelection(getFile(state.dmFileName));
+			}
+		}));
+		add(dm2tdmFigure = createFlowActionFigure(new RunWizardAction() {
+
+			public boolean isEnabled() {
+				return super.isEnabled() && state.dmFileName != null;
+			}
+
+			protected IWizard createWizard() {
+				return new GMFToolSimpleModelWizard();
+			}
+
+			protected IStructuredSelection getSelection() {
+				return new StructuredSelection(getFile(state.dmFileName));
+			}
+		}));
+		add(dm2mmFigure = createFlowActionFigure(new RunWizardAction() {
+
+			public boolean isEnabled() {
+				return project != null && state.dmFileName != null;
+			}
+
+			protected IWizard createWizard() {
+				return new NewGMFMapModelWizard();
+			}
+		}));
+		add(mm2gmFigure = createFlowActionFigure(new DashboardAction() {
+
+			public boolean isEnabled() {
+				return project != null && state.mmFileName != null;
+			}
+
+			public void run() {
+				IFile file = getFile(state.mmFileName);
+				TransformToGenModel action = new TransformToGenModel();
+				IAction uiAction = new Action() {
+				};
+				IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+				action.setActivePart(uiAction, window.getPartService().getActivePart());
+				action.selectionChanged(uiAction, new StructuredSelection(file));
+				action.run(uiAction);
+			}
+		}));
+d126 37
+a162 1
+	protected ModelFigure createModelFigure(String description, DashboardAction selectAction, DashboardAction createAction) {
+a164 2
+		modelFigure.addAction(createLinkFigure("Select", selectAction));
+		modelFigure.addAction(createLinkFigure("Create", createAction));
+d190 1
+a190 1
+	protected FlowActionFigure createFlowActionFigure(DashboardAction generateAction) {
+a192 2
+		IFigure generateLabel = createLinkFigure("Generate", generateAction);
+		flowActionFigure.add(generateLabel);
+d200 1
+a200 1
+	protected IFigure createLinkFigure(String text, final DashboardAction action) {
+d236 1
+a236 1
+	protected Label getStatusLine(int i) {
+a242 32
+	protected IFile getFile(String fileName) {
+		return project.getFile(new Path(fileName));
+	}
+
+	public IProject getProject() {
+		return project;
+	}
+
+	public DashboardState getState() {
+		return state;
+	}
+
+	public void setProjectAndState(IProject project, DashboardState state) {
+		this.project = project;
+		this.state = state;
+		if (this.state == null) {
+			this.state = new DashboardState();
+		}
+		updateStatus();
+	}
+
+	protected void updateStatus() {
+		if (project == null) {
+			getStatusLine(0).setText("");
+		} else {
+			getStatusLine(0).setText("Project: " + project.getName());
+		}
+		int done = state.getSpecifiedModelsCount() * 100 / state.getModelsCount();
+		getStatusLine(1).setText("Progress: " + done + "% done");
+		repaint();
+	}
+
+a401 56
+
+	protected abstract class SelectFileAction implements DashboardAction {
+
+		public boolean isEnabled() {
+			return project != null;
+		}
+
+		public void run() {
+			IFile file = null;
+			String fileName = getFileName();
+			if (fileName != null) {
+				file = getFile(fileName);
+			}
+			file = FileSelector.selectFile(shell, getDescription(), file);
+			if (file == null) {
+				setFileName(null);
+			} else {
+				setFileName(file.getProjectRelativePath().toString());
+			}
+			updateStatus();
+		}
+
+		protected abstract String getDescription();
+
+		protected abstract String getFileName();
+
+		protected abstract String setFileName(String fileName);
+	}
+
+	protected abstract class RunWizardAction implements DashboardAction {
+
+		private static final int SIZING_WIZARD_WIDTH = 500;
+
+		private static final int SIZING_WIZARD_HEIGHT = 500;
+
+		public boolean isEnabled() {
+			return project != null;
+		}
+
+		public void run() {
+			IWizard wizard = createWizard();
+			if (wizard instanceof IWorkbenchWizard) {
+				((IWorkbenchWizard) wizard).init(PlatformUI.getWorkbench(), getSelection());
+			}
+			WizardDialog dialog = new WizardDialog(shell, wizard);
+			dialog.create();
+			dialog.getShell().setSize(Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x), SIZING_WIZARD_HEIGHT);
+			dialog.open();
+		}
+
+		protected IStructuredSelection getSelection() {
+			return new StructuredSelection(project);
+		}
+
+		protected abstract IWizard createWizard();
+	}
+@
+
+
+1.1
+log
+@#124173 provide gmf dashboard
+@
+text
+@d22 1
+d38 1
+d49 1
+d55 1
+d66 9
+a74 1
+	private static final int TEXT_GAP = 6;
+d82 2
+d125 5
+a129 4
+
+		// setBackgroundColor(new Color(null, 130, 133, 178));
+		setBackgroundColor(new Color(null, 113, 104, 209));
+
+d309 1
+d316 3
+a318 1
+		setBorder(new MarginBorder(30));
+d326 4
+a329 4
+		modelFigure.setCornerDimensions(new Dimension(TEXT_GAP, TEXT_GAP));
+		// modelFigure.setBackgroundColor(new Color(null, 219, 219, 219));
+		modelFigure.setBackgroundColor(ColorConstants.white);
+		modelFigure.setLineWidth(2);
+d336 9
+a344 1
+			flowFigure.setTargetDecoration(new PolygonDecoration());
+d346 2
+a347 1
+		// flowFigure.setLineWidth(2);
+a352 1
+		flowActionFigure.setBorder(new MarginBorder(TEXT_GAP));
+d356 4
+a359 3
+		// flowActionFigure.setBackgroundColor(new Color(null, 219, 219, 219));
+		flowActionFigure.setBackgroundColor(ColorConstants.white);
+		flowActionFigure.setLineWidth(2);
+d442 1
+a442 1
+		private static final int BOX_SPACING = 50;
+d513 2
+d516 2
+a517 1
+			data.statusBox = new Rectangle(data.mmBox.x, Math.max(data.mmBox.y + data.mmBox.height, data.gmBox.y + data.gmBox.height) + BOX_SPACING, statusSize.width, statusSize.height);
+d524 2
+d559 1
+d586 2
+a587 1
+				Rectangle bounds = statusBox.getCopy();
+@
+

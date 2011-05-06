@@ -1,0 +1,411 @@
+head	1.4;
+access;
+symbols
+	v20081020-0700:1.4
+	v20080722-1827:1.4
+	R2_1_maintenance:1.4.0.6
+	Root_R2_1_maintenance:1.4
+	R2_1_0:1.4
+	v20080425-1959:1.4
+	v20080222-1200:1.4
+	v20070809-0000:1.4
+	R2_0_maintenance:1.4.0.4
+	R2_0:1.4
+	R4_20:1.4
+	RC3_20:1.4
+	v20070601-1400:1.4
+	v20070330-1300:1.4
+	M4_20:1.4
+	v20061214-0000:1.4
+	M3_20:1.4
+	v20061013-1330:1.4
+	v20061012-1100:1.4
+	v20060925-1700:1.4
+	v20060919-0800:1.4
+	M1_20:1.4
+	v20060810-1700:1.4
+	v20060713-1700:1.4
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	v20060627-1200:1.4
+	v20060616-1200:1.4
+	v20060531-1730:1.4
+	I20060505-1400:1.4
+	I20060424-0500:1.4
+	I20060424-0300:1.4
+	M6_10:1.4
+	I20060407-1200:1.4
+	I20060331-1000:1.4
+	I20060324-0300:1.4
+	I20060317-1300:1.4
+	I20060317-1200:1.4
+	I20060316-1300:1.4
+	I20060309-1300:1.4
+	M5_10:1.4
+	S20060303-1600:1.4
+	I20060227-1730:1.4
+	I20060216-1945:1.4
+	I20060210-1715:1.3
+	I20060209-1815:1.3
+	I20060203-0830:1.3
+	I20060129-1145:1.3
+	I20060127-0900:1.3
+	I20060120-1530:1.3
+	I20060113-1700:1.3
+	M4_10:1.3
+	I20060107-1100:1.3
+	I20060105-1630:1.3
+	I20051230-1230:1.3
+	I20051223-1100:1.3
+	I20051217-0925:1.3
+	M3_10:1.3
+	I20051118-1245:1.3
+	I20051111-1800:1.3
+	I20051106-0900:1.3
+	v20051030:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2006.02.13.19.11.13;	author ldamus;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.10.12.20.55.16;	author ahunter;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.24.06;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.53;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[112826] gmf_head ldamus 060213 Adopt Eclipse 3.1 Operation History Framework
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2003, 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.emf.ui.properties.commands;
+
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+import org.eclipse.ui.views.properties.IPropertySource;
+
+/**
+ * Command to restore a property value to its default value using the
+ * {@@link org.eclipse.ui.views.properties.IPropertySource#resetPropertyValue(java.lang.Object)}
+ * method.
+ * <P>
+ * This command is undoable and redoable.
+ * <P>
+ * @@author ldamus
+ */
+public class RestoreDefaultPropertyValueCommand extends AbstractTransactionalCommand {
+
+	/**
+	 * Flag to indicate that the property value was reset by this command. The
+	 * property value is not reset to its default if the property source's
+	 * <code>isPropertySet()</code> method returns <code>false</code>.
+	 */
+	private boolean valueResetOnUndo = false;
+
+	/**
+	 * The property source that owns the property to be restored to its 
+	 * default value.
+	 */
+	private final IPropertySource propertySource;
+
+	/**
+	 * The ID of the property whose default value is to be restored.
+	 */
+	private final Object propertyId;
+
+	/**
+	 * The property value which is used when this command execution is undone.
+	 */
+	private Object undoValue;
+
+	/**
+	 * Constructs a new command with the property source and the id of the
+	 * property to be reset.
+	 * 
+     * @@param editingDomain the editing domain in which to make the change
+	 * @@param label The label for the command. Appears in the Edit menu items.
+	 * @@param affectedObjects The model operation context for the new model command.
+	 * @@param propertySource The property source that owns the property
+	 * 						 whose value is to be reset.
+	 * @@param propertyId The ID of the property to be reset.
+	 */
+	public RestoreDefaultPropertyValueCommand(TransactionalEditingDomain editingDomain,  
+		String label,
+		Object affectedObjects,
+		IPropertySource propertySource,
+		Object propertyId) {
+
+		super(
+            editingDomain,
+            label,
+            (affectedObjects instanceof EObject) ? getWorkspaceFiles((EObject) affectedObjects)
+                : null);
+        this.propertySource = propertySource;
+		this.propertyId = propertyId;
+	}
+
+	public boolean canRedo() {
+		return true;
+	}
+
+	public boolean canUndo() {
+		return true;
+	}
+
+	protected CommandResult doExecuteWithResult(
+            IProgressMonitor progressMonitor, IAdaptable info)
+        throws ExecutionException {
+
+		CommandResult result;
+		setValueResetOnUndo(getPropertySource().isPropertySet(getPropertyId()));
+
+		if (isValueResetOnUndo()) {
+			setUndoValue(getPropertySource().getPropertyValue(getPropertyId()));
+			getPropertySource().resetPropertyValue(getPropertyId());
+			result =
+				CommandResult.newOKCommandResult(
+					getPropertySource().getPropertyValue(getPropertyId()));
+
+		} else {
+			undoValue = null;
+			result = CommandResult.newOKCommandResult();
+		}
+		return result;
+	}
+
+	protected CommandResult doRedoWithResult(IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException {
+		return doExecuteWithResult(progressMonitor, info);
+	}
+
+	protected CommandResult doUndoWithResult(IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException {
+		CommandResult result;
+		if (isValueResetOnUndo()) {
+			getPropertySource().setPropertyValue(
+				getPropertyId(),
+				getUndoValue());
+			result = CommandResult.newOKCommandResult(getUndoValue());
+		} else {
+			getPropertySource().resetPropertyValue(getPropertyId());
+			result =
+                CommandResult.newOKCommandResult(
+					getPropertySource().getPropertyValue(getPropertyId()));
+		}
+		return result;
+	}
+
+	/**
+	 * Gets the flag that indicates that the property value was reset by this
+	 * command. The property value is not reset to its default if the property
+	 * source's <code>isPropertySet()</code> method returns <code>false</code>.
+	 * 
+	 * @@return <code>true</code> if the property value was reset by this command,
+	 * 		   <code>false</code> otherwise.
+	 */
+	protected boolean isValueResetOnUndo() {
+		return valueResetOnUndo;
+	}
+
+	/**
+	 * Sets the flag that indicates that the property value was reset by this
+	 * command. The property value is not reset to its default if the property
+	 * source's <code>isPropertySet()</code> method returns <code>false</code>.
+	 * 
+	 * @@param b <code>true</code> if the property value was reset by this command,
+	 * 		    <code>false</code> otherwise.
+	 */
+	protected void setValueResetOnUndo(boolean b) {
+		valueResetOnUndo = b;
+	}
+
+	/**
+	 * Gets the property source that owns the property to be restored to its 
+	 * default value.
+	 * 
+	 * @@return the property source
+	 */
+	protected IPropertySource getPropertySource() {
+		return propertySource;
+	}
+
+	/**
+	 * Gets the ID of the property whose default value is to be restored.
+	 * 
+	 * @@return the property ID
+	 */
+	protected Object getPropertyId() {
+		return propertyId;
+	}
+
+	/**
+	 * Gets the property value which is used when this command execution is 
+	 * undone.
+	 * 
+	 * @@return the undo property value
+	 */
+	protected Object getUndoValue() {
+		return undoValue;
+	}
+
+	/**
+	 * Sets the property value which is used when this command execution is 
+	 * undone.
+	 * 
+	 * @@param object the undo property value
+	 */
+	protected void setUndoValue(Object object) {
+		undoValue = object;
+	}
+
+}
+@
+
+
+1.3
+log
+@Bugzilla 110653 gmf_head ahunter 051012 Eroneous references to xtools in gmf common namespace
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2003, 2004 IBM Corporation and others.
+d14 2
+d17 4
+a20 1
+import org.eclipse.core.runtime.NullProgressMonitor;
+a22 3
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractModelCommand;
+
+d32 1
+a32 1
+public class RestoreDefaultPropertyValueCommand extends AbstractModelCommand {
+d61 1
+d68 1
+a68 1
+	public RestoreDefaultPropertyValueCommand(
+d74 6
+a79 2
+		super(label, affectedObjects);
+		this.propertySource = propertySource;
+d83 1
+a83 4
+	/* (non-Javadoc)
+		 * @@see org.eclipse.gmf.runtime.common.core.command.AbstractCommand#isRedoable()
+		 */
+	public boolean isRedoable() {
+d87 1
+a87 4
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.common.core.command.AbstractCommand#isUndoable()
+	 */
+	public boolean isUndoable() {
+d91 3
+a93 4
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.common.core.command.AbstractCommand#doExecute(org.eclipse.core.runtime.IProgressMonitor)
+	 */
+	protected CommandResult doExecute(IProgressMonitor progressMonitor) {
+d102 1
+a102 1
+				newOKCommandResult(
+d107 1
+a107 1
+			result = newOKCommandResult();
+d112 2
+a113 5
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.common.core.command.AbstractCommand#doRedo()
+	 */
+	protected CommandResult doRedo() {
+		return doExecute(new NullProgressMonitor());
+d116 1
+a116 4
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.common.core.command.AbstractCommand#doUndo()
+	 */
+	protected CommandResult doUndo() {
+d122 1
+a122 1
+			result = newOKCommandResult(getUndoValue());
+d126 1
+a126 1
+				newOKCommandResult(
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d77 1
+a77 1
+		 * @@see com.rational.xtools.common.core.command.AbstractCommand#isRedoable()
+d84 1
+a84 1
+	 * @@see com.rational.xtools.common.core.command.AbstractCommand#isUndoable()
+d91 1
+a91 1
+	 * @@see com.rational.xtools.common.core.command.AbstractCommand#doExecute(org.eclipse.core.runtime.IProgressMonitor)
+d113 1
+a113 1
+	 * @@see com.rational.xtools.common.core.command.AbstractCommand#doRedo()
+d120 1
+a120 1
+	 * @@see com.rational.xtools.common.core.command.AbstractCommand#doUndo()
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2003, 2004.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

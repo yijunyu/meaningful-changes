@@ -1,0 +1,724 @@
+head	1.5;
+access;
+symbols
+	v20080722-1827:1.5
+	v20080718-1700:1.5
+	v20080718-1731:1.5
+	v20080716-1642:1.5
+	R2_1_maintenance:1.5.0.2
+	Root_R2_1_maintenance:1.5
+	R2_1_0:1.5
+	v20080610-1132:1.5
+	v20080603-1553:1.5
+	v20080528-1052:1.5
+	v20080521:1.5
+	v20080516-1143:1.5
+	v20080512-1200:1.4
+	v20080510-0100:1.4
+	v20080507-1326:1.4
+	v20080501-1739:1.4
+	v20080425-1959:1.4
+	v20080411-0411:1.3
+	v20080404-1111:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.5
+date	2008.05.16.11.57.11;	author ashatalin;	state Exp;
+branches;
+next	1.4;
+commitid	249c482d76974567;
+
+1.4
+date	2008.04.17.16.55.09;	author ashatalin;	state Exp;
+branches;
+next	1.3;
+commitid	784e480780eb4567;
+
+1.3
+date	2008.04.04.17.52.41;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+commitid	126447f66ae84567;
+
+1.2
+date	2008.04.04.17.37.08;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+commitid	5d0147f667424567;
+
+1.1
+date	2008.04.02.14.54.52;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	297047f39e3b4567;
+
+
+desc
+@@
+
+
+1.5
+log
+@Adding Background/Foreground color property sheet controls.
+@
+text
+@/*
+ * Copyright (c) 2008 Borland Software Corporation.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Alexander Shatalin (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.graphdef.editor.sheet;
+
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.gmf.gmfgraph.Dimension;
+import org.eclipse.gmf.gmfgraph.Figure;
+import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+import org.eclipse.gmf.gmfgraph.GMFGraphPackage;
+import org.eclipse.gmf.gmfgraph.Point;
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Group;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Spinner;
+import org.eclipse.swt.widgets.Widget;
+import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.ui.forms.widgets.FormToolkit;
+import org.eclipse.ui.views.properties.tabbed.AbstractPropertySection;
+import org.eclipse.ui.views.properties.tabbed.TabbedPropertySheetPage;
+
+public class SizeSection extends AbstractPropertySection implements ChangeTracker, Listener {
+
+	private org.eclipse.emf.common.notify.Adapter[] myModelListeners;
+
+	private boolean myIsCommit;
+	private boolean myIsRefresh;
+	private Object myInput;
+
+	private Group myLocationGroup;
+	private Group myPreferredSizeGroup;
+	private Group myMaximumSizeGroup;
+	private Group myMinimumSizeGroup;
+	private Button mySetLocation;
+	private Spinner myLocationX;
+	private Spinner myLocationY;
+	private Button mySetPreferredSize;
+	private Spinner myPreferredSizeX;
+	private Spinner myPreferredSizeY;
+	private Button mySetMaximumSize;
+	private Spinner myMaximumSizeX;
+	private Spinner myMaximumSizeY;
+	private Button mySetMinimumSize;
+	private Spinner myMinimumSizeX;
+	private Spinner myMinimumSizeY;
+
+	@@Override
+	public void createControls(Composite parent, TabbedPropertySheetPage page) {
+		super.createControls(parent, page);
+		getWidgetFactory().paintBordersFor(parent);
+		myLocationGroup = createGroup(parent, "Location");
+		mySetLocation = getWidgetFactory().createButton(myLocationGroup, "Define", SWT.CHECK);
+		createLabel(myLocationGroup, "X");
+		myLocationX = new Spinner(myLocationGroup, SWT.FLAT);
+		myLocationX.setMinimum(0);
+		myLocationX.setMaximum(2147483647);
+		myLocationX.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see #145837
+		createLabel(myLocationGroup, "Y");
+		myLocationY = new Spinner(myLocationGroup, SWT.FLAT);
+		myLocationY.setMinimum(0);
+		myLocationY.setMaximum(2147483647);
+		myLocationY.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see #145837
+		myLocationGroup.setLayout(new org.eclipse.swt.layout.GridLayout(2, false));
+		org.eclipse.jface.layout.GridDataFactory.swtDefaults().align(SWT.BEGINNING, SWT.BEGINNING).span(2, 1).applyTo(mySetLocation);
+		myPreferredSizeGroup = createGroup(parent, "Preferred Size");
+		mySetPreferredSize = getWidgetFactory().createButton(myPreferredSizeGroup, "Define", SWT.CHECK);
+		createLabel(myPreferredSizeGroup, "Width");
+		myPreferredSizeX = new Spinner(myPreferredSizeGroup, SWT.FLAT);
+		myPreferredSizeX.setMinimum(0);
+		myPreferredSizeX.setMaximum(2147483647);
+		myPreferredSizeX.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see #145837
+		createLabel(myPreferredSizeGroup, "Height");
+		myPreferredSizeY = new Spinner(myPreferredSizeGroup, SWT.FLAT);
+		myPreferredSizeY.setMinimum(0);
+		myPreferredSizeY.setMaximum(2147483647);
+		myPreferredSizeY.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see #145837
+		myPreferredSizeGroup.setLayout(new org.eclipse.swt.layout.GridLayout(2, false));
+		org.eclipse.jface.layout.GridDataFactory.swtDefaults().align(SWT.BEGINNING, SWT.BEGINNING).span(2, 1).applyTo(mySetPreferredSize);
+		myMaximumSizeGroup = createGroup(parent, "Maximum Size");
+		mySetMaximumSize = getWidgetFactory().createButton(myMaximumSizeGroup, "Define", SWT.CHECK);
+		createLabel(myMaximumSizeGroup, "Width");
+		myMaximumSizeX = new Spinner(myMaximumSizeGroup, SWT.FLAT);
+		myMaximumSizeX.setMinimum(0);
+		myMaximumSizeX.setMaximum(2147483647);
+		myMaximumSizeX.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see #145837
+		createLabel(myMaximumSizeGroup, "Height");
+		myMaximumSizeY = new Spinner(myMaximumSizeGroup, SWT.FLAT);
+		myMaximumSizeY.setMinimum(0);
+		myMaximumSizeY.setMaximum(2147483647);
+		myMaximumSizeY.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see #145837
+		myMaximumSizeGroup.setLayout(new org.eclipse.swt.layout.GridLayout(2, false));
+		org.eclipse.jface.layout.GridDataFactory.swtDefaults().align(SWT.BEGINNING, SWT.BEGINNING).span(2, 1).applyTo(mySetMaximumSize);
+		myMinimumSizeGroup = createGroup(parent, "Minimum Size");
+		mySetMinimumSize = getWidgetFactory().createButton(myMinimumSizeGroup, "Define", SWT.CHECK);
+		createLabel(myMinimumSizeGroup, "Width");
+		myMinimumSizeX = new Spinner(myMinimumSizeGroup, SWT.FLAT);
+		myMinimumSizeX.setMinimum(0);
+		myMinimumSizeX.setMaximum(2147483647);
+		myMinimumSizeX.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see #145837
+		createLabel(myMinimumSizeGroup, "Height");
+		myMinimumSizeY = new Spinner(myMinimumSizeGroup, SWT.FLAT);
+		myMinimumSizeY.setMinimum(0);
+		myMinimumSizeY.setMaximum(2147483647);
+		myMinimumSizeY.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see #145837
+		myMinimumSizeGroup.setLayout(new org.eclipse.swt.layout.GridLayout(2, false));
+		org.eclipse.jface.layout.GridDataFactory.swtDefaults().align(SWT.BEGINNING, SWT.BEGINNING).span(2, 1).applyTo(mySetMinimumSize);
+
+		parent.setLayout(new org.eclipse.swt.layout.FormLayout());
+		org.eclipse.swt.layout.FormData parentFD;
+		parentFD = new org.eclipse.swt.layout.FormData();
+		parentFD.left = new org.eclipse.swt.layout.FormAttachment(0, 10);
+		myLocationGroup.setLayoutData(parentFD);
+		parentFD = new org.eclipse.swt.layout.FormData();
+		parentFD.left = new org.eclipse.swt.layout.FormAttachment(myLocationGroup, 20, org.eclipse.swt.SWT.RIGHT);
+		myPreferredSizeGroup.setLayoutData(parentFD);
+		parentFD = new org.eclipse.swt.layout.FormData();
+		parentFD.left = new org.eclipse.swt.layout.FormAttachment(myPreferredSizeGroup, 20, org.eclipse.swt.SWT.RIGHT);
+		myMaximumSizeGroup.setLayoutData(parentFD);
+		parentFD = new org.eclipse.swt.layout.FormData();
+		parentFD.left = new org.eclipse.swt.layout.FormAttachment(myMaximumSizeGroup, 20, org.eclipse.swt.SWT.RIGHT);
+		myMinimumSizeGroup.setLayoutData(parentFD);
+
+		for (Spinner s : new Spinner[] { myLocationX, myLocationY, myPreferredSizeX, myPreferredSizeY, myMaximumSizeX, myMaximumSizeY, myMinimumSizeX, myMinimumSizeY }) {
+			s.addListener(SWT.Modify, this);
+			s.addListener(SWT.FocusOut, this);
+		}
+		for (Widget w : new Widget[] { mySetLocation, mySetPreferredSize, mySetMaximumSize, mySetMinimumSize }) {
+			w.addListener(SWT.Selection, this);
+		}
+	}
+
+	@@Override
+	public void setInput(IWorkbenchPart part, ISelection selection) {
+		super.setInput(part, selection);
+		Object newInput = null;
+		if (selection instanceof IStructuredSelection && ((IStructuredSelection) selection).size() == 1) {
+			newInput = unwrap(((IStructuredSelection) selection).getFirstElement());
+		}
+		if (newInput != myInput) {
+			if (myInput != null) {
+				detach();
+			}
+			myInput = newInput;
+			if (newInput != null) {
+				attach();
+			}
+		}
+	}
+
+	protected void commit() {
+
+		if (myLocationX.isEnabled() && myLocationY.isEnabled()) {
+			getInput().setLocation(GMFGraphFactory.eINSTANCE.createPoint());
+			getInput().getLocation().setX(myLocationX.getSelection());
+			getInput().getLocation().setY(myLocationY.getSelection());
+		} else {
+			getInput().setLocation(null);
+		}
+		if (myPreferredSizeX.isEnabled() && myPreferredSizeY.isEnabled()) {
+			getInput().setPreferredSize(GMFGraphFactory.eINSTANCE.createDimension());
+			getInput().getPreferredSize().setDx(myPreferredSizeX.getSelection());
+			getInput().getPreferredSize().setDy(myPreferredSizeY.getSelection());
+		} else {
+			getInput().setPreferredSize(null);
+		}
+		if (myMaximumSizeX.isEnabled() && myMaximumSizeY.isEnabled()) {
+			getInput().setMaximumSize(GMFGraphFactory.eINSTANCE.createDimension());
+			getInput().getMaximumSize().setDx(myMaximumSizeX.getSelection());
+			getInput().getMaximumSize().setDy(myMaximumSizeY.getSelection());
+		} else {
+			getInput().setMaximumSize(null);
+		}
+		if (myMinimumSizeX.isEnabled() && myMinimumSizeY.isEnabled()) {
+			getInput().setMinimumSize(GMFGraphFactory.eINSTANCE.createDimension());
+			getInput().getMinimumSize().setDx(myMinimumSizeX.getSelection());
+			getInput().getMinimumSize().setDy(myMinimumSizeY.getSelection());
+		} else {
+			getInput().setMinimumSize(null);
+		}
+
+	}
+
+	@@Override
+	public void refresh() {
+		myIsRefresh = true;
+
+		if (getInput().getLocation() instanceof Point) {
+			if (getInput().getLocation() != null) {
+				myLocationX.setSelection(getInput().getLocation().getX());
+				myLocationY.setSelection(getInput().getLocation().getY());
+			}
+			mySetLocation.setSelection(true);
+			myLocationX.setEnabled(true);
+			myLocationY.setEnabled(true);
+		} else {
+			mySetLocation.setSelection(false);
+			myLocationX.setEnabled(false);
+			myLocationY.setEnabled(false);
+		}
+		if (getInput().getPreferredSize() instanceof Dimension) {
+			if (getInput().getPreferredSize() != null) {
+				myPreferredSizeX.setSelection(getInput().getPreferredSize().getDx());
+				myPreferredSizeY.setSelection(getInput().getPreferredSize().getDy());
+			}
+			mySetPreferredSize.setSelection(true);
+			myPreferredSizeX.setEnabled(true);
+			myPreferredSizeY.setEnabled(true);
+		} else {
+			mySetPreferredSize.setSelection(false);
+			myPreferredSizeX.setEnabled(false);
+			myPreferredSizeY.setEnabled(false);
+		}
+		if (getInput().getMaximumSize() instanceof Dimension) {
+			if (getInput().getMaximumSize() != null) {
+				myMaximumSizeX.setSelection(getInput().getMaximumSize().getDx());
+				myMaximumSizeY.setSelection(getInput().getMaximumSize().getDy());
+			}
+			mySetMaximumSize.setSelection(true);
+			myMaximumSizeX.setEnabled(true);
+			myMaximumSizeY.setEnabled(true);
+		} else {
+			mySetMaximumSize.setSelection(false);
+			myMaximumSizeX.setEnabled(false);
+			myMaximumSizeY.setEnabled(false);
+		}
+		if (getInput().getMinimumSize() instanceof Dimension) {
+			if (getInput().getMinimumSize() != null) {
+				myMinimumSizeX.setSelection(getInput().getMinimumSize().getDx());
+				myMinimumSizeY.setSelection(getInput().getMinimumSize().getDy());
+			}
+			mySetMinimumSize.setSelection(true);
+			myMinimumSizeX.setEnabled(true);
+			myMinimumSizeY.setEnabled(true);
+		} else {
+			mySetMinimumSize.setSelection(false);
+			myMinimumSizeX.setEnabled(false);
+			myMinimumSizeY.setEnabled(false);
+		}
+
+		myIsRefresh = false;
+	}
+
+	@@Override
+	public void aboutToBeHidden() {
+		if (myInput != null) {
+			detach();
+		}
+	}
+
+	public void handleEvent(Event event) {
+		if (myIsRefresh) {
+			return;
+		}
+
+		if (event.type == SWT.Modify) {
+			// XXX also override isDirty to compare values if they
+			// match model's and to clear dirty state in case like aaa^H^H^H
+			markDirty();
+		} else if (event.type == SWT.FocusOut) {
+			applyChanges();
+		} else if (event.type == SWT.KeyDown) {
+			if (event.keyCode == SWT.ESC) {
+				discardChanges();
+			} else if (event.keyCode == SWT.CR) {
+				applyChanges();
+			}
+		}
+		if (event.type == SWT.Selection) {
+			if (mySetLocation == event.widget) {
+				if (mySetLocation.getSelection()) {
+					myLocationX.setEnabled(true);
+					myLocationY.setEnabled(true);
+					myLocationX.setEnabled(true);
+					myLocationY.setEnabled(true);
+					applyChanges(); // Commit; View to Model
+					if (getInput().getLocation() != null) {
+						myLocationX.setSelection(getInput().getLocation().getX());
+						myLocationY.setSelection(getInput().getLocation().getY());
+					}
+				} else {
+					myLocationX.setEnabled(false);
+					myLocationY.setEnabled(false);
+					applyChanges(); // Commit; View to Model
+				}
+			} else if (mySetPreferredSize == event.widget) {
+				if (mySetPreferredSize.getSelection()) {
+					myPreferredSizeX.setEnabled(true);
+					myPreferredSizeY.setEnabled(true);
+					myPreferredSizeX.setEnabled(true);
+					myPreferredSizeY.setEnabled(true);
+					applyChanges(); // Commit; View to Model
+					if (getInput().getPreferredSize() != null) {
+						myPreferredSizeX.setSelection(getInput().getPreferredSize().getDx());
+						myPreferredSizeY.setSelection(getInput().getPreferredSize().getDy());
+					}
+				} else {
+					myPreferredSizeX.setEnabled(false);
+					myPreferredSizeY.setEnabled(false);
+					applyChanges(); // Commit; View to Model
+				}
+			} else if (mySetMaximumSize == event.widget) {
+				if (mySetMaximumSize.getSelection()) {
+					myMaximumSizeX.setEnabled(true);
+					myMaximumSizeY.setEnabled(true);
+					myMaximumSizeX.setEnabled(true);
+					myMaximumSizeY.setEnabled(true);
+					applyChanges(); // Commit; View to Model
+					if (getInput().getMaximumSize() != null) {
+						myMaximumSizeX.setSelection(getInput().getMaximumSize().getDx());
+						myMaximumSizeY.setSelection(getInput().getMaximumSize().getDy());
+					}
+				} else {
+					myMaximumSizeX.setEnabled(false);
+					myMaximumSizeY.setEnabled(false);
+					applyChanges(); // Commit; View to Model
+				}
+			} else if (mySetMinimumSize == event.widget) {
+				if (mySetMinimumSize.getSelection()) {
+					myMinimumSizeX.setEnabled(true);
+					myMinimumSizeY.setEnabled(true);
+					myMinimumSizeX.setEnabled(true);
+					myMinimumSizeY.setEnabled(true);
+					applyChanges(); // Commit; View to Model
+					if (getInput().getMinimumSize() != null) {
+						myMinimumSizeX.setSelection(getInput().getMinimumSize().getDx());
+						myMinimumSizeY.setSelection(getInput().getMinimumSize().getDy());
+					}
+				} else {
+					myMinimumSizeX.setEnabled(false);
+					myMinimumSizeY.setEnabled(false);
+					applyChanges(); // Commit; View to Model
+				}
+			}
+
+		}
+	}
+
+	public void modelChanged(Notification msg) {
+		if (!myIsCommit && Display.getCurrent() != null) {
+			refresh();
+		}
+	}
+
+	private void markDirty() {
+		// NO-OP, need that to share Update::handleEvent template with IFormPart which has same method
+		// Perhaps, clients may find this method useful for some purpose?
+	}
+
+	protected void applyChanges() {
+		try {
+			myIsCommit = true;
+			commit();
+		} finally {
+			myIsCommit = false;
+		}
+	}
+
+	protected void discardChanges() {
+		refresh();
+	}
+
+	protected Object unwrap(Object element) {
+		// TODO may need to adapt selected element to smth else,
+		// do it here
+		return element;
+	}
+
+	private void attach() {
+		myModelListeners = new org.eclipse.emf.common.notify.Adapter[] { new AttachAdapter(GMFGraphPackage.eINSTANCE.getFigure_Location(), new ChangeTracker() {
+
+			public void modelChanged(org.eclipse.emf.common.notify.Notification n) {
+				// FIXME enable/disable widget(s) -- HOWEVER, need access to Binding/Widget here, so can't share the template with e.g. Alex's ItemProviders
+			}
+		}, new FeatureTracker(this, GMFGraphPackage.eINSTANCE.getPoint_X(), GMFGraphPackage.eINSTANCE.getPoint_Y())),
+				new AttachAdapter(GMFGraphPackage.eINSTANCE.getFigure_PreferredSize(), new ChangeTracker() {
+
+					public void modelChanged(org.eclipse.emf.common.notify.Notification n) {
+						// FIXME enable/disable widget(s) -- HOWEVER, need access to Binding/Widget here, so can't share the template with e.g. Alex's ItemProviders
+					}
+				}, new FeatureTracker(this, GMFGraphPackage.eINSTANCE.getDimension_Dx(), GMFGraphPackage.eINSTANCE.getDimension_Dy())),
+				new AttachAdapter(GMFGraphPackage.eINSTANCE.getFigure_MaximumSize(), new ChangeTracker() {
+
+					public void modelChanged(org.eclipse.emf.common.notify.Notification n) {
+						// FIXME enable/disable widget(s) -- HOWEVER, need access to Binding/Widget here, so can't share the template with e.g. Alex's ItemProviders
+					}
+				}, new FeatureTracker(this, GMFGraphPackage.eINSTANCE.getDimension_Dx(), GMFGraphPackage.eINSTANCE.getDimension_Dy())),
+				new AttachAdapter(GMFGraphPackage.eINSTANCE.getFigure_MinimumSize(), new ChangeTracker() {
+
+					public void modelChanged(org.eclipse.emf.common.notify.Notification n) {
+						// FIXME enable/disable widget(s) -- HOWEVER, need access to Binding/Widget here, so can't share the template with e.g. Alex's ItemProviders
+					}
+				}, new FeatureTracker(this, GMFGraphPackage.eINSTANCE.getDimension_Dx(), GMFGraphPackage.eINSTANCE.getDimension_Dy())) };
+		getInput().eAdapters().addAll(java.util.Arrays.asList(myModelListeners));
+
+	}
+
+	private void detach() {
+		if (myModelListeners != null) {
+			getInput().eAdapters().removeAll(java.util.Arrays.asList(myModelListeners));
+			myModelListeners = null;
+		}
+
+	}
+
+	protected Figure getInput() {
+		// TODO implement;
+		return (Figure) myInput;
+	}
+
+	private org.eclipse.swt.widgets.Label createLabel(org.eclipse.swt.widgets.Composite parent, String label) {
+		org.eclipse.swt.widgets.Label l = new org.eclipse.swt.widgets.Label(parent, SWT.NONE);
+		if (label != null)
+			l.setText(label);
+		getWidgetFactory().adapt(l, false, false);
+		return l;
+	}
+
+	private org.eclipse.swt.widgets.Group createGroup(org.eclipse.swt.widgets.Composite parent, String label) {
+		org.eclipse.swt.widgets.Group g = new org.eclipse.swt.widgets.Group(parent, SWT.SHADOW_NONE);
+		if (label != null)
+			g.setText(label);
+		getWidgetFactory().adapt(g, false, false);
+		getWidgetFactory().paintBordersFor(g);
+		return g;
+	}
+
+}
+@
+
+
+1.4
+log
+@Generating commit/unwrap methods + Filters for formTK-based properties sections.
+@
+text
+@d122 13
+a134 13
+		org.eclipse.swt.layout.FormData fd;
+		fd = new org.eclipse.swt.layout.FormData();
+		fd.left = new org.eclipse.swt.layout.FormAttachment(0, 10);
+		myLocationGroup.setLayoutData(fd);
+		fd = new org.eclipse.swt.layout.FormData();
+		fd.left = new org.eclipse.swt.layout.FormAttachment(myLocationGroup, 20, org.eclipse.swt.SWT.RIGHT);
+		myPreferredSizeGroup.setLayoutData(fd);
+		fd = new org.eclipse.swt.layout.FormData();
+		fd.left = new org.eclipse.swt.layout.FormAttachment(myPreferredSizeGroup, 20, org.eclipse.swt.SWT.RIGHT);
+		myMaximumSizeGroup.setLayoutData(fd);
+		fd = new org.eclipse.swt.layout.FormData();
+		fd.left = new org.eclipse.swt.layout.FormAttachment(myMaximumSizeGroup, 20, org.eclipse.swt.SWT.RIGHT);
+		myMinimumSizeGroup.setLayoutData(fd);
+@
+
+
+1.3
+log
+@Common formatting rules used.
+@
+text
+@a17 1
+import org.eclipse.gmf.gmfgraph.Layoutable;
+a34 4
+/**
+ * This class is fully generated except for the methods marked as <code>generated NOT</code>
+ * @@generated
+ */
+a361 3
+	/**
+	 * @@generated NOT
+	 */
+a362 11
+		final java.util.List<org.eclipse.core.resources.IFile> files = java.util.Collections.singletonList(org.eclipse.emf.workspace.util.WorkspaceSynchronizer.getFile(getInput().eResource()));
+		org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand cmd = new org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand(
+				org.eclipse.emf.transaction.util.TransactionUtil.getEditingDomain(getInput()), "", files) {
+
+			@@Override
+			protected org.eclipse.gmf.runtime.common.core.command.CommandResult doExecuteWithResult(org.eclipse.core.runtime.IProgressMonitor monitor, org.eclipse.core.runtime.IAdaptable info)
+					throws org.eclipse.core.commands.ExecutionException {
+				commit();
+				return org.eclipse.gmf.runtime.common.core.command.CommandResult.newOKCommandResult();
+			}
+		};
+d365 1
+a365 3
+			org.eclipse.core.commands.operations.OperationHistoryFactory.getOperationHistory().execute(cmd, new org.eclipse.core.runtime.NullProgressMonitor(), null);
+		} catch (org.eclipse.core.commands.ExecutionException ex) {
+			ex.printStackTrace();
+d375 4
+a378 21
+	/**
+	 * @@generated NOT
+	 */
+	private Object unwrap(Object element) {
+		Object rv = null;
+		if (element instanceof org.eclipse.gef.EditPart) {
+			Object model = ((org.eclipse.gef.EditPart) element).getModel();
+			rv = model instanceof org.eclipse.gmf.runtime.notation.View ? ((org.eclipse.gmf.runtime.notation.View) model).getElement() : null;
+		} else if (element instanceof org.eclipse.gmf.runtime.notation.View) {
+			rv = ((org.eclipse.gmf.runtime.notation.View) element).getElement();
+		} else if (element instanceof org.eclipse.core.runtime.IAdaptable) {
+			org.eclipse.gmf.runtime.notation.View view = (org.eclipse.gmf.runtime.notation.View) ((org.eclipse.core.runtime.IAdaptable) element)
+					.getAdapter(org.eclipse.gmf.runtime.notation.View.class);
+			if (view != null) {
+				rv = view.getElement();
+			}
+		}
+		if (rv instanceof Layoutable) {
+			return rv;
+		}
+		return null;
+d418 1
+a418 1
+	private Figure getInput() {
+@
+
+
+1.2
+log
+@Property sections are generated with oeg.formtk plugin
+@
+text
+@d36 4
+a44 1
+
+a45 1
+
+a48 1
+
+a49 1
+
+a50 1
+
+a51 1
+
+a52 1
+
+a53 1
+
+a54 1
+
+a55 1
+
+a56 1
+
+a57 1
+
+a58 1
+
+a59 1
+
+a60 1
+
+a61 1
+
+a62 1
+
+d75 1
+a75 2
+		myLocationX.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see
+																					// #145837
+d80 1
+a80 2
+		myLocationY.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see
+																					// #145837
+d89 1
+a89 2
+		myPreferredSizeX.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see
+																						// #145837
+d94 1
+a94 2
+		myPreferredSizeY.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see
+																						// #145837
+d103 1
+a103 2
+		myMaximumSizeX.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see
+																						// #145837
+d108 1
+a108 2
+		myMaximumSizeY.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see
+																						// #145837
+d117 1
+a117 2
+		myMinimumSizeX.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see
+																						// #145837
+d122 1
+a122 2
+		myMinimumSizeY.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @@see
+																						// #145837
+d363 1
+a363 2
+		// NO-OP, need that to share Update::handleEvent template with IFormPart
+		// which has same method
+d367 3
+d396 3
+d423 1
+a423 3
+				// FIXME enable/disable widget(s) -- HOWEVER, need access to
+				// Binding/Widget here, so can't share the template with e.g.
+				// Alex's ItemProviders
+d429 1
+a429 3
+						// FIXME enable/disable widget(s) -- HOWEVER, need
+						// access to Binding/Widget here, so can't share the
+						// template with e.g. Alex's ItemProviders
+d435 1
+a435 3
+						// FIXME enable/disable widget(s) -- HOWEVER, need
+						// access to Binding/Widget here, so can't share the
+						// template with e.g. Alex's ItemProviders
+d441 1
+a441 3
+						// FIXME enable/disable widget(s) -- HOWEVER, need
+						// access to Binding/Widget here, so can't share the
+						// template with e.g. Alex's ItemProviders
+@
+
+
+1.1
+log
+@Size properties section added.
+@
+text
+@d1 10
+a83 1
+		org.eclipse.jface.layout.GridDataFactory.swtDefaults().align(SWT.BEGINNING, SWT.BEGINNING).span(2, 1).applyTo(mySetLocation);
+d97 1
+a99 1
+		org.eclipse.jface.layout.GridDataFactory.swtDefaults().align(SWT.BEGINNING, SWT.BEGINNING).span(2, 1).applyTo(mySetPreferredSize);
+d113 1
+a115 1
+		org.eclipse.jface.layout.GridDataFactory.swtDefaults().align(SWT.BEGINNING, SWT.BEGINNING).span(2, 1).applyTo(mySetMaximumSize);
+d129 1
+a131 1
+		org.eclipse.jface.layout.GridDataFactory.swtDefaults().align(SWT.BEGINNING, SWT.BEGINNING).span(2, 1).applyTo(mySetMinimumSize);
+d145 1
+d153 1
+a153 1
+		fd.left = new org.eclipse.swt.layout.FormAttachment(myLocationGroup, 20, SWT.RIGHT);
+d156 1
+a156 1
+		fd.left = new org.eclipse.swt.layout.FormAttachment(myPreferredSizeGroup, 20, SWT.RIGHT);
+d159 1
+a159 1
+		fd.left = new org.eclipse.swt.layout.FormAttachment(myMaximumSizeGroup, 20, SWT.RIGHT);
+@
+

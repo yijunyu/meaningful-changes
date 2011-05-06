@@ -1,0 +1,709 @@
+head	1.11;
+access;
+symbols
+	v20081015-1925:1.11
+	v20081008-1925:1.11
+	v20080903-1520:1.11
+	v20080731-1520:1.11
+	R1_0_maintenance:1.11.0.2
+	R1_0:1.11
+	I20051217-0925:1.10
+	I20051201-1800:1.10
+	I20051124-2000:1.10
+	M3_10:1.9
+	I20051118-1245:1.9
+	I20051111-1800:1.9
+	I20051106-0900:1.9
+	v20051030:1.8;
+locks; strict;
+comment	@# @;
+
+
+1.11
+date	2005.12.20.16.49.29;	author mmostafa;	state dead;
+branches;
+next	1.10;
+
+1.10
+date	2005.11.21.18.25.41;	author mmostafa;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2005.11.02.23.29.21;	author sshaw;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2005.10.04.20.30.46;	author ahunter;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2005.09.23.20.55.58;	author sshaw;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2005.09.23.18.45.42;	author sshaw;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2005.09.12.21.24.26;	author sshaw;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2005.09.12.15.48.40;	author sshaw;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.09.08.18.58.50;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.08.30.18.48.50;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.18.37;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.11
+log
+@bugzilla 115826 gmf-head mmostafa 051220 ViewService should be public
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2005 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.diagram.core.internal.services.view;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.IConfigurationElement;
+import org.eclipse.gmf.runtime.common.core.service.ExecutionStrategy;
+import org.eclipse.gmf.runtime.common.core.service.IOperation;
+import org.eclipse.gmf.runtime.common.core.service.Service;
+import org.eclipse.gmf.runtime.diagram.core.internal.DiagramPlugin;
+import org.eclipse.gmf.runtime.diagram.core.internal.services.semantic.CreateElementRequest;
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+import org.eclipse.gmf.runtime.diagram.core.providers.IViewProvider;
+import org.eclipse.gmf.runtime.diagram.core.providers.ViewProviderConfiguration;
+import org.eclipse.gmf.runtime.notation.Diagram;
+import org.eclipse.gmf.runtime.notation.Edge;
+import org.eclipse.gmf.runtime.notation.Node;
+import org.eclipse.gmf.runtime.notation.View;
+
+/**
+ *
+ * A service for manipulating the notational models
+ * @@author melaasar, mmostafa
+ */
+final public class ViewService
+	extends Service
+	implements IViewProvider {
+
+	/**
+	 * A descriptor for <code>ISemanticProvider</code> defined
+	 * by a configuration element.
+	 */
+	protected static class ProviderDescriptor
+		extends Service.ProviderDescriptor {
+
+		/** the provider configuration parsed from XML */
+		private ViewProviderConfiguration providerConfiguration;
+
+		/**
+		 * Constructs a <code>ISemanticProvider</code> descriptor for
+		 * the specified configuration element.
+		 * 
+		 * @@param element The configuration element describing the provider.
+		 */
+		public ProviderDescriptor(IConfigurationElement element) {
+			super(element);
+
+			this.providerConfiguration = ViewProviderConfiguration
+				.parse(element);
+			assert null != providerConfiguration : "Null providerConfiguration in ProviderDescriptor";//$NON-NLS-1$
+		}
+
+		/**
+		 * @@see org.eclipse.gmf.runtime.common.core.service.IProvider#provides(org.eclipse.gmf.runtime.common.core.service.IOperation)
+		 */
+		public boolean provides(IOperation operation) {
+			if (!policyInitialized){
+				policy = getPolicy();
+				policyInitialized = true;
+			}
+			if (policy != null)
+				return policy.provides(operation);
+			if (provider == null) {
+				if (isSupportedInExtention(operation)) {
+					providerConfiguration = null;
+					return getProvider().provides(operation);
+				}
+				return false;
+			}
+			return getProvider().provides(operation);
+		}
+
+		/**
+		 * Cheks if the operation is supported by the XML extension
+		 * @@param operation
+		 * @@return
+		 */
+		private boolean isSupportedInExtention(IOperation operation) {
+			if (operation instanceof CreateViewOperation) {
+				CreateViewOperation o = (CreateViewOperation) operation;
+				Class viewKind = o.getViewKind();
+				IAdaptable semanticAdapter = o.getSemanticAdapter();
+				String semanticHint = o.getSemanticHint();
+				View containerView = null;
+				if (o instanceof CreateChildViewOperation) {
+					CreateChildViewOperation cvo = (CreateChildViewOperation) o;
+					containerView = cvo.getContainerView();
+				}
+
+				return providerConfiguration.supports(viewKind,
+					semanticAdapter, containerView, semanticHint);
+			}
+			return false;
+		}
+
+		/** 
+		 * the default implementation is overriden here to make it easier to debug
+		 * XML providers, now when you select the ProviderDescriptor in the debug
+		 * window the provider class name will be displayed
+		 * @@return the provider class name
+		 */
+		public String toString() {
+			return getElement().getAttribute("class"); 	 //$NON-NLS-1$
+			//return (super.toString();
+		}
+
+	}
+
+	/**
+	 * The singleton instance of the notation service.
+	 */
+	private final static ViewService instance = new ViewService();
+
+	static {
+		instance.configureProviders(DiagramPlugin.getPluginId(), "viewProviders"); //$NON-NLS-1$
+	}
+	
+	/**
+	 * Retrieves the singleton instance of the notation service.
+	 * 
+	 * @@return The notation service singleton.
+	 */
+	public static ViewService getInstance() {
+		return instance;
+	}
+
+	/**
+	 * 
+	 */
+	protected ViewService() {
+		super(true, false);
+	}
+
+	/**
+	 * @@see org.eclipse.gmf.runtime.common.core.service.Service#newProviderDescriptor(org.eclipse.core.runtime.IConfigurationElement)
+	 */
+	protected Service.ProviderDescriptor newProviderDescriptor(
+		IConfigurationElement element) {
+		return new ProviderDescriptor(element);
+	}
+
+	/**
+	 * @@see org.eclipse.gmf.runtime.common.core.service.Service#createPriorityCache()
+	 */
+	protected Map createPriorityCache() {
+		return new HashMap();
+	}
+
+	/**
+	 * @@see org.eclipse.gmf.runtime.common.core.service.Service#getCacheKey(org.eclipse.gmf.runtime.common.core.service.IOperation)
+	 */
+	protected Object getCachingKey(IOperation operation) {
+		return ((CreateViewOperation) operation).getCachingKey();
+	}
+
+	/**
+	 * Executes the specified operation using the FIRST execution
+	 * strategy.
+	 * @@return The result of executing the model operation.
+	 * @@param operation The model operation to be executed.
+	 */
+	private Object execute(IOperation operation) {
+		List results = execute(ExecutionStrategy.FIRST, operation);
+		return results.isEmpty() ? null : results.get(0);
+	}
+
+	/**
+	 * A convenience method to determine whether there is a provider 
+	 * that can create a view with the given parameters
+	 * @@param viewKind
+	 * @@param semanticAdapter adapts to either <code>Integer<code> or <code>IReference</code>
+	 * @@param containerView
+	 * @@param semanticHint
+	 * @@param index
+	 * @@param preferencesHint
+	 *            The preference hint that is to be used to find the appropriate
+	 *            preference store from which to retrieve diagram preference
+	 *            values. The preference hint is mapped to a preference store in
+	 *            the preference registry <@@link DiagramPreferencesRegistry>.
+	 * @@return boolean
+	 */
+	public final boolean provides(Class viewKind, IAdaptable semanticAdapter,
+		View containerView, String semanticHint, int index,
+		boolean persisted, PreferencesHint preferencesHint) {
+		
+		assert (viewKind == Diagram.class ||
+				viewKind == Edge.class ||
+				viewKind == Node.class ) :
+				"The default View service does not support " + viewKind.getName() + " as a view kind";//$NON-NLS-1$ //$NON-NLS-2$
+
+		/* if the semantic adapter adapters to the semantic kind */
+		if (semanticAdapter != null) {
+			if (semanticAdapter.getAdapter(CreateElementRequest.class) != null) {
+				return providerExistsFor(new CreateViewForKindOperation(
+					viewKind, semanticAdapter, containerView, semanticHint,
+					index, preferencesHint));
+			}
+		}
+		if (viewKind == Diagram.class)
+			return providerExistsFor(new CreateDiagramViewOperation(
+				semanticAdapter, semanticHint, preferencesHint));
+		else if (viewKind == Edge.class)
+			return providerExistsFor(new CreateEdgeViewOperation(
+				semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint));
+		else if (viewKind == Node.class)
+			return providerExistsFor(new CreateNodeViewOperation(
+				semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint));
+		return false;
+	}
+
+	private boolean providerExistsFor(IOperation operation) {
+		return provides(operation);
+	}
+
+	/**
+	 * A convenience method to create a view with the given parameters
+	 * @@param viewKind
+	 * @@param semanticAdapter adapts to <code>IReference<code>
+	 * @@param containerView
+	 * @@param semanticHint
+	 * @@param index
+	 * @@param preferencesHint
+	 *            The preference hint that is to be used to find the appropriate
+	 *            preference store from which to retrieve diagram preference
+	 *            values. The preference hint is mapped to a preference store in
+	 *            the preference registry <@@link DiagramPreferencesRegistry>.
+	 * @@return IView
+	 */
+	public final View createView(Class viewKind, IAdaptable semanticAdapter,
+		View containerView, String semanticHint, int index,
+		boolean persisted, PreferencesHint preferencesHint) {
+		
+		assert (viewKind == Diagram.class ||
+				viewKind == Edge.class ||
+				viewKind == Node.class ) :
+			    "The default View service does not support " + viewKind.getName() + " as a view kind";//$NON-NLS-1$ //$NON-NLS-2$
+
+		if (viewKind == Diagram.class)
+			return createDiagram(semanticAdapter, semanticHint, preferencesHint);
+		else if (viewKind == Edge.class)
+			return createEdge(semanticAdapter, containerView,
+				semanticHint, index, persisted, preferencesHint);
+		else if (viewKind == Node.class)
+			return createNode(semanticAdapter, containerView, semanticHint,
+				index, persisted, preferencesHint);
+		return null;
+	}
+
+	public final Diagram createDiagram(IAdaptable semanticAdapter,
+		String diagramKindType, PreferencesHint preferencesHint) {
+		Diagram view = (Diagram) execute(new CreateDiagramViewOperation(
+			semanticAdapter, diagramKindType, preferencesHint));
+		return view;
+	}
+
+	public final Edge createEdge(IAdaptable semanticAdapter,
+		View containerView, String semanticHint, int index,
+		boolean persisted, PreferencesHint preferencesHint) {
+		Edge edge = (Edge) execute(new CreateEdgeViewOperation(
+			semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint));
+		return edge;
+	}
+
+	/**
+	 * @@param semanticAdapter
+	 * @@param containerView
+	 * @@param semanticHint
+	 * @@param index
+	 * @@param preferencesHint
+	 *            The preference hint that is to be used to find the appropriate
+	 *            preference store from which to retrieve diagram preference
+	 *            values. The preference hint is mapped to a preference store in
+	 *            the preference registry <@@link DiagramPreferencesRegistry>.
+	 * @@return
+	 */
+	public final View createEdge(IAdaptable semanticAdapter,
+		View containerView, String semanticHint, int index, PreferencesHint preferencesHint) {
+		return createEdge(semanticAdapter, containerView,
+			semanticHint, index, true, preferencesHint);
+	}
+
+	/**
+	 * creates a persisted Node
+	 * @@param semanticElement
+	 * @@param containerView
+	 * @@param semanticHint
+	 * @@param index
+	 * @@param preferencesHint
+	 *            The preference hint that is to be used to find the appropriate
+	 *            preference store from which to retrieve diagram preference
+	 *            values. The preference hint is mapped to a preference store in
+	 *            the preference registry <@@link DiagramPreferencesRegistry>.
+	 * @@return the created node
+	 */
+	public final Node createNode(IAdaptable semanticElement,
+		View containerView, String semanticHint, int index, PreferencesHint preferencesHint) {
+		return createNode(semanticElement, containerView, semanticHint,
+			index, true, preferencesHint);
+	}
+
+	/**
+	 * creates a Node
+	 * @@param semanticElement
+	 * @@param containerView
+	 * @@param semanticHint
+	 * @@param persisted
+	 * @@param index
+	 * @@param preferencesHint
+	 *            The preference hint that is to be used to find the appropriate
+	 *            preference store from which to retrieve diagram preference
+	 *            values. The preference hint is mapped to a preference store in
+	 *            the preference registry <@@link DiagramPreferencesRegistry>.
+	 * @@return the created node
+	 */
+	public Node createNode(IAdaptable semanticAdapter,
+			View containerView, String semanticHint, int index,
+			boolean persisted, PreferencesHint preferencesHint) {
+		Node node = (Node) execute(new CreateNodeViewOperation(
+			semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint));
+		return node;
+	}
+}@
+
+
+1.10
+log
+@bugzilla 117343 gmf-head  mmostafa 051121 getPolicy on the Service class get called more than 500,000 times
+@
+text
+@@
+
+
+1.9
+log
+@Bugzilla#113157 gmf_head cmahoney 051102 GMF Diagram Layer Public API Name Changes
+@
+text
+@d70 6
+a75 2
+			if (getPolicy() != null)
+				return getPolicy().provides(operation);
+@
+
+
+1.8
+log
+@Bugzilla 110635 gmf_head keithc 051004 Delay configuration of services
+@
+text
+@d212 1
+a212 1
+			return providerExistsFor(new CreateConnectorViewOperation(
+d268 1
+a268 1
+		Edge edge = (Edge) execute(new CreateConnectorViewOperation(
+d285 1
+a285 1
+	public final View createConnectorView(IAdaptable semanticAdapter,
+@
+
+
+1.7
+log
+@Bugzilla 109092: gmf_head sshaw 050923 : fixing build errors
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2002, 2004 IBM Corporation and others.
+d23 1
+d123 4
+d221 1
+a221 1
+		return provides(ExecutionStrategy.FIRST, operation);
+@
+
+
+1.6
+log
+@bugzilla 110478 gmf-head sshaw Introduce a view refactoring helper based on semantic refactoring
+
+Contributed by: Maged Elaasar
+@
+text
+@a19 1
+import org.eclipse.emf.ecore.EObject;
+a26 2
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+a325 81
+
+	/**
+	 * Creates a diagram with the given context and kind
+	 * 
+	 * @@param context The diagram element context
+	 * @@param kind diagram kind
+	 * @@param preferencesHint
+	 *            The preference hint that is to be used to find the appropriate
+	 *            preference store from which to retrieve diagram preference
+	 *            values. The preference hint is mapped to a preference store in
+	 *            the preference registry <@@link DiagramPreferencesRegistry>.
+	 * @@return A newly created <code>Diagram</code>
+	 */
+	public Diagram createDiagram(EObject context, String kind, PreferencesHint preferencesHint) {
+		IAdaptable viewModel = (context != null) ? new EObjectAdapter(context) : null;
+		String viewType = (kind != null) ? kind : ""; //$NON-NLS-1$
+		return createDiagram(viewModel, viewType, preferencesHint);
+	}
+
+	/**
+	 * Creates a node for a given eObject and with a given type and inserts it into a given container
+	 * 
+	 * @@param container The node view container
+	 * @@param eObject The node view object context
+	 * @@param type The node view type
+	 * @@param preferencesHint
+	 *            The preference hint that is to be used to find the appropriate
+	 *            preference store from which to retrieve diagram preference
+	 *            values. The preference hint is mapped to a preference store in
+	 *            the preference registry <@@link DiagramPreferencesRegistry>.
+	 * @@return A newly created <code>Node</code>
+	 */
+	public Node createNode(View container, EObject eObject, String type, PreferencesHint preferencesHint) {
+		IAdaptable viewModel = (eObject != null) ? new EObjectAdapter(eObject) : null;
+		String viewType = (type != null) ? type : ""; //$NON-NLS-1$
+		View view = createNode(viewModel, container, viewType, ViewUtil.APPEND, preferencesHint);
+		return (view != null) ? (Node)view : null;
+	}
+
+	/**
+	 * Creates an edge for a given eObject and with a given type in the given diagram
+	 *
+	 * @@param diagram The container diagram 
+	 * @@param eObject The edge view object context
+	 * @@param type The edge view type
+	 * @@param preferencesHint
+	 *            The preference hint that is to be used to find the appropriate
+	 *            preference store from which to retrieve diagram preference
+	 *            values. The preference hint is mapped to a preference store in
+	 *            the preference registry <@@link DiagramPreferencesRegistry>.
+	 * @@return A newly created <code>Edge</code>
+	 */
+	public Edge createEdge(Diagram diagram, EObject eObject, String type, PreferencesHint preferencesHint) {
+		IAdaptable viewModel = (eObject != null) ? new EObjectAdapter(eObject) : null;
+		String viewType = (type != null) ? type : ""; //$NON-NLS-1$
+		View view = createConnectorView(viewModel, diagram, viewType, ViewUtil.APPEND, preferencesHint);
+		return (view != null) ? (Edge) view : null;
+	}
+	
+	/**
+	 * Creates an edge for a given eObject and with a given type and connects it between a given source and a given target
+	 * 
+	 * @@param source The edge's source view
+	 * @@param target The edge's target view
+	 * @@param eObject The edge view object context
+	 * @@param type The edge view type
+	 * @@param preferencesHint
+	 *            The preference hint that is to be used to find the appropriate
+	 *            preference store from which to retrieve diagram preference
+	 *            values. The preference hint is mapped to a preference store in
+	 *            the preference registry <@@link DiagramPreferencesRegistry>.
+	 * @@return A newly created <code>Edge</code>
+	 */
+	public Edge createEdge(View source, View target, EObject eObject, String type, PreferencesHint preferencesHint) {
+		Edge edge = createEdge(source.getDiagram(), eObject, type, preferencesHint);
+		if (edge != null) {
+			edge.setSource(source);
+			edge.setTarget(target);
+		}
+		return edge;
+	}
+@
+
+
+1.5
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d20 1
+d28 2
+d329 81
+@
+
+
+1.4
+log
+@Bugzilla109092 : rmp_head mmostafa 050912 : API Analysis: Diagram layer API.  Determine if all API is needed and/or has appropriate signatures
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2002, 2004.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+
+
+1.3
+log
+@Bugzilla 109092  : rumv_head mmostafa 050908 : API Analysis: Diagram layer API.  Determine if all API is needed and/or has appropriate signatures
+@
+text
+@d24 1
+a28 1
+import org.eclipse.gmf.runtime.diagram.core.providers.ViewProviderConfiguration;
+d33 1
+a33 1
+ * @@author melaasar
+d241 1
+a241 1
+			return createDiagramView(semanticAdapter, semanticHint, preferencesHint);
+d243 1
+a243 1
+			return createConnectorView(semanticAdapter, containerView,
+d246 1
+a246 1
+			return createNodeView(semanticAdapter, containerView, semanticHint,
+d251 1
+a251 1
+	public final Diagram createDiagramView(IAdaptable semanticAdapter,
+d258 1
+a258 1
+	public final Edge createConnectorView(IAdaptable semanticAdapter,
+d280 1
+a280 1
+		return createConnectorView(semanticAdapter, containerView,
+d285 1
+a285 1
+	 * creates a persisted View
+d295 1
+a295 1
+	 * @@return
+d297 1
+a297 1
+	public final View createNodeView(IAdaptable semanticElement,
+d299 1
+a299 1
+		return createNodeView(semanticElement, containerView, semanticHint,
+d303 15
+a317 1
+	public View createNodeView(IAdaptable semanticAdapter,
+d320 1
+a320 1
+		View view = (View) execute(new CreateNodeViewOperation(
+d322 1
+a322 1
+		return view;
+@
+
+
+1.2
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@a17 1
+
+d23 1
+d28 1
+a250 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.diagram.core.internal.services.view.IViewProvider#createDiagramView(org.eclipse.core.runtime.IAdaptable, java.lang.String, org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint)
+	 */
+d257 2
+a258 5
+	
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.diagram.core.internal.services.view.IViewProvider#createConnectorView(org.eclipse.core.runtime.IAdaptable, org.eclipse.gmf.runtime.notation.View, java.lang.String, int, boolean, java.lang.String)
+	 */
+	public final View createConnectorView(IAdaptable semanticAdapter,
+d261 1
+a261 1
+		View view = (View) execute(new CreateConnectorViewOperation(
+d263 1
+a263 1
+		return view;
+d285 1
+a302 3
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.diagram.core.internal.services.view.IViewProvider#createNodeView(org.eclipse.core.runtime.IAdaptable, org.eclipse.gmf.runtime.notation.View, java.lang.String, int, boolean, org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint)
+	 */
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d24 4
+a27 4
+import com.ibm.xtools.notation.Diagram;
+import com.ibm.xtools.notation.Edge;
+import com.ibm.xtools.notation.Node;
+import com.ibm.xtools.notation.View;
+d261 1
+a261 1
+	 * @@see org.eclipse.gmf.runtime.diagram.core.internal.services.view.IViewProvider#createConnectorView(org.eclipse.core.runtime.IAdaptable, com.ibm.xtools.notation.View, java.lang.String, int, boolean, java.lang.String)
+d308 1
+a308 1
+	 * @@see org.eclipse.gmf.runtime.diagram.core.internal.services.view.IViewProvider#createNodeView(org.eclipse.core.runtime.IAdaptable, com.ibm.xtools.notation.View, java.lang.String, int, boolean, org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint)
+@
+

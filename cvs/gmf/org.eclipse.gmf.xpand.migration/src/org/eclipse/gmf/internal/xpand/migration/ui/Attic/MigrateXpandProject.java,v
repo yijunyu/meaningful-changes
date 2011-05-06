@@ -1,0 +1,381 @@
+head	1.1;
+access;
+symbols
+	ocl_qvt:1.1.0.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2008.10.07.14.44.37;	author ashatalin;	state dead;
+branches
+	1.1.2.1;
+next	;
+commitid	1997848eb75d34567;
+
+1.1.2.1
+date	2008.10.07.14.44.37;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.2;
+commitid	1997848eb75d34567;
+
+1.1.2.2
+date	2008.10.07.15.40.29;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	1e9d648eb82eb4567;
+
+
+desc
+@@
+
+
+1.1
+log
+@file MigrateXpandProject.java was initially added on branch ocl_qvt.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ - Project-wide migrate action handling native extensions was added.
+@
+text
+@a0 276
+/**
+ * Copyright (c) 2008 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.xpand.migration.ui;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.core.resources.IContainer;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.gmf.internal.xpand.RootManager;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.migration.ExpressionMigrationFacade;
+import org.eclipse.gmf.internal.xpand.migration.MigrationException;
+import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.dialogs.ProgressMonitorDialog;
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IObjectActionDelegate;
+import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.ui.actions.WorkspaceModifyOperation;
+
+public class MigrateXpandProject extends WorkspaceModifyOperation implements IObjectActionDelegate {
+
+	private static final String PLUGIN_CLOSING_TAG = "</plugin>";
+
+	private static final String PLUGIN_OPENNING_TAG = "<plugin>";
+
+	private static final String LF = ExpressionMigrationFacade.LF;
+
+	private static final String PLUGIN_XML_CHARSET = "UTF8";
+
+	private static final String PLUGIN_XML_FILE_NAME = "plugin.xml";
+
+	private static final int BIG_NUMBER = 100;
+
+	private static final String NATIVE_EXTENSIONS_SRC_FOLDER = ".qvtlib";
+
+	private static final String MIGRATED_ROOT_EXTENSION = "migrated";
+
+	private IWorkbenchPart workbenchPart;
+
+	private IJavaProject selectedJavaProject;
+
+	private RootManager rootManager;
+
+	private static IProgressMonitor createSubProgressMonitor(IProgressMonitor monitor, String taskName, int numberOfTicks) throws InterruptedException {
+		if (monitor.isCanceled()) {
+			throw new InterruptedException("Process was canceled");
+		}
+		SubProgressMonitor spm = new SubProgressMonitor(monitor, numberOfTicks);
+		if (taskName != null) {
+			spm.setTaskName(taskName);
+		}
+		return spm;
+	}
+
+	public void setActivePart(IAction action, IWorkbenchPart targetPart) {
+		workbenchPart = targetPart;
+	}
+
+	public void run(IAction action) {
+		try {
+			new ProgressMonitorDialog(getShell()).run(true, true, this);
+		} catch (InvocationTargetException e) {
+			Throwable cause = e.getCause();
+			if (cause instanceof XpandResourceMigrationException) {
+				reportMigrationException((XpandResourceMigrationException) cause);
+			} else if (cause instanceof UnsupportedEncodingException) {
+				showError("Unsupported encoding", "Specified encoding \"" + MigrationVisitor.CHARSET + "\" is not supported by the platform: " + cause.getMessage());
+			} else if (cause != null) {
+				showError("Exception", cause.getMessage());
+			} else {
+				showError("Invocation target exception", e.getMessage());
+			}
+		} catch (InterruptedException e) {
+			// Cancel pressed
+		}
+	}
+
+	private void reportMigrationException(XpandResourceMigrationException ex) {
+		MigrationException migrationException = ex.getMigrationException();
+		StringBuilder sb = new StringBuilder(ex.getTemplateFile().getProjectRelativePath().toString());
+		sb.append(" migration error\n");
+		switch (migrationException.getType()) {
+		case ANALYZATION_PROBLEMS:
+			sb.append("Following analyzation problems present:\n\n");
+			for (AnalysationIssue issue : migrationException.getIssues()) {
+				sb.append(issue.toString());
+				sb.append("\n");
+			}
+			showError("Unable to load xtend resource", sb.toString());
+			return;
+		default:
+			showError("Migration exception", sb.append(migrationException.getMessage()).toString());
+		}
+	}
+
+	@@Override
+	protected void execute(IProgressMonitor monitor) throws CoreException, InvocationTargetException, InterruptedException {
+		monitor.setTaskName("Migrating Xpand project");
+		List<IFolder> xpandRoots = rootManager.getXpandRootFolders();
+		monitor.beginTask("Migrating all available xpand root folders", xpandRoots.size() + 1);
+		List<CharSequence> nativeLibraryDeclarations = new ArrayList<CharSequence>();
+		for (IFolder rootFolder : xpandRoots) {
+			migrateXpandRoot(rootFolder, nativeLibraryDeclarations, createSubProgressMonitor(monitor, "Migrating xpand root: " + rootFolder.getName(), 1));
+		}
+		registerNativeLibraries(nativeLibraryDeclarations, createSubProgressMonitor(monitor, "Registering native libraries", 1));
+	}
+
+	private void registerNativeLibraries(List<CharSequence> nativeLibraryDeclarations, IProgressMonitor progressMonitor) throws CoreException, InvocationTargetException, InterruptedException {
+		if (nativeLibraryDeclarations.size() == 0) {
+			progressMonitor.done();
+			return;
+		}
+		progressMonitor.beginTask("Registering native libraries", 2);
+		IFile pluginXml = selectedJavaProject.getProject().getFile(PLUGIN_XML_FILE_NAME);
+		StringBuilder pluginXmlContent = new StringBuilder();
+		int insertPosition;
+		if (pluginXml.exists()) {
+			InputStream is = new BufferedInputStream(pluginXml.getContents());
+			try {
+				for (int ch = is.read(); ch != -1; ch = is.read()) {
+					if (progressMonitor.isCanceled()) {
+						throw new InterruptedException();
+					}
+					pluginXmlContent.append((char) ch);
+				}
+			} catch (IOException e) {
+				throw new InvocationTargetException(e);
+			}
+			insertPosition = pluginXmlContent.lastIndexOf(PLUGIN_CLOSING_TAG);
+			if (insertPosition < 0) {
+				throw new InvocationTargetException(new Exception("Incorrect " + PLUGIN_XML_FILE_NAME + " file - " + PLUGIN_CLOSING_TAG + " tag was not found"));
+			}
+		} else {
+			pluginXmlContent.append(PLUGIN_OPENNING_TAG);
+			pluginXmlContent.append(LF);
+			insertPosition = pluginXmlContent.length();
+			pluginXmlContent.append(PLUGIN_CLOSING_TAG);
+		}
+		progressMonitor.worked(1);
+
+		pluginXmlContent.insert(insertPosition, getNativeLibraryExtensionPoint(nativeLibraryDeclarations));
+		try {
+			ByteArrayInputStream inputStream = new ByteArrayInputStream(pluginXmlContent.toString().getBytes(PLUGIN_XML_CHARSET));
+			IProgressMonitor subProgressMonitor = createSubProgressMonitor(progressMonitor, "Saving new " + PLUGIN_XML_FILE_NAME + "content", 1);
+			if (pluginXml.exists()) {
+				pluginXml.setContents(inputStream, IFile.FORCE | IFile.KEEP_HISTORY, subProgressMonitor);
+			} else {
+				pluginXml.create(inputStream, true, subProgressMonitor);
+			}
+		} catch (UnsupportedEncodingException e) {
+			throw new InvocationTargetException(e);
+		}
+	}
+
+	private StringBuilder getNativeLibraryExtensionPoint(List<CharSequence> nativeLibraryDeclarations) {
+		StringBuilder result = new StringBuilder("\t<extension point=\"org.eclipse.m2m.qvt.oml.ocl.libraries\">");
+		result.append(LF);
+		for (CharSequence declaration : nativeLibraryDeclarations) {
+			result.append("\t\t");
+			result.append(declaration);
+		}
+		result.append("\t</extension>");
+		return result.append(LF);
+	}
+
+	private void migrateXpandRoot(IFolder rootFolder, List<CharSequence> nativeLibraryDeclarations, IProgressMonitor progressMonitor) throws InterruptedException, CoreException,
+			InvocationTargetException {
+		progressMonitor.beginTask("Migrating xpand root: " + rootFolder.getName(), BIG_NUMBER + 3);
+		IFolder templatesOutputFolder = getTemplatesOutputFolder(rootFolder, createSubProgressMonitor(progressMonitor, "Calculating new templates root folder name", 1));
+		IFolder nativeExtensionsRoot = getNativeExtensionsSourceRoot(rootFolder, createSubProgressMonitor(progressMonitor, "Creating new source rolot for native extensions", 1));
+		int numberOfResources = getNumberOfResources(rootFolder, createSubProgressMonitor(progressMonitor, "Counting xpand resources", 1));
+
+		IProgressMonitor subMonitor = createSubProgressMonitor(progressMonitor, "Migrating xpand resources", BIG_NUMBER);
+		subMonitor.beginTask("Migrating xpand resources", numberOfResources);
+		try {
+			MigrationVisitor visitor = new MigrationVisitor(rootFolder, templatesOutputFolder, nativeExtensionsRoot, selectedJavaProject, rootManager, subMonitor);
+			rootFolder.accept(visitor);
+			nativeLibraryDeclarations.addAll(visitor.getNativeLibraryDeclarations());
+		} catch (CoreException e) {
+			Throwable cause = e.getCause();
+			if (cause instanceof InterruptedException) {
+				throw (InterruptedException) cause;
+			} else if (cause != null) {
+				throw new InvocationTargetException(cause);
+			} else {
+				throw e;
+			}
+		} finally {
+			/*
+			 * Marking this progress monitor as "done" even in case of
+			 * non-executed optional step for native extensions source root
+			 * creation.
+			 */
+			subMonitor.done();
+		}
+	}
+
+	private int getNumberOfResources(IFolder rootFolder, IProgressMonitor progressMonitor) throws CoreException {
+		progressMonitor.beginTask("Counting xpand resources", 1);
+		ResourceCountingVisitor counter = new ResourceCountingVisitor();
+		rootFolder.accept(counter);
+		progressMonitor.done();
+		return counter.getNumberOfFiles();
+	}
+
+	private IFolder getTemplatesOutputFolder(IFolder rootFolder, IProgressMonitor progressMonitor) {
+		progressMonitor.beginTask("Calculating new templates root folder name", 1);
+		IContainer parent = rootFolder.getParent();
+		IPath relativePathBasis = rootFolder.getProjectRelativePath().removeFirstSegments(parent.getProjectRelativePath().segmentCount());
+		IPath relativePath = relativePathBasis.addFileExtension(MIGRATED_ROOT_EXTENSION);
+		for (int i = 1; parent.getFolder(relativePath).exists(); i++) {
+			relativePath = relativePathBasis.addFileExtension(MIGRATED_ROOT_EXTENSION + i);
+		}
+		progressMonitor.done();
+		return parent.getFolder(relativePath);
+	}
+
+	private IFolder getNativeExtensionsSourceRoot(IFolder rootFolder, IProgressMonitor progressMonitor) throws CoreException, InterruptedException {
+		progressMonitor.beginTask("Calculating source root for native extensions", 1);
+		IProject project = selectedJavaProject.getProject();
+		String folderName = rootFolder.getName() + NATIVE_EXTENSIONS_SRC_FOLDER;
+		for (int i = 1; project.getFolder(folderName).exists(); i++) {
+			folderName = rootFolder.getName() + NATIVE_EXTENSIONS_SRC_FOLDER + i;
+		}
+		progressMonitor.done();
+		return project.getFolder(folderName);
+	}
+
+	public void selectionChanged(IAction action, ISelection selection) {
+		if (selection instanceof IStructuredSelection) {
+			IStructuredSelection structuredSelection = (IStructuredSelection) selection;
+			if (structuredSelection.size() == 1 && structuredSelection.getFirstElement() instanceof IJavaProject) {
+				selectedJavaProject = (IJavaProject) structuredSelection.getFirstElement();
+				rootManager = new RootManager(selectedJavaProject.getProject());
+				action.setEnabled(rootManager.hasConfig());
+				return;
+			}
+		}
+		action.setEnabled(false);
+	}
+
+	private Shell getShell() {
+		return workbenchPart.getSite().getShell();
+	}
+
+	private void showError(String title, String contents) {
+		MessageDialog.openError(getShell(), title, contents);
+	}
+
+}
+@
+
+
+1.1.2.2
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ - ProgressMonitor-related refactoring
+@
+text
+@a26 1
+import org.eclipse.core.resources.IResource;
+d126 1
+a126 8
+		monitor.beginTask("Migrating Xpand project", xpandRoots.size() + BIG_NUMBER * xpandRoots.size() + 1);
+		int totalNumberOfSteps = 0;
+		for (IFolder rootFolder : xpandRoots) {
+			// each root migration requires two additional steps
+			totalNumberOfSteps += 2 + getNumberOfSteps(rootFolder, createSubProgressMonitor(monitor, "Counting xpand resources in: " + rootFolder.getName(), 1));
+		}
+		IProgressMonitor subMonitor = createSubProgressMonitor(monitor, "Migrating all available xpand root folders", BIG_NUMBER * xpandRoots.size());
+		subMonitor.beginTask("Migrating all available xpand root folders", totalNumberOfSteps);
+d129 1
+a129 1
+			migrateXpandRoot(rootFolder, nativeLibraryDeclarations, subMonitor);
+d194 1
+d197 1
+d199 2
+a200 15
+		MigrationVisitor visitor = new MigrationVisitor(rootFolder, templatesOutputFolder, nativeExtensionsRoot, selectedJavaProject, rootManager, progressMonitor);
+		acceptVisitor(rootFolder, visitor);
+		visitor.done();
+		nativeLibraryDeclarations.addAll(visitor.getNativeLibraryDeclarations());
+	}
+
+	private int getNumberOfSteps(IFolder rootFolder, IProgressMonitor progressMonitor) throws CoreException, InterruptedException, InvocationTargetException {
+		progressMonitor.beginTask("Counting xpand resources in: " + rootFolder.getName(), 1);
+		ResourceCountingVisitor counter = new ResourceCountingVisitor(progressMonitor);
+		acceptVisitor(rootFolder, counter);
+		progressMonitor.done();
+		return counter.getNumberOfFiles();
+	}
+
+	private void acceptVisitor(IResource resource, AbstractMigrationVisitor visitor) throws InterruptedException, CoreException, InvocationTargetException {
+d202 3
+a204 1
+			resource.accept(visitor);
+d206 5
+a210 4
+			if (e.getCause() instanceof InterruptedException) {
+				throw (InterruptedException) e.getCause();
+			} else if (e.getCause() != null) {
+				throw new InvocationTargetException(e.getCause());
+d214 7
+d224 8
+@
+
+

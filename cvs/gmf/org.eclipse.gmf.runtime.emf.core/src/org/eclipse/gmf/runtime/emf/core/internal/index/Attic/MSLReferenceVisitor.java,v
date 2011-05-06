@@ -1,0 +1,322 @@
+head	1.4;
+access;
+symbols
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	I20060203-0830:1.2
+	I20060129-1145:1.2
+	I20060127-0900:1.2
+	I20060120-1530:1.2
+	I20060113-1700:1.2
+	M4_10:1.2
+	I20060107-1100:1.2
+	I20060105-1630:1.2
+	I20051230-1230:1.2
+	I20051223-1100:1.2
+	I20051217-0925:1.2
+	I20051201-1800:1.2
+	I20051124-2000:1.2
+	M3_10:1.2
+	I20051118-1245:1.2
+	I20051111-1800:1.2
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2006.02.08.14.52.13;	author ldamus;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2006.02.03.14.15.25;	author vramaswamy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.25.13;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.54;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[121508] gmf_head cdamus 060208 Refactor MSL using the new transaction API
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2004-2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.emf.core.internal.index;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.EStructuralFeature.Setting;
+import org.eclipse.gmf.runtime.emf.core.internal.domain.MSLEditingDomain;
+
+/**
+ * This class is used to visit the referencers of an EObject.
+ * 
+ * @@author rafikj
+ *  
+ */
+public abstract class MSLReferenceVisitor {
+
+	protected MSLEditingDomain domain = null;
+
+	protected EObject referencedObject = null;
+
+	/**
+	 * Constructor.
+	 */
+	public MSLReferenceVisitor(MSLEditingDomain domain, EObject eObject) {
+		this.domain = domain;
+		this.referencedObject = eObject;
+	}
+
+
+	/**
+	 * Visit all the referencers.
+	 */
+	public void visitReferencers() {
+
+		Map featureMap = getGroupedReferencers(referencedObject);
+
+		// operate on a clone to prevent concurrent access exceptions.
+		Object[] references = featureMap.keySet().toArray();
+
+		for (int i = 0; i < references.length; i++) {
+
+			EReference reference = (EReference) references[i];
+
+			List referencerList = (List)featureMap.get(reference);
+
+			// operate on a clone to prevent concurrent access exceptions.
+			Object[] referencers = referencerList.toArray();
+
+			for (int j = 0; j < referencers.length; j++) {
+				EObject referencer = (EObject) referencerList.get(j);
+
+				visitedReferencer(reference, referencer);
+			}
+		}
+	}
+
+	/**
+	 * Override to implement processing the visit.
+	 */
+	protected abstract void visitedReferencer(EReference reference,
+			EObject referencer);
+
+	/**
+	 * For the given referenced EObject, returns a Map whose keys are EReferences
+	 * and values are EObjects that reference the referenced EObject with the key
+	 * EReference.
+	 * 
+	 * @@param referenced the referenced EObject
+	 * @@return a Map of referencers
+	 */
+	private Map getGroupedReferencers(EObject referenced) {
+
+		Map newMap = new HashMap();
+
+		MSLCrossReferenceAdapter crossReferenceAdapter = domain.getCrossReferenceAdapter();
+
+		// first group all the inverse referencers
+		Collection nonNavigableInverseReferences = 
+			crossReferenceAdapter.getNonNavigableInverseReferences(referenced);
+
+		if (nonNavigableInverseReferences != null &&
+				!nonNavigableInverseReferences.isEmpty()) {
+			for (Iterator iter = nonNavigableInverseReferences.iterator(); iter
+					.hasNext();) {
+				Setting setting = (Setting) iter.next();
+				List list = (List)newMap.get(setting.getEStructuralFeature());
+				if (list == null) {
+					list = new ArrayList();
+					list.add(setting.getEObject());
+					newMap.put(setting.getEStructuralFeature(), list);
+				} else {
+					list.add(setting.getEObject());
+				}
+			}
+		}
+
+		// next loop through all the EReferences to find referencers
+		// for those EReferences with opposites
+		List features = referenced.eClass().getEAllReferences();
+
+		for (Iterator i = features.iterator(); i.hasNext();) {
+
+			EReference reference = (EReference) i.next();
+
+			EReference opposite = reference.getEOpposite();
+
+			if (opposite != null && reference.isChangeable()
+					&& !reference.isContainer() && !reference.isContainment()) {
+
+				Set referencers = crossReferenceAdapter.getInverseReferencers(referenced, opposite, null);
+
+				if (!referencers.isEmpty()) {
+
+					newMap.put(opposite, new ArrayList(referencers));
+				}
+			}
+		}
+
+		if (newMap != null) {
+			return Collections.unmodifiableMap(newMap);
+		} else {
+			return Collections.EMPTY_MAP;
+		}
+	}
+}@
+
+
+1.3
+log
+@[113892], gmf_head,Contributed by cvogt, 060203, Integration of the EMF dynamic references for reverse reference lookup
+@
+text
+@@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2004 IBM Corporation and others.
+d14 5
+a18 1
+import java.lang.ref.WeakReference;
+d21 1
+d25 1
+a25 1
+
+a39 2
+	private boolean resolve = true;
+
+a43 9
+		this(domain, eObject, true);
+	}
+
+	/**
+	 * Constructor.
+	 */
+	public MSLReferenceVisitor(MSLEditingDomain domain, EObject eObject,
+			boolean resolve) {
+
+a45 1
+		this.resolve = resolve;
+d48 1
+d54 1
+a54 2
+		Map featureMap = domain.getObjectIndexer().getGroupedReferencers(
+			referencedObject, resolve);
+d63 1
+a63 1
+			Object value = featureMap.get(reference);
+d65 2
+a66 1
+			if (value instanceof List) {
+d68 2
+a69 1
+				List referencerList = (List) value;
+d71 4
+a74 2
+				// operate on a clone to prevent concurrent access exceptions.
+				Object[] referencers = referencerList.toArray();
+d76 5
+a80 1
+				for (int j = 0; j < referencers.length; j++) {
+d82 9
+a90 1
+					WeakReference r = (WeakReference) referencerList.get(j);
+d92 1
+a92 1
+					if (r != null) {
+d94 1
+a94 1
+						EObject referencer = (EObject) r.get();
+d96 16
+a111 3
+						if (referencer != null)
+							visitedReferencer(reference, referencer);
+					}
+d113 10
+d124 1
+a124 1
+			} else if (value instanceof WeakReference) {
+d126 2
+a127 1
+				WeakReference r = (WeakReference) value;
+d129 1
+a129 1
+				if (r != null) {
+d131 1
+a131 1
+					EObject referencer = (EObject) r.get();
+d133 1
+a133 2
+					if (referencer != null)
+						visitedReferencer(reference, referencer);
+d137 6
+a143 6
+
+	/**
+	 * Override to implement processing the visit.
+	 */
+	protected abstract void visitedReferencer(EReference reference,
+			EObject referencer);
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2004.  All Rights Reserved.                    |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

@@ -1,0 +1,210 @@
+head	1.3;
+access;
+symbols
+	v20080924-1925:1.3
+	v20080722-1827:1.3
+	v20080716-1642:1.3
+	R2_1_maintenance:1.3.0.4
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080417-1610:1.3
+	v20080322-0000:1.3
+	v20080222-1200:1.3
+	v20080215-1500:1.3
+	v20080207-0207:1.3
+	v20071124-0000:1.3
+	v20071108-0000:1.3
+	v20070903-0000:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.2
+	R2_0:1.3
+	R4_20:1.3
+	v20070621-0000:1.3
+	RC3_20:1.2
+	v20070608-1300:1.2
+	v20070605-1400:1.2
+	v20070601-1400:1.2
+	v20070520-1200:1.2
+	v20070518-1300:1.2
+	v20070420-1000:1.2
+	v20070413-1300:1.2
+	v20070405-2000:1.2
+	v20070330-1300:1.2
+	v20070322-1100:1.2
+	v20060316-0600:1.2
+	v20070301-1200:1.2
+	v20070228-2000:1.2
+	v20070208-1800:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2007.06.21.14.03.14;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	1176467a85204567;
+
+1.2
+date	2007.01.25.18.14.32;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	7f7045b8f3874567;
+
+1.1
+date	2007.01.18.18.49.15;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	197b45afc1284567;
+
+
+desc
+@@
+
+
+1.3
+log
+@fix copyright years
+@
+text
+@/*
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Fedorov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.bridge.transform;
+
+import java.lang.reflect.InvocationTargetException;
+
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.gmf.internal.bridge.ui.Plugin;
+import org.eclipse.gmf.internal.common.ui.ModelSelectionPage;
+import org.eclipse.gmf.internal.common.ui.ResourceLocationProvider;
+import org.eclipse.jface.dialogs.IMessageProvider;
+import org.eclipse.ui.actions.WorkspaceModifyOperation;
+
+
+public class ModelConfigurationPage extends ModelSelectionPage {
+
+	public ModelConfigurationPage(String pageId, ResourceLocationProvider rlp, ResourceSet resourceSet) {
+		super(pageId, rlp, resourceSet);
+	}
+
+	@@Override
+	protected Resource loadResource() {
+		Resource current = getResource();
+		if (current != null) {
+			current.getResourceSet().getResources().remove(current);
+		}
+		
+		final Resource[] result = new Resource[1];
+	    WorkspaceModifyOperation initializeOperation = new WorkspaceModifyOperation()
+	      {
+
+			protected void execute(IProgressMonitor progressMonitor) throws CoreException {
+				IProgressMonitor monitor = null;
+				try {
+					monitor = (progressMonitor != null) ? new SubProgressMonitor(progressMonitor, 1, SubProgressMonitor.PREPEND_MAIN_LABEL_TO_SUBTASK) : new NullProgressMonitor(); 
+					setStatusMessage(Status.OK_STATUS);
+					result[0] = doLoadResource(monitor);
+				} catch (CoreException exception) {
+					throw exception;
+				} catch (Exception exception) {
+					throw new CoreException(Plugin.createError(exception.getMessage(), exception));
+				} finally {
+					if (monitor != null) {
+						monitor.done();
+					}
+				}
+			}
+		};
+
+		try {
+			getContainer().run(false, false, initializeOperation);
+			setStatusMessage(Status.OK_STATUS);
+		} catch (InvocationTargetException e) {
+			Throwable target = e.getTargetException();
+			if (target instanceof CoreException) {
+				CoreException ce = (CoreException) target;
+				setStatusMessage(ce.getStatus());
+			} else {
+				setStatusMessage(Plugin.createError(target.getMessage(), target));
+			}
+		} catch (InterruptedException e) {
+			setStatusMessage(Status.CANCEL_STATUS);
+		}
+		return result[0];
+	}
+
+	protected Resource doLoadResource(IProgressMonitor monitor) throws CoreException {
+		try {
+			Resource r = super.loadResource();
+			return r;
+		} catch (Exception e) {
+			throw new CoreException(Plugin.createError(e.getMessage(), e));
+		} finally {
+			if (monitor != null) {
+				monitor.done();
+			}
+		}
+	}
+	
+	void setStatusMessage(IStatus status) {
+		if (status == null || status.isOK()) {
+			setMessage(null);
+			setErrorMessage(null);
+		} else if (IStatus.INFO == status.getSeverity()) {
+			setMessage(status.getMessage(), IMessageProvider.INFORMATION);
+			setErrorMessage(null);
+		} else if (IStatus.WARNING == status.getSeverity()) {
+			setMessage(status.getMessage(), IMessageProvider.WARNING);
+			setErrorMessage(null);
+		} else if (IStatus.ERROR == status.getSeverity()) {
+			setMessage(null);
+			setErrorMessage(status.getMessage());
+		} else if (IStatus.CANCEL == status.getSeverity()) {
+			setMessage(null);
+			setErrorMessage(status.getMessage());
+		}
+	}
+
+}
+@
+
+
+1.2
+log
+@[148836] afedorov - Provide "Create generator model..." wizard instead of existing dialog sequence. Fix for NPE on pure-design gmfmap
+@
+text
+@d1 2
+a2 2
+/**
+ * Copyright (c) 2006 Borland Software Corporation
+@
+
+
+1.1
+log
+@[148836] afedorov - Provide "Create generator model..." wizard instead of existing dialog sequence
+@
+text
+@d74 2
+a76 1
+			setStatusMessage(Plugin.createError(target.getMessage(), target));
+@
+

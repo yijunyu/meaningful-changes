@@ -1,0 +1,372 @@
+head	1.4;
+access;
+symbols
+	v20081020-0700:1.4
+	v20080807-1333:1.4
+	v20080807-1325:1.4
+	v20080731-1520:1.4
+	v20080725-1738:1.4
+	v20080722-1827:1.4
+	R2_1_maintenance:1.4.0.6
+	Root_R2_1_maintenance:1.4
+	R2_1_0:1.4
+	v20080425-1959:1.4
+	v20080328-1605:1.4
+	v20080222-1200:1.4
+	v20080114-2222:1.4
+	v20080107-1111:1.4
+	v20071130-1111:1.4
+	v20071124-0000:1.4
+	v20070809-0000:1.4
+	R2_0_maintenance:1.4.0.4
+	R2_0:1.4
+	R4_20:1.4
+	RC3_20:1.4
+	v20070601-1400:1.4
+	v20070518-1300:1.4
+	v20070403-1500:1.4
+	v20070330-1300:1.4
+	v20070208-1800:1.4
+	M4_20:1.4
+	v20061214-0000:1.4
+	M3_20:1.4
+	v20061117-0800:1.4
+	v20061013-1330:1.4
+	v20060919-0800:1.4
+	v20060907-1100:1.4
+	M1_20:1.4
+	v20060831-1500:1.4
+	v20060817-1500:1.4
+	v20060803-1200:1.4
+	v20060721-1130:1.4
+	v20060713-1700:1.4
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	v20060627-1200:1.4
+	v20060616-1200:1.4
+	v20060609-1400:1.4
+	v20060531-1730:1.4
+	v20060530-1930:1.4
+	v20060526-1200:1.4
+	v20060519-0800:1.4
+	I20060505-1400:1.4
+	I20060428-1300:1.4;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2006.04.27.19.52.29;	author ldamus;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.04.26.21.19.43;	author ldamus;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.04.26.21.16.08;	author ldamus;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.04.26.20.14.33;	author ldamus;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[136760] gmf_head ldamus 060427  Infer client context from element type in create request if not explicitly set
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.emf.type.core;
+
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+import org.eclipse.gmf.runtime.emf.type.core.internal.descriptors.IEditHelperAdviceDescriptor;
+
+/**
+ * Implements a multi-context, which is a compound context representing a group
+ * of client contexts.
+ * <P>
+ * It's matcher matches an <code>EObject</code> if all of child contexts match
+ * that <code>EObject</code>.
+ * <P>
+ * It includes an <code>IElementType</code> or an
+ * <code>IEditHelperAdviceDescriptor</code> if all of the child contexts
+ * include that <code>IElementType</code> or
+ * <code>IEditHelperAdviceDescriptor</code>.
+ * 
+ * @@author ldamus
+ */
+public class MultiClientContext implements IClientContext {
+
+	/**
+	 * The ID of all multi-contexts.
+	 */
+	public static final String MULTI_CLIENT_CONTEXT_ID = "multi_client_context_ID"; //$NON-NLS-1$
+
+	private final Set children;
+
+	private IElementMatcher matcher;
+
+	/**
+	 * Initializes me with my child contexts.
+	 * 
+	 * @@param children
+	 *            the {@@link IClientContext}s that I represent
+	 */
+	public MultiClientContext(Collection childContexts) {
+
+		children = new HashSet(childContexts.size());
+
+		// reduce any MultiClientContexts to their child contexts
+		for (Iterator i = childContexts.iterator(); i.hasNext();) {
+			IClientContext next = (IClientContext) i.next();
+
+			if (next.isMultiClientContext()) {
+				Collection nested = ((MultiClientContext) next).getChildren();
+				children.addAll(nested);
+
+			} else {
+				children.add(next);
+			}
+		}
+	}
+
+	/**
+	 * I am a multi-clientContext.
+	 */
+	public boolean isMultiClientContext() {
+		return true;
+	}
+
+	/**
+	 * Adds the given context to this multi-context. If <code>context</code>
+	 * is a multi-context, adds its children instead of itself.
+	 * 
+	 * @@param status
+	 *            the new child context
+	 */
+	public void add(IClientContext context) {
+		if (context.isMultiClientContext()) {
+			children.addAll(context.getChildren());
+		} else {
+			children.add(context);
+		}
+	}
+
+	public final String getId() {
+		return MULTI_CLIENT_CONTEXT_ID;
+	}
+
+	public Collection getChildren() {
+		return children;
+	}
+
+	/**
+	 * Matches an <code>EObject</code> if all of my children match that
+	 * <code>EObject</code>.
+	 */
+	public final IElementMatcher getMatcher() {
+
+		if (matcher == null) {
+			matcher = new IElementMatcher() {
+				public boolean matches(EObject eObject) {
+
+					boolean result = !getChildren().isEmpty();
+					
+					for (Iterator i = getChildren().iterator(); result && i.hasNext();) {
+						IClientContext next = (IClientContext) i.next();
+
+						if (!next.getMatcher().matches(eObject)) {
+							result = false;
+						}
+					}
+					return result;
+				}
+			};
+		}
+		return matcher;
+	}
+
+	/**
+	 * Binds the <code>typeId</code> to each of my children.
+	 */
+	public void bindId(String typeId) {
+		for (Iterator i = getChildren().iterator(); i.hasNext();) {
+			IClientContext next = (IClientContext) i.next();
+			next.bindId(typeId);
+		}
+	}
+
+	/**
+	 * Binds the <code>pattern</code> to each of my children.
+	 */
+	public void bindPattern(Pattern pattern) {
+		for (Iterator i = getChildren().iterator(); i.hasNext();) {
+			IClientContext next = (IClientContext) i.next();
+			next.bindPattern(pattern);
+		}
+	}
+
+	/**
+	 * Includes the <code>elementTypeDescriptor</code> if all of my child
+	 * contexts include the <code>elementTypeDescriptor</code>.
+	 */
+	public boolean includes(IElementTypeDescriptor elementTypeDescriptor) {
+
+		boolean result = !getChildren().isEmpty();
+		
+		for (Iterator i = getChildren().iterator(); result && i.hasNext();) {
+			IClientContext next = (IClientContext) i.next();
+			if (!next.includes(elementTypeDescriptor)) {
+				result = false;
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Includes the <code>elementType</code> if all of my child contexts
+	 * include the <code>elementType</code>.
+	 */
+	public boolean includes(IElementType elementType) {
+
+		boolean result = !getChildren().isEmpty();
+		
+		for (Iterator i = getChildren().iterator(); result && i.hasNext();) {
+			IClientContext next = (IClientContext) i.next();
+			if (!next.includes(elementType)) {
+				result = false;
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Includes the <code>advice</code> if all of my child contexts include
+	 * the <code>advice</code>.
+	 */
+	public boolean includes(IEditHelperAdviceDescriptor advice) {
+		
+		boolean result = !getChildren().isEmpty();
+		
+		for (Iterator i = getChildren().iterator(); result && i.hasNext();) {
+			IClientContext next = (IClientContext) i.next();
+			if (!next.includes(advice)) {
+				result = false;
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * The children fully determine equality.
+	 */
+	public boolean equals(Object obj) {
+
+		if (obj instanceof MultiClientContext) {
+			return getChildren().equals(((MultiClientContext) obj).getChildren());
+		}
+		return false;
+	}
+
+	/**
+	 * The children fully determine equality.
+	 */
+	public int hashCode() {
+		return getChildren().hashCode();
+	}
+
+	public String toString() {
+		StringBuffer b = new StringBuffer();
+
+		for (Iterator i = getChildren().iterator(); i.hasNext();) {
+			b.append(((IClientContext) i.next()).getId());
+
+			if (i.hasNext()) {
+				b.append(StringStatics.COMMA);
+			}
+		}
+		return "ClientMultiContext[" + b + ']'; //$NON-NLS-1$
+	}
+}
+@
+
+
+1.3
+log
+@[136760] gmf_head ldamus 060426  ElementTypeRegistry prevents deployment of different applications sharing the same metamodel
+@
+text
+@d150 1
+a150 1
+	 * Includes the <code>elementTypeDescriptor</code> if all one of my child
+@
+
+
+1.2
+log
+@[136760] gmf_head ldamus 060426  ElementTypeRegistry prevents deployment of different applications sharing the same metamodel
+@
+text
+@d205 2
+a206 11
+		if (obj instanceof MultiClientContext
+				&& ((MultiClientContext) obj).getChildren().size() == getChildren()
+						.size()) {
+
+			for (Iterator i = ((MultiClientContext) obj).getChildren()
+					.iterator(); i.hasNext();) {
+				if (!getChildren().contains(i.next())) {
+					return false;
+				}
+			}
+			return true;
+d215 1
+a215 7
+		
+		int result = 0;
+		
+		for (Iterator i = getChildren().iterator(); i.hasNext();) {
+			result += i.next().hashCode();
+		}
+		return result;
+@
+
+
+1.1
+log
+@[136760] gmf_head ldamus 060426  ElementTypeRegistry prevents deployment of different applications sharing the same metamodel
+@
+text
+@d224 7
+a230 2
+		// TODO check if this is right
+		return getChildren().hashCode();
+@
+

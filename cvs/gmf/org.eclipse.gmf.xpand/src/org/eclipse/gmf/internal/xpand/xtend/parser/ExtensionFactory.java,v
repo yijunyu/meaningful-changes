@@ -1,0 +1,219 @@
+head	1.2;
+access;
+symbols
+	v20081022-1925:1.2
+	v20081020-0700:1.2
+	ocl_qvt:1.2.0.6
+	Root_ocl_qvt:1.2
+	v20080722-1827:1.2
+	v20080718-1731:1.2
+	v20080716-1600:1.2
+	v20080716-1642:1.2
+	R2_1_maintenance:1.2.0.4
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080528-1052:1.2
+	v20080516-1143:1.2
+	v20080417-1610:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20071130-1111:1.2
+	v20071124-0000:1.2
+	v20071108-0000:1.2
+	v20071003-0000:1.2
+	v20070921-0000:1.2
+	v20070903-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	RC3_20:1.2
+	v20070608-1300:1.2
+	v20070605-1400:1.2
+	v20070601-1400:1.2
+	v20070518-1300:1.2
+	v20070420-1000:1.2
+	v20070405-1100:1.2
+	v20070403-1500:1.2
+	v20070330-1300:1.2
+	v20070208-1800:1.2
+	v20070103-0300:1.2
+	M4_20:1.2
+	M3_20:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2006.10.24.18.33.35;	author atikhomirov;	state Exp;
+branches
+	1.2.6.1;
+next	1.1;
+
+1.1
+date	2006.10.18.20.33.48;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.2.6.1
+date	2008.07.29.15.57.04;	author ashatalin;	state dead;
+branches;
+next	;
+commitid	337c488f3dcd4567;
+
+
+desc
+@@
+
+
+1.2
+log
+@support for instance method access in JAVA extensions added
+@
+text
+@/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.xtend.parser;
+
+import java.util.List;
+
+import lpg.lpgjavaruntime.IToken;
+
+import org.eclipse.gmf.internal.xpand.expression.ast.DeclaredParameter;
+import org.eclipse.gmf.internal.xpand.expression.ast.Expression;
+import org.eclipse.gmf.internal.xpand.expression.ast.Identifier;
+import org.eclipse.gmf.internal.xpand.expression.ast.StringLiteral;
+import org.eclipse.gmf.internal.xpand.expression.ast.SyntaxElement;
+import org.eclipse.gmf.internal.xpand.expression.parser.ExpressionFactory;
+import org.eclipse.gmf.internal.xpand.xtend.ast.CreateExtensionStatement;
+import org.eclipse.gmf.internal.xpand.xtend.ast.ExpressionExtensionStatement;
+import org.eclipse.gmf.internal.xpand.xtend.ast.Extension;
+import org.eclipse.gmf.internal.xpand.xtend.ast.ExtensionFile;
+import org.eclipse.gmf.internal.xpand.xtend.ast.ImportStatement;
+import org.eclipse.gmf.internal.xpand.xtend.ast.JavaExtensionStatement;
+import org.eclipse.gmf.internal.xpand.xtend.ast.WorkflowSlotExtensionStatement;
+
+public class ExtensionFactory extends ExpressionFactory {
+
+	public ExtensionFactory(String string) {
+		super(string);
+	}
+
+	public ExtensionFile createExtensionFile(final List<SyntaxElement> nsimports, final List<SyntaxElement> extimports, final List<SyntaxElement> extensions) {
+		return handle(new ExtensionFile(0, -1, 1, nsimports, extimports, extensions));
+	}
+
+	public ImportStatement createNsImport(final IToken s, final IToken e, final StringLiteral st) {
+		return handle(new ImportStatement(start(s), end(e), line(s), st.getValue()));
+	}
+
+	public ImportStatement createExtensionFileImport(final IToken s, final IToken e, final Identifier t, final IToken exported) {
+		return handle(new ImportStatement(start(s), end(e), line(s), t, exported != null));
+	}
+
+	public JavaExtensionStatement createJavaExtension(final IToken name, final IToken endSemi, final Identifier type, final List<DeclaredParameter> params, final Identifier fqn, final List<Identifier> javaParamTypes, final IToken cached, final IToken isPrivate, final Identifier instanceSlot) {
+		final String txt = fqn.getValue();
+		final int index = txt.lastIndexOf('.');
+		final String typeName = txt.substring(0, index);
+		final String methodName = txt.substring(index + 1);
+		final int start = getExtensionStart(cached, type, name);
+		final int line = getExtensionLine(cached, type, name);
+		final Identifier javaMethod = new Identifier(fqn.getStart() + index + 1, fqn.getEnd(), fqn.getLine(), methodName);
+		final Identifier javaType = new Identifier(fqn.getStart(), fqn.getStart() + index, fqn.getLine(), typeName);
+		return handle(new JavaExtensionStatement(start, end(endSemi), line, createIdentifier(name), params, type, javaType, javaMethod, javaParamTypes, cached != null, isPrivate != null, instanceSlot));
+	}
+
+	public WorkflowSlotExtensionStatement createWorkflowSlotExtension(final IToken name, final IToken e, final Identifier type, final List<DeclaredParameter> params, final Identifier slotName, final IToken cached, final IToken priv) {
+		final int start = getExtensionStart(cached, type, name);
+		final int line = getExtensionLine(cached, type, name);
+		return handle(new WorkflowSlotExtensionStatement(start, end(e), line, createIdentifier(name), params, type, slotName, cached != null, priv != null));
+	}
+
+	protected static int getExtensionStart(final IToken resentful, final Identifier type, final IToken name) {
+		// XXX syntax ordering is smth like "resentful type name", and it's odd why start(type) gets higher precedence
+		int start = start(name);
+		if (resentful != null) {
+			start = start(resentful);
+		} else if (type != null) {
+			start = type.getStart();
+		}
+		return start;
+	}
+
+	protected static int getExtensionLine(final IToken resentful, final Identifier type, final IToken name) {
+		int line = line(name);
+		if (resentful != null) {
+			line = line(resentful);
+		} else if (type != null) {
+			line = type.getLine();
+		}
+		return line;
+	}
+
+	public ExpressionExtensionStatement createExpressionExtension(final IToken name, final IToken e, final Identifier returnType, final List<DeclaredParameter> params, final Expression expr, final IToken cached, final IToken priv) {
+		final int start = getExtensionStart(cached, returnType, name);
+		final int line = getExtensionLine(cached, returnType, name);
+		return handle(new ExpressionExtensionStatement(start, end(e), line, createIdentifier(name), returnType, params, expr, cached != null, priv != null));
+	}
+
+	public Extension createCreateExtension(final IToken create, final IToken e, final Identifier returnType, final IToken rtn, final IToken name, final List<DeclaredParameter> params, final Expression expr, final IToken priv) {
+		int start = start(create);
+		int line = line(create);
+		if (priv != null) {
+			start = start(priv);
+			line = line(priv);
+		}
+		return handle(new CreateExtensionStatement(start, end(e), line, createIdentifier(name), returnType, rtn != null ? createIdentifier(rtn) : null, params, expr, priv != null));
+	}
+
+}
+@
+
+
+1.2.6.1
+log
+@Xtend-based implementation of XPand extensions was separated into .migration plugin.
+@
+text
+@@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@d37 1
+a37 5
+	public ExtensionFactory() {
+		super();
+	}
+
+	public ExtensionFactory(final String string) {
+d53 1
+a53 1
+	public JavaExtensionStatement createJavaExtension(final IToken name, final IToken e, final Identifier type, final List<DeclaredParameter> params, final Identifier fqn, final List<Identifier> javaParamTypes, final IToken cached, final IToken priv) {
+d62 1
+a62 1
+		return handle(new JavaExtensionStatement(start, end(e), line, createIdentifier(name), params, type, javaType, javaMethod, javaParamTypes, cached != null, priv != null));
+d71 2
+a72 1
+	protected int getExtensionStart(final IToken resentful, final Identifier type, final IToken name) {
+d82 1
+a82 1
+	protected int getExtensionLine(final IToken resentful, final Identifier type, final IToken name) {
+@
+

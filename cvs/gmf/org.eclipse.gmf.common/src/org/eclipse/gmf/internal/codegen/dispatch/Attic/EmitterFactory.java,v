@@ -1,0 +1,485 @@
+head	1.9;
+access;
+symbols
+	v20081015-1925:1.9
+	v20080924-1925:1.9
+	v20080222-1200:1.8
+	v20071108-0000:1.8
+	v20070903-0000:1.8
+	v20070809-0000:1.8
+	R2_0_maintenance:1.8.0.2
+	R2_0:1.8
+	R4_20:1.8
+	v20070621-0000:1.8
+	RC3_20:1.8
+	v20070605-1400:1.8
+	v20070601-1400:1.8
+	v20070525-1500:1.8
+	v20070520-1200:1.8
+	v20070518-1300:1.8
+	v20070427-0600:1.8
+	v20070420-1000:1.8
+	v20070413-1300:1.8
+	v20070405-1100:1.8
+	v20070330-1300:1.8
+	v20060330-1300:1.8
+	v20070322-1100:1.8
+	v20070307-0700:1.8
+	v20070301-1200:1.8
+	v20070228-2000:1.8
+	v20070221-1500:1.8
+	v20070208-1800:1.8
+	M4_20:1.8
+	v20061222-1800:1.8
+	v20061214-0000:1.8
+	v20061120-1300:1.8
+	M3_20:1.8
+	v20061117-0800:1.8
+	v20061013-1330:1.8
+	v20060925-1700:1.6
+	v20060919-0800:1.6
+	M1_20:1.8
+	v20060904-1500:1.8
+	v20060713-1700:1.6
+	R1_0_maintenance:1.6.0.2
+	R1_0:1.6
+	v20060627-1200:1.6
+	v20060626-1420:1.6
+	v20060616-1200:1.6
+	v20060609-1400:1.6
+	v20060531-1730:1.6
+	v20060530-1930:1.6
+	v20060526-1200:1.6
+	v20060519-1300:1.6
+	v20060519-0800:1.6
+	I20060424-0500:1.5
+	I20060424-0300:1.5
+	M6_10:1.5
+	I20060407-1200:1.4
+	I20060331-1000:1.4
+	I20060324-0300:1.4
+	I20060317-1300:1.4
+	I20060317-1200:1.4
+	I20060316-1300:1.4
+	I20060309-1300:1.4
+	M5_10:1.4
+	S20060303-1600:1.4
+	I20060227-1730:1.4
+	I20060216-1945:1.4
+	I20060210-1715:1.2
+	I20060209-1815:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.9
+date	2008.02.28.20.24.40;	author atikhomirov;	state dead;
+branches;
+next	1.8;
+commitid	4cff47c718874567;
+
+1.8
+date	2006.08.30.15.12.11;	author atikhomirov;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2006.08.30.14.01.36;	author atikhomirov;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2006.05.18.19.12.37;	author atikhomirov;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.04.11.19.16.41;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.02.16.19.09.39;	author ashatalin;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.02.15.18.59.27;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.02.06.22.32.29;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.02.06.22.21.43;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.9
+log
+@cleaned code that is no longer in use (since last JET template gone)
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.dispatch;
+
+import org.eclipse.emf.codegen.jet.JETEmitter;
+import org.eclipse.gmf.common.UnexpectedBehaviourException;
+
+/**
+ * @@author artem
+ */
+public interface EmitterFactory {
+
+	/**
+	 * @@param key
+	 * @@return <code>true</code> if template for the key passed is known to this factory
+	 */
+	boolean checkEmitter(Object key);
+
+	/**
+	 * This is primary way to get emitters from this factory. Produces new emitter.
+	 */
+	JETEmitter acquireEmitter(Object key) throws NoSuchTemplateException, UnexpectedBehaviourException;
+}@
+
+
+1.8
+log
+@extracted caching behaviour outside from the factory - moving towards support for different template engines, #114207
+@
+text
+@@
+
+
+1.7
+log
+@generify
+@
+text
+@a13 5
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+a14 1
+import org.eclipse.emf.codegen.jet.JETException;
+a17 4
+ * Yet Another Emitter Factory.
+ * This factory is expected to slip away from JET templates to some abstract emitters so we could
+ * substitute template engine.
+ * 
+d20 1
+a20 45
+public class EmitterFactory {
+
+	private final TemplateRegistry myTemplates;
+
+	private final boolean myUsePrecompiled;
+
+	private final String[] myVariables;
+
+	private final Map<Object, JETEmitter> myCache;
+
+	private String[] myTemplatePath;
+
+	public EmitterFactory(String[] templatePath, TemplateRegistry templates) {
+		this(templatePath, templates, true, null, true);
+	}
+
+	/**
+	 * @@param templatePath paths to the templates - allows loading external templates
+	 * @@param templates registry with templates
+	 * @@param usePrecompiled whether or not respect class from TemplateRegistry (if there's one specified)
+	 * @@param variables dependencies (plugin identifiers) of code generators
+	 * @@param cache when <code>true</code>, remembers JETEmitter for key
+	 */
+	public EmitterFactory(String[] templatePath, TemplateRegistry templates, boolean usePrecompiled, String[] variables, boolean cache) {
+		assert templatePath != null && templatePath.length > 0 && templates != null;
+		assert variables == null || !Arrays.asList(variables).contains(null);
+		myTemplatePath = templatePath;
+		myTemplates = templates;
+		myUsePrecompiled = usePrecompiled;
+		myVariables = variables == null ? new String[0] : variables;
+		if (cache) {
+			myCache = createCache();
+		} else {
+			myCache = null;
+		}
+	}
+
+	/**
+	 * Instantiates {@@link HashMap} by default. NOTE, this method is invoked
+	 * from constructor, object may not be fully initialized, don't use this
+	 * method for anything but cache instantiation.
+	 */
+	protected Map<Object, JETEmitter> createCache() {
+		return new HashMap<Object, JETEmitter>();
+	}
+d26 1
+a26 17
+	public boolean checkEmitter(Object key) {
+		return checkCache(key) != null || myTemplates.getTemplatePath(key) != null;
+	}
+
+	/**
+	 * This is primary way to get emitters from this factory. 
+	 * Checks cache (if there's one) first. Produces new emitter (with {@@link #newEmitter(Object)}), caches and returns its outcome.
+	 */
+	public JETEmitter acquireEmitter(Object key) throws NoSuchTemplateException, UnexpectedBehaviourException {
+		JETEmitter em = checkCache(key);
+		if (em != null) {
+			return em;
+		}
+		em = newEmitter(key);
+		cache(key, em);
+		return em;
+	}
+d29 1
+a29 1
+	 * Explicit way to produce new instance of emitter, passing over cache (if any).
+d31 2
+a32 62
+	public JETEmitter newEmitter(Object key) throws UnexpectedBehaviourException, NoSuchTemplateException {
+		JETEmitter em;
+		String relativePath = constructPath(key);
+		ClassLoader cl;
+		if (precompiledInUse(key)) {
+			cl = myTemplates.getGeneratorClass(key).getClassLoader();
+		} else {
+			cl = myTemplates.getTemplateClassLoader(key);
+		}
+
+		em = new JETEmitter(myTemplatePath, relativePath, cl);
+		feedVariables(em);
+		initPrecompiled(key, em);
+		return em;
+	}
+
+	private boolean precompiledInUse(Object key) {
+		return myUsePrecompiled && myTemplates.hasGeneratorClass(key);
+	}
+
+	private void initPrecompiled(Object key, JETEmitter em) throws UnexpectedBehaviourException {
+		try {
+			if (precompiledInUse(key)) {
+				Method m = myTemplates.getGeneratorClass(key).getMethod("generate", new Class[] { Object.class });
+				em.setMethod(m);
+			}
+		} catch (NoSuchMethodException ex) {
+			throw new UnexpectedBehaviourException("Bad template class", ex);
+		}
+	}
+
+	private String constructPath(Object key) throws UnexpectedBehaviourException, NoSuchTemplateException {
+		String path = myTemplates.getTemplatePath(key);
+		if (path == null) {
+			throw new NoSuchTemplateException(String.valueOf(key));
+		}
+		return path;
+	}
+
+	private void feedVariables(JETEmitter em) throws UnexpectedBehaviourException {
+		try {
+			for (int i = 0; i < myVariables.length; i++) {
+				em.addVariable(null, myVariables[i]);
+			}
+		} catch (JETException ex) {
+			throw new UnexpectedBehaviourException(ex.getMessage(), ex);
+		}
+	}
+
+	private JETEmitter checkCache(Object key) {
+		if (myCache != null) {
+			return myCache.get(key);
+		}
+		return null;
+	}
+
+	private void cache(Object key, JETEmitter emitter) {
+		if (myCache != null) {
+			myCache.put(key, emitter);
+		}
+	}
+}
+@
+
+
+1.6
+log
+@Emitter became top-level entity (TextEmitter), oddness of JetAdapter and Emitter api were cleared.
+GeneratorBase lost knowledge about JET.
+Parts of gmf.common made internal to avoid possible API issues.
+ImportAssistant refactored to know name of compilation unit to avoid problems like #134506.
+FigureGenerator's reuse of ImportAssistant removed.
+[mgolubev] Tests for #134506 and 142553
+@
+text
+@d38 1
+a38 1
+	private final Map myCache;
+d72 2
+a73 2
+	protected Map/*<Object, JETEmitter>*/ createCache() {
+		return new HashMap();
+d152 1
+a152 1
+			return (JETEmitter) myCache.get(key);
+@
+
+
+1.5
+log
+@refactor exception thrown during generation. There's nothing we could do about JETException, so why treat it differently from Unexpected
+@
+text
+@d78 1
+a78 1
+	 * @@return <code>true</code> if template for the key passes is known to this factory
+@
+
+
+1.4
+log
+@#125175
+- Do not cache templates if dynamicTemplates == true
+- template classLoader could be specified if using dynamicTemplates
+@
+text
+@d24 3
+a26 1
+ * Yet Another Emitter Factory
+d88 1
+a88 1
+	public JETEmitter acquireEmitter(Object key) throws JETException, NoSuchTemplateException, UnexpectedBehaviourException {
+d101 1
+a101 1
+	public JETEmitter newEmitter(Object key) throws UnexpectedBehaviourException, NoSuchTemplateException, JETException {
+d140 7
+a146 3
+	private void feedVariables(JETEmitter em) throws JETException {
+		for (int i = 0; i < myVariables.length; i++) {
+			em.addVariable(null, myVariables[i]);
+@
+
+
+1.3
+log
+@#125175 Allow toolsmith to use different (sub)set of templates for editor code generation
+@
+text
+@d103 6
+a108 1
+		cl = myTemplates.getGeneratorClass(key).getClassLoader();
+@
+
+
+1.2
+log
+@minor refactoring
+@
+text
+@a14 2
+import java.net.MalformedURLException;
+import java.net.URL;
+a29 2
+	private final URL myBaseURL;
+
+d38 4
+a41 2
+	public EmitterFactory(URL baseURL, TemplateRegistry templates) {
+		this(baseURL, templates, true, null, true);
+d45 1
+a45 2
+	 * XXX perhaps, baseURL should be URL[] to handle external/dynamic templates?
+	 * @@param baseURL base location to resolve template path taken from TemplateRegistry
+d51 2
+a52 2
+	public EmitterFactory(URL baseURL, TemplateRegistry templates, boolean usePrecompiled, String[] variables, boolean cache) {
+		assert baseURL != null && templates != null;
+d54 1
+a54 1
+		myBaseURL = baseURL;
+d101 1
+a101 1
+		String fullPath = constructPath(key);
+d103 2
+a104 6
+		if (precompiledInUse(key)) {
+			cl = myTemplates.getGeneratorClass(key).getClassLoader();
+		} else {
+			cl = getClass().getClassLoader();
+		}
+		em = new JETEmitter(fullPath, cl);
+d126 3
+a128 8
+		try {
+			String path = myTemplates.getTemplatePath(key);
+			if (path == null) {
+				throw new NoSuchTemplateException(String.valueOf(key));
+			}
+			return new URL(myBaseURL, path).toString();
+		} catch (MalformedURLException ex) {
+			throw new UnexpectedBehaviourException(ex);
+d130 1
+@
+
+
+1.1
+log
+@refactor - moved EmitterFactory/Dispatcher infrastructure to gmf.common to enable its use in oeg.codegen
+@
+text
+@d17 1
+a17 1
+import java.util.Collections;
+a18 2
+import java.util.Iterator;
+import java.util.List;
+d38 1
+a38 1
+	private final List/* <String> */myVariables;
+d42 4
+d47 6
+a52 6
+	 * FIXME variables - either String[] or wrap as UnmodifiableList
+	 * 
+	 * @@param baseURL
+	 * @@param templates
+	 * @@param usePrecompiled
+	 * @@param variables
+d54 1
+a54 1
+	public EmitterFactory(URL baseURL, TemplateRegistry templates, boolean usePrecompiled, List/* <String> */variables, boolean cache) {
+d56 1
+a56 1
+		assert variables == null || !variables.contains(null);
+d60 1
+a60 1
+		myVariables = variables == null ? Collections.EMPTY_LIST : variables;
+d145 2
+a146 2
+		for (Iterator it = myVariables.iterator(); it.hasNext();) {
+			em.addVariable(null, (String) it.next());
+@
+

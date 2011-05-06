@@ -1,0 +1,177 @@
+head	1.1;
+access;
+symbols
+	v20080722-1827:1.1
+	R2_1_maintenance:1.1.0.4
+	Root_R2_1_maintenance:1.1
+	R2_1_0:1.1
+	v20080425-1959:1.1
+	v20071108-0000:1.1
+	v20071003-0000:1.1
+	v20070921-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1
+	RC3_20:1.1
+	v20070601-1400:1.1
+	v20070525-1500:1.1
+	v20070518-1300:1.1
+	v20070427-0600:1.1
+	v20070420-1000:1.1
+	v20070413-1300:1.1
+	v20070405-1100:1.1
+	v20070330-1300:1.1
+	v20060330-1300:1.1
+	v20070322-1100:1.1
+	v20060316-0600:1.1
+	v20070307-0700:1.1
+	v20070228-2000:1.1
+	v20070208-1800:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2007.02.02.17.14.35;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	78e045c371794567;
+
+
+desc
+@@
+
+
+1.1
+log
+@[172664]: Provide audits and metrics for Lite diagrams (including view-based and RCP) + validation decorators + validation markers (for non-RCP case);
+Several templates are rewritten with xpand;
+lite-specific TextEmitter is back (otherwise importManager is sometimes passed to xpand templates)
+@
+text
+@/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.validation;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+
+import org.eclipse.emf.common.util.URI;
+
+/**
+ * Represents a state of validation of a single diagram.
+ */
+public class ValidationState {
+	private final URI myDiagramUri;
+	private final ValidationStateManager myStateManager;
+	private HashMap<URI, Collection<ViolationDescriptor>> myViolations = new HashMap<URI, Collection<ViolationDescriptor>>();
+	private ValidationStateUpdater myUpdater;
+
+	public ValidationState(ValidationStateManager stateManager, URI diagramUri) {
+		myDiagramUri = diagramUri;
+		myStateManager = stateManager;
+	}
+
+	/**
+	 * @@return the diagramUri
+	 */
+	public URI getDiagramUri() {
+		return myDiagramUri;
+	}
+
+	public Collection<ViolationDescriptor> getViolations(URI uri) {
+		return myViolations.get(uri);
+	}
+
+	public Collection<ViolationDescriptor> getAllViolations() {
+		Collection<ViolationDescriptor> result = new ArrayList<ViolationDescriptor>();
+		for (Collection<ViolationDescriptor> next : myViolations.values()) {
+			result.addAll(next);
+		}
+		return result;
+	}
+
+	/**
+	 * Starts an update operation. The operation will typically create the violations based on 
+	 * the current state of the validation and report completion 
+	 * using {@@link IValidationStateUpdater#commitChanges()} method.
+	 * After the operation is completed successfully, the {@@link IValidationStateListener listeners} 
+	 * registered to the {@@link ValidationStateManager} will be notified about the change.
+	 * It is expected that a single command may be active at any given time, and that a command will 
+	 * not be used after is has been reported as completed.
+	 */
+	public IValidationStateUpdater startUpdate() {
+		if (myUpdater != null) {
+			throw new IllegalStateException();
+		}
+		myUpdater = new ValidationStateUpdater();
+		return myUpdater;
+	}
+
+	private class ValidationStateUpdater implements IValidationStateUpdater {
+		private HashMap<URI, Collection<ViolationDescriptor>> myUpdatedViolations;
+		public ValidationStateUpdater() {
+			myUpdatedViolations = new HashMap<URI, Collection<ViolationDescriptor>>();
+		}
+		public void addViolation(ViolationDescriptor violation) {
+			if (violation == null) {
+				return;
+			}
+			URI uri = violation.getUri();
+			Collection<ViolationDescriptor> descriptors = get(uri, true);
+			if (!descriptors.contains(violation)) {
+				descriptors.add(violation);
+			}
+		}
+		public void removeViolation(ViolationDescriptor violation) {
+			if (violation == null) {
+				return;
+			}
+			URI uri = violation.getUri();
+			Collection<ViolationDescriptor> descriptors = get(uri, false);
+			if (descriptors != null) {
+				descriptors.remove(violation);
+			}
+		}
+		private Collection<ViolationDescriptor> get(URI uri, boolean createIfMissing) {
+			Collection<ViolationDescriptor> result = myUpdatedViolations.get(uri);
+			if (result == null && createIfMissing) {
+				result = new ArrayList<ViolationDescriptor>();
+				myUpdatedViolations.put(uri, result);
+			}
+			return result;
+		}
+		public void commitChanges() {
+			if (myUpdater != this) {
+				throw new IllegalStateException();
+			}
+			try {
+				HashMap<URI, Collection<ViolationDescriptor>> oldViolations = myViolations;
+				myViolations = myUpdatedViolations;
+				myStateManager.fireValidationStateChanged(ValidationState.this, Collections.unmodifiableMap(oldViolations), Collections.unmodifiableMap(myUpdatedViolations));
+			} finally {
+				myUpdater = null;
+			}
+		}
+		public void discardChanges() {
+			if (myUpdater == this) {
+				myUpdater = null;
+			}
+		}
+	}
+}
+@

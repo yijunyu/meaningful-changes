@@ -1,0 +1,224 @@
+head	1.2;
+access;
+symbols
+	v20081023-2107:1.2
+	v20081022-1925:1.2
+	v20081022-1005:1.2
+	v20081020-0700:1.2
+	v20080917-1925:1.2
+	v20080916-2008:1.2
+	v20080911-1728:1.2
+	v20080911-1506:1.2
+	v20080910-1520:1.2
+	v20080910-1510:1.2
+	v20080903-1520:1.2
+	v20080903-1510:1.2
+	v20080813-1510:1.2
+	v20080811-1546:1.2
+	v20080731-1520:1.2
+	v20080725-1738:1.2
+	v20080723-2246:1.2
+	v20080723-2232:1.2
+	v20080723-1700:1.2
+	v20080722-1827:1.2
+	v20080718-1700:1.2
+	v20080718-1731:1.2
+	v20080716-1600:1.2
+	v20080716-1642:1.2
+	R2_1_maintenance:1.2.0.2
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080610-1132:1.2
+	v20080603-1553:1.2
+	v20080527-1255:1.2
+	v20080516-1748:1.2
+	v20080516-1143:1.2
+	v20080512-1200:1.2
+	v20080503-1740:1.2
+	v20080501-1739:1.2
+	v20080425-1959:1.2
+	v20080417-1610:1.2
+	v20080407-2250:1.2
+	v20080407-0930:1.2
+	v20080404-1111:1.2
+	v20080328-1605:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20080201-2010:1.2
+	v20080114-1111:1.2
+	v20080107-1111:1.1
+	v20071222-1111:1.1
+	v20071214-1111:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2008.01.11.15.59.37;	author crevells;	state Exp;
+branches;
+next	1.1;
+commitid	6a2c478792684567;
+
+1.1
+date	2007.12.11.15.17.03;	author crevells;	state Exp;
+branches;
+next	;
+commitid	70dc475ea9ed4567;
+
+
+desc
+@@
+
+
+1.2
+log
+@[111901] gmf_head crevells 080111 [KeyboardBindings] Ability to move shapes using cursors keys. (by default)
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2007, 2008 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.diagram.ui.internal.ruler;
+
+import java.util.Map;
+
+import org.eclipse.draw2d.PositionConstants;
+import org.eclipse.gef.GraphicalEditPart;
+import org.eclipse.gef.SnapToGeometry;
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.IMapMode;
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapModeUtil;
+
+/**
+ * Overridden to:
+ * <li> support various mapmode units</li>
+ * <li> support snapping to geometry in a restricted direction. See
+ * {@@link SnapToHelperUtil#RESTRICTED_DIRECTIONS}.</li>
+ * 
+ * @@author cli, crevells
+ */
+public class SnapToGeometryEx
+    extends SnapToGeometry {
+
+    public SnapToGeometryEx(GraphicalEditPart container) {
+        super(container);
+    }
+
+    // This code will be required to translate the figure's coordinates
+    // accordingly if Bugzilla 188308 is fixed
+    // protected static class EntryEx extends Entry {
+    //
+    // protected EntryEx(int type, int location) {
+    // super(type, location);
+    // }
+    // }
+    //
+
+    // protected void populateRowsAndCols(List parts) {
+    //		
+    // rows = new Entry[parts.size() * 3];
+    // cols = new Entry[parts.size() * 3];
+    // GraphicalEditPart diagramEditPart = (GraphicalEditPart)parts.get(0);
+    //		
+    // while (diagramEditPart.getParent() != null){
+    // diagramEditPart = (GraphicalEditPart)diagramEditPart.getParent();
+    // if (diagramEditPart instanceof DiagramEditPart) break;
+    // }
+    //		
+    // for (int i = 0; i < parts.size(); i++) {
+    //			
+    // GraphicalEditPart child = (GraphicalEditPart)parts.get(i);
+    // Rectangle bounds = getFigureBounds(child).getCopy();
+    //			
+    // //translate the figure's coordinates to absolute, then relative
+    // //to the diagram (i.e the figure's layout constraint on the diagram)
+    // child.getFigure().translateToAbsolute(bounds);
+    // diagramEditPart.getFigure().translateToRelative(bounds);
+    //			
+    // cols[i * 3] = new EntryEx(-1, bounds.x);
+    // rows[i * 3] = new EntryEx(-1, bounds.y);
+    // cols[i * 3 + 1] = new EntryEx(0, bounds.x + (bounds.width - 1) / 2);
+    // rows[i * 3 + 1] = new EntryEx(0, bounds.y + (bounds.height - 1) / 2);
+    // cols[i * 3 + 2] = new EntryEx(1, bounds.right() - 1);
+    // rows[i * 3 + 2] = new EntryEx(1, bounds.bottom() - 1);
+    //
+    // }
+    // }
+
+    protected double getThreshold() {
+        IMapMode mm = MapModeUtil.getMapMode(container.getFigure());
+        return mm.DPtoLP((int) super.getThreshold());
+    }
+
+    protected double getCorrectionFor(Entry entries[], Map extendedData,
+            boolean vert, double value, int side) {
+
+        Integer restrictedDirections = (Integer) extendedData
+            .get(SnapToHelperUtil.RESTRICTED_DIRECTIONS);
+        if (restrictedDirections == null
+            || restrictedDirections == PositionConstants.NONE) {
+            return super.getCorrectionFor(entries, extendedData, vert, value,
+                side);
+        }
+
+        boolean increaseOK = vert ? (restrictedDirections & EAST) != 0
+            : (restrictedDirections & SOUTH) != 0;
+        boolean decreaseOK = vert ? (restrictedDirections & WEST) != 0
+            : (restrictedDirections & NORTH) != 0;
+
+        Entry filteredEntries[] = new Entry[entries.length];
+        int count = 0;
+        for (int i = 0; i < entries.length; i++) {
+            if ((increaseOK && entries[i].getLocation() > value)
+                || (decreaseOK && entries[i].getLocation() < value)) {
+                filteredEntries[count++] = entries[i];
+            }
+        }
+
+        // remove empty entries
+        Entry[] filteredEntries2 = new Entry[count];
+        for (int i = 0; i < count; i++) {
+            filteredEntries2[i] = filteredEntries[i];
+        }
+
+        return super.getCorrectionFor(filteredEntries2, extendedData, vert,
+            value, side);
+    }
+
+}
+@
+
+
+1.1
+log
+@[188974] gmf_head crevells 071211 [RulersGrid] GEF alignment feature missing
+Contributed by:  Carson Li
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2007 IBM Corporation and others.
+d14 3
+d23 4
+a26 1
+ * Override to support HiMetrics *
+d28 1
+a28 1
+ * @@author cli
+a77 6
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.gef.SnapToGeometry#getThreshold()
+     */
+
+d83 35
+@
+

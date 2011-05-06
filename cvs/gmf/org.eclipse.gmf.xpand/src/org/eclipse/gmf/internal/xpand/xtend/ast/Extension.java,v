@@ -1,0 +1,414 @@
+head	1.5;
+access;
+symbols
+	v20081022-1925:1.5
+	v20081020-0700:1.5
+	ocl_qvt:1.5.0.6
+	Root_ocl_qvt:1.5
+	v20080722-1827:1.5
+	v20080718-1731:1.5
+	v20080716-1600:1.5
+	v20080716-1642:1.5
+	R2_1_maintenance:1.5.0.4
+	Root_R2_1_maintenance:1.5
+	R2_1_0:1.5
+	v20080528-1052:1.5
+	v20080516-1143:1.5
+	v20080417-1610:1.5
+	v20080322-0000:1.5
+	v20080222-1200:1.5
+	v20071130-1111:1.5
+	v20071124-0000:1.5
+	v20071108-0000:1.5
+	v20071003-0000:1.5
+	v20070921-0000:1.5
+	v20070903-0000:1.5
+	v20070809-0000:1.5
+	R2_0_maintenance:1.5.0.2
+	R2_0:1.5
+	R4_20:1.5
+	RC3_20:1.5
+	v20070608-1300:1.5
+	v20070605-1400:1.5
+	v20070601-1400:1.5
+	v20070518-1300:1.5
+	v20070420-1000:1.3
+	v20070405-1100:1.3
+	v20070403-1500:1.3
+	v20070330-1300:1.3
+	v20070208-1800:1.3
+	v20070103-0300:1.3
+	M4_20:1.3
+	M3_20:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.5
+date	2007.05.14.16.53.25;	author atikhomirov;	state Exp;
+branches
+	1.5.6.1;
+next	1.4;
+commitid	6d85464894054567;
+
+1.4
+date	2007.05.14.11.13.35;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	44814648445e4567;
+
+1.3
+date	2006.11.09.18.00.11;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.10.23.18.58.22;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.10.18.20.33.50;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.5.6.1
+date	2008.07.24.16.21.35;	author ashatalin;	state Exp;
+branches;
+next	1.5.6.2;
+commitid	7c4a4888ac0d4567;
+
+1.5.6.2
+date	2008.07.29.15.57.04;	author ashatalin;	state dead;
+branches;
+next	;
+commitid	337c488f3dcd4567;
+
+
+desc
+@@
+
+
+1.5
+log
+@always notify about extension leave
+@
+text
+@/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.xtend.ast;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.gmf.internal.xpand.eval.EvaluationListener;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.EvaluationException;
+import org.eclipse.gmf.internal.xpand.expression.ExecutionContext;
+import org.eclipse.gmf.internal.xpand.expression.Variable;
+import org.eclipse.gmf.internal.xpand.expression.ast.DeclaredParameter;
+import org.eclipse.gmf.internal.xpand.expression.ast.Identifier;
+import org.eclipse.gmf.internal.xpand.expression.ast.SyntaxElement;
+
+public abstract class Extension extends SyntaxElement /*implements ParameterizedCallable*/ {
+
+    private final Identifier name;
+
+    private final List formalParameters;
+
+    protected ExtensionFile file;
+
+    protected final boolean cached;
+
+    private final boolean isPrivate;
+
+    protected final Identifier returnType;
+
+    private List<EClassifier> resolvedParameterTypes = null;
+
+    public Extension(final int start, final int end, final int line, final Identifier name,
+            final Identifier returnType, final List formalParameters, final boolean cached, final boolean isPrivate) {
+        super(start, end, line);
+        this.name = name;
+        this.formalParameters = formalParameters;
+        this.returnType = returnType;
+        this.cached = cached;
+        this.isPrivate = isPrivate;
+    }
+
+    public List getFormalParameters() {
+        return formalParameters;
+    }
+
+    public String getName() {
+        return name.getValue();
+    }
+
+    public final EClassifier getReturnType(final EClassifier[] parameters, ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+        ctx = ctx.cloneWithResource(getExtensionFile());
+        return internalGetReturnType(parameters, ctx, issues);
+    }
+
+    protected abstract EClassifier internalGetReturnType(EClassifier[] parameters, ExecutionContext ctx, Set<AnalysationIssue> issues);
+
+    public final void analyze(ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+        final List params = getFormalParameters();
+        final Set<String> usedNames = new HashSet<String>();
+        for (final Iterator iter = params.iterator(); iter.hasNext();) {
+            final DeclaredParameter p = (DeclaredParameter) iter.next();
+            final EClassifier pt = ctx.getTypeForName(p.getType().getValue());
+            if (pt == null) {
+                issues.add(new AnalysationIssue(AnalysationIssue.Type.TYPE_NOT_FOUND, "Type not found: "
+                        + p.getType().getValue(), p.getType()));
+            }
+            if (!usedNames.add(p.getName().getValue())) {
+                issues.add(new AnalysationIssue(AnalysationIssue.Type.SYNTAX_ERROR, "Duplicate parameter name: "
+                        + p.getName().getValue(), p.getName()));
+            }
+            ctx = ctx.cloneWithVariable(new Variable(p.getName().getValue(), pt));
+        }
+        if (returnType != null) {
+            final EClassifier pt = ctx.getTypeForName(returnType.getValue());
+            if (pt == null) {
+                issues.add(new AnalysationIssue(AnalysationIssue.Type.TYPE_NOT_FOUND, "Type not found: "
+                        + returnType.getValue(), returnType));
+            }
+        }
+        analyzeInternal(ctx, issues);
+    }
+
+    protected abstract void analyzeInternal(ExecutionContext ctx, Set<AnalysationIssue> issues);
+
+    private final Map<List<Object>, Object> cache = new HashMap<List<Object>, Object>();
+
+    public Object evaluate(final Object[] parameters, ExecutionContext ctx) {
+        if (cached) {
+            final List<Object> l = Arrays.asList(parameters);
+            if (cache.containsKey(l)) {
+				return cache.get(l);
+			}
+        }
+        if (getExtensionFile() == null) {
+            throw new IllegalStateException("No containing file!");
+        }
+        ctx = ctx.cloneWithResource(getExtensionFile());
+        notifyEnter(ctx);
+        final Object result;
+        try {
+        	result = evaluateInternal(parameters, ctx);
+        } finally {
+        	notifyLeave(ctx);
+        }
+        if (cached) {
+            cache.put(Arrays.asList(parameters), result);
+        }
+        return result;
+    }
+
+    public final void setExtensionFile(final ExtensionFile f) {
+        file = f;
+    }
+
+    public ExtensionFile getExtensionFile() {
+        return file;
+    }
+
+    protected abstract Object evaluateInternal(Object[] parameters, ExecutionContext ctx);
+
+    public List<String> getParameterNames() {
+        final List<String> names = new ArrayList<String>();
+        for (final Iterator iter = getFormalParameters().iterator(); iter.hasNext();) {
+            names.add(((DeclaredParameter) iter.next()).getName().getValue());
+        }
+        return names;
+    }
+
+    public void init(final ExecutionContext ctx) {
+        if (resolvedParameterTypes == null) {
+            try {
+                resolvedParameterTypes = new ArrayList<EClassifier>();
+                for (final Iterator iter = getFormalParameters().iterator(); iter.hasNext();) {
+                    final String name = ((DeclaredParameter) iter.next()).getType().getValue();
+                    final EClassifier t = ctx.getTypeForName(name);
+                    if (t == null) {
+						throw new EvaluationException("Couldn't resolve type for '" + name
+                                + "'. Did you forget to configure the corresponding metamodel?", this);
+					}
+                    resolvedParameterTypes.add(t);
+                }
+                resolvedParameterTypes = Collections.unmodifiableList(resolvedParameterTypes);
+            } catch (final RuntimeException e) {
+                resolvedParameterTypes = null;
+                throw e;
+            }
+        }
+    }
+
+    public List<EClassifier> getParameterTypes() {
+        return resolvedParameterTypes;
+    }
+
+    public Identifier getReturnTypeIdentifier() {
+        return returnType;
+    }
+
+    @@Override
+    public String toString() {
+        return (returnType != null ? returnType.getValue() + " " : "") + getName() + "(" + paramsToString() + ")";
+    }
+
+    private String paramsToString() {
+        final StringBuffer buff = new StringBuffer();
+        for (final Iterator iter = getFormalParameters().iterator(); iter.hasNext();) {
+            final DeclaredParameter element = (DeclaredParameter) iter.next();
+            buff.append(element.getType() + " " + element.getName());
+            if (iter.hasNext()) {
+                buff.append(",");
+            }
+        }
+        return buff.toString();
+    }
+
+    public boolean isPrivate() {
+        return isPrivate;
+    }
+
+    private void notifyEnter(ExecutionContext ctx) {
+    	EvaluationListener l = ctx.getEvaluationListener();
+    	if (l != null) {
+    		l.enter(this, ctx);
+    	}
+    }
+
+    private void notifyLeave(ExecutionContext ctx) {
+    	EvaluationListener l = ctx.getEvaluationListener();
+    	if (l != null) {
+    		l.leave(this, ctx);
+    	}
+    }
+}
+@
+
+
+1.5.6.1
+log
+@Initial commit of extend->qvt migration in xpand.
+@
+text
+@d37 1
+a37 1
+public abstract class Extension extends SyntaxElement implements GenericExtension /*implements ParameterizedCallable*/ {
+@
+
+
+1.5.6.2
+log
+@Xtend-based implementation of XPand extensions was separated into .migration plugin.
+@
+text
+@@
+
+
+1.4
+log
+@basic debug support for xpand
+@
+text
+@d120 6
+a125 2
+        final Object result = evaluateInternal(parameters, ctx);
+        notifyLeave(ctx);
+@
+
+
+1.3
+log
+@issue's type converted to enum, added decreased (warning) severity option toease development with xpand
+@
+text
+@d28 1
+d119 1
+d121 1
+d196 13
+@
+
+
+1.2
+log
+@finals
+@
+text
+@d84 1
+a84 1
+                issues.add(new AnalysationIssue(AnalysationIssue.TYPE_NOT_FOUND, "Type not found: "
+d88 1
+a88 1
+                issues.add(new AnalysationIssue(AnalysationIssue.SYNTAX_ERROR, "Duplicate parameter name: "
+d96 1
+a96 1
+                issues.add(new AnalysationIssue(AnalysationIssue.TYPE_NOT_FOUND, "Type not found: "
+@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@d19 1
+d38 1
+a38 1
+    private Identifier name;
+d40 1
+a40 1
+    private List formalParameters;
+d44 1
+a44 1
+    protected boolean cached = false;
+d46 5
+a50 1
+    private boolean isPrivate = false;
+d144 1
+a144 1
+        if (parameterTypes == null) {
+d146 1
+a146 1
+                parameterTypes = new ArrayList<EClassifier>();
+d154 1
+a154 1
+                    parameterTypes.add(t);
+d156 1
+d158 1
+a158 1
+                parameterTypes = null;
+a163 4
+    private List<EClassifier> parameterTypes = null;
+
+    protected Identifier returnType;
+
+d165 1
+a165 1
+        return parameterTypes;
+@
+

@@ -1,0 +1,234 @@
+head	1.5;
+access;
+symbols
+	v20081022-1925:1.5
+	v20081020-0700:1.5
+	ocl_qvt:1.5.0.6
+	Root_ocl_qvt:1.5
+	v20080722-1827:1.5
+	v20080718-1731:1.5
+	v20080716-1600:1.5
+	v20080716-1642:1.5
+	R2_1_maintenance:1.5.0.4
+	Root_R2_1_maintenance:1.5
+	R2_1_0:1.5
+	v20080528-1052:1.5
+	v20080516-1143:1.5
+	v20080417-1610:1.5
+	v20080322-0000:1.5
+	v20080222-1200:1.5
+	v20071130-1111:1.5
+	v20071124-0000:1.5
+	v20071108-0000:1.5
+	v20071003-0000:1.5
+	v20070921-0000:1.5
+	v20070903-0000:1.5
+	v20070809-0000:1.5
+	R2_0_maintenance:1.5.0.2
+	R2_0:1.5
+	R4_20:1.5
+	RC3_20:1.5
+	v20070608-1300:1.5
+	v20070605-1400:1.5
+	v20070601-1400:1.5
+	v20070518-1300:1.5
+	v20070420-1000:1.4
+	v20070405-1100:1.4
+	v20070403-1500:1.4
+	v20070330-1300:1.4
+	v20070208-1800:1.4
+	v20070103-0300:1.3
+	M4_20:1.3
+	M3_20:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.5
+date	2007.05.14.17.55.50;	author atikhomirov;	state Exp;
+branches
+	1.5.6.1;
+next	1.4;
+commitid	75ac4648a2a64567;
+
+1.4
+date	2007.01.31.17.20.48;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	27fe45c0cfef4567;
+
+1.3
+date	2006.10.25.17.23.40;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.10.23.16.13.10;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.10.18.20.33.51;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.5.6.1
+date	2008.08.06.14.05.34;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	35b4899afa74567;
+
+
+desc
+@@
+
+
+1.5
+log
+@abstract class loading concept
+@
+text
+@/*******************************************************************************
+ * Copyright (c) 2006,2007 Eclipse.org
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *******************************************************************************/
+package org.eclipse.gmf.internal.xpand.util;
+
+import java.util.Collection;
+
+import org.eclipse.gmf.internal.xpand.ResourceManager;
+import org.eclipse.gmf.internal.xpand.expression.ExecutionContext;
+import org.eclipse.gmf.internal.xpand.expression.ExecutionContextImpl;
+import org.eclipse.gmf.internal.xpand.expression.Variable;
+import org.eclipse.gmf.internal.xpand.model.Output;
+import org.eclipse.gmf.internal.xpand.model.XpandExecutionContext;
+import org.eclipse.gmf.internal.xpand.model.XpandExecutionContextImpl;
+
+/**
+ * TODO remove?
+ * @@author artem
+ */
+public class ContextFactory {
+
+	public static XpandExecutionContext createXpandContext(ResourceManager resourceManager) {
+		return createXpandContext(resourceManager, null, null, (ClassLoadContext) null);
+	}
+
+	public static XpandExecutionContext createXpandContext(ResourceManager resourceManager, Output output, Collection<Variable> globalVars) {
+		return createXpandContext(resourceManager, output, globalVars, (ClassLoadContext) null);
+	}
+
+	public static XpandExecutionContext createXpandContext(ResourceManager resourceManager, Output output, Collection<Variable> globalVars, ClassLoader context) {
+		return createXpandContext(resourceManager, output, globalVars, context == null ? (ClassLoadContext) null : new ClassLoadContext.Naive(context));
+	}
+
+	public static XpandExecutionContext createXpandContext(ResourceManager resourceManager, Output output, Collection<Variable> globalVars, ClassLoadContext context) {
+		final XpandExecutionContextImpl execCtx = new XpandExecutionContextImpl(resourceManager, output, null, globalVars);
+		execCtx.setContextClassLoader(context);
+		return execCtx;
+	}
+
+	public static ExecutionContext createXtendContext(ResourceManager resourceManager) {
+		return new ExecutionContextImpl(resourceManager);
+	}
+}
+@
+
+
+1.5.6.1
+log
+@[243154] Use OCL instead of home-grown expression language. Refactored to eliminate context specific to expressions (moving towards using OCL environment for that), split modifiable (context-specific) and static execution data.
+@
+text
+@d1 2
+a2 2
+/*
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+d8 1
+a8 1
+ */
+d14 3
+d18 2
+a19 4
+import org.eclipse.gmf.internal.xpand.model.ExecutionContext;
+import org.eclipse.gmf.internal.xpand.model.ExecutionContextImpl;
+import org.eclipse.gmf.internal.xpand.model.Scope;
+import org.eclipse.gmf.internal.xpand.model.Variable;
+d27 1
+a27 1
+	public static ExecutionContext createXpandContext(ResourceManager resourceManager) {
+d31 1
+a31 1
+	public static ExecutionContext createXpandContext(ResourceManager resourceManager, Output output, Collection<Variable> globalVars) {
+d35 1
+a35 1
+	public static ExecutionContext createXpandContext(ResourceManager resourceManager, Output output, Collection<Variable> globalVars, ClassLoader context) {
+d39 8
+a46 4
+	public static ExecutionContext createXpandContext(ResourceManager resourceManager, Output output, Collection<Variable> globalVars, ClassLoadContext context) {
+		Scope scope = new Scope(resourceManager, globalVars, output);
+		scope.setContextClassLoader(context);
+		return new ExecutionContextImpl(scope);
+@
+
+
+1.4
+log
+@move XpandTextEmitter out from codegen to common plugin
+@
+text
+@d28 1
+a28 1
+		return createXpandContext(resourceManager, null, null, null);
+d32 1
+a32 1
+		return createXpandContext(resourceManager, output, globalVars, null);
+d36 4
+@
+
+
+1.3
+log
+@refactored resource manager into capable working in workspace and working with uris, added experimental extended error reporting to provide more details on parsing errors
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Eclipse.org
+d28 1
+a28 1
+		return new XpandExecutionContextImpl(resourceManager, null, null);
+d32 7
+a38 1
+		return new XpandExecutionContextImpl(resourceManager, output, null, globalVars);
+@
+
+
+1.2
+log
+@refactored use of variables (no need to expose Map)
+@
+text
+@d22 1
+@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@d11 1
+a11 1
+import java.util.Map;
+d30 1
+a30 2
+	// FIXME no much sense in GlobalVarsMap<String, Varaible<String, value>> - nobody cares about variable's name in this case
+	public static XpandExecutionContext createXpandContext(ResourceManager resourceManager, Output output, Map<String, Variable> globalVars) {
+@
+

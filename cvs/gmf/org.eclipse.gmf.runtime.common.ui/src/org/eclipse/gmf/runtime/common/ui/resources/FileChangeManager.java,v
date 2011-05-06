@@ -1,0 +1,639 @@
+head	1.7;
+access;
+symbols
+	v20081023-2107:1.7
+	v20081022-1925:1.7
+	v20081022-1104:1.7
+	v20081020-0700:1.7
+	v20080722-1827:1.7
+	R2_1_maintenance:1.7.0.2
+	Root_R2_1_maintenance:1.7
+	R2_1_0:1.7
+	v20080512-1200:1.7
+	v20080503-1740:1.6
+	v20080501-1739:1.6
+	v20080425-1959:1.6
+	v20080407-2250:1.6
+	v20080222-1200:1.6
+	v20080215-1500:1.6
+	v20071003-0000:1.6
+	v20070921-0000:1.6
+	v20070915-0000:1.6
+	v20070809-0000:1.6
+	R2_0_maintenance:1.6.0.2
+	R2_0:1.6
+	R4_20:1.6
+	RC3_20:1.6
+	v20070601-1400:1.6
+	v20070504-1000:1.6
+	v20070330-1300:1.6
+	v20070208-1800:1.6
+	M4_20:1.6
+	v20061218-1200:1.6
+	v20061214-0000:1.6
+	M3_20:1.6
+	v20061117-0800:1.6
+	v20061020-1000:1.5.2.1
+	v20061013-1330:1.6
+	v20061012-1100:1.5.2.1
+	v20060925-1700:1.5.2.1
+	v20060919-0800:1.5.2.1
+	M1_20:1.5
+	v20060824-1600:1.5
+	v20060803-1200:1.5
+	v20060728-0500:1.5
+	v20060721-1130:1.5
+	v20060713-1700:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	v20060627-1200:1.5
+	v20060616-1200:1.5
+	v20060531-1730:1.5
+	v20060526-1200:1.5
+	I20060424-0500:1.4
+	I20060424-0300:1.4
+	M6_10:1.4
+	I20060407-1200:1.4
+	I20060331-1000:1.4
+	I20060324-0300:1.4
+	I20060317-1300:1.4
+	I20060317-1200:1.4
+	I20060316-1300:1.4
+	I20060309-1300:1.4
+	M5_10:1.4
+	S20060303-1600:1.4
+	I20060227-1730:1.4
+	I20060216-1945:1.4
+	I20060210-1715:1.4
+	I20060209-1815:1.4
+	I20060203-0830:1.4
+	I20060129-1145:1.4
+	I20060127-0900:1.4
+	I20060120-1530:1.4
+	I20060113-1700:1.4
+	M4_10:1.4
+	I20060107-1100:1.4
+	I20060105-1630:1.4
+	I20051230-1230:1.4
+	I20051223-1100:1.4
+	I20051217-0925:1.4
+	I20051124-2000:1.3
+	M3_10:1.3
+	I20051118-1245:1.3
+	I20051111-1800:1.3
+	I20051106-0900:1.3
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.7
+date	2008.05.09.20.45.38;	author ahunter;	state Exp;
+branches;
+next	1.6;
+commitid	22384824b7f24567;
+
+1.6
+date	2006.10.03.14.51.25;	author ahunter;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.05.24.16.00.12;	author ahunter;	state Exp;
+branches
+	1.5.2.1;
+next	1.4;
+
+1.4
+date	2005.12.12.21.22.18;	author ahunter;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.11.02.18.32.07;	author ahunter;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.23.49;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.16.20;	author sshaw;	state Exp;
+branches;
+next	;
+
+1.5.2.1
+date	2006.09.13.16.41.25;	author ahunter;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.7
+log
+@[227658] gmf-head cvogt 080509 Update file observer to support resource links to non local file system resources
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2008 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.common.ui.resources;
+
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IMarkerDelta;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IResourceChangeEvent;
+import org.eclipse.core.resources.IResourceChangeListener;
+import org.eclipse.core.resources.IResourceDelta;
+import org.eclipse.core.resources.IResourceDeltaVisitor;
+import org.eclipse.core.resources.IWorkspaceRunnable;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.content.IContentType;
+import org.eclipse.gmf.runtime.common.core.util.Log;
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+import org.eclipse.gmf.runtime.common.ui.internal.resources.FileChangeEvent;
+import org.eclipse.gmf.runtime.common.ui.internal.resources.FileChangeEventType;
+import org.eclipse.gmf.runtime.common.ui.internal.resources.IFileChangeManager;
+import org.eclipse.gmf.runtime.common.ui.internal.resources.MarkerChangeEvent;
+import org.eclipse.gmf.runtime.common.ui.internal.resources.MarkerChangeEventType;
+
+/**
+ * The file change manager handles changes made to file resources within the
+ * Eclipse workspace. Files in the workspace are affected by change events on
+ * the files themselves as well as change events on the project and folder that
+ * contains these files.
+ * 
+ * @@author Anthony Hunter <a
+ *         href="mailto:ahunter@@rational.com">ahunter@@rational.com </a>
+ */
+public class FileChangeManager
+	implements IResourceChangeListener, IResourceDeltaVisitor,
+	IFileChangeManager {
+
+	/**
+	 * singleton instance of this class
+	 */
+	private static FileChangeManager INSTANCE = new FileChangeManager();
+
+	/**
+	 * get the singleton instance of this class
+	 * 
+	 * @@return singleton instance of the FileChangeManager class
+	 */
+	public static FileChangeManager getInstance() {
+		return INSTANCE;
+	}
+
+	/**
+	 * list of resource observers
+	 */
+	private FileObserverManager fileObserverManager = new FileObserverManager();
+
+	/**
+	 * Simple constructor.
+	 */
+	private FileChangeManager() {
+		super();
+		ResourcesPlugin.getWorkspace().addResourceChangeListener(this,
+			IResourceChangeEvent.POST_CHANGE);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.core.resources.IResourceChangeListener#resourceChanged(org.eclipse.core.resources.IResourceChangeEvent)
+	 */
+	public final void resourceChanged(IResourceChangeEvent event) {
+		switch (event.getType()) {
+			case IResourceChangeEvent.POST_CHANGE:
+				try {
+					event.getDelta().accept(this);
+				} catch (CoreException e) {
+					Trace.catching(CommonUIPlugin.getDefault(),
+						CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+						"resourceChanged", e); //$NON-NLS-1$
+					Log.warning(CommonUIPlugin.getDefault(),
+						CommonUIStatusCodes.IGNORED_EXCEPTION_WARNING, e
+							.getMessage(), e);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.core.resources.IResourceDeltaVisitor#visit(org.eclipse.core.resources.IResourceDelta)
+	 */
+	public final boolean visit(IResourceDelta delta) {
+		switch (delta.getKind()) {
+			case IResourceDelta.ADDED:
+				if ((delta.getFlags() & IResourceDelta.MOVED_FROM) != 0) {
+					if (delta.getMovedFromPath().removeLastSegments(1)
+						.equals(
+							delta.getResource().getFullPath()
+								.removeLastSegments(1))) {
+						trace("...FileChangeManager: Resource " //$NON-NLS-1$
+							+ getAbsolutePath(delta.getResource())
+							+ " was renamed from " //$NON-NLS-1$
+							+ delta.getMovedFromPath().toString());
+						if (delta.getResource() instanceof IFile) {
+							FileChangeEvent event = new FileChangeEvent(
+								FileChangeEventType.RENAMED,
+								(IFile) getMovedFromResource(delta),
+								(IFile) delta.getResource());
+							fileObserverManager.notify(event);
+						}
+					} else {
+						trace("...FileChangeManager: Resource " //$NON-NLS-1$
+							+ getAbsolutePath(delta.getResource())
+							+ " was moved from " //$NON-NLS-1$
+							+ delta.getMovedFromPath().toString());
+						if (delta.getResource() instanceof IFile) {
+							FileChangeEvent event = new FileChangeEvent(
+								FileChangeEventType.MOVED,
+								(IFile) getMovedFromResource(delta),
+								(IFile) delta.getResource());
+							fileObserverManager.notify(event);
+						}
+					}
+				} else {
+					trace("...FileChangeManager: Resource " //$NON-NLS-1$ 
+						+ getAbsolutePath(delta.getResource()) + " was added"); //$NON-NLS-1$ 
+				}
+				break;
+			case IResourceDelta.REMOVED:
+				if ((delta.getFlags() & IResourceDelta.MOVED_TO) == 0) {
+					trace("...FileChangeManager: Resource " //$NON-NLS-1$
+						+ getAbsolutePath(delta.getResource()) + " was deleted"); //$NON-NLS-1$
+					if (delta.getResource() instanceof IFile) {
+						FileChangeEvent event = new FileChangeEvent(
+							FileChangeEventType.DELETED, (IFile) delta
+								.getResource());
+						fileObserverManager.notify(event);
+					}
+				}
+				break;
+			case IResourceDelta.CHANGED:
+				trace("...FileChangeManager: Resource " //$NON-NLS-1$
+					+ getAbsolutePath(delta.getResource()) + " was changed"); //$NON-NLS-1$
+				if ((delta.getFlags() & IResourceDelta.MARKERS) != 0) {
+					// fire notifications if markers have been
+					// added/removed/changed
+					List markers = Arrays.asList(delta.getMarkerDeltas());
+					for (Iterator i = markers.iterator(); i.hasNext();) {
+						trace("...FileChangeManager: Resource marker of " //$NON-NLS-1$
+							+ getAbsolutePath(delta.getResource())
+							+ " was changed"); //$NON-NLS-1$
+
+						MarkerChangeEvent event = null;
+						IMarkerDelta markerDelta = (IMarkerDelta) i.next();
+						switch (markerDelta.getKind()) {
+							case IResourceDelta.ADDED:
+								event = new MarkerChangeEvent(
+									MarkerChangeEventType.ADDED, markerDelta
+										.getMarker());
+								fileObserverManager.notify(event);
+								break;
+							case IResourceDelta.REMOVED:
+								event = new MarkerChangeEvent(
+									MarkerChangeEventType.REMOVED, markerDelta
+										.getMarker(), markerDelta
+										.getAttributes());
+								fileObserverManager.notify(event);
+								break;
+							case IResourceDelta.CHANGED:
+								event = new MarkerChangeEvent(
+									MarkerChangeEventType.CHANGED, markerDelta
+										.getMarker());
+								fileObserverManager.notify(event);
+								break;
+							default:
+								break;
+						}
+					}
+				} else if (delta.getResource() instanceof IFile) {
+					FileChangeEvent event = new FileChangeEvent(
+						FileChangeEventType.CHANGED, (IFile) delta
+							.getResource());
+					fileObserverManager.notify(event);
+				}
+				break;
+			default:
+				break;
+		}
+		return true;
+	}
+
+	/**
+	 * Print a trace message if tracing is on for resource management.
+	 * 
+	 * @@param message
+	 *            the trace message to print.
+	 */
+	private void trace(String message) {
+		if (Trace.shouldTrace(CommonUIPlugin.getDefault(),
+			CommonUIDebugOptions.RESOURCE)) {
+			Trace.trace(CommonUIPlugin.getDefault(), message);
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.resources.IFileChangeManager#okToEdit(org.eclipse.core.resources.IFile[],
+	 *      java.lang.String)
+	 */
+	public boolean okToEdit(IFile[] files, String modificationReason) {
+		return FileModificationValidator.getInstance().okToEdit(files,
+			modificationReason);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.resources.IFileChangeManager#okToSave(org.eclipse.core.resources.IFile)
+	 */
+	public boolean okToSave(IFile file) {
+		return FileModificationValidator.getInstance().okToSave(file);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.resources.IFileChangeManager#removeFileObserver(org.eclipse.gmf.runtime.common.ui.resources.IFileObserver)
+	 */
+	public void removeFileObserver(IFileObserver fileObserver) {
+		fileObserverManager.remove(fileObserver);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.resources.IFileChangeManager#addFileObserver(org.eclipse.gmf.runtime.common.ui.resources.IFileObserver,
+	 *      org.eclipse.core.resources.IFile)
+	 */
+	public void addFileObserver(IFileObserver fileObserver, IFile fileFilter) {
+		fileObserverManager.add(fileObserver, fileFilter);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.resources.IFileChangeManager#addFileObserver(org.eclipse.gmf.runtime.common.ui.resources.IFileObserver,
+	 *      org.eclipse.core.runtime.content.IContentType[])
+	 */
+	public void addFileObserver(IFileObserver fileObserver, IContentType[] contentTypeFilter) {
+		fileObserverManager.add(fileObserver, contentTypeFilter);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.resources.IFileChangeManager#addFileObserver(org.eclipse.gmf.runtime.common.ui.resources.IFileObserver,
+	 *      org.eclipse.core.resources.IFolder)
+	 */
+	public void addFileObserver(IFileObserver fileObserver, IFolder folderFilter) {
+		fileObserverManager.add(fileObserver, folderFilter);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.resources.IFileChangeManager#addFileObserver(org.eclipse.gmf.runtime.common.ui.resources.IFileObserver,
+	 *      java.lang.String[])
+	 */
+	public void addFileObserver(IFileObserver fileObserver,
+			String[] extensionFilter) {
+		fileObserverManager.add(fileObserver, extensionFilter);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.resources.IFileChangeManager#addFileObserver(org.eclipse.gmf.runtime.common.ui.resources.IFileObserver)
+	 */
+	public void addFileObserver(IFileObserver fileObserver) {
+		fileObserverManager.add(fileObserver);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.resources.IFileChangeManager#refreshLocal(org.eclipse.core.resources.IFile)
+	 */
+	public void refreshLocal(final IFile file) {
+		try {
+			file.getWorkspace().run(new IWorkspaceRunnable() {
+
+				public void run(IProgressMonitor monitor)
+					throws CoreException {
+
+					trace("...FileChangeManager: Resource " + getAbsolutePath(file) + " was refreshed"); //$NON-NLS-2$//$NON-NLS-1$
+					file.refreshLocal(IResource.DEPTH_ZERO, null);
+
+				}
+			}, new NullProgressMonitor());
+		} catch (CoreException e) {
+			Trace.catching(CommonUIPlugin.getDefault(),
+				CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+				"refreshResource", e); //$NON-NLS-1$
+			Log.error(CommonUIPlugin.getDefault(),
+				CommonUIStatusCodes.SERVICE_FAILURE, e.getMessage(), e); 
+		}
+
+	}
+
+	/**
+	 * Retrieve the moved from resource from the resource delta. The moved from
+	 * resource is the original resource after a rename or move.
+	 * 
+	 * @@param delta
+	 *            the resource change containing the moved from path.
+	 * @@return the moved from resource.
+	 */
+	public static IResource getMovedFromResource(IResourceDelta delta) {
+		IPath movedFromPath = delta.getMovedFromPath();
+		IResource resource = delta.getResource();
+		IResource movedResource = null;
+		switch (resource.getType()) {
+			case IResource.PROJECT:
+				movedResource = ResourcesPlugin.getWorkspace().getRoot()
+					.getProject(movedFromPath.lastSegment());
+				break;
+			case IResource.FOLDER:
+				movedResource = ResourcesPlugin.getWorkspace().getRoot()
+					.getFolder(movedFromPath);
+				break;
+			case IResource.FILE:
+				movedResource = ResourcesPlugin.getWorkspace().getRoot()
+					.getFile(movedFromPath);
+				break;
+			default:
+				break;
+		}
+		return movedResource;
+	}
+
+	/**
+	 * Get the path for a resource. In the case of a moved or deleted resource,
+	 * resource.getLocation() returns null since it does not exist in the
+	 * workspace. The workaround is below.
+	 * 
+	 * @@param resource
+	 *            the resource.
+	 * @@return the path for a resource.
+	 */
+	private String getAbsolutePath(IResource resource) {
+		if (resource.getLocationURI() == null) {
+			return resource.getFullPath().toString();
+		} else {
+			return resource.getLocationURI().toString();
+		}
+	}
+}@
+
+
+1.6
+log
+@gmf_head ahunter 061003 Merge 1.0.1 Runtime to HEAD 2.0
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2002, 2006 IBM Corporation and others.
+d125 1
+a125 1
+							+ delta.getMovedFromPath().toOSString());
+d137 1
+a137 1
+							+ delta.getMovedFromPath().toOSString());
+d374 2
+a375 4
+		if (resource.getLocation() == null) {
+			IPath root = ResourcesPlugin.getWorkspace().getRoot().getLocation();
+			IPath path = root.append(resource.getFullPath());
+			return path.toOSString();
+d377 1
+a377 1
+			return resource.getLocation().toOSString();
+@
+
+
+1.5
+log
+@[117778] gmf_head ahunter 060524 IFileChangeManager does not support filtering of Resource Change Events based on Content Type
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2002, 2005 IBM Corporation and others.
+@
+
+
+1.5.2.1
+log
+@[153901] gmf_R1_0_maintenance tmacdoug 060913 Sweep copyright files for anything changed in 2006
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2002, 2006 IBM Corporation and others.
+@
+
+
+1.4
+log
+@[110317] gmf_head ahunter 051212 Compiler warning count should be 0 - runtime foundation layer components
+@
+text
+@d32 1
+a32 1
+
+d270 10
+@
+
+
+1.3
+log
+@Bugzilla Bug 114809 gmf_head ahunter 051102 Expensive resource change listeners
+@
+text
+@d318 1
+a318 1
+				CommonUIStatusCodes.SERVICE_FAILURE, e.getMessage(), e); //$NON-NLS-1$
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d64 1
+d81 2
+a82 1
+		ResourcesPlugin.getWorkspace().addResourceChangeListener(this);
+a103 11
+
+			case IResourceChangeEvent.PRE_DELETE:
+				trace("...FileChangeManager: Project " //$NON-NLS-1$
+					+ getAbsolutePath(event.getResource())
+					+ " is about to be deleted."); //$NON-NLS-1$
+				break;
+			case IResourceChangeEvent.PRE_CLOSE:
+				trace("...FileChangeManager: Project " //$NON-NLS-1$
+					+ getAbsolutePath(event.getResource())
+					+ " is about to be closed."); //$NON-NLS-1$
+				break;
+d307 1
+a307 1
+ 
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2002, 2005.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

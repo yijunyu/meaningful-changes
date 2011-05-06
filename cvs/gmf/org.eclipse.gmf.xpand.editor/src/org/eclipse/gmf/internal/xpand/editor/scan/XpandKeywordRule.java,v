@@ -1,0 +1,234 @@
+head	1.3;
+access;
+symbols
+	v20080813-1520:1.3
+	v20080812-2100:1.3
+	ocl_qvt:1.3.0.6
+	Root_ocl_qvt:1.3
+	v20080722-1827:1.3
+	v20080716-1600:1.3
+	v20080716-1642:1.3
+	R2_1_maintenance:1.3.0.4
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080425-1959:1.3
+	v20071108-0000:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.2
+	R2_0:1.3
+	R4_20:1.3
+	RC3_20:1.3
+	v20070601-1400:1.3
+	v20070518-1300:1.3
+	v20070330-1300:1.3
+	v20070228-2000:1.3
+	M4_20:1.3
+	M3_20:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.3
+date	2006.11.02.17.35.34;	author atikhomirov;	state Exp;
+branches
+	1.3.6.1;
+next	1.2;
+
+1.2
+date	2006.10.23.13.35.04;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.10.18.20.33.08;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.3.6.1
+date	2008.08.19.15.56.03;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	746548aaed124567;
+
+
+desc
+@@
+
+
+1.3
+log
+@refactor
+@
+text
+@/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.editor.scan;
+
+import org.eclipse.jface.text.rules.ICharacterScanner;
+import org.eclipse.jface.text.rules.IRule;
+import org.eclipse.jface.text.rules.IToken;
+import org.eclipse.jface.text.rules.Token;
+
+/**
+ * @@author Sven Efftinge
+ */
+public class XpandKeywordRule implements IRule {
+
+    private final IToken token;
+
+    private final String[] keywords;
+
+    public XpandKeywordRule(final IToken token, final String[] keywords) {
+        this.token = token;
+        this.keywords = keywords;
+    }
+
+    private boolean isKeyword(final String word) {
+    	// XXX linear search
+        for (final String w : keywords) {
+            if (w.equals(word)) {
+				return true;
+			}
+        }
+        return false;
+    }
+
+    private boolean keywordExists(final String prefix) {
+        for (final String w : keywords) {
+            if (w.startsWith(prefix)) {
+				return true;
+			}
+        }
+        return false;
+    }
+
+    public IToken evaluate(final ICharacterScanner scanner) {
+        final StringBuilder buff = new StringBuilder();
+        boolean stopReading = false;
+        int reads = 0;
+        while (!stopReading) {
+            reads++;
+            final char c = (char) scanner.read();
+            if ((buff.length() > 0) && !Character.isJavaIdentifierPart(c)) {
+                if (isKeyword(buff.toString()) && !keywordExists(buff.toString() + c)) {
+                    scanner.unread();
+                    return token;
+                }
+            }
+            buff.append(c);
+            stopReading = !keywordExists(buff.toString());
+        }
+
+        for (int i = 0; i < reads; i++) {
+            scanner.unread();
+        }
+        return Token.UNDEFINED;
+    }
+
+}
+@
+
+
+1.3.6.1
+log
+@[243154] Use OCL instead of home-grown expression language - editor and its tests made compilable
+@
+text
+@d2 3
+a4 1
+ * Copyright (c) 2005, 2008 Sven Efftinge and others.
+d12 2
+a16 2
+import java.util.Arrays;
+
+d31 1
+a31 1
+    public XpandKeywordRule(final IToken token, String[] keywords) {
+d33 1
+a33 1
+        Arrays.sort(this.keywords = keywords.clone());
+d37 7
+a43 1
+    	return Arrays.binarySearch(keywords, word) >= 0;
+a46 1
+    	// XXX may do a binarySearch, than negate result and look at neighbors (+1/-1) only
+@
+
+
+1.2
+log
+@refactor access to color preferences
+@
+text
+@a16 3
+import java.util.ArrayList;
+import java.util.List;
+
+d27 1
+a27 1
+    private IToken token;
+d29 1
+a29 1
+    private String[] keywords;
+d31 3
+a33 8
+    private String[] getKeywords(final String prefix) {
+        final List<String> result = new ArrayList<String>();
+        for (final String w : keywords) {
+            if (w.startsWith(prefix)) {
+				result.add(w);
+			}
+        }
+        return  result.toArray(new String[result.size()]);
+a45 12
+    /**
+     * 
+     */
+    public XpandKeywordRule(final IToken token, final String[] keywords) {
+        this.token = token;
+        this.keywords = keywords;
+    }
+
+    /**
+     * @@param prefix
+     * @@return
+     */
+d47 6
+a52 2
+        final String[] currentWords = getKeywords(prefix.toString());
+        return (currentWords != null) && (currentWords.length > 0);
+d56 1
+a56 1
+        final StringBuffer buff = new StringBuffer();
+@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@a26 2
+ * 
+ * 
+a70 5
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.jface.text.rules.IRule#evaluate(org.eclipse.jface.text.rules.ICharacterScanner)
+     */
+@
+

@@ -1,0 +1,223 @@
+head	1.4;
+access;
+symbols
+	v20080722-1827:1.4
+	R2_1_maintenance:1.4.0.4
+	Root_R2_1_maintenance:1.4
+	R2_1_0:1.4
+	v20080425-1959:1.4
+	v20071108-0000:1.4
+	v20071003-0000:1.4
+	v20070921-0000:1.4
+	v20070903-0000:1.4
+	v20070809-0000:1.4
+	R2_0_maintenance:1.4.0.2
+	R2_0:1.4
+	R4_20:1.4
+	v20070621-0000:1.4
+	RC3_20:1.4
+	v20070601-1400:1.4
+	v20070525-1500:1.4
+	v20070518-1300:1.4
+	v20070427-0600:1.4
+	v20070420-1000:1.3
+	v20070413-1300:1.3
+	v20070405-1100:1.3
+	v20070330-1300:1.3
+	v20060330-1300:1.3
+	v20070322-1100:1.3
+	v20060316-0600:1.3
+	v20070307-0700:1.2
+	v20070228-2000:1.2
+	v20070208-1800:1.2
+	M4_20:1.2
+	v20061222-1800:1.2
+	v20061218-1200:1.2
+	v20061214-0000:1.2
+	v20061120-1300:1.2
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061013-1330:1.2
+	M1_20:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2007.04.24.14.16.45;	author bblajer;	state Exp;
+branches;
+next	1.3;
+commitid	4252462e114b4567;
+
+1.3
+date	2007.03.15.16.43.32;	author bblajer;	state Exp;
+branches;
+next	1.2;
+commitid	61a145f977b34567;
+
+1.2
+date	2006.09.11.15.45.03;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.09.01.16.14.11;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@CanonicalStyle is taken into account while refreshing notational model to reflect changes in underlying domain model;
+Update is now centralized and transactional;
+Changes to visibility are dispatched to the parent of the affected view as well (was: only to the view itself);
+Save options are not reused, for easy modification of the generated code;
+Side-affixed children are not considered direct children;
+Empty edit-patterns are treated the same way as null patterns (view pattern is used instead).
+@
+text
+@/**
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.edit.parts.update;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.util.EContentAdapter;
+import org.eclipse.gef.EditPart;
+import org.eclipse.gef.EditPartViewer;
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+import org.eclipse.gmf.runtime.notation.View;
+
+public class UpdateManager extends EContentAdapter {
+	private final EditPartViewer myViewer;
+
+	public UpdateManager(EditPartViewer viewer) {
+		myViewer = viewer;
+	}
+
+	public void notifyChanged(Notification msg) {
+		super.notifyChanged(msg);
+		if (msg.isTouch()) {
+			return;
+		}
+		Collection<IUpdatableEditPart> affectedEditParts = findAffectedParts(msg);
+		for(IUpdatableEditPart next : affectedEditParts) {
+			if (next instanceof IExternallyUpdatableEditPart) {
+				for (IExternallyUpdatableEditPart.ExternalRefresher nextExternalRefresher : ((IExternallyUpdatableEditPart) next).getExternalRefreshers()) {
+					if (nextExternalRefresher.isAffectingEvent(msg)) {
+						nextExternalRefresher.refresh();
+					}
+				}
+			}
+			IUpdatableEditPart.Refresher refresher = next.getRefresher((EStructuralFeature)msg.getFeature(), msg);
+			if (refresher != null) {
+				refresher.refresh();
+			}
+		}
+	}
+
+	private Collection<IUpdatableEditPart> findAffectedParts(Notification msg) {
+		Object notifier = msg.getNotifier();
+		if (notifier instanceof EObject) {
+			org.eclipse.gmf.runtime.notation.View view = getView((EObject) notifier);
+			if (view != null) {
+				EditPart affectedEditPart = (EditPart) myViewer.getEditPartRegistry().get(view);
+				if (affectedEditPart instanceof IUpdatableEditPart) {
+					if (msg.getFeature() == NotationPackage.eINSTANCE.getView_Visible() && affectedEditPart.getParent() instanceof IUpdatableEditPart) {
+						return Arrays.asList((IUpdatableEditPart) affectedEditPart, (IUpdatableEditPart) affectedEditPart.getParent());
+					}
+					return Collections.singleton((IUpdatableEditPart) affectedEditPart);
+				}
+				return Collections.emptyList();
+			}
+		}
+		return Collections.emptyList();
+	}
+
+	private View getView(EObject offspring) {
+		while (offspring != null && offspring instanceof View == false || isFiltered((View) offspring)) {
+			offspring = offspring.eContainer();
+		}
+		return (View) offspring;
+	}
+
+	protected boolean isFiltered(View view) {
+		return myViewer.getEditPartRegistry().get(view) == null;
+	}
+}
+@
+
+
+1.3
+log
+@[164018] Command generation seperated from Parts for commands that operate with labels;
+API to display label text, apply modifications and update after (external) modifications isolated from generated code;
+Moved as much common generated code as possible to BaseTreeEditPart;
+[165700] Support diagrams in read-only mode: all EMF commands that are not composed of standard EMF commands, but modify EMF models directly should query the editing domain for read-onliness of the resource they operate on.
+@
+text
+@d14 1
+d24 1
+d62 3
+d67 1
+@
+
+
+1.2
+log
+@[156358] bblajer - Diagram overview with Lite runtime
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Eclipse.org
+a15 1
+import java.util.Iterator;
+d37 9
+a45 3
+		Collection affectedEditParts = findAffectedParts(msg);
+		for(Iterator it = affectedEditParts.iterator(); it.hasNext(); ) {
+			IUpdatableEditPart next = (IUpdatableEditPart) it.next();
+d53 1
+a53 1
+	private Collection/*<IUpdatableEditPart>*/ findAffectedParts(Notification msg) {
+d59 2
+a60 2
+				if (affectedEditPart != null) {
+					return Collections.singleton(affectedEditPart);
+d64 1
+a64 1
+		return Collections.EMPTY_LIST;
+@
+
+
+1.1
+log
+@[155040] bblajer - Common Lite runtime functionality moved to dedicated plugin
+@
+text
+@d63 1
+a63 1
+		while (offspring != null && offspring instanceof View == false) {
+d68 4
+@
+

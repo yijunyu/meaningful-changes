@@ -1,0 +1,358 @@
+head	1.6;
+access;
+symbols
+	R1_0_maintenance:1.6.0.2
+	R1_0:1.6
+	I20060209-1815:1.5
+	I20060203-0830:1.5
+	I20060129-1145:1.5
+	I20060127-0900:1.5
+	I20060120-1530:1.5
+	I20060113-1700:1.5
+	M4_10:1.5
+	I20060107-1100:1.5
+	I20060105-1630:1.5
+	I20051230-1230:1.5
+	I20051223-1100:1.5
+	I20051217-0925:1.5
+	I20051208-2000:1.5
+	I20051201-1800:1.4
+	I20051124-2000:1.3
+	M3_10:1.2
+	I20051118-1245:1.2
+	I20051111-1800:1.2
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.6
+date	2006.02.10.19.18.31;	author sshaw;	state dead;
+branches;
+next	1.5;
+
+1.5
+date	2005.12.05.19.18.18;	author sshaw;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2005.11.29.16.33.55;	author sshaw;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.11.21.15.55.28;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.24.39;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.56;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@bugzilla 119319 gmf-head sshaw 060210 Support extensibility for RenderedImageFactory
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2004 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+
+package org.eclipse.gmf.runtime.draw2d.ui.render.internal.svg.export;
+
+import java.awt.Color;
+import java.awt.Dimension;
+
+import org.apache.batik.dom.svg.SVGDOMImplementation;
+import org.apache.batik.dom.svg.SVGOMDocument;
+import org.apache.batik.svggen.DOMTreeManager;
+import org.apache.batik.svggen.SVGGraphics2D;
+import org.apache.batik.util.SVGConstants;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderInfo;
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderedImage;
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.DrawableRenderedImage;
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.RenderingListener;
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics.GraphicsToGraphics2DAdaptor;
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.svg.SVGColorConverter;
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.svg.SVGImage;
+import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+
+/**
+ * Objects of this class can be used with draw2d to create an SVG DOM.
+ * 
+ * @@author jschofie / sshaw
+ */
+public class GraphicsSVG extends GraphicsToGraphics2DAdaptor implements DrawableRenderedImage {
+
+	private Document doc;
+
+	/**
+	 * Static initializer that will return an instance of <code>GraphicsSVG</code>
+	 * 
+	 * @@param viewPort the <code>Rectangle</code> area that is to be rendered.
+	 * @@return a new <code>GraphicsSVG</code> object.
+	 */
+	public static GraphicsSVG getInstance(Rectangle viewPort) {
+		SVGGraphics2D svgGraphics;
+		
+		// Get the DOM implementation and create the document
+		DOMImplementation impl = SVGDOMImplementation.getDOMImplementation();
+		String svgNameSpace = SVGDOMImplementation.SVG_NAMESPACE_URI;
+		Document doc = impl.createDocument(svgNameSpace, "svg", null); //$NON-NLS-1$
+
+		// Create the SVG Graphics Object
+		svgGraphics = new SVGGraphics2D(doc);
+
+		// Set the precision level to avoid NPEs (issue with Batik 1.5)
+		svgGraphics.getGeneratorContext().setPrecision( 3 );
+
+		// Set the Width and Height Attributes on the Root Element
+		svgGraphics.setSVGCanvasSize(
+			new Dimension(viewPort.width, viewPort.height));
+		
+		return new GraphicsSVG(svgGraphics, doc, svgNameSpace, viewPort);
+	}
+	
+	/**
+	 * @@return <code>SVGGraphics2D</code> object
+	 */
+	public SVGGraphics2D getSVGGraphics2D() {
+		return (SVGGraphics2D)getGraphics2D();
+	}
+	
+	/**
+	 * @@param graphics
+	 * @@param doc
+	 * @@param svgNameSpace
+	 * @@param viewPort
+	 */
+	private GraphicsSVG( SVGGraphics2D graphics, Document doc, String svgNameSpace, Rectangle viewPort ) {
+		
+		this( graphics, doc, svgNameSpace, new org.eclipse.swt.graphics.Rectangle( viewPort.x,
+						viewPort.y,
+						viewPort.width,
+						viewPort.height) );
+	}
+
+	/**
+	 * @@param graphics
+	 * @@param doc
+	 * @@param svgNameSpace
+	 * @@param viewPort
+	 */
+	private GraphicsSVG(SVGGraphics2D graphics, Document doc, String svgNameSpace, org.eclipse.swt.graphics.Rectangle viewPort) {
+
+		super(graphics, viewPort );
+		this.doc = doc;
+	}
+
+	/**
+	 * Method used to get the SVG DOM from the Graphics
+	 * 
+	 * @@return SVG document
+	 */
+	public Document getDocument() {
+		return doc;
+	}
+
+	/**
+	 * Method used to get the SVG Root element from the document
+	 * 
+	 * @@return DOM Root element
+	 */
+	public Element getRoot() {
+		return getSVGGraphics2D().getRoot();		
+	}
+
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics.GraphicsToGraphics2DAdaptor#drawRenderedImage(org.eclipse.gmf.runtime.draw2d.ui.render.RenderedImage, org.eclipse.draw2d.geometry.Rectangle, org.eclipse.gmf.runtime.draw2d.ui.render.RenderingListener)
+	 */
+	public RenderedImage drawRenderedImage(RenderedImage srcImage, Rectangle rect, RenderingListener listener) {
+
+		// Check for a change in the state
+		checkState();
+
+	    // Get the Tree Manager
+	    DOMTreeManager treeManager = getSVGGraphics2D().getDOMTreeManager();
+
+	    Point trans = getTranslationOffset();
+	    // Get the Root element of the SVG document to export
+	    if (srcImage instanceof SVGImage) {
+	    	Document document = ((SVGImage)srcImage).getDocument();
+	    	if (document instanceof SVGOMDocument) {
+	    		RenderInfo info = srcImage.getRenderInfo();
+				SVGColorConverter.getInstance().replaceDocumentColors((SVGOMDocument)document, 
+					new Color(info.getBackgroundColor().red, 
+						  info.getBackgroundColor().green,
+						  info.getBackgroundColor().blue),
+					new Color(info.getForegroundColor().red, 
+						info.getForegroundColor().green,
+						info.getForegroundColor().blue));
+			}
+			Element root = ((SVGImage)srcImage).getDocument().getDocumentElement();
+
+			// Create a "deep" copy of the document
+			Element toAppend = (Element)doc.importNode(root, true);
+
+			// Modify the X Attribute
+			toAppend.setAttributeNS(
+					null,
+					SVGConstants.SVG_X_ATTRIBUTE,
+					String.valueOf(rect.x + trans.x));
+
+			// Modify the Y Attribute
+			toAppend.setAttributeNS(
+					null,
+					SVGConstants.SVG_Y_ATTRIBUTE,
+					String.valueOf(rect.y + trans.y));
+
+			// Modify the Width Attribute
+			toAppend.setAttributeNS(
+					null,
+					SVGConstants.SVG_WIDTH_ATTRIBUTE,
+					String.valueOf(rect.width));
+
+			// Modify the Height Attribute
+			toAppend.setAttributeNS(
+					null,
+					SVGConstants.SVG_HEIGHT_ATTRIBUTE,
+					String.valueOf(rect.height));
+
+			treeManager.appendGroup(toAppend, null);
+			return srcImage;
+	    }
+	    else {
+	    	return super.drawRenderedImage(srcImage, rect, listener);
+		}
+	}
+	
+
+}
+@
+
+
+1.5
+log
+@bugzilla 111436 gmf-head sshaw 051205 Improve performance of SVG transcoder
+@
+text
+@@
+
+
+1.4
+log
+@bugzilla 111436 gmf-head sshaw 051128 Improve performance of SVG transcoder
+@
+text
+@d15 1
+d25 1
+d28 1
+d124 2
+a125 5
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.gef.ui.internal.render.DrawableRenderedImage#drawRenderedImage(org.eclipse.gmf.runtime.gef.ui.internal.render.RenderedImage,
+	 *      int, int, int, int)
+d127 1
+a127 1
+	public RenderedImage drawRenderedImage(RenderedImage srcImage, int x, int y, int width, int height) {
+d140 1
+d142 6
+a147 2
+					srcImage.getRenderInfo().getFillColor(),
+					srcImage.getRenderInfo().getOutlineColor());
+d158 1
+a158 1
+					String.valueOf(x + trans.x));
+d164 1
+a164 1
+					String.valueOf(y + trans.y));
+d170 1
+a170 1
+					String.valueOf(width));
+d176 1
+a176 1
+					String.valueOf(height));
+d182 1
+a182 1
+	    	return super.drawRenderedImage(srcImage, x, y, width, height);
+@
+
+
+1.3
+log
+@bugzilla 116937 gmf-head sshaw 051117 SVG export ignores RenderedImage classes that aren't SVG
+@
+text
+@d18 1
+d27 1
+d127 1
+a127 1
+	public void drawRenderedImage(RenderedImage srcImage, int x, int y, int width, int height) {
+d138 6
+d174 1
+d177 1
+a177 1
+	    	super.drawRenderedImage(srcImage, x, y, width, height);
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@a22 4
+import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+d27 3
+d167 3
+d171 1
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 7
+/****************************************************************************
+  Licensed Materials - Property of IBM
+  (C) Copyright IBM Corp. 2004. All Rights Reserved.
+ 
+  US Government Users Restricted Rights - Use, duplication or disclosure
+  restricted by GSA ADP Schedule Contract with IBM Corp.
+*****************************************************************************/
+@
+

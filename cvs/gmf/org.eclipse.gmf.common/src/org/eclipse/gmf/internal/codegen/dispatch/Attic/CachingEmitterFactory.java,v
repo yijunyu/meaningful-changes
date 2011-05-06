@@ -1,0 +1,140 @@
+head	1.2;
+access;
+symbols
+	v20081015-1925:1.2
+	v20080924-1925:1.2
+	v20080222-1200:1.1
+	v20071108-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1
+	RC3_20:1.1
+	v20070605-1400:1.1
+	v20070601-1400:1.1
+	v20070525-1500:1.1
+	v20070520-1200:1.1
+	v20070518-1300:1.1
+	v20070427-0600:1.1
+	v20070420-1000:1.1
+	v20070413-1300:1.1
+	v20070405-1100:1.1
+	v20070330-1300:1.1
+	v20060330-1300:1.1
+	v20070322-1100:1.1
+	v20070307-0700:1.1
+	v20070301-1200:1.1
+	v20070228-2000:1.1
+	v20070221-1500:1.1
+	v20070208-1800:1.1
+	M4_20:1.1
+	v20061222-1800:1.1
+	v20061214-0000:1.1
+	v20061120-1300:1.1
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061013-1330:1.1
+	M1_20:1.1
+	v20060904-1500:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2008.02.28.20.24.40;	author atikhomirov;	state dead;
+branches;
+next	1.1;
+commitid	4cff47c718874567;
+
+1.1
+date	2006.08.30.15.12.11;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@cleaned code that is no longer in use (since last JET template gone)
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.dispatch;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.eclipse.emf.codegen.jet.JETEmitter;
+import org.eclipse.gmf.common.UnexpectedBehaviourException;
+
+/**
+ * @@author artem
+ */
+public class CachingEmitterFactory implements EmitterFactory {
+
+	private final EmitterFactory myDelegate;
+	private final Map<Object, JETEmitter> myCache;
+
+	public CachingEmitterFactory(EmitterFactory delegate) {
+		assert delegate != null;
+		myDelegate = delegate;
+		myCache = createCache();
+	}
+
+	/**
+	 * Instantiates {@@link HashMap} by default. NOTE, this method is invoked
+	 * from constructor, object may not be fully initialized, don't use this
+	 * method for anything but cache instantiation.
+	 */
+	protected Map<Object, JETEmitter> createCache() {
+		return new HashMap<Object, JETEmitter>();
+	}
+
+	public JETEmitter acquireEmitter(Object key) throws NoSuchTemplateException, UnexpectedBehaviourException {
+		JETEmitter em = checkCache(key);
+		if (em != null) {
+			return em;
+		}
+		em = myDelegate.acquireEmitter(key);
+		cache(key, em);
+		return em;
+	}
+
+	public boolean checkEmitter(Object key) {
+		return checkCache(key) != null || myDelegate.checkEmitter(key);
+	}
+
+	private JETEmitter checkCache(Object key) {
+		return myCache.get(key);
+	}
+
+	private void cache(Object key, JETEmitter emitter) {
+		myCache.put(key, emitter);
+	}
+}
+@
+
+
+1.1
+log
+@extracted caching behaviour outside from the factory - moving towards support for different template engines, #114207
+@
+text
+@@
+

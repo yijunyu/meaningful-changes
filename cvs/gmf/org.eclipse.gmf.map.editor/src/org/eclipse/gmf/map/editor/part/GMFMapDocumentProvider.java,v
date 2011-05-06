@@ -1,0 +1,255 @@
+head	1.1;
+access;
+symbols
+	v20080722-1827:1.1
+	R2_1_maintenance:1.1.0.4
+	Root_R2_1_maintenance:1.1
+	R2_1_0:1.1
+	v20080425-1959:1.1
+	v20080222-1200:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	RC3_20:1.1
+	v20070608-1300:1.1
+	v20070601-1400:1.1
+	v20070520-1200:1.1
+	v20070330-1300:1.1
+	v20061121-0030:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2006.10.23.19.25.59;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@[114199] Provide a graphical surface for mapping definitions
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Dmitry Stadnik (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.map.editor.part;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IStorage;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.core.runtime.jobs.ISchedulingRule;
+import org.eclipse.core.runtime.jobs.MultiRule;
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.transaction.DemultiplexingListener;
+import org.eclipse.emf.transaction.NotificationFilter;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.DiagramDocument;
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.DiagramModificationListener;
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDiagramDocument;
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDocument;
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.document.FileDiagramDocumentProvider;
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.document.FileDiagramModificationListener;
+import org.eclipse.gmf.runtime.notation.Diagram;
+import org.eclipse.ui.IFileEditorInput;
+
+/**
+ * @@generated
+ */
+public class GMFMapDocumentProvider extends FileDiagramDocumentProvider {
+
+	/**
+	 * @@generated
+	 */
+	private final String contentObjectURI;
+
+	/**
+	 * @@generated
+	 */
+	public GMFMapDocumentProvider() {
+		this(null);
+	}
+
+	/**
+	 * @@generated
+	 */
+	public GMFMapDocumentProvider(String rootObjectURI) {
+		this.contentObjectURI = rootObjectURI;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void setDocumentContentFromStorage(IDocument document, IStorage storage) throws CoreException {
+		super.setDocumentContentFromStorage(document, storage);
+		if (contentObjectURI == null || false == document.getContent() instanceof EObject) {
+			return;
+		}
+		EObject currentContent = (EObject) document.getContent();
+		if (currentContent.eResource().getURIFragment(currentContent) == contentObjectURI) {
+			return; // already there
+		}
+		EObject anotherContentObject = currentContent.eResource().getEObject(contentObjectURI);
+		document.setContent(anotherContentObject);
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void saveDocumentToFile(IDocument document, IFile file, boolean overwrite, IProgressMonitor monitor) throws CoreException {
+		Diagram diagram = (Diagram) document.getContent();
+		Resource diagramResource = diagram.eResource();
+		IDiagramDocument diagramDocument = (IDiagramDocument) document;
+		TransactionalEditingDomain domain = diagramDocument.getEditingDomain();
+		List resources = domain.getResourceSet().getResources();
+
+		monitor.beginTask("Saving diagram", resources.size() + 1); //$NON-NLS-1$
+		super.saveDocumentToFile(document, file, overwrite, new SubProgressMonitor(monitor, 1));
+		for (Iterator it = resources.iterator(); it.hasNext();) {
+			Resource nextResource = (Resource) it.next();
+			monitor.setTaskName("Saving " + nextResource.getURI()); //$NON-NLS-1$
+			if (nextResource != diagramResource && nextResource.isLoaded()) {
+				try {
+					nextResource.save(Collections.EMPTY_MAP);
+				} catch (IOException e) {
+					GMFMapDiagramEditorPlugin.getInstance().logError("Unable to save resource: " + nextResource.getURI(), e); //$NON-NLS-1$
+				}
+			}
+			monitor.worked(1);
+		}
+		monitor.done();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected ISchedulingRule getSaveRule(Object element) {
+		IDiagramDocument diagramDocument = getDiagramDocument(element);
+		if (diagramDocument != null) {
+			Diagram diagram = diagramDocument.getDiagram();
+			if (diagram != null) {
+				Collection rules = new ArrayList();
+				for (Iterator it = diagramDocument.getEditingDomain().getResourceSet().getResources().iterator(); it.hasNext();) {
+					IFile nextFile = WorkspaceSynchronizer.getFile((Resource) it.next());
+					if (nextFile != null) {
+						rules.add(computeSaveSchedulingRule(nextFile));
+					}
+				}
+				return new MultiRule((ISchedulingRule[]) rules.toArray(new ISchedulingRule[rules.size()]));
+			}
+		}
+		return super.getSaveRule(element);
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected FileInfo createFileInfo(IDocument document, FileSynchronizer synchronizer, IFileEditorInput input) {
+		assert document instanceof DiagramDocument;
+
+		DiagramModificationListener diagramListener = new CustomModificationListener(this, (DiagramDocument) document, input);
+		DiagramFileInfo info = new DiagramFileInfo(document, synchronizer, diagramListener);
+
+		diagramListener.startListening();
+		return info;
+	}
+
+	/**
+	 * @@generated
+	 */
+	private ISchedulingRule computeSaveSchedulingRule(IResource toCreateOrModify) {
+		if (toCreateOrModify.exists() && toCreateOrModify.isSynchronized(IResource.DEPTH_ZERO))
+			return fResourceRuleFactory.modifyRule(toCreateOrModify);
+
+		IResource parent = toCreateOrModify;
+		do {
+			/*
+			 * XXX This is a workaround for https://bugs.eclipse.org/bugs/show_bug.cgi?id=67601
+			 * IResourceRuleFactory.createRule should iterate the hierarchy itself.
+			 */
+			toCreateOrModify = parent;
+			parent = toCreateOrModify.getParent();
+		} while (parent != null && !parent.exists() && !parent.isSynchronized(IResource.DEPTH_ZERO));
+
+		return fResourceRuleFactory.createRule(toCreateOrModify);
+	}
+
+	/**
+	 * @@generated
+	 */
+	private class CustomModificationListener extends FileDiagramModificationListener {
+
+		/**
+		 * @@generated
+		 */
+		private DemultiplexingListener myListener = null;
+
+		/**
+		 * @@generated
+		 */
+		public CustomModificationListener(GMFMapDocumentProvider documentProviderParameter, DiagramDocument documentParameter, IFileEditorInput inputParameter) {
+			super(documentProviderParameter, documentParameter, inputParameter);
+			final DiagramDocument document = documentParameter;
+			NotificationFilter diagramResourceModifiedFilter = NotificationFilter.createEventTypeFilter(Notification.SET);
+			myListener = new DemultiplexingListener(diagramResourceModifiedFilter) {
+
+				protected void handleNotification(TransactionalEditingDomain domain, Notification notification) {
+					if (notification.getNotifier() instanceof EObject) {
+						Resource modifiedResource = ((EObject) notification.getNotifier()).eResource();
+						if (modifiedResource != document.getDiagram().eResource()) {
+							document.setContent(document.getContent());
+						}
+					}
+
+				}
+			};
+		}
+
+		/**
+		 * @@generated
+		 */
+		public void startListening() {
+			super.startListening();
+			getEditingDomain().addResourceSetListener(myListener);
+		}
+
+		/**
+		 * @@generated
+		 */
+		public void stopListening() {
+			getEditingDomain().removeResourceSetListener(myListener);
+			super.stopListening();
+		}
+
+	}
+
+}
+@

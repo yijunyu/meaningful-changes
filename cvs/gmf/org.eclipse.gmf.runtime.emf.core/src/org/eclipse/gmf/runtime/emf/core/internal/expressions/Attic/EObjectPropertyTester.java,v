@@ -1,0 +1,235 @@
+head	1.4;
+access;
+symbols
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	I20060203-0830:1.3
+	I20060129-1145:1.3
+	I20060127-0900:1.3
+	I20060120-1530:1.3
+	I20060113-1700:1.3
+	M4_10:1.3
+	I20060107-1100:1.3
+	I20060105-1630:1.3
+	I20051230-1230:1.3
+	I20051223-1100:1.2
+	I20051217-0925:1.2
+	I20051201-1800:1.2
+	I20051124-2000:1.2
+	M3_10:1.2
+	I20051118-1245:1.2
+	I20051111-1800:1.2
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2006.02.08.14.52.12;	author ldamus;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2005.12.23.20.19.04;	author vramaswamy;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.25.12;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.56;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[121508] gmf_head cdamus 060208 Refactor MSL using the new transaction API
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2005 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+
+package org.eclipse.gmf.runtime.emf.core.internal.expressions;
+
+import org.eclipse.core.expressions.PropertyTester;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MEditingDomain;
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+import org.eclipse.gmf.runtime.emf.core.util.EObjectUtil;
+
+
+/**
+ * Property tester for MSL extended properties of {@@link EObject}s.  Currently
+ * supported properties are
+ * <dl>
+ *   <dt>objectType</dt>
+ *     <dd>string-valued property denoting an <code>EObject</code>'s
+ *         {@@linkplain org.eclipse.gmf.runtime.emf.core.internal.MObjectType object type}</dd>
+ * </dl>
+ *
+ * @@author Christian W. Damus (cdamus)
+ */
+public class EObjectPropertyTester extends PropertyTester {
+	private static final String OBJECT_TYPE_PROPERTY = "objectType"; //$NON-NLS-1$
+	
+	/**
+	 * 
+	 * @@deprecated Use the cross-resource containment support provided by EMF,
+	 *     instead, by defining containment features that are capable of storing
+	 *     proxies.
+	 */
+	private static final String CAN_SEPARATE_PROPERTY = "canSeparate"; //$NON-NLS-1$
+	/**
+	 * 
+	 * @@deprecated Use the cross-resource containment support provided by EMF,
+	 *     instead, by defining containment features that are capable of storing
+	 *     proxies.
+	 */
+	private static final String IS_SEPARATE_PROPERTY = "isSeparate"; //$NON-NLS-1$
+	
+	/**
+	 * Initializes me.
+	 */
+	public EObjectPropertyTester() {
+		super();
+	}
+	
+	public boolean test(
+			Object receiver,
+			final String property,
+			final Object[] args,
+			final Object expectedValue) {
+		
+		boolean result = false;
+		
+		final EObject eObject = (EObject) receiver;
+		
+		Resource res = eObject.eResource();
+		if (res != null) {
+			MEditingDomain domain = MEditingDomain.getEditingDomain(res);
+			
+			if (domain != null) {
+				result = ((Boolean) domain.runAsRead(new MRunnable() {
+					public Object run() {
+						return doTest(
+							eObject,
+							property,
+							args,
+							expectedValue);
+					}})).booleanValue();
+			}
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Implementation of the {@@link #test(Object, String, Object[], Object)} to
+	 * be executed in a read operation in the <code>eObject</code>'s editing
+	 * domain.
+	 * 
+	 * @@param eObject the model element to be tested
+	 * @@param property the property to be tested
+	 * @@param args optional property arguments
+	 * @@param expectedValue the expected value of the property (if not boolean)
+	 * 
+	 * @@return the result of the test, as a boolean object
+	 */
+	Boolean doTest(EObject eObject, String property, Object[] args, Object expectedValue) {
+		boolean result = false;
+		
+		if (property.equals(OBJECT_TYPE_PROPERTY)) {
+			result = EObjectUtil.getType(eObject).getName().equals(expectedValue);
+		} else if (property.equals(CAN_SEPARATE_PROPERTY)) {
+			return Boolean.FALSE;
+		} else if (property.equals(IS_SEPARATE_PROPERTY)) {
+			return Boolean.FALSE;
+		}
+		
+		return Boolean.valueOf(result);
+	}
+
+}
+@
+
+
+1.3
+log
+@[113863], gmf_head,Contributed by cdamus, 051223, Remove the LogicalResource implementation (obsoleted by Cross-Resource Containment in EMF)
+@
+text
+@@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@a30 7
+ *   <dt>canSeparate</dt>
+ *     <dd>boolean-valued property indicating whether an <code>EObject</code>
+ *         can be
+ *         {@@linkplain org.eclipse.gmf.runtime.emf.core.resources.ILogicalResource#canSeparate(EObject) separated}</dd>
+ *   <dt>isSeparate</dt>
+ *     <dd>boolean-valued property indicating whether an <code>EObject</code> is
+ *         {@@linkplain org.eclipse.gmf.runtime.emf.core.resources.ILogicalResource#isSeparate(EObject) separate}</dd>
+d37 7
+d45 6
+d107 1
+a107 6
+			Resource res = eObject.eResource();
+			MEditingDomain domain = MEditingDomain.getEditingDomain(res);
+			
+			if (domain != null) {
+				result = domain.asLogicalResource(res).canSeparate(eObject);
+			}
+d109 1
+a109 6
+			Resource res = eObject.eResource();
+			MEditingDomain domain = MEditingDomain.getEditingDomain(res);
+			
+			if (domain != null) {
+				result = domain.asLogicalResource(res).isSeparate(eObject);
+			}
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2005.  All Rights Reserved.                    |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

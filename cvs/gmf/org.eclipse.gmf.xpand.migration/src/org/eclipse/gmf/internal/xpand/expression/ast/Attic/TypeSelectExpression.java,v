@@ -1,0 +1,245 @@
+head	1.1;
+access;
+symbols
+	ocl_qvt:1.1.0.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2008.07.29.15.57.43;	author ashatalin;	state dead;
+branches
+	1.1.2.1;
+next	;
+commitid	33cb488f3dd14567;
+
+1.1.2.1
+date	2008.07.29.15.57.43;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.2;
+commitid	33cb488f3dd14567;
+
+1.1.2.2
+date	2008.08.05.10.42.09;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.3;
+commitid	41ee48982e7f4567;
+
+1.1.2.3
+date	2008.08.06.11.05.53;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.4;
+commitid	6b3c4899858e4567;
+
+1.1.2.4
+date	2008.08.19.16.56.42;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.5;
+commitid	14b548aafb484567;
+
+1.1.2.5
+date	2008.08.28.15.51.00;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	35c448b6c95d4567;
+
+
+desc
+@@
+
+
+1.1
+log
+@file TypeSelectExpression.java was initially added on branch ocl_qvt.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@Xtend-based implementation of XPand extensions was separated into .migration plugin.
+@
+text
+@a0 115
+/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.expression.ast;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.gmf.internal.xpand.BuiltinMetaModel;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.EvaluationException;
+import org.eclipse.gmf.internal.xpand.expression.ExecutionContext;
+import org.eclipse.gmf.internal.xpand.expression.Variable;
+
+/**
+ * @@author Sven Efftinge
+ * @@author Arno Haase
+ */
+public class TypeSelectExpression extends FeatureCall {
+
+    private Identifier typeLiteral;
+
+    public TypeSelectExpression(final int end, final Identifier opName, final Identifier typeLiteral,
+            final Expression target) {
+        super(opName.getStart(), end, opName.getLine(), opName, target);
+        this.typeLiteral = typeLiteral;
+    }
+
+    @@Override
+    public String toString() {
+        return super.toString() + "(" + typeLiteral + ")";
+    }
+
+    @@Override
+    public Object evaluateInternal(final ExecutionContext ctx) {
+        Object targetObj = null;
+        if (getTarget() == null) {
+            final Variable v = ctx.getVariable(ExecutionContext.IMPLICIT_VARIABLE);
+            if (v != null) {
+				targetObj = v.getValue();
+			}
+        } else {
+            targetObj = getTarget().evaluate(ctx);
+        }
+        if (targetObj == null) {
+			return null;
+		}
+        if (!(targetObj instanceof Collection)) {
+
+        }
+
+        return executeTypeSelect((Collection) targetObj, ctx);
+    }
+
+    private Object executeTypeSelect(final Collection collection, final ExecutionContext ctx) {
+        final Collection<Object> resultCol = new ArrayList<Object>();
+        final EClassifier t = ctx.getTypeForName(typeLiteral.getValue());
+        if (t == null) {
+            throw new EvaluationException("Unkown type '" + typeLiteral + "'", typeLiteral);
+        }
+        for (final Iterator iter = collection.iterator(); iter.hasNext();) {
+            final Object ele = iter.next();
+            if ((ele!=null) && BuiltinMetaModel.isAssignableFrom(t, BuiltinMetaModel.getType(ele))) {
+                resultCol.add(ele);
+            }
+        }
+        return resultCol;
+    }
+
+    @@Override
+    public EClassifier analyze(final ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+        EClassifier targetType = null;
+        if (getTarget() == null) {
+            final Variable v = ctx.getVariable(ExecutionContext.IMPLICIT_VARIABLE);
+            if (v != null) {
+				targetType = (EClassifier) v.getValue();
+			}
+        } else {
+            targetType = getTarget().analyze(ctx, issues);
+        }
+        if (targetType == null) {
+			return null;
+		}
+
+        if (!BuiltinMetaModel.isParameterizedType(targetType)) {
+            issues.add(new AnalysationIssue(AnalysationIssue.Type.INCOMPATIBLE_TYPES, "Collection type expected! was : "
+                    + targetType, getTarget()));
+            return null;
+        }
+
+        final EClassifier closureEClassifier = ctx.getTypeForName(typeLiteral.getValue());
+        if (closureEClassifier == null) {
+            issues.add(new AnalysationIssue(AnalysationIssue.Type.TYPE_NOT_FOUND, "Couldn't find type " + typeLiteral,
+                    typeLiteral));
+            return null;
+        }
+
+        return BuiltinMetaModel.getListType(closureEClassifier);
+    }
+
+}
+@
+
+
+1.1.2.2
+log
+@Supporting:
+- CollectionExpression
+- FeatureCall
+- OperationCall
+- TypeSelect
+@
+text
+@a113 4
+    
+    public Identifier getTypeLiteral() {
+    	return typeLiteral;
+    }
+@
+
+
+1.1.2.3
+log
+@Copyrights updated.
+@
+text
+@d4 1
+a4 1
+ * Copyright (c) 2005-2008 Sven Efftinge and others.
+a11 1
+ *     Alexander Shatalin (Borland)
+@
+
+
+1.1.2.4
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ Transforming Collection types on TypeSelectExpression migration.
+@
+text
+@a28 1
+import org.eclipse.gmf.internal.xpand.migration.TypeSelectExpressionTrace;
+d97 1
+a97 1
+			return createAnalyzeTrace(ctx, new TypeSelectExpressionTrace(null, null));
+d113 1
+a113 1
+        return createAnalyzeTrace(ctx, new TypeSelectExpressionTrace(BuiltinMetaModel.getListType(closureEClassifier), targetType));
+@
+
+
+1.1.2.5
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ First step toward .xpt migration.
+@
+text
+@d39 1
+a39 1
+    public TypeSelectExpression(final int end, final int endOffset, final Identifier opName, final Identifier typeLiteral,
+d41 1
+a41 1
+        super(opName.getStart(), end, opName.getLine(), opName.getStartOffset(), endOffset, opName, target);
+@
+
+

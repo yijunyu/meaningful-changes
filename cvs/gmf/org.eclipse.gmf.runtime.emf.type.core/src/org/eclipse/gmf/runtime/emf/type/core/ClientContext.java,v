@@ -1,0 +1,279 @@
+head	1.2;
+access;
+symbols
+	v20081020-0700:1.2
+	v20080807-1333:1.2
+	v20080807-1325:1.2
+	v20080731-1520:1.2
+	v20080725-1738:1.2
+	v20080722-1827:1.2
+	R2_1_maintenance:1.2.0.4
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080425-1959:1.2
+	v20080328-1605:1.2
+	v20080222-1200:1.2
+	v20080114-2222:1.2
+	v20080107-1111:1.2
+	v20071130-1111:1.2
+	v20071124-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	RC3_20:1.2
+	v20070601-1400:1.2
+	v20070518-1300:1.2
+	v20070403-1500:1.2
+	v20070330-1300:1.2
+	v20070208-1800:1.2
+	M4_20:1.2
+	v20061214-0000:1.2
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061013-1330:1.2
+	v20060919-0800:1.1.2.1
+	v20060907-1100:1.1.2.1
+	M1_20:1.1
+	v20060831-1500:1.1.2.1
+	v20060817-1500:1.1.2.1
+	v20060803-1200:1.1.2.1
+	v20060721-1130:1.1.2.1
+	v20060713-1700:1.1.2.1
+	R1_0_maintenance:1.1.0.2
+	R1_0:1.1
+	v20060627-1200:1.1
+	v20060616-1200:1.1
+	v20060609-1400:1.1
+	v20060531-1730:1.1
+	v20060530-1930:1.1
+	v20060526-1200:1.1
+	v20060519-0800:1.1
+	I20060505-1400:1.1
+	I20060428-1300:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2006.10.03.15.06.37;	author ahunter;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.04.26.20.14.33;	author ldamus;	state Exp;
+branches
+	1.1.2.1;
+next	;
+
+1.1.2.1
+date	2006.07.13.15.10.02;	author mmostafa;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@gmf_head ahunter 061003 Merge 1.0.1 Runtime to HEAD 2.0
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.emf.type.core;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.descriptors.IEditHelperAdviceDescriptor;
+
+/**
+ * The implementation of the client context interface.
+ * <p>
+ * This class may be instantiated or subclassed by clients.
+ * 
+ * @@author ldamus
+ */
+public class ClientContext implements IClientContext {
+
+	private final String id;
+
+	private final IElementMatcher matcher;
+
+	// set of String type and advice IDs that are bound to me
+	private final Set typeIdBindings = new java.util.HashSet();
+
+	// set of regex patterns that are bound to me
+	private final Set patternBindings = new java.util.HashSet();
+
+	/**
+	 * Initializes me with my ID and my element matcher.
+	 * 
+	 * @@param id
+	 *            my unique identifier
+	 * @@param matcher
+	 *            my element matcher
+	 */
+	public ClientContext(String id, IElementMatcher matcher) {
+		this.id = id;
+		this.matcher = matcher;
+	}
+
+	public final String getId() {
+		return id;
+	}
+
+	public final IElementMatcher getMatcher() {
+		return matcher;
+	}
+
+	public boolean includes(IEditHelperAdviceDescriptor adviceDescriptor) {
+		return includes(adviceDescriptor.getId());
+	}
+
+	public boolean includes(IElementTypeDescriptor elementTypeDescriptor) {
+		return includes(elementTypeDescriptor.getId());
+	}
+
+	public boolean includes(IElementType elementType) {
+		return includes(elementType.getId());
+	}
+
+	private boolean includes(String _id) {
+		boolean result = false;
+
+		result = typeIdBindings.contains(_id);
+
+		if (!result && !patternBindings.isEmpty()) {
+			// look for a bound pattern
+			result = hasPatternBindingFor(_id);
+
+			if (result) {
+				// cache the result for this type
+				bindId(_id);
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Determines whether any of my pattern bindings matches the
+	 * <code>toMatch</code> string.
+	 * 
+	 * @@param toMatch
+	 *            the string to be matched
+	 * @@return <code>true</code> if any of my pattern bindings matches the
+	 *         <code>toMatch</code> string; <code>false</code>, otherwise
+	 */
+	private boolean hasPatternBindingFor(String toMatch) {
+
+		for (Iterator iter = patternBindings.iterator(); iter.hasNext();) {
+			Pattern pattern = (Pattern) iter.next();
+
+			if (pattern.matcher(toMatch).matches()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	public void bindId(String typeId) {
+		typeIdBindings.add(typeId);
+	}
+
+	public void bindPattern(Pattern pattern) {
+		patternBindings.add(pattern);
+	}
+
+	/**
+	 * Has no children.
+	 */
+	public Collection getChildren() {
+		return Collections.EMPTY_LIST;
+	}
+
+	/**
+	 * Not a multi-context.
+	 */
+	public boolean isMultiClientContext() {
+		return false;
+	}
+
+	/**
+	 * The context ID fully determines equality.
+	 */
+	public boolean equals(Object obj) {
+		return (obj instanceof ClientContext)
+				&& ((ClientContext) obj).getId().equals(getId());
+	}
+
+	/**
+	 * The context ID fully determines equality.
+	 */
+	public int hashCode() {
+		return getId().hashCode();
+	}
+
+	public String toString() {
+		return "ClientContext[" + getId() + ']'; //$NON-NLS-1$
+	}
+}
+@
+
+
+1.1
+log
+@[136760] gmf_head ldamus 060426  ElementTypeRegistry prevents deployment of different applications sharing the same metamodel
+@
+text
+@d74 1
+a74 1
+	private boolean includes(String id) {
+d77 1
+a77 1
+		result = typeIdBindings.contains(id);
+d81 1
+a81 1
+			result = hasPatternBindingFor(id);
+d85 1
+a85 1
+				bindId(id);
+@
+
+
+1.1.2.1
+log
+@[110316] gmf_R1_0_maintenance mmostafa  060713 Compiler warning count should be 0 - runtime diagram layer components
+@
+text
+@d74 1
+a74 1
+	private boolean includes(String _id) {
+d77 1
+a77 1
+		result = typeIdBindings.contains(_id);
+d81 1
+a81 1
+			result = hasPatternBindingFor(_id);
+d85 1
+a85 1
+				bindId(_id);
+@
+

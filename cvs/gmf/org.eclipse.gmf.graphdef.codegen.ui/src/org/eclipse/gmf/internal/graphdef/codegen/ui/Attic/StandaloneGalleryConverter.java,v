@@ -1,0 +1,211 @@
+head	1.4;
+access;
+symbols
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	I20060407-1200:1.3
+	I20060331-1000:1.3
+	I20060324-0300:1.3
+	I20060317-1300:1.3
+	I20060317-1200:1.3
+	I20060316-1300:1.3
+	I20060309-1300:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2006.04.10.13.28.16;	author atikhomirov;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2006.03.13.15.42.36;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.03.10.15.50.15;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.03.08.14.22.43;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@Refactor latest fix for #128779 - StandaloneGalleryConverter moved to gmfgraph.codegen, dependencies of oeg.tests and oeg.graphdef.codegen.ui updated.
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Michael Golubev (Borland) - initial API and implementation
+ */
+
+package org.eclipse.gmf.internal.graphdef.codegen.ui;
+
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Iterator;
+
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.gmf.gmfgraph.Canvas;
+import org.eclipse.gmf.gmfgraph.ConnectionFigure;
+import org.eclipse.gmf.gmfgraph.CustomFigure;
+import org.eclipse.gmf.gmfgraph.DecorationFigure;
+import org.eclipse.gmf.gmfgraph.Figure;
+import org.eclipse.gmf.gmfgraph.FigureGallery;
+import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+import org.eclipse.gmf.graphdef.codegen.StandaloneGenerator;
+
+public class StandaloneGalleryConverter {
+	private final StandaloneGenerator.GenerationInfo myGenerationInfo;
+	private final DiagramElementsCopier myDiagramElementsCopier;
+	
+	public StandaloneGalleryConverter(StandaloneGenerator.GenerationInfo generationInfo){
+		myGenerationInfo = generationInfo;
+		myDiagramElementsCopier = new DiagramElementsCopier();
+	}
+	
+	public FigureGallery convertFigureGallery(){
+		FigureGallery result = GMFGraphFactory.eINSTANCE.createFigureGallery();
+		String generatedBundle = myGenerationInfo.getConfig().getPluginID();
+		result.setImplementationBundle(generatedBundle);
+		
+		for (Enumeration originalFigures = myGenerationInfo.getProcessedFigures(); originalFigures.hasMoreElements();){
+			Figure nextOriginal = (Figure) originalFigures.nextElement();
+			String nextConvertedFqn = myGenerationInfo.getGeneratedClassFQN(nextOriginal);
+			CustomFigure custom = createCustomFigure(nextOriginal);
+			custom.setName(nextOriginal.getName());
+			custom.setBundleName(generatedBundle);
+			custom.setQualifiedClassName(nextConvertedFqn);
+			
+			result.getFigures().add(custom);
+			myDiagramElementsCopier.registerSubstitution(nextOriginal, custom);
+		}
+		return result;
+	}
+	
+	public Canvas mirrorDiagramElements(Collection resources){
+		Canvas result = null;
+		for (Iterator it = resources.iterator(); it.hasNext();){
+			Resource next = (Resource)it.next();
+			if (!next.getContents().isEmpty()){
+				EObject root = (EObject) next.getContents().get(0);
+				if (root instanceof Canvas){
+					Canvas original = (Canvas)root;
+					if (result == null){
+						result = GMFGraphFactory.eINSTANCE.createCanvas();
+						result.setName(original.getName());
+					}
+					Collection children = myDiagramElementsCopier.copyAll(original.getChildren());
+					Collection compartments = myDiagramElementsCopier.copyAll(original.getCompartments());
+					Collection labels = myDiagramElementsCopier.copyAll(original.getLabels());
+					Collection nodes = myDiagramElementsCopier.copyAll(original.getNodes());
+
+					result.getChildren().addAll(children);
+					result.getCompartments().addAll(compartments);
+					result.getLabels().addAll(labels);
+					result.getNodes().addAll(nodes);
+				}
+			}
+		}
+		if (result != null && !result.eContents().isEmpty()){
+			myDiagramElementsCopier.copyReferences();	
+		}
+		return result;
+	}
+	
+	private CustomFigure createCustomFigure(Figure original){
+		GMFGraphFactory factory = GMFGraphFactory.eINSTANCE;
+		if (original instanceof DecorationFigure){
+			return factory.createCustomDecoration();
+		} 
+		if (original instanceof ConnectionFigure){
+			return factory.createCustomConnection();
+		}
+		return factory.createCustomFigure();
+	}
+	
+	private static class DiagramElementsCopier extends EcoreUtil.Copier {
+		private final HashSet myOriginalFigures = new HashSet();
+		
+		public void registerSubstitution(Figure original, CustomFigure substituted){
+			put(original, substituted);
+			myOriginalFigures.add(original);
+		}
+		
+		protected void copyReference(EReference eReference, EObject eObject, EObject copyEObject) {
+			if (EcoreUtil.isAncestor(myOriginalFigures, eObject)){
+				//no such features in the CustomFigure's
+				return;
+			}
+			super.copyReference(eReference, eObject, copyEObject);
+		}
+		
+	}
+
+}
+@
+
+
+1.3
+log
+@[mgolubev] #131365 Mirror diagram elements and connect them to newly generated custom figures
+@
+text
+@@
+
+
+1.2
+log
+@leave figure original names
+@
+text
+@d15 1
+d17 2
+d20 5
+d34 9
+a42 1
+	public FigureGallery convertFigureGallery(StandaloneGenerator.GenerationInfo generationInfo){
+d44 1
+a44 1
+		String generatedBundle = generationInfo.getConfig().getPluginID();
+d47 1
+a47 1
+		for (Enumeration originalFigures = generationInfo.getProcessedFigures(); originalFigures.hasMoreElements();){
+d49 1
+a49 1
+			String nextConvertedFqn = generationInfo.getGeneratedClassFQN(nextOriginal);
+d56 31
+d101 18
+@
+
+
+1.1
+log
+@[mgolubev] #128779 create new .gmfgraph as part of figure bundle generation process
+@
+text
+@d35 1
+@
+

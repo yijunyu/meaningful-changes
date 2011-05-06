@@ -1,0 +1,181 @@
+head	1.2;
+access;
+symbols
+	v20080722-1827:1.2
+	R2_1_maintenance:1.2.0.2
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080425-1959:1.2
+	v20071108-0000:1.2
+	v20071003-0000:1.2
+	v20070921-0000:1.1
+	v20070903-0000:1.2
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1
+	RC3_20:1.1
+	v20070601-1400:1.1
+	v20070525-1500:1.1
+	v20070518-1300:1.1
+	v20070427-0600:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2007.08.13.14.11.06;	author bblajer;	state Exp;
+branches;
+next	1.1;
+commitid	660946c066784567;
+
+1.1
+date	2007.04.24.14.16.45;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	4252462e114b4567;
+
+
+desc
+@@
+
+
+1.2
+log
+@1. Don't cache templates if dynamic templates option is on;
+2. [199747] Support shortcuts in the Lite diagrams (including notation model update for links between alien shortcuts);
+3. Decorations should be visible;
+4. TransactionalUpdateManager: more notifications to be dispatched to parents, make it possible to add more in subclasses;
+5. On element creation, it should be given an opportunity to contribute its notational update commands;
+6. [199749]: Delete from View supported (request, edit policy, command, UI action);
+7. Add @@generated tags where they were missing;
+8. ChildNotationModelRefresher: if the child feature is derived transient, notation model refresher should listen to containment feature.
+@
+text
+@/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.edit.parts.update;
+
+import java.util.Collection;
+import java.util.Collections;
+
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.common.util.BasicEList;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+/**
+ * Various utility methods related to EMF notifications.
+ */
+public class UpdaterUtil {
+	public static boolean affects(Notification notification, EClass clz) {
+		if (notification.isTouch()) {
+			return false;
+		}
+		switch (notification.getEventType()) {
+		case Notification.ADD:
+		case Notification.SET:
+			return clz.isInstance(notification.getNewValue());
+		case Notification.REMOVE:
+		case Notification.UNSET:
+			return clz.isInstance(notification.getOldValue());
+		case Notification.ADD_MANY:
+			return affects(notification.getNewValue(), clz);
+		case Notification.REMOVE_MANY:
+			return affects(notification.getOldValue(), clz);
+		case Notification.MOVE:
+			if (notification.getNotifier() instanceof EObject && notification.getFeature() instanceof EStructuralFeature) {
+				return affects(((EObject) notification.getNotifier()).eGet((EStructuralFeature) notification.getFeature()), clz);
+			}
+			return false;
+		}
+		return false;
+	}
+
+	private static boolean affects(Object list, EClass clz) {
+		if (list instanceof Collection<?>) {
+			for(Object next : ((Collection<?>) list)) {
+				if (clz.isInstance(next)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public static Collection<EObject> getAffectedValues(Notification notification, EClass clz) {
+		if (notification.isTouch()) {
+			return Collections.emptyList();
+		}
+		switch (notification.getEventType()) {
+		case Notification.ADD:
+		case Notification.SET:
+			if (clz.isInstance(notification.getNewValue())) {
+				return Collections.singletonList((EObject) notification.getNewValue());
+			}
+			return Collections.emptyList();
+		case Notification.REMOVE:
+		case Notification.UNSET:
+			if (clz.isInstance(notification.getOldValue())) {
+				return Collections.singletonList((EObject) notification.getOldValue());
+			}
+		case Notification.ADD_MANY:
+			return affectingObjects(notification.getNewValue(), clz);
+		case Notification.REMOVE_MANY:
+			return affectingObjects(notification.getOldValue(), clz);
+		case Notification.MOVE:
+			if (notification.getNotifier() instanceof EObject && notification.getFeature() instanceof EStructuralFeature) {
+				return affectingObjects(((EObject) notification.getNotifier()).eGet((EStructuralFeature) notification.getFeature()), clz);
+			}
+			return Collections.emptyList();
+		}
+		return Collections.emptyList();
+	}
+
+	private static Collection<EObject> affectingObjects(Object list, EClass clz) {
+		Collection<EObject> result = null;
+		if (list instanceof Collection<?>) {
+			for(Object next : ((Collection<?>) list)) {
+				if (clz.isInstance(next)) {
+					if (result == null) {
+						result = new BasicEList<EObject>();
+					}
+					result.add((EObject) next);
+				}
+			}
+		}
+		if (result != null) {
+			return result;
+		}
+		return Collections.emptyList();
+	}
+}
+@
+
+
+1.1
+log
+@CanonicalStyle is taken into account while refreshing notational model to reflect changes in underlying domain model;
+Update is now centralized and transactional;
+Changes to visibility are dispatched to the parent of the affected view as well (was: only to the view itself);
+Save options are not reused, for easy modification of the generated code;
+Side-affixed children are not considered direct children;
+Empty edit-patterns are treated the same way as null patterns (view pattern is used instead).
+@
+text
+@d15 1
+d18 1
+d61 47
+@
+

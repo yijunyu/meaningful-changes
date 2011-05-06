@@ -1,0 +1,512 @@
+head	1.4;
+access;
+symbols
+	v20081023-2107:1.4
+	v20081022-1925:1.4
+	v20081022-1104:1.4
+	v20081020-0700:1.4
+	v20080722-1827:1.4
+	R2_1_maintenance:1.4.0.6
+	Root_R2_1_maintenance:1.4
+	R2_1_0:1.4
+	v20080512-1200:1.4
+	v20080503-1740:1.4
+	v20080501-1739:1.4
+	v20080425-1959:1.4
+	v20080407-2250:1.4
+	v20080222-1200:1.4
+	v20080215-1500:1.4
+	v20071003-0000:1.4
+	v20070921-0000:1.4
+	v20070915-0000:1.4
+	v20070809-0000:1.4
+	R2_0_maintenance:1.4.0.4
+	R2_0:1.4
+	R4_20:1.4
+	RC3_20:1.4
+	v20070601-1400:1.4
+	v20070504-1000:1.4
+	v20070330-1300:1.4
+	v20070208-1800:1.4
+	M4_20:1.4
+	v20061218-1200:1.4
+	v20061214-0000:1.4
+	M3_20:1.4
+	v20061117-0800:1.4
+	v20061020-1000:1.4
+	v20061013-1330:1.4
+	v20061012-1100:1.4
+	v20060925-1700:1.4
+	v20060919-0800:1.4
+	M1_20:1.4
+	v20060824-1600:1.4
+	v20060803-1200:1.4
+	v20060728-0500:1.4
+	v20060721-1130:1.4
+	v20060713-1700:1.4
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	v20060627-1200:1.4
+	v20060616-1200:1.4
+	v20060531-1730:1.4
+	v20060526-1200:1.4
+	I20060424-0500:1.4
+	I20060424-0300:1.4
+	M6_10:1.4
+	I20060407-1200:1.4
+	I20060331-1000:1.4
+	I20060324-0300:1.4
+	I20060317-1300:1.4
+	I20060317-1200:1.4
+	I20060316-1300:1.4
+	I20060309-1300:1.4
+	M5_10:1.4
+	S20060303-1600:1.4
+	I20060227-1730:1.4
+	I20060216-1945:1.4
+	I20060210-1715:1.4
+	I20060209-1815:1.4
+	I20060203-0830:1.4
+	I20060129-1145:1.4
+	I20060127-0900:1.4
+	I20060120-1530:1.4
+	I20060113-1700:1.4
+	M4_10:1.4
+	I20060107-1100:1.4
+	I20060105-1630:1.4
+	I20051230-1230:1.4
+	I20051223-1100:1.4
+	I20051217-0925:1.4
+	I20051124-2000:1.3
+	M3_10:1.3
+	I20051118-1245:1.3
+	I20051111-1800:1.3
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2005.12.12.21.22.36;	author ahunter;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.11.08.21.41.16;	author ahunter;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.23.50;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.16.26;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[114587] gmf_head ahunter 051212 Migrate GMF plug-ins to conform with Eclipse standard way of managing Images and Fonts
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2005 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.common.ui.internal.dialogs;
+
+import java.util.Hashtable;
+
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+import org.eclipse.gmf.runtime.common.ui.dialogs.SelectableElement;
+import org.eclipse.gmf.runtime.common.ui.dialogs.SelectedType;
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIIconNames;
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+import org.eclipse.gmf.runtime.common.ui.util.OverlayImageDescriptor;
+
+/**
+ * This label provider overlays a selected or unselected icon on another icon.
+ * It supports three states as defined in SelectedType, which are SELECTED,
+ * UNSELECTED. and LEAVE. It decorates SELECTED with a green plus sign. It
+ * decorates UNSELECTED with a red x. It doesn't do anything with LEAVE.
+ * 
+ * A mix of SELECTED, UNSELECTED, and LEAVE gives a greyed out parent. You could
+ * call this this a fourth state, but it is not a real state.
+ * 
+ * @@author wdiu, Wayne Diu
+ */
+
+public class SelectableElementsTriStateLabelProvider
+	extends SelectableElementsLabelProvider {
+
+	/**
+	 * Image pool, this is not reusing the superclass' image pool because they
+	 * are supposed to be different.
+	 */
+	private Hashtable imagePool = new Hashtable();
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.jface.viewers.ILabelProvider#getImage(java.lang.Object)
+	 */
+	public Image getImage(Object element) {
+		Image image = super.getImage(element);
+
+		// overlay if image is not null
+		if (image != null) {
+
+			SelectableElement selectableElement = (SelectableElement) element;
+			// super asserted on this
+
+			if ((selectableElement.getNumberOfChildren() > 0 && areAllChildrenOfType(
+				selectableElement, SelectedType.SELECTED))
+				|| (selectableElement.getNumberOfChildren() == 0 && selectableElement
+					.getSelectedType() == SelectedType.SELECTED)) {
+
+				String key = "s" + image.hashCode(); //$NON-NLS-1$ 
+				Image overlayImage = (Image) imagePool.get(key);
+
+				if (overlayImage == null) {
+					try {
+						overlayImage = overlayImage(image, AbstractUIPlugin
+							.imageDescriptorFromPlugin(CommonUIPlugin
+								.getPluginId(),
+								CommonUIIconNames.IMG_CHECKBOX_SELECTED));
+						imagePool.put(key, overlayImage);
+					} catch (Exception e) {
+						Trace.catching(CommonUIPlugin.getDefault(),
+							CommonUIDebugOptions.EXCEPTIONS_CATCHING,
+							getClass(), "getImage", e); //$NON-NLS-1$
+						// don't just return the image,
+						// that will be more confusing in case of failure
+						Log.error(CommonUIPlugin.getDefault(),
+							CommonUIStatusCodes.RESOURCE_FAILURE,
+							"Failed to load SELECTED_ICON overlay", e); //$NON-NLS-1$
+						return null;
+					}
+				}
+				return overlayImage;
+
+			}
+
+			else if ((selectableElement.getNumberOfChildren() > 0 && areAllChildrenOfType(
+				selectableElement, SelectedType.UNSELECTED))
+				|| (selectableElement.getNumberOfChildren() == 0 && selectableElement
+					.getSelectedType() == SelectedType.UNSELECTED)) {
+				String key = "u" + image.hashCode(); //$NON-NLS-1$ 
+				Image overlayImage = (Image) imagePool.get(key);
+
+				if (overlayImage == null) {
+					try {
+						overlayImage = overlayImage(image, AbstractUIPlugin
+							.imageDescriptorFromPlugin(CommonUIPlugin
+								.getPluginId(),
+								CommonUIIconNames.IMG_CHECKBOX_UNSELECTED));
+						imagePool.put(key, overlayImage);
+					} catch (Exception e) {
+						// don't just return the image,
+						// that will be more confusing in case of failure
+						Trace.catching(CommonUIPlugin.getDefault(),
+							CommonUIDebugOptions.EXCEPTIONS_CATCHING,
+							getClass(), "getImage", e); //$NON-NLS-1$
+						Log.error(CommonUIPlugin.getDefault(),
+							CommonUIStatusCodes.RESOURCE_FAILURE,
+							"Failed to load UNSELECTED_ICON overlay", e); //$NON-NLS-1$
+						return null;
+					}
+				}
+				return overlayImage;
+
+			}
+
+			else if ((selectableElement.getNumberOfChildren() > 0 && areAllChildrenOfType(
+				selectableElement, SelectedType.LEAVE))
+				|| (selectableElement.getNumberOfChildren() == 0 && selectableElement
+					.getSelectedType() == SelectedType.LEAVE)) {
+
+				String key = "c" + image.hashCode(); //$NON-NLS-1$ 
+				Image overlayImage = (Image) imagePool.get(key);
+
+				if (overlayImage == null) {
+					try {
+						overlayImage = overlayImage(image, AbstractUIPlugin
+							.imageDescriptorFromPlugin(CommonUIPlugin
+								.getPluginId(),
+								CommonUIIconNames.IMG_CHECKBOX_CLEARED));
+						imagePool.put(key, overlayImage);
+					} catch (Exception e) {
+						// don't just return the image,
+						// that will be more confusing in case of failure
+						Trace.catching(CommonUIPlugin.getDefault(),
+							CommonUIDebugOptions.EXCEPTIONS_CATCHING,
+							getClass(), "getImage", e); //$NON-NLS-1$
+						Log.error(CommonUIPlugin.getDefault(),
+							CommonUIStatusCodes.RESOURCE_FAILURE,
+							"Failed to load CHECKBOX_ICON overlay", e); //$NON-NLS-1$
+						return null;
+					}
+				}
+				return overlayImage;
+			}
+
+			else {// mix, since has children
+
+				assert (selectableElement.getNumberOfChildren() > 0);
+
+				String key = "g" + image.hashCode(); //$NON-NLS-1$ 
+				Image overlayImage = (Image) imagePool.get(key);
+
+				if (overlayImage == null) {
+					try {
+						overlayImage = overlayImage(image, AbstractUIPlugin
+							.imageDescriptorFromPlugin(CommonUIPlugin
+								.getPluginId(),
+								CommonUIIconNames.IMG_CHECKBOX_GREYED));
+						imagePool.put(key, overlayImage);
+					} catch (Exception e) {
+						// don't just return the image,
+						// that will be more confusing in case of failure
+						Trace.catching(CommonUIPlugin.getDefault(),
+							CommonUIDebugOptions.EXCEPTIONS_CATCHING,
+							getClass(), "getImage", e); //$NON-NLS-1$
+						Log.error(CommonUIPlugin.getDefault(),
+							CommonUIStatusCodes.RESOURCE_FAILURE,
+							"Failed to load GREYED_ICON overlay", e); //$NON-NLS-1$
+						return null;
+					}
+				}
+				return overlayImage;
+
+			}
+		}
+
+		return image;
+	}
+
+	/**
+	 * Overlays given base image with given overlay image ImageDescriptor
+	 * 
+	 * Based on overlayImage from ModelExplorerDecorator
+	 * 
+	 * @@param srcImage
+	 *            base image
+	 * @@param imageDesc
+	 *            overlay ImageDescriptor
+	 * @@return Image the new overlay image
+	 */
+	private Image overlayImage(Image srcImage, ImageDescriptor imageDesc) {
+		OverlayImageDescriptor overlayDesc = new OverlayImageDescriptor(
+			srcImage, imageDesc, srcImage.getImageData().width, srcImage
+				.getImageData().height);
+
+		Image destImage = overlayDesc.createImage();
+		assert null != destImage;
+
+		return destImage;
+	}
+
+	/**
+	 * Returns if the SelectableElement's children all have the given type. This
+	 * function is recursive.
+	 * 
+	 * @@param selectableElement
+	 *            the element to check if all children have the selectedType
+	 * @@param selectedType
+	 *            the SelectedType that all children must have to return true
+	 * @@return boolean true if all children are selectedType, false if they are
+	 *         not
+	 */
+	private boolean areAllChildrenOfType(SelectableElement selectableElement,
+			SelectedType selectedType) {
+		int numberOfChildren = selectableElement.getNumberOfChildren();
+		assert (numberOfChildren > 0);
+		for (int i = 0; i < numberOfChildren; i++) {
+			SelectableElement element = selectableElement.getChild(i);
+			if ((element.getNumberOfChildren() == 0 && element
+				.getSelectedType() != selectedType)
+				|| (element.getNumberOfChildren() > 0 && !areAllChildrenOfType(
+					element, selectedType)))
+				return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Also frees up the images that were created
+	 * 
+	 * @@see org.eclipse.jface.viewers.LabelProvider#dispose()
+	 */
+	public void dispose() {
+		dispose(imagePool);
+		super.dispose();
+	}
+
+	/**
+	 * Constructor that calls its superclass
+	 */
+	public SelectableElementsTriStateLabelProvider() {
+		// randomly select an image, assume they're all the same size
+		// if your icon size is > short, then that would be very strange
+		// change it to int if you think that it will be a problem
+		super(
+			(AbstractUIPlugin.imageDescriptorFromPlugin(CommonUIPlugin
+				.getPluginId(), CommonUIIconNames.IMG_CHECKBOX_SELECTED) == null) ? (short) 0
+				: (short) (AbstractUIPlugin.imageDescriptorFromPlugin(
+					CommonUIPlugin.getPluginId(),
+					CommonUIIconNames.IMG_CHECKBOX_SELECTED).getImageData().width),
+			(short) 0);
+	}
+}@
+
+
+1.3
+log
+@Bugzilla Bug 115547 gmf_head etworkow 051109 Remove duplicate icons from common ui
+@
+text
+@d18 1
+a27 1
+import org.eclipse.gmf.runtime.common.ui.internal.l10n.ResourceManager;
+d59 1
+a59 1
+		//overlay if image is not null
+d63 1
+a63 1
+			//super asserted on this
+d75 4
+a78 2
+						overlayImage = overlayImage(image, ResourceManager
+							.getInstance().getImageDescriptor(CommonUIIconNames.IMG_CHECKBOX_SELECTED));
+d84 2
+a85 2
+						//don't just return the image,
+						//that will be more confusing in case of failure
+d105 4
+a108 2
+						overlayImage = overlayImage(image, ResourceManager
+							.getInstance().getImageDescriptor(CommonUIIconNames.IMG_CHECKBOX_UNSELECTED));
+d111 2
+a112 2
+						//don't just return the image,
+						//that will be more confusing in case of failure
+d136 4
+a139 2
+						overlayImage = overlayImage(image, ResourceManager
+							.getInstance().getImageDescriptor(CommonUIIconNames.IMG_CHECKBOX_CLEARED));
+d142 2
+a143 2
+						//don't just return the image,
+						//that will be more confusing in case of failure
+d156 1
+a156 1
+			else {//mix, since has children
+d165 4
+a168 2
+						overlayImage = overlayImage(image, ResourceManager
+							.getInstance().getImageDescriptor(CommonUIIconNames.IMG_CHECKBOX_GREYED));
+d171 2
+a172 2
+						//don't just return the image,
+						//that will be more confusing in case of failure
+d252 3
+a254 3
+		//randomly select an image, assume they're all the same size
+		//if your icon size is > short, then that would be very strange
+		//change it to int if you think that it will be a problem
+d256 6
+a261 3
+			(ResourceManager.getInstance().getImageDescriptor(CommonUIIconNames.IMG_CHECKBOX_SELECTED) == null) ? (short) 0
+				: (short) (ResourceManager.getInstance().getImageDescriptor(
+					CommonUIIconNames.IMG_CHECKBOX_SELECTED).getImageData().width), (short) 0);
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d24 1
+a50 20
+	/**
+	 * Green plus file
+	 */
+	private static final String SELECTED_ICON = "checkboxselected.gif"; //$NON-NLS-1$
+
+	/**
+	 * Red x file
+	 */
+	private static final String UNSELECTED_ICON = "checkboxunselected.gif"; //$NON-NLS-1$
+
+	/**
+	 * Greyed file
+	 */
+	private static final String GREYED_ICON = "checkboxgreyed.gif"; //$NON-NLS-1$
+
+	/**
+	 * Cleared checkbox file
+	 */
+	private static final String CHECKBOX_ICON = "checkboxcleared.gif"; //$NON-NLS-1$
+
+d76 1
+a76 1
+							.getInstance().getImageDescriptor(SELECTED_ICON));
+d104 1
+a104 1
+							.getInstance().getImageDescriptor(UNSELECTED_ICON));
+d133 1
+a133 1
+							.getInstance().getImageDescriptor(CHECKBOX_ICON));
+d160 1
+a160 1
+							.getInstance().getImageDescriptor(GREYED_ICON));
+d248 1
+a248 1
+			(ResourceManager.getInstance().getImageDescriptor(SELECTED_ICON) == null) ? (short) 0
+d250 1
+a250 1
+					SELECTED_ICON).getImageData().width), (short) 0);
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2002, 2005.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

@@ -1,0 +1,431 @@
+head	1.3;
+access;
+symbols
+	v20081023-2107:1.3
+	v20081022-1925:1.3
+	v20081022-1005:1.3
+	v20081020-0700:1.3
+	v20080917-1925:1.3
+	v20080916-2008:1.3
+	v20080911-1728:1.3
+	v20080911-1506:1.3
+	v20080910-1520:1.3
+	v20080910-1510:1.3
+	v20080903-1520:1.3
+	v20080903-1510:1.3
+	v20080813-1510:1.3
+	v20080811-1546:1.3
+	v20080731-1520:1.3
+	v20080725-1738:1.3
+	v20080723-2246:1.3
+	v20080723-2232:1.3
+	v20080723-1700:1.3
+	v20080722-1827:1.3
+	v20080718-1700:1.3
+	v20080718-1731:1.3
+	v20080716-1600:1.3
+	v20080716-1642:1.3
+	R2_1_maintenance:1.3.0.2
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080610-1132:1.3
+	v20080603-1553:1.3
+	v20080527-1255:1.3
+	v20080516-1748:1.3
+	v20080516-1143:1.3
+	v20080512-1200:1.3
+	v20080503-1740:1.3
+	v20080501-1739:1.3
+	v20080425-1959:1.3
+	v20080417-1610:1.3
+	v20080407-2250:1.3
+	v20080407-0930:1.3
+	v20080404-1111:1.3
+	v20080328-1605:1.3
+	v20080322-0000:1.3
+	v20080222-1200:1.3
+	v20080201-2010:1.3
+	v20080114-1111:1.2
+	v20080107-1111:1.2
+	v20071222-1111:1.2
+	v20071214-1111:1.2
+	v20071130-1111:1.2
+	bugzilla111892_group_support:1.1.0.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2008.01.16.16.51.00;	author crevells;	state Exp;
+branches;
+next	1.2;
+commitid	349478e35f24567;
+
+1.2
+date	2007.11.21.17.57.28;	author crevells;	state Exp;
+branches;
+next	1.1;
+commitid	4a12474471874567;
+
+1.1
+date	2007.05.18.17.36.44;	author crevells;	state dead;
+branches
+	1.1.2.1;
+next	;
+commitid	1899464de42a4567;
+
+1.1.2.1
+date	2007.05.18.17.36.44;	author crevells;	state Exp;
+branches;
+next	;
+commitid	1899464de42a4567;
+
+
+desc
+@@
+
+
+1.3
+log
+@[215505] gmf_head crevells 080116 Should be able to right-click a Circuit and arrange contents of its compartment
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2007, 2008 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.diagram.ui.editparts;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.gef.EditPart;
+import org.eclipse.gef.EditPolicy;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.editpolicies.SnapFeedbackPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.actions.ActionIds;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.ContainerEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.DecorationEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.GroupComponentEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.GroupXYLayoutEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableEditPolicyEx;
+import org.eclipse.gmf.runtime.diagram.ui.internal.figures.GroupFigure;
+import org.eclipse.gmf.runtime.diagram.ui.requests.ArrangeRequest;
+import org.eclipse.gmf.runtime.gef.ui.figures.NodeFigure;
+import org.eclipse.gmf.runtime.notation.View;
+
+/**
+ * The editpart for a group. A group is a special type of container around
+ * shapes.
+ * 
+ * @@author crevells, mmostafa
+ * @@since 2.1
+ */
+public class GroupEditPart
+    extends ShapeNodeEditPart {
+
+    /**
+     * A <code>ContainerEditPolicy</code> for a <code>GroupEditPart</code>.
+     * 
+     * @@since 2.1
+     */
+    protected static class GroupContainerEditPolicy
+        extends ContainerEditPolicy {
+
+        protected Command getArrangeCommand(ArrangeRequest request) {
+            if (ActionIds.ACTION_ARRANGE_SELECTION.equals(request.getType())
+                || ActionIds.ACTION_TOOLBAR_ARRANGE_SELECTION.equals(request
+                    .getType())) {
+                List parts = request.getPartsToArrange();
+                if (parts.size() == 1 && parts.contains(getHost())) {
+                    ArrangeRequest newRequest = createRequest(request,
+                        getHost().getChildren());
+                    return super.getArrangeCommand(newRequest);
+                }
+            }
+            return super.getArrangeCommand(request);
+        }
+
+        private ArrangeRequest createRequest(ArrangeRequest request,
+                List partsToArrange) {
+            ArrangeRequest newRequest = new ArrangeRequest((String) request
+                .getType(), request.getLayoutType());
+            newRequest.setExtendedData(request.getExtendedData());
+            newRequest.setPartsToArrange(partsToArrange);
+            return newRequest;
+        }
+    }
+    
+    /**
+     * Creates a new <code>GroupEditPart</code>.
+     * 
+     * @@param view
+     *            the view controlled by this edit part
+     */
+    public GroupEditPart(View view) {
+        super(view);
+    }
+
+    protected NodeFigure createNodeFigure() {
+        return new GroupFigure();
+    }
+
+    public boolean canAttachNote() {
+        return false;
+    }
+
+    public IFigure getContentPane() {
+        return ((GroupFigure) getFigure()).getContainerFigure();
+    }
+
+    public void setLayoutConstraint(EditPart child, IFigure childFigure,
+            Object constraint) {
+        getContentPaneFor((IGraphicalEditPart) child).setConstraint(
+            childFigure, constraint);
+    }
+
+    protected void createDefaultEditPolicies() {
+        installEditPolicy(EditPolicyRoles.DECORATION_ROLE,
+            new DecorationEditPolicy());
+        installEditPolicy(EditPolicy.LAYOUT_ROLE, new GroupXYLayoutEditPolicy());
+        installEditPolicy(EditPolicy.COMPONENT_ROLE,
+            new GroupComponentEditPolicy());
+        installEditPolicy(EditPolicy.CONTAINER_ROLE, new GroupContainerEditPolicy());
+        installEditPolicy(EditPolicyRoles.SNAP_FEEDBACK_ROLE,
+            new SnapFeedbackPolicy());
+    }
+
+    public EditPolicy getPrimaryDragEditPolicy() {
+        return new NonResizableEditPolicyEx();
+    }
+
+    /**
+     * Gets all the shape children of this group, digging into any nested groups
+     * found.
+     * 
+     * @@return all the shape children including shapes in nested groups
+     */
+    public List getShapeChildren() {
+        List flatChildren = new ArrayList(getChildren().size());
+        for (Iterator iter = getChildren().iterator(); iter.hasNext();) {
+            Object childEP = iter.next();
+            if (childEP instanceof GroupEditPart) {
+                flatChildren.addAll(((GroupEditPart) childEP)
+                    .getShapeChildren());
+            } else {
+                flatChildren.add(childEP);
+            }
+        }
+        return flatChildren;
+    }
+
+}
+@
+
+
+1.2
+log
+@[111892] gmf_head crevells 071121 Group/Ungroup support
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2007 IBM Corporation and others.
+d21 1
+d23 1
+d31 1
+d46 32
+d111 1
+a111 1
+        installEditPolicy(EditPolicy.CONTAINER_ROLE, new ContainerEditPolicy());
+@
+
+
+1.1
+log
+@file GroupEditPart.java was initially added on branch bugzilla111892_group_support.
+@
+text
+@d1 105
+@
+
+
+1.1.2.1
+log
+@[111892] gmf_head crevells 070518 First milestone of group/ungroup support (painting issues when grouping shapes with border items)
+@
+text
+@a0 160
+/******************************************************************************
+ * Copyright (c) 2007 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.diagram.ui.editparts;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.XYLayout;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.gef.DragTracker;
+import org.eclipse.gef.EditPolicy;
+import org.eclipse.gef.Request;
+import org.eclipse.gef.editpolicies.SnapFeedbackPolicy;
+import org.eclipse.gef.requests.SelectionRequest;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.ContainerEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.DecorationEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.GroupComponentEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.GroupXYLayoutEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableEditPolicyEx;
+import org.eclipse.gmf.runtime.diagram.ui.tools.DragEditPartsTrackerEx;
+import org.eclipse.gmf.runtime.gef.ui.figures.NodeFigure;
+import org.eclipse.gmf.runtime.notation.View;
+
+/**
+ * The editpart for a group. A group is a special type of container around
+ * shapes.
+ * 
+ * @@author crevells, mmostafa
+ */
+public class GroupEditPart
+    extends ShapeEditPart {
+    
+    class GroupFigure extends NodeFigure {
+        public boolean containsPoint(int x, int y) {
+            Point absolutePoint = new Point(x, y);
+            translateToAbsolute(absolutePoint);
+            for (Iterator iterator = getChildren().iterator(); iterator
+                .hasNext();) {
+                IFigure child = (IFigure) iterator.next();
+                Point pt = absolutePoint.getCopy();
+                child.translateToRelative(pt);
+                if (child.containsPoint(pt)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        protected boolean useLocalCoordinates() {
+            return true;
+        }
+    }
+
+    /**
+     * constructor
+     * 
+     * @@param view
+     *            the view controlled by this edit part
+     */
+    public GroupEditPart(View view) {
+        super(view);
+    }
+
+    protected IFigure createFigure() {
+        IFigure f = new GroupFigure();
+        f.setLayoutManager(new XYLayout());
+        f.setOpaque(false);
+        return f;
+    }
+
+    public DragTracker getDragTracker(Request request) {
+
+        // we only want to select the group if the user clicked the area
+        // over one of the shapes in the group
+        if (request instanceof SelectionRequest) {
+
+            for (Iterator iterator = getChildren().iterator(); iterator
+                .hasNext();) {
+                IGraphicalEditPart childEP = (IGraphicalEditPart) iterator
+                    .next();
+                Point location = ((SelectionRequest) request).getLocation()
+                    .getCopy();
+
+                childEP.getFigure().translateToRelative(location);
+
+                if (childEP.getFigure().containsPoint(location)) {
+                    return super.getDragTracker(request);
+                }
+            }
+
+            // in this case the user has not clicked over one of the shapes,
+            // so disable selection; however, we must still support dragging
+            // to move the group if it is already selected.
+            return new DragEditPartsTrackerEx(this) {
+
+                protected boolean handleButtonDown(int button) {
+                    int selectedState = getSelected();
+                    if (selectedState == SELECTED
+                        || selectedState == SELECTED_PRIMARY) {
+                        return super.handleButtonDown(button);
+                    }
+
+                    // do nothing if the group isn't selected
+                    return true;
+                }
+
+            };
+        }
+
+        return super.getDragTracker(request);
+    }
+
+    protected void createDefaultEditPolicies() {
+        installEditPolicy(EditPolicyRoles.DECORATION_ROLE,
+            new DecorationEditPolicy());
+        installEditPolicy(EditPolicy.LAYOUT_ROLE, new GroupXYLayoutEditPolicy());
+        installEditPolicy(EditPolicy.COMPONENT_ROLE,
+            new GroupComponentEditPolicy());
+        installEditPolicy(EditPolicy.CONTAINER_ROLE, new ContainerEditPolicy());
+        installEditPolicy(EditPolicyRoles.SNAP_FEEDBACK_ROLE,
+            new SnapFeedbackPolicy());
+    }
+
+    public EditPolicy getPrimaryDragEditPolicy() {
+        return new NonResizableEditPolicyEx();
+    }
+
+    /**
+     * Gets all the shape children of this group, digging into any nested groups
+     * found.
+     * 
+     * @@return all the shape children including shapes in nested groups
+     */
+    public List getFlattenedChildren() {
+        List flatChildren = new ArrayList(getChildren().size());
+        for (Iterator iter = getChildren().iterator(); iter.hasNext();) {
+            Object childEP = iter.next();
+            if (childEP instanceof GroupEditPart) {
+                flatChildren.addAll(((GroupEditPart) childEP)
+                    .getFlattenedChildren());
+            } else {
+                flatChildren.add(childEP);
+            }
+        }
+        return flatChildren;
+    }
+
+}
+@
+

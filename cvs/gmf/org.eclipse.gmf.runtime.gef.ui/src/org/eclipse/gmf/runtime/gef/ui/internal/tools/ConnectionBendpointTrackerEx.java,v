@@ -1,0 +1,266 @@
+head	1.2;
+access;
+symbols
+	v20081020-0700:1.2
+	v20080813-1510:1.2
+	v20080811-1546:1.2
+	v20080722-1827:1.2
+	R2_1_maintenance:1.2.0.2
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080503-1740:1.2
+	v20080425-1959:1.2
+	v20080328-1605:1.2
+	v20080222-1200:1.2
+	v20080114-1111:1.2
+	v20080107-1111:1.2
+	v20071222-1111:1.2
+	v20071214-1111:1.2
+	v20071130-1111:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2007.12.10.21.43.57;	author ahunter;	state Exp;
+branches;
+next	1.1;
+commitid	67b6475db31d4567;
+
+1.1
+date	2007.11.23.14.11.41;	author crevells;	state Exp;
+branches;
+next	;
+commitid	9214746df9d4567;
+
+
+desc
+@@
+
+
+1.2
+log
+@[194282] gmf_head carson_li 071210 [RulersGrid] Useability: diagram arrange all should snap to grid if snap to grid is on
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2007 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.gef.ui.internal.tools;
+
+import org.eclipse.draw2d.PositionConstants;
+import org.eclipse.draw2d.geometry.Dimension;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.draw2d.geometry.PrecisionPoint;
+import org.eclipse.draw2d.geometry.PrecisionRectangle;
+import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.gef.ConnectionEditPart;
+import org.eclipse.gef.SnapToHelper;
+import org.eclipse.gef.requests.BendpointRequest;
+import org.eclipse.gef.tools.ConnectionBendpointTracker;
+import org.eclipse.swt.SWT;
+
+/**
+ * A derived ConnectionBendpointTracker that overrides the updateSourceRequest
+ * method allowing bendpoints to snap to grid
+ * 
+ * @@author carson_li
+ */
+public class ConnectionBendpointTrackerEx extends ConnectionBendpointTracker {
+
+	private PrecisionRectangle sourceRectangle;
+	private Point originalLocation = null;
+	private final int MODIFIER_NO_SNAPPING;
+
+	/**
+	 * Constructs a tracker for the given connection and index.
+	 * 
+	 * @@param editpart:
+	 *            the connection
+	 * @@param i:
+	 *            the index of the bendpoint
+	 */
+	public ConnectionBendpointTrackerEx(ConnectionEditPart editpart, int i) {
+		super(editpart, i);
+		if (SWT.getPlatform().equals("carbon"))//$NON-NLS-1$
+			MODIFIER_NO_SNAPPING = SWT.CTRL;
+		else
+			MODIFIER_NO_SNAPPING = SWT.ALT;
+	}
+
+	/*
+	 * @@see org.eclipse.gef.tools.SimpleDragTracker#updateSourceRequest()
+	 */
+	protected void updateSourceRequest() {
+		BendpointRequest request = (BendpointRequest) getSourceRequest();
+
+		if (originalLocation == null) {
+			originalLocation = getStartLocation().getCopy();
+		}
+
+		Dimension delta = getDragMoveDelta();
+
+		if (getCurrentInput().isShiftKeyDown()) {
+			float ratio = 0;
+			if (delta.width != 0)
+				ratio = (float) delta.height / (float) delta.width;
+
+			ratio = Math.abs(ratio);
+			if (ratio > 0.5 && ratio < 1.5) {
+				if (Math.abs(delta.height) > Math.abs(delta.width)) {
+					if (delta.height > 0)
+						delta.height = Math.abs(delta.width);
+					else
+						delta.height = -Math.abs(delta.width);
+				} else {
+					if (delta.width > 0)
+						delta.width = Math.abs(delta.height);
+					else
+						delta.width = -Math.abs(delta.height);
+				}
+			} else {
+				if (Math.abs(delta.width) > Math.abs(delta.height))
+					delta.height = 0;
+				else
+					delta.width = 0;
+			}
+		}
+		Point moveDelta = new Point(delta.width, delta.height);
+		SnapToHelper snapToHelper = (SnapToHelper) getConnectionEditPart()
+				.getAdapter(SnapToHelper.class);
+
+		Rectangle rect = new Rectangle(originalLocation.x, originalLocation.y,
+				1, 1);
+		if (sourceRectangle == null) {
+			sourceRectangle = new PrecisionRectangle(rect);
+		}
+
+		if (snapToHelper != null
+				&& !getCurrentInput().isModKeyDown(MODIFIER_NO_SNAPPING)) {
+			PrecisionRectangle baseRect = sourceRectangle.getPreciseCopy();
+			baseRect.translate(moveDelta);
+			PrecisionPoint preciseDelta = new PrecisionPoint(moveDelta);
+			snapToHelper.snapPoint(request, PositionConstants.HORIZONTAL
+					| PositionConstants.VERTICAL,
+					new PrecisionRectangle[] { baseRect }, preciseDelta);
+			Point newLocation = originalLocation.getCopy().translate(
+					preciseDelta);
+			request.setLocation(newLocation);
+		} else {
+			request.setLocation(getLocation());
+		}
+	}
+
+	/*
+	 * @@see org.eclipse.gef.tools.AbstractTool#handleDragStarted()
+	 */
+	protected boolean handleDragStarted() {
+		originalLocation = null;
+		sourceRectangle = null;
+		return super.handleDragStarted();
+	}
+
+}
+@
+
+
+1.1
+log
+@[194282] gmf_head crevells 071123 [RulersGrid] Useability: diagram arrange all
+should snap to grid if snap to grid is on
+Contributed by:  Carson Li
+@
+text
+@d23 1
+a23 1
+import org.eclipse.gef.tools.ConnectionBendpointTracker; 
+d27 4
+a30 4
+ *  A derived ConnectionBendpointTracker that overrides the updateSourceRequest
+ *  method allowing bendpoints to snap to grid
+ *  
+ * @@author cli
+d33 3
+a35 3
+	
+	private PrecisionRectangle sourceRectangle;	
+	private Point originalLocation = null;	
+d37 1
+a37 1
+	
+d41 4
+a44 2
+	 * @@param editpart: the connection
+	 * @@param i:  the index of the bendpoint
+d47 1
+a47 1
+		super(editpart, i);	
+d51 4
+a54 4
+			MODIFIER_NO_SNAPPING = SWT.ALT;		
+	}			
+	
+	/**
+d59 3
+a61 3
+		
+		if (originalLocation == null){							
+			originalLocation = getStartLocation().getCopy();			 
+d63 1
+a63 1
+			
+d65 3
+a67 3
+		
+		if (getCurrentInput().isShiftKeyDown()) {			
+			float ratio = 0;			
+d69 2
+a70 2
+				ratio = (float)delta.height / (float)delta.width;
+			
+d80 1
+a80 1
+						delta.width = Math.abs(delta.height); 
+d92 5
+a96 3
+	    SnapToHelper snapToHelper = (SnapToHelper)getConnectionEditPart().getAdapter(SnapToHelper.class);		
+		
+		Rectangle rect = new Rectangle(originalLocation.x, originalLocation.y, 1, 1);	
+d98 1
+a98 1
+			sourceRectangle = new PrecisionRectangle(rect);	
+d100 5
+a104 4
+				
+		if (snapToHelper != null && !getCurrentInput().isModKeyDown(MODIFIER_NO_SNAPPING)){
+			PrecisionRectangle baseRect = sourceRectangle.getPreciseCopy();			
+			baseRect.translate(moveDelta);						
+d106 5
+a110 4
+			snapToHelper.snapPoint(request,
+					PositionConstants.HORIZONTAL | PositionConstants.VERTICAL, 
+					new PrecisionRectangle[] {baseRect}, preciseDelta);		
+			Point newLocation = originalLocation.getCopy().translate(preciseDelta);					
+d112 2
+a114 3
+		else{			
+			request.setLocation(getLocation());
+		}	
+d116 2
+a117 3
+	
+	/* 
+	 * (non-Javadoc)
+d122 1
+a122 1
+		sourceRectangle = null;		
+@
+

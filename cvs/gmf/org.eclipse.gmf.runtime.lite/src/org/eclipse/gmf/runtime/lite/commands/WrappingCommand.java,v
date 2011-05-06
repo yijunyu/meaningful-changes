@@ -1,0 +1,247 @@
+head	1.5;
+access;
+symbols
+	v20080722-1827:1.5
+	R2_1_maintenance:1.5.0.2
+	Root_R2_1_maintenance:1.5
+	R2_1_0:1.5
+	v20080425-1959:1.5
+	v20071108-0000:1.5
+	v20071003-0000:1.5
+	v20070921-0000:1.4
+	v20070903-0000:1.5
+	v20070809-0000:1.4
+	R2_0_maintenance:1.4.0.2
+	R2_0:1.4
+	R4_20:1.4
+	v20070621-0000:1.4
+	RC3_20:1.3
+	v20070601-1400:1.3
+	v20070525-1500:1.3
+	v20070518-1300:1.3
+	v20070427-0600:1.3
+	v20070420-1000:1.3
+	v20070413-1300:1.3
+	v20070405-1100:1.3
+	v20070330-1300:1.3
+	v20060330-1300:1.3
+	v20070322-1100:1.3
+	v20060316-0600:1.3
+	v20070307-0700:1.3
+	v20070228-2000:1.3
+	v20070208-1800:1.2
+	M4_20:1.2
+	v20061222-1800:1.2
+	v20061218-1200:1.2
+	v20061214-0000:1.2
+	v20061120-1300:1.2
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061013-1330:1.1
+	M1_20:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2007.08.15.14.52.56;	author bblajer;	state Exp;
+branches;
+next	1.4;
+commitid	69a846c313484567;
+
+1.4
+date	2007.06.21.14.08.17;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	1770467a86514567;
+
+1.3
+date	2007.02.23.16.19.00;	author bblajer;	state Exp;
+branches;
+next	1.2;
+commitid	48eb45df13f44567;
+
+1.2
+date	2006.11.09.18.15.35;	author bblajer;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.09.01.16.14.11;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@Incoming links should not point nowhere after deleting the target shortcut from diagram only
+@
+text
+@/**
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.commands;
+
+import org.eclipse.core.commands.operations.IUndoableOperation;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.emf.workspace.EMFCommandOperation;
+
+public class WrappingCommand extends AbstractWrappingCommand {
+	private final EMFCommandOperation operation;
+
+	public WrappingCommand(TransactionalEditingDomain editingDomain,
+			org.eclipse.emf.common.command.Command emfCommand) {
+		super(editingDomain);
+		this.operation = new EMFCommandOperation(editingDomain, emfCommand);
+	}
+
+	public org.eclipse.emf.common.command.Command getEMFCommand() {
+		return operation.getCommand();
+	}
+
+	@@Override
+	protected IUndoableOperation getOperation() {
+		return operation;
+	}
+}
+@
+
+
+1.4
+log
+@fix copyright years
+@
+text
+@a13 1
+import org.eclipse.core.commands.ExecutionException;
+a14 5
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Status;
+a15 1
+import org.eclipse.emf.workspace.AbstractEMFOperation;
+a16 2
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gmf.internal.runtime.lite.Activator;
+d18 2
+a19 3
+public class WrappingCommand extends Command {
+	private final IUndoableOperation operation;
+	private final TransactionalEditingDomain editingDomain;
+d23 1
+a24 1
+		this.editingDomain = editingDomain;
+d27 2
+a28 47
+	public void execute() {
+		try {
+			operation.execute(new NullProgressMonitor(), null);
+		} catch (ExecutionException e) {
+			Activator.getDefault().logError("exception occurred while executing operation", e);
+		}
+	}
+
+	public boolean canExecute() {
+		/*
+		 * Some commands (see StrictCompoundCommand) require read-write transaction to test for executability. 
+		 * When they fail, the RollbackException is consumed, and the command is not rolled back, thus leaving the model in a modified state.
+		 */
+		final boolean[] result = new boolean[1];
+		AbstractEMFOperation canExecute = new AbstractEMFOperation(editingDomain, "canExecute") {
+			@@Override
+			protected IStatus doExecute(IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+				result[0] = operation.canExecute();
+				return Status.OK_STATUS;
+			}
+		};
+		try {
+			canExecute.execute(new NullProgressMonitor(), null);
+		} catch (ExecutionException e) {
+			Activator.getDefault().logError("exception occurred while testing executability of operation", e);
+		}
+		return result[0];
+	}
+
+	public void undo() {
+		try {
+			operation.undo(new NullProgressMonitor(), null);
+		} catch (ExecutionException e) {
+			Activator.getDefault().logError("exception occurred while undoing operation", e);
+		}
+	}
+
+	public boolean canUndo() {
+		return operation.canUndo();
+	}
+
+	public void redo() {
+		try {
+			operation.redo(new NullProgressMonitor(), null);
+		} catch (ExecutionException e) {
+			Activator.getDefault().logError("exception occurred while redoing operation", e);
+		}
+d32 2
+a33 3
+	public void dispose() {
+		operation.dispose();
+		super.dispose();
+@
+
+
+1.3
+log
+@WrappingCommand::dispose() implemented correctly
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation
+@
+
+
+1.2
+log
+@[162579] Support diagram partitioning
++
+1. CustomBehaviours;
+2. LayoutDiagramAction: execute the command through the command stack;
+3. WrappingCommand: Workaround for a problem with StrictCompoundCommand.canExecute() in transactional editing domains
+@
+text
+@d85 6
+@
+
+
+1.1
+log
+@[155040] bblajer - Common Lite runtime functionality moved to dedicated plugin
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Eclipse.org
+d16 3
+d20 1
+d22 1
+d29 1
+d34 1
+d46 18
+a63 1
+		return operation.canExecute();
+@
+

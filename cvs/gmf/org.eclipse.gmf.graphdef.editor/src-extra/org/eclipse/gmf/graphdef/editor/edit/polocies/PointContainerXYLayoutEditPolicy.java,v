@@ -1,0 +1,178 @@
+head	1.3;
+access;
+symbols
+	v20080722-1827:1.3
+	v20080718-1700:1.3
+	v20080718-1731:1.3
+	v20080716-1642:1.3
+	R2_1_maintenance:1.3.0.2
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080610-1132:1.3
+	v20080603-1553:1.3
+	v20080528-1052:1.3;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2008.05.28.12.37.13;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+commitid	5988483d51f74567;
+
+1.2
+date	2008.05.28.11.08.28;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+commitid	6cc8483d3d2b4567;
+
+1.1
+date	2008.05.27.12.28.09;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	68fd483bfe544567;
+
+
+desc
+@@
+
+
+1.3
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@/**
+ * Copyright (c) 2008 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.graphdef.editor.edit.polocies;
+
+import java.util.Collections;
+
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+import org.eclipse.gmf.gmfgraph.Point;
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.GraphicalEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.requests.CreateViewRequest.ViewDescriptor;
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.IMapMode;
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+import org.eclipse.gmf.runtime.notation.View;
+
+public class PointContainerXYLayoutEditPolicy extends AbstractDomainBasedXYLayoutEditPolicy {
+
+	private boolean myIsInsideFigure;
+
+	public PointContainerXYLayoutEditPolicy(IMapMode mapMode, boolean isInsideFigure) {
+		super(mapMode);
+		myIsInsideFigure = isInsideFigure;
+	}
+
+	@@Override
+	protected ICommand createSetBoundsCommand(TransactionalEditingDomain editingDomain, String label, Resource resource, ViewDescriptor viewDescriptor, Rectangle rect) {
+		return new SetBoundsCommand(editingDomain, label, resource, viewDescriptor, rect);
+	}
+
+	@@Override
+	protected ICommand createSetBoundsCommand(TransactionalEditingDomain editingDomain, String label, Resource resource, Rectangle bounds, EObject element) {
+		if (element instanceof Point) {
+			Point point = (Point) element;
+			return new SetBoundsCommand(editingDomain, label, resource, bounds, point);
+		}
+		return null;
+	}
+
+	private final class SetBoundsCommand extends AbstractTransactionalCommand {
+
+		private Rectangle myBounds;
+
+		private Point myPoint;
+
+		private IAdaptable myAdaptable;
+
+		protected SetBoundsCommand(TransactionalEditingDomain domain, String label, Resource resource, Rectangle bounds, Point point) {
+			super(domain, label, Collections.singletonList(WorkspaceSynchronizer.getFile(resource)));
+			myBounds = bounds;
+			myPoint = point;
+		}
+
+		protected SetBoundsCommand(TransactionalEditingDomain domain, String label, Resource resource, IAdaptable adaptable, Rectangle bounds) {
+			super(domain, label, Collections.singletonList(WorkspaceSynchronizer.getFile(resource)));
+			myBounds = bounds;
+			myAdaptable = adaptable;
+		}
+
+		private Point getPoint() {
+			if (myPoint != null) {
+				return myPoint;
+			}
+			View view = (View) myAdaptable.getAdapter(View.class);
+			return (Point) view.getElement();
+		}
+
+		@@Override
+		protected CommandResult doExecuteWithResult(IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+			int x = getMapMode().LPtoDP(myBounds.x);
+			int y = getMapMode().LPtoDP(myBounds.y);
+			if (myIsInsideFigure) {
+				Rectangle editPartBounds = ((GraphicalEditPart) getHost()).getFigure().getBounds();
+				x += getMapMode().LPtoDP(editPartBounds.x);
+				y += getMapMode().LPtoDP(editPartBounds.y);
+			}
+			Point point = getPoint();
+			point.setX(x);
+			point.setY(y);
+			return CommandResult.newOKCommandResult();
+		}
+	}
+
+}
+@
+
+
+1.2
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@d35 3
+a37 1
+	public PointContainerXYLayoutEditPolicy(IMapMode mapMode) {
+d39 1
+d86 7
+a92 3
+			Rectangle editPartBounds = ((GraphicalEditPart) getHost()).getFigure().getBounds();
+			int x = getMapMode().LPtoDP(myBounds.x + editPartBounds.x);
+			int y = getMapMode().LPtoDP(myBounds.y + editPartBounds.y);
+@
+
+
+1.1
+log
+@[233205] - Support Polyline figure in .gmfgraph editor
+@
+text
+@d27 1
+d83 3
+a85 2
+			int x = getMapMode().LPtoDP(myBounds.x);
+			int y = getMapMode().LPtoDP(myBounds.y);
+@
+

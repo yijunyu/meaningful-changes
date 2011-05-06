@@ -1,0 +1,536 @@
+head	1.9;
+access;
+symbols
+	v20081015-1925:1.9
+	v20080930-1130:1.9
+	v20080926-1245:1.9
+	v20080924-1925:1.9
+	v20080722-1827:1.9
+	v20080716-1642:1.9
+	R2_1_maintenance:1.9.0.2
+	Root_R2_1_maintenance:1.9
+	R2_1_0:1.9
+	v20080610-1132:1.9
+	v20080521:1.9
+	v20080516-1143:1.8
+	v20080508-2000:1.7
+	v20080417-1610:1.7
+	v20080322-0000:1.7
+	v20080222-1200:1.7
+	v20071108-0000:1.7
+	v20070903-0000:1.7
+	v20070809-0000:1.7
+	R2_0_maintenance:1.7.0.2
+	R2_0:1.7
+	R4_20:1.7
+	v20070621-0000:1.7
+	RC3_20:1.7
+	v20070605-1400:1.7
+	v20070601-1400:1.6
+	v20070525-1500:1.5
+	v20070520-1200:1.3;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.9
+date	2008.05.19.21.52.28;	author atikhomirov;	state Exp;
+branches;
+next	1.8;
+commitid	1c3b4831f69b4567;
+
+1.8
+date	2008.05.15.12.54.59;	author atikhomirov;	state Exp;
+branches;
+next	1.7;
+commitid	7abf482c32a24567;
+
+1.7
+date	2007.06.04.18.10.00;	author atikhomirov;	state Exp;
+branches;
+next	1.6;
+commitid	1d28466455784567;
+
+1.6
+date	2007.05.28.13.43.40;	author atikhomirov;	state Exp;
+branches;
+next	1.5;
+commitid	3f0b465adc8c4567;
+
+1.5
+date	2007.05.24.09.34.42;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+commitid	4f9546555c314567;
+
+1.4
+date	2007.05.22.17.38.30;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	14d646532a964567;
+
+1.3
+date	2007.05.20.12.54.39;	author mfeldman;	state Exp;
+branches;
+next	1.2;
+commitid	7d014650450d4567;
+
+1.2
+date	2007.05.18.22.44.52;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	1b7a464e2c644567;
+
+1.1
+date	2007.05.18.20.39.13;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	58f6464e0ef14567;
+
+
+desc
+@@
+
+
+1.9
+log
+@[232299] refactor migration utils: gmfgraph migration done usign dynamic package for old metamodel, unused logic from MigrationHelper and MigrationDelegate was removed
+@
+text
+@/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0 which
+ * accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: Borland - initial API and implementation
+ */
+package org.eclipse.gmf.internal.common.migrate;
+
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EFactory;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.xmi.XMLResource;
+import org.eclipse.emf.ecore.xmi.impl.XMIHelperImpl;
+
+public class MigrationHelper extends XMIHelperImpl {
+	private final MigrationDelegate myDelegate;
+
+	public MigrationHelper(XMLResource resource, MigrationDelegate delegate) {
+		super(resource);
+		assert delegate != null;
+		myDelegate = delegate;
+	}
+
+	boolean isMigrationApplied() {
+		return myDelegate.isMigrationApplied();
+	}
+	
+	@@Override
+	public void setValue(EObject object, EStructuralFeature feature, Object value, int position) {
+		if (!myDelegate.setValue(object, feature, value, position)) {
+			super.setValue(object, feature, value, position);
+		}
+	}
+
+	@@Override
+	public EStructuralFeature getFeature(EClass eClass, String namespaceURI, String name, boolean isElement) {
+		EStructuralFeature result = myDelegate.getFeature(eClass, namespaceURI, name, isElement);
+		if (result == null) {
+			result = super.getFeature(eClass, namespaceURI, name, isElement);
+		}
+		return result;
+	}
+	
+	@@Override
+	public EClassifier getType(EFactory factory, String typeName) {
+		EClassifier result = myDelegate.getType(factory, typeName);
+		if (result == null) {
+			result = super.getType(factory, typeName);
+		}
+		return result;
+	}
+
+	@@Override
+	public void popContext() {
+		super.popContext();
+		myDelegate.preResolve();
+	}
+
+	@@Override
+	public String getURI(String prefix) {
+		String uri = super.getURI(prefix);
+		String newUri = myDelegate.getURI(prefix, uri);
+		return newUri == null ? uri : newUri;
+	}
+
+}
+@
+
+
+1.8
+log
+@[228913] bring back tests for old migrations, with fixes.
+@
+text
+@a12 2
+import java.util.List;
+
+a17 1
+import org.eclipse.emf.ecore.xmi.XMIException;
+a27 1
+		myDelegate.setResource(resource);
+a34 19
+	public EObject createObject(EFactory factory, EClassifier type) {
+		EObject result = myDelegate.createObject(factory, type);
+		if (result == null) {
+			result = super.createObject(factory, type);
+		}
+		myDelegate.processObject(result);
+		return result;
+	}
+
+	@@Override
+	public List<XMIException> setManyReference(ManyReference reference, String location) {
+		List<XMIException> result = null;
+		if (!myDelegate.setManyReference(reference.getObject(), reference.getFeature(), reference.getValues())) {
+			result = super.setManyReference(reference, location);
+		}
+		return result;
+	}
+
+	@@Override
+a64 4
+	public void postLoad() {
+		myDelegate.postLoad();
+	}
+
+@
+
+
+1.7
+log
+@[189703] akarjakina - migration for gmfgraph, handle figure accessors
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2007 Borland Software Corporation
+d91 8
+@
+
+
+1.6
+log
+@migration support for recent gmfgraph changes
+@
+text
+@d13 2
+d20 1
+d49 4
+a52 4
+	public String getID(EObject obj) {
+		String result = myDelegate.getID(obj);
+		if (result == null) {
+			result = super.getID(obj);
+a56 4
+	public void setXMLMap(XMLResource.XMLMap map) {
+		//map.setIDAttributeName("");
+	}
+
+d85 1
+a85 1
+		myDelegate.postProcess();
+d88 3
+@
+
+
+1.5
+log
+@[188768] akarjakina - Migration should not rely solely on nsURIs;
+MIgrationHelperDelegate was renamed to MigrationDelegate
+@
+text
+@d28 1
+d46 13
+d88 1
+@
+
+
+1.4
+log
+@[187811] akarjakina - migrating gmf 1.0 models to 2.0, refactoring, tests
+@
+text
+@a12 3
+import java.util.HashMap;
+import java.util.Map;
+
+a17 1
+import org.eclipse.emf.ecore.util.EcoreUtil;
+d22 1
+a22 3
+	private final MigrationHelperDelegate myDelegate;
+	private boolean myIsDelegateDisabled = true;
+	private Map<EStructuralFeature, EStructuralFeature> myNarrowedFeatureTypes;
+d24 1
+a24 1
+	public MigrationHelper(XMLResource resource, MigrationHelperDelegate delegate) {
+d30 2
+a31 6
+	void enableDelegate(boolean enabled) {
+		myIsDelegateDisabled = !enabled;
+	}
+
+	boolean isEnabled() {
+		return !myIsDelegateDisabled;
+a35 3
+		if (myIsDelegateDisabled) {
+			return super.createObject(factory, type);
+		}
+a45 8
+		if (myIsDelegateDisabled) {
+			super.setValue(object, feature, value, position);
+			return; 
+		}
+		EStructuralFeature originalFeature = getOriginalFeature(feature);
+		if (originalFeature != null) {
+			feature = originalFeature;
+		}
+a52 3
+		if (myIsDelegateDisabled) {
+			return super.getFeature(eClass, namespaceURI, name, isElement);
+		}
+a56 6
+		EClass narrow = myDelegate.getStructuralFeatureType(result);
+		if (narrow != null) {
+			EStructuralFeature fake = addNarrowedFeature(result);
+			fake.setEType(narrow);
+			return fake;
+		}
+a61 3
+		if (myIsDelegateDisabled) {
+			return super.getType(factory, typeName);
+		}
+a71 3
+		if (myIsDelegateDisabled) {
+			return;
+		}
+a73 21
+	
+	@@Override
+	public void addPrefix(String prefix, String uri) {
+		super.addPrefix(prefix, uri);
+		if (myDelegate.isOldVersionDetected(uri)) {
+			enableDelegate(true);
+		}
+	}
+
+	protected EStructuralFeature getOriginalFeature(EStructuralFeature feature) {
+		return myNarrowedFeatureTypes == null ? null : myNarrowedFeatureTypes.get(feature);
+	}
+	
+	protected EStructuralFeature addNarrowedFeature(EStructuralFeature originalFeature) {
+		if (myNarrowedFeatureTypes == null) {
+			myNarrowedFeatureTypes = new HashMap<EStructuralFeature, EStructuralFeature>();
+		}
+		EStructuralFeature result = (EStructuralFeature) EcoreUtil.copy(originalFeature);
+		myNarrowedFeatureTypes.put(result, originalFeature);
+		return result;
+	}
+@
+
+
+1.3
+log
+@Anna Karyakina's migration fix
+@
+text
+@d40 4
+d111 8
+d120 1
+a120 4
+		if (myNarrowedFeatureTypes == null) {
+			myNarrowedFeatureTypes = new HashMap<EStructuralFeature, EStructuralFeature>();
+		}
+		return myNarrowedFeatureTypes.get(feature);
+@
+
+
+1.2
+log
+@do not process up-to-date versions of the model, consult delegate only when old version was detected;
+moved base delegate impl out from helper class
+@
+text
+@d13 2
+d21 1
+a21 1
+import org.eclipse.emf.ecore.impl.EReferenceImpl;
+a26 2
+	private EStructuralFeature mySavedFeature;
+	private EReferenceImpl myFakeFeatureWithNarrowType;
+d28 1
+d59 3
+a61 2
+		if (feature != null && feature.equals(myFakeFeatureWithNarrowType)) {
+			feature = mySavedFeature;
+d79 3
+a81 5
+			mySavedFeature = result;
+			myFakeFeatureWithNarrowType = new EReferenceImpl() {};
+			myFakeFeatureWithNarrowType.setName(result.getName());
+			myFakeFeatureWithNarrowType.setEType(narrow);
+			return myFakeFeatureWithNarrowType;
+d106 16
+@
+
+
+1.1
+log
+@[187811] akarjakina - Migration support refactored
+@
+text
+@a12 5
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+a17 1
+import org.eclipse.emf.ecore.EReference;
+a18 2
+import org.eclipse.emf.ecore.EcoreFactory;
+import org.eclipse.emf.ecore.EcorePackage;
+d27 1
+a33 57
+	
+	public static class MigrationHelperDelegateImpl implements MigrationHelperDelegate {
+
+		public MigrationHelperDelegateImpl() {
+			super();
+		}
+
+		private static EStructuralFeature ourDeletedAttribute = EcoreFactory.eINSTANCE.createEAttribute();
+		static {
+			ourDeletedAttribute.setName("attributeIsDeleted"); //$NON-NLS-1$
+			ourDeletedAttribute.setEType(EcorePackage.eINSTANCE.getEString());
+		}
+
+		private Map<EClassifier, Collection<String>> myDeletedAttributes = new HashMap<EClassifier, Collection<String>>();
+		private Map<EReference, EClass> myNarrowReferenceTypes = new HashMap<EReference, EClass>();
+		private Map<EClass, Map<String, EStructuralFeature>> myRenamedAttributes = new HashMap<EClass, Map<String, EStructuralFeature>>();
+		private Map<String, EClassifier> myRenamedTypes = new HashMap<String, EClassifier>();
+		
+		public void registerDeletedAttributes(EClassifier classifier, String... deletedAttrNames) {
+			assert !myDeletedAttributes.containsKey(classifier);
+			myDeletedAttributes.put(classifier, Arrays.asList(deletedAttrNames));
+		}
+		
+		public void registerNarrowReferenceType(EReference reference, EClass concreteType) {
+			myNarrowReferenceTypes.put(reference, concreteType);
+		}
+		
+		public void registerRenamedAttributes(EClass eClass, Map<String, EStructuralFeature> renamedAttributes) {
+			myRenamedAttributes.put(eClass, renamedAttributes);
+		}
+		
+		public void registerRenamedType(String oldTypeName, EClassifier newType) {
+			myRenamedTypes.put(oldTypeName, newType);
+		}
+		
+		public void registerRenamedAttribute(EClass eClass, String oldName, EStructuralFeature newStructuralFeature) {
+			Map<String, EStructuralFeature> renamedAttributes = myRenamedAttributes.get(eClass);
+			if (renamedAttributes == null) {
+				renamedAttributes = new HashMap<String, EStructuralFeature>();
+			}
+			renamedAttributes.put(oldName, newStructuralFeature);
+			registerRenamedAttributes(eClass, renamedAttributes);
+		}
+		
+		public boolean isAttributeDeleted(EClass clazz, String name) {
+			Collection<String> deletedAttributes = myDeletedAttributes.get(clazz);
+			boolean result = deletedAttributes != null && deletedAttributes.contains(name);
+			for (Iterator<EClass> it=clazz.getEAllSuperTypes().iterator(); !result && it.hasNext();) {
+				EClass nextParent = it.next();
+				result = isAttributeDeleted(nextParent, name);
+			}
+			return result;
+		}
+		
+		public EClass getNarrowReferenceType(EStructuralFeature feature) {
+			return myNarrowReferenceTypes.get(feature);
+		}
+d35 2
+a36 51
+		public EStructuralFeature getRenamedFeatureFor(EClass clazz, String name) {
+		    Map<String, EStructuralFeature> renamings = myRenamedAttributes.get(clazz);
+			EStructuralFeature result = renamings != null ? renamings.get(name) : null;
+			for (Iterator<EClass> it=clazz.getEAllSuperTypes().iterator(); result == null && it.hasNext();) {
+				EClass nextParent = it.next();
+				result = getRenamedFeatureFor(nextParent, name);
+			}
+			return result;
+		}
+
+		public EClassifier getRenamedType(String typeName) {
+			return myRenamedTypes.get(typeName);
+		}
+
+		public EClass getStructuralFeatureType(EStructuralFeature feature) {
+			return getNarrowReferenceType(feature);
+		}
+
+		public boolean setValue(EObject object, EStructuralFeature feature, Object value, int position) {
+			return ourDeletedAttribute.equals(feature);
+		}
+
+		public EStructuralFeature getFeature(EClass eClass, String namespaceURI, String name, boolean isElement) {
+			EStructuralFeature result = null;
+			EStructuralFeature rename = null;
+			if (isAttributeDeleted(eClass, name)) {
+				result = ourDeletedAttribute;
+			} else if ((rename = getRenamedFeatureFor(eClass, name)) != null) {
+				result = rename;
+			}
+			return result;
+		}
+
+		public EClassifier getType(EFactory factory, String typeName) {
+			EClassifier result = null;
+			EClassifier type = getRenamedType(typeName);
+			if (type != null) {
+				result = type;
+			}
+			return result;
+		}
+
+		public EObject createObject(EFactory factory, EClassifier type) {
+			return null;
+		}
+		
+		public void postProcess() {
+		}
+
+		public void processObject(EObject result) {
+		}
+d39 1
+d41 3
+d52 1
+d54 4
+d66 1
+d68 3
+d73 1
+a73 1
+			result = super.getFeature(eClass, namespaceURI, name);
+d86 1
+d88 3
+d98 1
+d100 4
+@
+

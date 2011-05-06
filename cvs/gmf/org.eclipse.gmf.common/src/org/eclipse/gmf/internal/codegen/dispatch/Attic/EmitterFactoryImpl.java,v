@@ -1,0 +1,193 @@
+head	1.2;
+access;
+symbols
+	v20081015-1925:1.2
+	v20080924-1925:1.2
+	v20080222-1200:1.1
+	v20071108-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1
+	RC3_20:1.1
+	v20070605-1400:1.1
+	v20070601-1400:1.1
+	v20070525-1500:1.1
+	v20070520-1200:1.1
+	v20070518-1300:1.1
+	v20070427-0600:1.1
+	v20070420-1000:1.1
+	v20070413-1300:1.1
+	v20070405-1100:1.1
+	v20070330-1300:1.1
+	v20060330-1300:1.1
+	v20070322-1100:1.1
+	v20070307-0700:1.1
+	v20070301-1200:1.1
+	v20070228-2000:1.1
+	v20070221-1500:1.1
+	v20070208-1800:1.1
+	M4_20:1.1
+	v20061222-1800:1.1
+	v20061214-0000:1.1
+	v20061120-1300:1.1
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061013-1330:1.1
+	M1_20:1.1
+	v20060904-1500:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2008.02.28.20.24.41;	author atikhomirov;	state dead;
+branches;
+next	1.1;
+commitid	4cff47c718874567;
+
+1.1
+date	2006.08.30.15.12.11;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@cleaned code that is no longer in use (since last JET template gone)
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.dispatch;
+
+import java.lang.reflect.Method;
+import java.util.Arrays;
+
+import org.eclipse.emf.codegen.jet.JETEmitter;
+import org.eclipse.emf.codegen.jet.JETException;
+import org.eclipse.gmf.common.UnexpectedBehaviourException;
+
+/**
+ * Yet Another Emitter Factory.
+ * This factory is expected to slip away from JET templates to some abstract emitters so we could
+ * substitute template engine.
+ * 
+ * @@author artem
+ */
+public class EmitterFactoryImpl implements EmitterFactory {
+
+	private final TemplateRegistry myTemplates;
+
+	private final boolean myUsePrecompiled;
+
+	private final String[] myVariables;
+
+	private String[] myTemplatePath;
+
+	public EmitterFactoryImpl(String[] templatePath, TemplateRegistry templates) {
+		this(templatePath, templates, true, null);
+	}
+
+	/**
+	 * @@param templatePath paths to the templates - allows loading external templates
+	 * @@param templates registry with templates
+	 * @@param usePrecompiled whether or not respect class from TemplateRegistry (if there's one specified)
+	 * @@param variables dependencies (plugin identifiers) of code generators
+	 */
+	public EmitterFactoryImpl(String[] templatePath, TemplateRegistry templates, boolean usePrecompiled, String[] variables) {
+		assert templatePath != null && templatePath.length > 0 && templates != null;
+		assert variables == null || !Arrays.asList(variables).contains(null);
+		myTemplatePath = templatePath;
+		myTemplates = templates;
+		myUsePrecompiled = usePrecompiled;
+		myVariables = variables == null ? new String[0] : variables;
+	}
+
+	/**
+	 * @@param key
+	 * @@return <code>true</code> if template for the key passed is known to this factory
+	 */
+	public boolean checkEmitter(Object key) {
+		return myTemplates.getTemplatePath(key) != null;
+	}
+
+	/**
+	 * This is primary way to get emitters from this factory. 
+	 * Checks cache (if there's one) first. Produces new emitter (with {@@link #newEmitter(Object)}), caches and returns its outcome.
+	 */
+	public JETEmitter acquireEmitter(Object key) throws NoSuchTemplateException, UnexpectedBehaviourException {
+		JETEmitter em;
+		String relativePath = constructPath(key);
+		ClassLoader cl;
+		if (precompiledInUse(key)) {
+			cl = myTemplates.getGeneratorClass(key).getClassLoader();
+		} else {
+			cl = myTemplates.getTemplateClassLoader(key);
+		}
+
+		em = new JETEmitter(myTemplatePath, relativePath, cl);
+		feedVariables(em);
+		initPrecompiled(key, em);
+		return em;
+	}
+
+	private boolean precompiledInUse(Object key) {
+		return myUsePrecompiled && myTemplates.hasGeneratorClass(key);
+	}
+
+	private void initPrecompiled(Object key, JETEmitter em) throws UnexpectedBehaviourException {
+		try {
+			if (precompiledInUse(key)) {
+				Method m = myTemplates.getGeneratorClass(key).getMethod("generate", new Class[] { Object.class });
+				em.setMethod(m);
+			}
+		} catch (NoSuchMethodException ex) {
+			throw new UnexpectedBehaviourException("Bad template class", ex);
+		}
+	}
+
+	private String constructPath(Object key) throws UnexpectedBehaviourException, NoSuchTemplateException {
+		String path = myTemplates.getTemplatePath(key);
+		if (path == null) {
+			throw new NoSuchTemplateException(String.valueOf(key));
+		}
+		return path;
+	}
+
+	private void feedVariables(JETEmitter em) throws UnexpectedBehaviourException {
+		try {
+			for (int i = 0; i < myVariables.length; i++) {
+				em.addVariable(null, myVariables[i]);
+			}
+		} catch (JETException ex) {
+			throw new UnexpectedBehaviourException(ex.getMessage(), ex);
+		}
+	}
+}
+@
+
+
+1.1
+log
+@extracted caching behaviour outside from the factory - moving towards support for different template engines, #114207
+@
+text
+@@
+

@@ -1,0 +1,273 @@
+head	1.5;
+access;
+symbols
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	I20060227-1730:1.4
+	I20060216-1945:1.3
+	I20060210-1715:1.3
+	I20060209-1815:1.3
+	I20060203-0830:1.3
+	I20060129-1145:1.3
+	I20060127-0900:1.3
+	I20060120-1530:1.3
+	I20060113-1700:1.2
+	M4_10:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2006.03.01.12.46.04;	author dstadnik;	state dead;
+branches;
+next	1.4;
+
+1.4
+date	2006.02.23.20.11.23;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.01.18.19.05.30;	author dstadnik;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.01.13.16.38.30;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.01.13.10.12.48;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@#129892 Move graphdef and tooldef wizards from codegen.ui to bridge.ui plugin
+@
+text
+@/*
+ * Copyright (c) 2006 Eclipse.org
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    dstadnik - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.wizards;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
+import org.eclipse.gmf.internal.codegen.FileSelector;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.wizard.WizardPage;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Text;
+
+public class DomainModelSelectionPage extends WizardPage {
+
+	protected FileDomainModelSource domainModelSource;
+
+	public DomainModelSelectionPage(String pageId, IStructuredSelection selection, FileDomainModelSource domainModelSource) {
+		super(pageId);
+		assert domainModelSource != null;
+		this.domainModelSource = domainModelSource;
+		if (selection != null && !selection.isEmpty()) {
+			Object selected = selection.getFirstElement();
+			if (selected instanceof IFile) {
+				domainModelSource.setFile((IFile) selected);
+			}
+		}
+	}
+
+	public void createControl(Composite parent) {
+		Composite composite = new Composite(parent, SWT.NONE);
+		{
+			GridLayout layout = new GridLayout();
+			layout.numColumns = 3;
+			layout.verticalSpacing = 12;
+			composite.setLayout(layout);
+
+			GridData data = new GridData();
+			data.verticalAlignment = GridData.FILL;
+			data.grabExcessVerticalSpace = true;
+			data.horizontalAlignment = GridData.FILL;
+			composite.setLayoutData(data);
+		}
+		Label label = new Label(composite, SWT.NONE);
+		label.setText("File name");
+		{
+			GridData data = new GridData();
+			label.setLayoutData(data);
+		}
+		final Text text = new Text(composite, SWT.SINGLE | SWT.BORDER);
+		{
+			GridData data = new GridData();
+			data.horizontalAlignment = GridData.FILL;
+			data.grabExcessHorizontalSpace = true;
+			text.setLayoutData(data);
+		}
+		if (domainModelSource.getFile() != null) {
+			text.setText(domainModelSource.getFile().getFullPath().toString());
+		}
+		text.addModifyListener(new ModifyListener() {
+
+			public void modifyText(ModifyEvent me) {
+				domainModelSource.setFile(null);
+				try {
+					Path filePath = new Path(text.getText());
+					if (!filePath.isEmpty()) {
+						domainModelSource.setFile(createFileHandle(filePath));
+					}
+				} catch (Exception e) {
+				}
+				setPageComplete(validatePage());
+			}
+		});
+		Button button = new Button(composite, SWT.PUSH);
+		button.addSelectionListener(new SelectionListener() {
+
+			public void widgetSelected(SelectionEvent e) {
+				domainModelSource.setFile(FileSelector.selectFile(getShell(), "Domain Model File", null, domainModelSource.getFile(), "ecore"));
+				if (domainModelSource.getFile() != null) {
+					text.setText(domainModelSource.getFile().getFullPath().toString());
+				} else {
+					text.setText("");
+				}
+				setPageComplete(validatePage());
+			}
+
+			public void widgetDefaultSelected(SelectionEvent e) {
+			}
+		});
+		button.setText("Browse");
+		{
+			GridData data = new GridData();
+			button.setLayoutData(data);
+		}
+		setPageComplete(validatePage());
+		setControl(composite);
+	}
+
+	protected IFile createFileHandle(IPath filePath) {
+		return ResourcesPlugin.getWorkspace().getRoot().getFile(filePath);
+	}
+
+	protected boolean validatePage() {
+		return domainModelSource.getFile() != null;
+	}
+}
+@
+
+
+1.4
+log
+@make definition page independent from domain model selection page
+@
+text
+@@
+
+
+1.3
+log
+@use advanced resource selection dialog
+@
+text
+@d35 1
+a35 1
+	protected IFile file;
+d37 1
+a37 1
+	public DomainModelSelectionPage(String pageId, IStructuredSelection selection) {
+d39 2
+d44 1
+a44 1
+				file = (IFile) selected;
+d76 2
+a77 2
+		if (file != null) {
+			text.setText(file.getFullPath().toString());
+d82 1
+a82 1
+				file = null;
+d86 1
+a86 1
+						file = createFileHandle(filePath);
+d97 3
+a99 3
+				file = FileSelector.selectFile(getShell(), "Domain Model File", null, file, "ecore");
+				if (file != null) {
+					text.setText(file.getFullPath().toString());
+d123 1
+a123 5
+		return file != null;
+	}
+
+	public IFile getFile() {
+		return file;
+@
+
+
+1.2
+log
+@validate page after file was changed
+@
+text
+@a13 2
+import java.util.Collections;
+
+d18 1
+a19 1
+import org.eclipse.jface.window.Window;
+a31 1
+import org.eclipse.ui.dialogs.ResourceSelectionDialog;
+d95 1
+a95 1
+				ResourceSelectionDialog fsd = new ResourceSelectionDialog(getShell(), ResourcesPlugin.getWorkspace().getRoot(), "Domain Model File");
+d97 3
+a99 11
+					fsd.setInitialElementSelections(Collections.singletonList(file));
+				}
+				if (fsd.open() == Window.OK) {
+					Object[] result = fsd.getResult();
+					if (result.length > 0 && result[0] instanceof IFile) {
+						file = (IFile) result[0];
+						text.setText(file.getFullPath().toString());
+					} else {
+						file = null;
+					}
+					setPageComplete(validatePage());
+d101 1
+@
+
+
+1.1
+log
+@#123587 wizard for tooling definition
+@
+text
+@d91 1
+d110 1
+@
+

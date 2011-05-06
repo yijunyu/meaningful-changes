@@ -1,0 +1,493 @@
+head	1.7;
+access;
+symbols
+	v20081015-1925:1.7
+	v20080917-1925:1.7
+	v20080903-1520:1.7
+	v20080827-1520:1.7
+	v20080813-1520:1.7
+	v20080722-1827:1.7
+	v20080716-1642:1.7
+	R2_1_maintenance:1.7.0.4
+	Root_R2_1_maintenance:1.7
+	R2_1_0:1.7
+	v20080528-1052:1.7
+	v20080507-1326:1.7
+	v20080417-1610:1.7
+	v20080222-1200:1.7
+	v20070809-0000:1.7
+	R2_0_maintenance:1.7.0.2
+	R2_0:1.7
+	R4_20:1.7
+	v20070621-0000:1.7
+	RC3_20:1.7
+	v20070608-1300:1.7
+	v20070605-1400:1.7
+	v20070601-1400:1.7
+	v20070525-1500:1.7
+	v20070518-1300:1.7
+	v20070504-1000:1.7
+	v20070427-0600:1.7
+	v20070420-1000:1.7
+	v20070413-1300:1.7
+	v20070405-1100:1.7
+	v20070330-1300:1.7
+	v20070322-1100:1.7
+	v20060316-0600:1.7
+	v20070228-2000:1.7
+	v20070208-1800:1.7
+	M4_20:1.7
+	v20061222-1800:1.7
+	v20061214-0000:1.7
+	M3_20:1.7
+	v20061117-0800:1.7
+	v20061013-1330:1.6
+	v20060925-1700:1.6
+	v20060919-0800:1.6
+	M1_20:1.6
+	v20060904-1500:1.6
+	v20060713-1700:1.6
+	R1_0_maintenance:1.6.0.2
+	R1_0:1.6
+	v20060627-1200:1.6
+	v20060626-1420:1.6
+	v20060620-0400:1.5
+	v20060616-1200:1.5
+	v20060609-1400:1.5;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.7
+date	2006.10.19.15.22.01;	author dstadnik;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2006.06.26.14.23.20;	author atikhomirov;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.06.08.13.54.29;	author dstadnik;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.06.08.13.28.17;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.06.07.14.31.09;	author dstadnik;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.06.07.13.52.14;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.06.06.12.19.39;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.7
+log
+@[161380] Inroduce label mapping subclasses
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ *    Dmitry Stadnik (Borland) - delegate to chained starategy when unable to get name from model facet
+ */
+package org.eclipse.gmf.internal.bridge.naming;
+
+import java.util.Collection;
+
+import org.eclipse.emf.ecore.EAttribute;
+import org.eclipse.gmf.internal.common.NamesDispenser;
+import org.eclipse.gmf.mappings.CanvasMapping;
+import org.eclipse.gmf.mappings.FeatureLabelMapping;
+import org.eclipse.gmf.mappings.LabelMapping;
+import org.eclipse.gmf.mappings.LinkMapping;
+import org.eclipse.gmf.mappings.NodeMapping;
+
+/**
+ * Generates names based on model facet identifiers.
+ * Should be consistent with genmodel naming strategy
+ * and GenCommonBase.getClassNamePrefix() in particular.
+ * 
+ * @@author artem
+ */
+public class ClassNamingStrategy extends AbstractNamingStrategy {
+
+	/**
+	 * Max length of semantic segment.
+	 * Concatenated feature names is the primary target.
+	 */
+	private static final int MAX_SEGMENT_LENGTH = 23;
+
+	public ClassNamingStrategy(String suffix, NamesDispenser namesDispenser, NamingStrategy chainedNamingStrategy, NamingStrategy prefixNamingStrategy) {
+		super(suffix, namesDispenser, chainedNamingStrategy, prefixNamingStrategy);
+	}
+
+	public String get(CanvasMapping mapping) {
+		if (mapping.getDomainMetaElement() != null) {
+			String name = mapping.getDomainMetaElement().getName();
+			if (!isEmpty(name)) {
+				return createClassName(name);
+			}
+		}
+		return super.get(mapping);
+	}
+
+	public String get(NodeMapping mapping) {
+		if (mapping.getDomainMetaElement() != null) {
+			String name = mapping.getDomainMetaElement().getName();
+			if (!isEmpty(name)) {
+				return createClassName(name);
+			}
+		}
+		return super.get(mapping);
+	}
+
+	public String get(LinkMapping mapping) {
+		if (mapping.getDomainMetaElement() != null) {
+			String name = mapping.getDomainMetaElement().getName();
+			if (!isEmpty(name)) {
+				return createClassName(name);
+			}
+		}
+		if (mapping.getLinkMetaFeature() != null) {
+			String name = mapping.getLinkMetaFeature().getName();
+			if (!isEmpty(name)) {
+				name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+				name = mapping.getLinkMetaFeature().getEContainingClass().getName() + name;
+				return createClassName(name);
+			}
+		}
+		return super.get(mapping);
+	}
+
+	public String get(LabelMapping mapping) {
+		if (mapping instanceof FeatureLabelMapping) {
+			StringBuffer sb = new StringBuffer();
+			for (EAttribute feature : (Collection<? extends EAttribute>) ((FeatureLabelMapping) mapping).getFeatures()) {
+				String name = feature.getName();
+				if (!isEmpty(name)) {
+					name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+					sb.append(name);
+				}
+			}
+			if (sb.length() > 0) {
+				String name = sb.toString();
+				if (name.length() > MAX_SEGMENT_LENGTH) {
+					name = name.substring(0, MAX_SEGMENT_LENGTH);
+				}
+				return createClassName(getLabelHostPrefix(mapping) + name);
+			}
+		}
+		return super.get(mapping);
+	}
+}
+@
+
+
+1.6
+log
+@not ready for API, internal for now
+@
+text
+@d15 1
+a15 1
+import java.util.Iterator;
+d20 1
+d83 15
+a97 13
+		StringBuffer sb = new StringBuffer();
+		for (Iterator features = mapping.getFeatures().iterator(); features.hasNext();) {
+			EAttribute feature = (EAttribute) features.next();
+			String name = feature.getName();
+			if (!isEmpty(name)) {
+				name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+				sb.append(name);
+			}
+		}
+		if (sb.length() > 0) {
+			String name = sb.toString();
+			if (name.length() > MAX_SEGMENT_LENGTH) {
+				name = name.substring(0, MAX_SEGMENT_LENGTH);
+a98 1
+			return createClassName(getLabelHostPrefix(mapping) + name);
+@
+
+
+1.5
+log
+@#146003 Limit class name length for labels based on multiple features
+@
+text
+@d18 1
+a18 1
+import org.eclipse.gmf.common.NamesDispenser;
+@
+
+
+1.4
+log
+@#144680 Use diagram element name from gmfgraph model for pure design elements
+@
+text
+@d33 6
+d92 5
+a96 1
+			return createClassName(getLabelHostPrefix(mapping) + sb.toString());
+@
+
+
+1.3
+log
+@do not expose names dispenser in api
+@
+text
+@a16 1
+import org.eclipse.emf.codegen.util.CodeGenUtil;
+a17 5
+import org.eclipse.gmf.codegen.gmfgen.GenCompartment;
+import org.eclipse.gmf.codegen.gmfgen.GenLabel;
+import org.eclipse.gmf.codegen.gmfgen.GenLink;
+import org.eclipse.gmf.codegen.gmfgen.GenNode;
+import org.eclipse.gmf.common.IncrementalNamesDispenser;
+a19 1
+import org.eclipse.gmf.mappings.CompartmentMapping;
+a21 1
+import org.eclipse.gmf.mappings.MappingEntry;
+d33 2
+a34 14
+	private final NamesDispenser namesDispenser;
+	
+	private final String suffix;
+
+	public ClassNamingStrategy(String suffix) {
+		this(suffix, null, new IncrementalNamesDispenser());
+	}
+
+	public ClassNamingStrategy(String suffix, NamingStrategy chained, NamesDispenser namesDispenser) {
+		super(chained);
+		assert suffix != null;
+		this.suffix = suffix;
+		assert namesDispenser != null;
+		this.namesDispenser = namesDispenser;
+a56 10
+	public String getAsPrefix(NodeMapping mapping) {
+		if (mapping.getDomainMetaElement() != null) {
+			String name = mapping.getDomainMetaElement().getName();
+			if (!isEmpty(name)) {
+				return getValidClassName(name);
+			}
+		}
+		return GenNode.CLASS_NAME_PREFIX;
+	}
+
+a74 30
+	public String getAsPrefix(LinkMapping mapping) {
+		if (mapping.getDomainMetaElement() != null) {
+			String name = mapping.getDomainMetaElement().getName();
+			if (!isEmpty(name)) {
+				return getValidClassName(name);
+			}
+		}
+		if (mapping.getLinkMetaFeature() != null) {
+			String name = mapping.getLinkMetaFeature().getName();
+			if (!isEmpty(name)) {
+				name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+				name = mapping.getLinkMetaFeature().getEContainingClass().getName() + name;
+				return getValidClassName(name);
+			}
+		}
+		return GenLink.CLASS_NAME_PREFIX;
+	}
+
+	public String get(CompartmentMapping mapping) {
+		// TODO : move to design naming strategy and allow to pass node name as prefix
+		if (mapping.getCompartment() != null) {
+			String name = mapping.getCompartment().getName();
+			if (!isEmpty(name)) {
+				name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+				return createClassName(getAsPrefix(mapping.getParentNode()) + name);
+			}
+		}
+		return createClassName(getAsPrefix(mapping.getParentNode()) + GenCompartment.CLASS_NAME_PREFIX);
+	}
+
+a75 1
+		// TODO : allow to use host/label name parts from chained strategy
+d85 2
+a86 8
+		String hostName;
+		MappingEntry parentMapping = mapping.getMapEntry();
+		if (parentMapping instanceof NodeMapping) {
+			hostName = getAsPrefix((NodeMapping) parentMapping);
+		} else if (parentMapping instanceof LinkMapping) {
+			hostName = getAsPrefix((LinkMapping) parentMapping);
+		} else {
+			throw new IllegalArgumentException(String.valueOf(mapping));
+d88 1
+a88 14
+		return createClassName(hostName + (sb.length() > 0 ? sb.toString() : GenLabel.CLASS_NAME_PREFIX));
+	}
+
+	protected String createClassName(String name) {
+		assert !isEmpty(name);
+		name = CodeGenUtil.validJavaIdentifier(name);
+		name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+		return namesDispenser.get(name, suffix);
+	}
+
+	protected static String getValidClassName(String s) {
+		assert !isEmpty(s);
+		s = CodeGenUtil.validJavaIdentifier(s);
+		return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+@
+
+
+1.2
+log
+@#145502 Naming strategy and gmfgen model objects should generate consistent class names
+@
+text
+@d41 3
+a43 1
+	private final String mySuffix;
+d49 1
+a49 1
+	public ClassNamingStrategy(String suffix, NamingStrategy chained, NamesDispenser dispenser) {
+d52 3
+a54 2
+		mySuffix = suffix;
+		setNamesDispenser(dispenser);
+d162 1
+a162 1
+		return getNamesDispenser() == null ? name + mySuffix : getNamesDispenser().get(name, mySuffix);
+@
+
+
+1.1
+log
+@rename strategy Name -> Naming
+@
+text
+@d11 1
+d19 4
+d33 4
+d54 6
+a59 3
+	public String get(CanvasMapping cme) {
+		if (cme.getDomainMetaElement() == null) {
+			return super.get(cme);
+d61 1
+a61 1
+		return createClassName(cme.getDomainMetaElement().getName());
+d64 6
+a69 3
+	public String get(NodeMapping nme) {
+		if (nme.getDomainContext() == null) {
+			return super.get(nme);
+d71 1
+a71 1
+		return createClassName(nme.getDomainContext().getName());
+d74 6
+a79 5
+	public String get(LinkMapping lme) {
+		if (lme.getDomainMetaElement() != null) {
+			return createClassName(lme.getDomainMetaElement().getName());
+		} else if (lme.getLinkMetaFeature() != null) {
+			return createClassName(lme.getLinkMetaFeature().getName());
+d81 1
+a81 1
+		return super.get(lme);
+d84 14
+a97 3
+	public String get(CompartmentMapping cm) {
+		if (cm.getParentNode().getDomainContext() == null || cm.getCompartment() == null) {
+			return super.get(cm);
+d99 1
+a99 1
+		return createClassName(cm.getParentNode().getDomainContext().getName() + '_' + cm.getCompartment().getName());
+d102 6
+a107 3
+	private String getQualifier(LabelMapping mapping) {
+		if (mapping.getFeatures().isEmpty()) {
+			return "Unknown";
+d109 6
+a114 7
+		// FIXME gmfmap model says features are 0..*, assert contradicts?  
+		assert mapping.getFeatures().size() > 0;
+		StringBuffer sb = new StringBuffer();
+		for (Iterator features = mapping.getFeatures().iterator(); features.hasNext();) {
+			EAttribute feature = (EAttribute) features.next();
+			if (sb.length() > 0) {
+				sb.append('_');
+a115 1
+			sb.append(feature.getName());
+d117 1
+a117 1
+		return sb.toString();
+d120 8
+a127 6
+	public String get(LabelMapping labelMapping) {
+		MappingEntry mapEntry = labelMapping.getMapEntry();
+		if (mapEntry instanceof NodeMapping) {
+			return getForNode((NodeMapping) mapEntry, labelMapping);
+		} else if (mapEntry instanceof LinkMapping) {
+			return getForLink((LinkMapping) mapEntry, labelMapping);
+d129 1
+a129 1
+		throw new IllegalStateException("Don't know how to handle mapEntry:" + mapEntry);
+d132 10
+a141 3
+	private String getForNode(NodeMapping nme, LabelMapping labelMapping) {
+		if (nme.getDomainContext() == null) {
+			return super.get(labelMapping);
+d143 8
+a150 10
+		String qualifier = getQualifier(labelMapping);
+		return createClassName(nme.getDomainContext().getName() + '_' + qualifier);
+	}
+
+	private String getForLink(LinkMapping lme, LabelMapping labelMapping) {
+		String qualifier = getQualifier(labelMapping);
+		if (lme.getDomainMetaElement() != null) {
+			return createClassName(lme.getDomainMetaElement().getName() + '_' + qualifier);
+		} else if (lme.getLinkMetaFeature() != null) {
+			return createClassName(lme.getLinkMetaFeature().getName() + '_' + qualifier);
+d152 1
+a152 1
+		return super.get(labelMapping);
+d156 1
+d158 1
+a158 5
+		if (name == null) {
+			name = "Unspecified";
+		} else if (name.length() > 0) {
+			name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+		}
+d161 6
+@
+

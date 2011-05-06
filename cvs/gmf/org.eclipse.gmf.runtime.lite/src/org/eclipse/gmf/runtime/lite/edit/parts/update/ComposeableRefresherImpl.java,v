@@ -1,0 +1,98 @@
+head	1.1;
+access;
+symbols
+	v20080722-1827:1.1
+	R2_1_maintenance:1.1.0.4
+	Root_R2_1_maintenance:1.1
+	R2_1_0:1.1
+	v20080425-1959:1.1
+	v20071108-0000:1.1
+	v20071003-0000:1.1
+	v20070921-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1
+	RC3_20:1.1
+	v20070601-1400:1.1
+	v20070525-1500:1.1
+	v20070518-1300:1.1
+	v20070427-0600:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2007.04.24.14.16.45;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	4252462e114b4567;
+
+
+desc
+@@
+
+
+1.1
+log
+@CanonicalStyle is taken into account while refreshing notational model to reflect changes in underlying domain model;
+Update is now centralized and transactional;
+Changes to visibility are dispatched to the parent of the affected view as well (was: only to the view itself);
+Save options are not reused, for easy modification of the generated code;
+Side-affixed children are not considered direct children;
+Empty edit-patterns are treated the same way as null patterns (view pattern is used instead).
+@
+text
+@/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.edit.parts.update;
+
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+
+/**
+ * Default implementation of {@@link IUpdatableEditPart.ComposeableRefresher}. 
+ */
+class ComposeableRefresherImpl implements IUpdatableEditPart.ComposeableRefresher {
+	private final Collection<IUpdatableEditPart.Refresher> myRefreshers;
+	public ComposeableRefresherImpl() {
+		myRefreshers = new HashSet<IUpdatableEditPart.Refresher>();
+	}
+	public ComposeableRefresherImpl(Collection<IUpdatableEditPart.Refresher> refreshers) {
+		myRefreshers = refreshers;
+	}
+	public void addRefresher(IUpdatableEditPart.Refresher refresher) {
+		if (refresher == null) {
+			return;
+		}
+		if (refresher instanceof IUpdatableEditPart.ComposeableRefresher) {
+			for (IUpdatableEditPart.Refresher next : ((IUpdatableEditPart.ComposeableRefresher) refresher)) {
+				addRefresher(next);
+			}
+		} else {
+			myRefreshers.add(refresher);
+		}
+	}
+	public Iterator<IUpdatableEditPart.Refresher> iterator() {
+		return myRefreshers.iterator();
+	}
+
+	public void refresh() {
+		for (IUpdatableEditPart.Refresher next : myRefreshers) {
+			next.refresh();
+		}
+	}
+}
+@

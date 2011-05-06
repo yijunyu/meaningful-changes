@@ -1,0 +1,330 @@
+head	1.7;
+access;
+symbols
+	v20081022-1925:1.7
+	v20080917-1925:1.7
+	v20080911-1728:1.7
+	v20080910-1520:1.7
+	v20080903-1520:1.7
+	v20080731-1520:1.7
+	v20080723-2246:1.7
+	R1_0_maintenance:1.7.0.2
+	R1_0:1.7
+	I20051124-2000:1.6
+	M3_10:1.6
+	I20051118-1245:1.6
+	I20051111-1800:1.6
+	I20051106-0900:1.6
+	v20051030:1.4;
+locks; strict;
+comment	@# @;
+
+
+1.7
+date	2005.11.25.19.38.12;	author cmahoney;	state dead;
+branches;
+next	1.6;
+
+1.6
+date	2005.11.04.22.13.15;	author sshaw;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2005.11.02.23.30.16;	author sshaw;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2005.09.12.21.29.06;	author sshaw;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.09.08.18.58.41;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.08.30.18.49.21;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.18.37;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.7
+log
+@Bugzilla#113812 gmf_head cmahoney 051125 Deprecating DiagramResourceManager
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2004 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import org.eclipse.draw2d.Connection;
+import org.eclipse.draw2d.Graphics;
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.Polyline;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.draw2d.geometry.PrecisionRectangle;
+import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.gef.DragTracker;
+import org.eclipse.gef.EditPart;
+import org.eclipse.gef.Request;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.editpolicies.NonResizableEditPolicy;
+import org.eclipse.gef.requests.ChangeBoundsRequest;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+import org.eclipse.gmf.runtime.diagram.ui.commands.SetBoundsCommand;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.LabelEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.internal.figures.LabelHelper;
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramResourceManager;
+import org.eclipse.gmf.runtime.diagram.ui.requests.RequestConstants;
+import org.eclipse.gmf.runtime.diagram.ui.tools.DragEditPartsTrackerEx;
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+import org.eclipse.gmf.runtime.notation.View;
+
+/**
+ * EditPolicy which moves a label relative to it parent.
+ * 
+ * @@author jcorchis
+ * @@deprecated Renamed to
+ *             {@@link org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableLabelEditPolicy}
+ */
+public class LabelNonResizableEditPolicy extends NonResizableEditPolicyEx {
+
+	private Polyline tether = null;
+
+	/**
+	 * @@see NonResizableEditPolicy#eraseChangeBoundsFeedback(ChangeBoundsRequest)
+	 */
+	protected void eraseChangeBoundsFeedback(ChangeBoundsRequest request) {
+		super.eraseChangeBoundsFeedback(request);
+		if (tether != null)
+			removeFeedback(tether);
+		tether = null;
+	}
+
+	/**
+	 * @@see NonResizableEditPolicy#createDragSourceFeedbackFigure()
+	 */
+	protected IFigure createDragSourceFeedbackFigure() {
+		IFigure feedback = super.createDragSourceFeedbackFigure();
+		tether = new Polyline();
+		tether.setLineStyle(Graphics.LINE_DASHDOT);
+		tether.setForegroundColor(((IGraphicalEditPart) getHost()).getFigure()
+			.getForegroundColor());
+		addFeedback(tether);
+		return feedback;
+	}
+
+	/**
+	 * @@see NonResizableEditPolicy#showChangeBoundsFeedback(ChangeBoundsRequest)
+	 */
+	protected void showChangeBoundsFeedback(ChangeBoundsRequest request) {
+		super.showChangeBoundsFeedback(request);
+
+		IFigure p = getDragSourceFeedbackFigure();
+		Rectangle r = p.getBounds();
+		Point refPoint = ((LabelEditPart)getHost()).getReferencePoint();
+		
+		// translate the feedback figure
+		PrecisionRectangle rect = new PrecisionRectangle(getInitialFeedbackBounds().getCopy());
+		getHostFigure().translateToAbsolute(rect);
+		rect.translate(request.getMoveDelta());
+		rect.resize(request.getSizeDelta());		
+		p.translateToRelative(rect);
+		p.setBounds(rect);
+		
+		Rectangle centerMain = null;
+		// TODO: remove this hack.  We should be using the reference point for the teher end, however, 
+		// the reference point is causing miscaculation when positioning.  This has to be redone in version 2.
+		if( ((IGraphicalEditPart)getHost().getParent()).getFigure() instanceof Connection ) {
+			centerMain = new Rectangle(refPoint.x, refPoint.y, 0, 0);
+			getHostFigure().translateToAbsolute(centerMain);
+			p.translateToRelative(centerMain);
+		} else {
+			centerMain = ((IGraphicalEditPart)getHost().getParent()).getFigure().getBounds().getCopy();
+			centerMain.translate(centerMain.width/2, centerMain.height/2);
+			getHostFigure().translateToAbsolute(centerMain);
+			p.translateToRelative(centerMain);
+		}
+	
+		PrecisionRectangle ref = new PrecisionRectangle( centerMain );
+						
+		Point midTop = new Point(r.x + r.width / 2, r.y);
+		Point midBottom = new Point(r.x + r.width / 2, r.y + r.height);
+		Point midLeft = new Point(r.x, r.y + r.height / 2);
+		Point midRight = new Point(r.x + r.width, r.y + r.height / 2);
+
+		Point startPoint = midTop;
+
+		int x = r.x + r.width / 2 - refPoint.x;
+		int y = r.y + r.height / 2 - refPoint.y;
+
+		if (y > 0 && y > x && y > -x)
+			startPoint = midTop;
+		else if (y < 0 && y < x && y < -x)
+			startPoint = midBottom;
+		else if (x < 0 && y > x && y < -x)
+			startPoint = midRight;
+		else
+			startPoint = midLeft;
+
+		tether.setStart(startPoint);
+		tether.setEnd(  ref.getLocation() );
+	}
+
+	protected Command getMoveCommand(ChangeBoundsRequest request) {
+		LabelEditPart editPart = (LabelEditPart) getHost();
+		Point refPoint = editPart.getReferencePoint();
+		
+		// translate the feedback figure
+		PrecisionRectangle rect = new PrecisionRectangle(getInitialFeedbackBounds().getCopy());
+		getHostFigure().translateToAbsolute(rect);
+		rect.translate(request.getMoveDelta());
+		rect.resize(request.getSizeDelta());		
+		getHostFigure().translateToRelative(rect);
+		
+		Point normalPoint = LabelHelper.offsetFromRelativeCoordinate(getHostFigure(), rect, refPoint);
+		
+ 		ICommand moveCommand = 
+ 			new SetBoundsCommand(
+ 				DiagramResourceManager.getI18NString("MoveLabelCommand.Label.Location"),//$NON-NLS-1$
+ 				new EObjectAdapter((View)editPart.getModel()),
+				normalPoint); 
+		return new EtoolsProxyCommand(moveCommand);
+	}
+
+	/**
+	 * Overridden to use a customized drag tracker for the handles.
+	 * The <code>isMove()</code> method of the drag tracker needs to be
+	 * overridden as the parent of the label and connection will not be the
+	 * same as the target editpart, instead it returns true always since 
+	 * labels can only be moved and not resized.
+	 * @@return a drag tracker
+	 */
+	protected DragTracker createSelectionHandleDragTracker() {
+		return new DragEditPartsTrackerEx(getHost()) {
+			protected boolean isMove() {
+				return true;
+			}
+		};
+	}
+
+	/**
+	 * @@see org.eclipse.gef.EditPolicy#getTargetEditPart(org.eclipse.gef.Request)
+	 */
+	public EditPart getTargetEditPart(Request request) {
+		if (RequestConstants.REQ_SNAP_BACK.equals(request.getType()))
+			return getHost();
+		return super.getTargetEditPart(request);
+	}
+
+	/**
+	 * @@see org.eclipse.gef.EditPolicy#understandsRequest(org.eclipse.gef.Request)
+	 */
+	public boolean understandsRequest(Request request) {
+		if (RequestConstants.REQ_SNAP_BACK.equals(request.getType()))
+			return true;
+		return super.understandsRequest(request);
+	}
+
+}
+@
+
+
+1.6
+log
+@Bugzilla#113157 gmf_head cmahoney 051104 Updating tutorial guides and some comments with name changes
+@
+text
+@@
+
+
+1.5
+log
+@Bugzilla#113157 gmf_head cmahoney 051102 GMF Diagram Layer Public API Name Changes
+@
+text
+@d155 1
+a155 1
+	 * overridden as the parent of the label and connector will not be the
+@
+
+
+1.4
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d34 1
+a34 1
+import org.eclipse.gmf.runtime.diagram.ui.l10n.PresentationResourceManager;
+d44 2
+d146 1
+a146 1
+ 				PresentationResourceManager.getI18NString("MoveLabelCommand.Label.Location"),//$NON-NLS-1$
+@
+
+
+1.3
+log
+@Bugzilla 109092  : rumv_head mmostafa 050908 : API Analysis: Diagram layer API.  Determine if all API is needed and/or has appropriate signatures
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2002, 2004.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+
+
+1.2
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d31 1
+a31 1
+import org.eclipse.gmf.runtime.diagram.ui.figures.LabelHelper;
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d36 1
+a36 1
+import com.ibm.xtools.notation.View;
+@
+

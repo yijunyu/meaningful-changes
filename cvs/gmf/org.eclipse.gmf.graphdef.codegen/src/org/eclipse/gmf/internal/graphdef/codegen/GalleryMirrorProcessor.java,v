@@ -1,0 +1,301 @@
+head	1.5;
+access;
+symbols
+	v20080813-1520:1.5
+	v20080807-1333:1.5
+	v20080806-1520:1.5
+	v20080731-1520:1.5
+	v20080722-1827:1.5
+	R2_1_maintenance:1.5.0.4
+	Root_R2_1_maintenance:1.5
+	R2_1_0:1.5
+	v20080528-1052:1.5
+	v20080417-1610:1.5
+	v20080222-1200:1.5
+	v20080215-1500:1.5
+	v20080207-0207:1.5
+	v20071214-1111:1.5
+	v20071108-0000:1.5
+	v20071003-0000:1.5
+	v20070809-0000:1.5
+	R2_0_maintenance:1.5.0.2
+	R2_0:1.5
+	R4_20:1.5
+	v20070621-0000:1.5
+	RC3_20:1.5
+	v20070608-1300:1.5
+	v20070605-1400:1.5
+	v20070601-1400:1.5
+	v20070518-1300:1.4
+	v20070330-1300:1.4
+	v20060316-0600:1.4
+	v20070307-0700:1.3
+	v20070228-2000:1.3
+	v20070208-1800:1.3
+	M4_20:1.2
+	v20061214-0000:1.2
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061027-1200:1.2
+	v20061013-1330:1.2
+	v20060925-1700:1.2
+	v20060919-0800:1.2
+	M1_20:1.2
+	v20060904-1500:1.2
+	v20060713-1700:1.2
+	R1_0_maintenance:1.2.0.2
+	R1_0:1.2
+	v20060627-1200:1.2
+	v20060626-1420:1.2
+	v20060616-1200:1.2
+	v20060531-1730:1.2
+	v20060530-1930:1.2
+	v20060526-1200:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2007.05.28.13.33.47;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+commitid	3e69465ada3a4567;
+
+1.4
+date	2007.03.14.12.59.52;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	123445f7f1c74567;
+
+1.3
+date	2007.02.01.13.38.44;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	25aa45c1ed644567;
+
+1.2
+date	2006.05.24.14.57.46;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.05.23.21.09.44;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@FigureDescriptor with explicit means to access children introduced into gmfgraph
+@
+text
+@/*
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.graphdef.codegen;
+
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Map;
+
+import org.eclipse.gmf.gmfgraph.ConnectionFigure;
+import org.eclipse.gmf.gmfgraph.CustomFigure;
+import org.eclipse.gmf.gmfgraph.DecorationFigure;
+import org.eclipse.gmf.gmfgraph.Figure;
+import org.eclipse.gmf.gmfgraph.FigureDescriptor;
+import org.eclipse.gmf.gmfgraph.FigureGallery;
+import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+import org.eclipse.gmf.graphdef.codegen.StandaloneGenerator.Config;
+import org.eclipse.gmf.graphdef.codegen.StandaloneGenerator.ProcessorCallback;
+
+/**
+ * In addition to {@@link GalleryProcessor} activities, collects names of transformed figures and 
+ * allows to create {@@link FigureGallery} full of them. 
+ * @@author artem
+ */
+public class GalleryMirrorProcessor extends GalleryProcessor {
+	private final Map<FigureDescriptor, String> myFigure2FQN = new IdentityHashMap<FigureDescriptor, String>();
+	private String myGeneratedBundle;
+
+	public GalleryMirrorProcessor(FigureGallery[] input) {
+		super(input);
+	}
+
+	public void go(ProcessorCallback callback, Config config) throws InterruptedException {
+		super.go(callback, config);
+		myGeneratedBundle = config.getPluginID();
+	}
+
+	public FigureGallery convertFigureGallery(){
+		FigureGallery result = GMFGraphFactory.eINSTANCE.createFigureGallery();
+		result.setName("GeneratedGallery"); // FIXME smth reasonable
+		result.setImplementationBundle(myGeneratedBundle);
+		
+		for (FigureDescriptor fd : myFigure2FQN.keySet()) {
+			Figure nextOriginal = fd.getActualFigure();
+			String nextConvertedFqn = myFigure2FQN.get(fd);
+			CustomFigure custom = createCustomFigure(nextOriginal);
+			custom.setName(fd.getName());
+			custom.setQualifiedClassName(nextConvertedFqn);
+
+			result.getFigures().add(custom);
+		}
+		return result;
+	}
+
+	public Map<FigureDescriptor, String> getGenerationInfo() {
+		return Collections.unmodifiableMap(myFigure2FQN);
+	}
+
+	protected void handle(FigureDescriptor next, String fqn) {
+		myFigure2FQN.put(next, fqn);
+	}
+
+	static CustomFigure createCustomFigure(Figure original){
+		GMFGraphFactory factory = GMFGraphFactory.eINSTANCE;
+		if (original instanceof DecorationFigure){
+			return factory.createCustomDecoration();
+		} 
+		if (original instanceof ConnectionFigure){
+			return factory.createCustomConnection();
+		}
+		return factory.createCustomFigure();
+	}
+}
+@
+
+
+1.4
+log
+@Regenerated graphdef, tooldef and gmfmap models with EMF 2.3 M5 Generics, updated code to be "generified"
+@
+text
+@a14 1
+import java.util.Enumeration;
+d18 1
+d20 1
+d22 1
+d34 1
+a34 1
+	private final GenerationInfoImpl myGenerationInfo;
+a38 1
+		myGenerationInfo = new GenerationInfoImpl();
+d51 5
+a55 6
+		for (Enumeration<Figure> originalFigures = myGenerationInfo.getProcessedFigures(); originalFigures.hasMoreElements();) {
+			Figure nextOriginal = originalFigures.nextElement();
+			String nextConvertedFqn = myGenerationInfo.getGeneratedClassFQN(nextOriginal);
+			CustomFigure custom = DiagramElementsCopier.createCustomFigure(nextOriginal);
+			custom.setName(nextOriginal.getName());
+			custom.setBundleName(myGeneratedBundle);
+d57 1
+a57 1
+			
+d63 2
+a64 6
+	public GenerationInfo getGenerationInfo() {
+		return myGenerationInfo;
+	}
+
+	protected void handle(Figure next, String fqn) {
+		myGenerationInfo.registerFQN(next, fqn);
+d67 2
+a68 4
+	public interface GenerationInfo {
+		// FIXME use iterator instead to allow enhanced for loop
+		public Enumeration<Figure> getProcessedFigures();
+		public String getGeneratedClassFQN(Figure figure);
+d71 7
+a77 4
+	private static class GenerationInfoImpl implements GenerationInfo {
+		private final Map<Figure, String> myFigure2FQN = new IdentityHashMap<Figure, String>();
+		
+		public GenerationInfoImpl(){
+d79 1
+a79 12
+		
+		public void registerFQN(Figure figure, String fqn){
+			myFigure2FQN.put(figure, fqn);
+		}
+		
+		public String getGeneratedClassFQN(Figure figure) {
+			return myFigure2FQN.get(figure);
+		}
+		
+		public Enumeration<Figure> getProcessedFigures() {
+			return Collections.enumeration(myFigure2FQN.keySet());
+		}	
+@
+
+
+1.3
+log
+@use generics wherever possible
+@
+text
+@d50 2
+a51 2
+		for (Enumeration originalFigures = myGenerationInfo.getProcessedFigures(); originalFigures.hasMoreElements();){
+			Figure nextOriginal = (Figure) originalFigures.nextElement();
+d72 1
+@
+
+
+1.2
+log
+@get rid of bogus config passing into ConverterOutcome
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation
+d72 1
+a72 1
+		public Enumeration/*<Figure>*/ getProcessedFigures();
+d77 1
+a77 1
+		private final Map myFigure2FQN = new IdentityHashMap();
+d87 1
+a87 1
+			return (String)myFigure2FQN.get(figure);
+d90 1
+a90 1
+		public Enumeration getProcessedFigures() {
+@
+
+
+1.1
+log
+@#140887 Remove Child interface from GMFGraph.
+Although the need to reference child figures persist, thus FigureHandle was introduced, to allow diagramElements to reference either *generateable* figures (Figure subclasses) or *just-use* figures (like CustomFigure and FigureAccessor).
+Refactoring performed with #131365 "Mirror GMFGraph model when generating standalone figure plugin" in mind
+@
+text
+@d24 1
+d33 1
+d40 6
+a45 1
+	public FigureGallery convertFigureGallery(Config config){
+a46 1
+		String generatedBundle = config.getPluginID();
+d48 1
+a48 1
+		result.setImplementationBundle(generatedBundle);
+d55 1
+a55 1
+			custom.setBundleName(generatedBundle);
+@
+

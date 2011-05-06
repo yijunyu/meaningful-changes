@@ -1,0 +1,253 @@
+head	1.4;
+access;
+symbols
+	v20081015-1925:1.4
+	v20081008-1925:1.4
+	v20080903-1520:1.4
+	v20080731-1520:1.4
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	I20060227-1730:1.3
+	I20060216-1945:1.3
+	I20060210-1715:1.3
+	I20060209-1815:1.3
+	I20060203-0830:1.3
+	I20060129-1145:1.3
+	I20060127-0900:1.3
+	I20060120-1530:1.3
+	I20060113-1700:1.3
+	M4_10:1.3
+	I20060107-1100:1.3
+	I20060105-1630:1.3
+	I20051230-1230:1.3
+	I20051223-1100:1.3
+	I20051217-0925:1.3
+	I20051201-1800:1.3
+	I20051124-2000:1.3
+	M3_10:1.3
+	I20051118-1245:1.3
+	I20051111-1800:1.3
+	I20051106-0900:1.3
+	v20051030:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2006.02.28.02.31.23;	author cmahoney;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2005.09.22.15.42.32;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.24.26;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.18.50;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@Bugzilla#113850 gmf_head cmahoney 060227 Diagram plug-in adoption of EMF transaction API enhancements
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2005 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.diagram.core.internal.util;
+
+import java.util.Collection;
+import java.util.Iterator;
+
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.gmf.runtime.emf.core.edit.MEditingDomain;
+
+
+/**
+ * @@author Yasser Lulu
+ *
+ */
+public class MEditingDomainGetter {
+
+	//emf editing domain related funcs	
+	//TODO revisit and verfiy that it is OK to return the deafult 
+	//MEditingDomain.INSTANCE as opposed to returning null instead
+	public static MEditingDomain getMEditingDomain(EObject eObject) {
+		return getMEditingDomain(eObject, true);
+	}
+
+	public static MEditingDomain getMEditingDomain(EObject eObject,
+			boolean returnDefaultOnFailure) {
+		if (eObject != null) {
+			return getMEditingDomain(eObject.eResource(),
+				returnDefaultOnFailure);
+		}
+		return (returnDefaultOnFailure) ? MEditingDomain.INSTANCE
+			: null;
+	}
+
+	public static MEditingDomain getMEditingDomain(Resource eResource) {
+		return getMEditingDomain(eResource, true);
+	}
+
+	public static MEditingDomain getMEditingDomain(Resource eResource,
+			boolean returnDefaultOnFailure) {
+		MEditingDomain editingDomain = null;
+		if (eResource != null) {
+			editingDomain = MEditingDomain.getEditingDomain(eResource);
+		}
+		return ((editingDomain == null) && returnDefaultOnFailure) ? MEditingDomain.INSTANCE
+			: editingDomain;
+	}
+
+	public static MEditingDomain getMEditingDomain(ResourceSet resourceSet) {
+		return getMEditingDomain(resourceSet, true);
+	}
+
+	public static MEditingDomain getMEditingDomain(ResourceSet resourceSet,
+			boolean returnDefaultOnFailure) {
+		MEditingDomain editingDomain = null;
+		if (resourceSet != null) {
+			editingDomain = MEditingDomain.getEditingDomain(resourceSet);
+		}
+		return ((editingDomain == null) && returnDefaultOnFailure) ? MEditingDomain.INSTANCE
+			: editingDomain;
+	}
+
+	public static MEditingDomain getMEditingDomain(IAdaptable eObjectAdaptable) {		
+		return getMEditingDomain(eObjectAdaptable, true);
+	}
+
+	public static MEditingDomain getMEditingDomain(IAdaptable eObjectAdaptable,
+			boolean returnDefaultOnFailure) {
+		if (eObjectAdaptable != null) {
+			return getMEditingDomain((EObject) eObjectAdaptable
+				.getAdapter(EObject.class), returnDefaultOnFailure);
+		}
+		return (returnDefaultOnFailure) ? MEditingDomain.INSTANCE
+			: null;
+	}
+
+	public static MEditingDomain getMEditingDomain(Notification notification) {
+		return getMEditingDomain(notification, true);
+	}
+
+	public static MEditingDomain getMEditingDomain(Notification notification,
+			boolean returnDefaultOnFailure) {
+		return getMEditingDomain(notification.getNotifier(),
+			returnDefaultOnFailure);
+	}
+
+	public static MEditingDomain getMEditingDomain(Collection collection) {
+		return getMEditingDomain(collection, true);
+	}
+
+	public static MEditingDomain getMEditingDomain(Collection elements,
+			boolean returnDefaultOnFailure) {
+		MEditingDomain editingDomain = null;
+		Iterator it = elements.iterator();
+		while (it.hasNext() && (editingDomain == null)) {
+			editingDomain = getMEditingDomain(it.next(), false);//we'll get the best match if any
+		}
+		return ((editingDomain == null) && returnDefaultOnFailure) ? MEditingDomain.INSTANCE
+			: editingDomain;
+	}
+
+	//a desperate attempt!
+	private static MEditingDomain getMEditingDomain(Object obj,
+			boolean returnDefaultOnFailure) {
+		if (obj != null) {
+			if (obj instanceof EObject) {
+				return getMEditingDomain((EObject) obj, returnDefaultOnFailure);
+			} else if (obj instanceof IAdaptable) {
+				return getMEditingDomain((IAdaptable) obj,
+					returnDefaultOnFailure);
+			} else if (obj instanceof Resource) {
+				return getMEditingDomain((Resource) obj, returnDefaultOnFailure);
+			} else if (obj instanceof ResourceSet) {
+				return getMEditingDomain((ResourceSet) obj,
+					returnDefaultOnFailure);
+			} 
+		}
+		return (returnDefaultOnFailure) ? MEditingDomain.INSTANCE
+			: null;
+	}
+
+}
+@
+
+
+1.3
+log
+@Bugzilla 109092: gmf_head sshaw 050922 : API Analysis: Diagram layer API.  Determine if all API is needed and/or has appropriate signatures
+Contributed by Mohammed Mostafa
+@
+text
+@@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@a21 2
+
+import org.eclipse.gmf.runtime.diagram.core.listener.NotificationEvent;
+a89 11
+	public static MEditingDomain getMEditingDomain(
+			NotificationEvent notificationEvent) {
+		return getMEditingDomain(notificationEvent.getElement(), true);
+	}
+
+	public static MEditingDomain getMEditingDomain(
+			NotificationEvent notificationEvent, boolean returnDefaultOnFailure) {
+		return getMEditingDomain(notificationEvent.getElement(),
+			returnDefaultOnFailure);
+	}
+
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2005.  All Rights Reserved.                    |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

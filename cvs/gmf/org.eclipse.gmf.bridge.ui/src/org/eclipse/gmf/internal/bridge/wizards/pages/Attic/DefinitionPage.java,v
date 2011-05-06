@@ -1,0 +1,1060 @@
+head	1.15;
+access;
+symbols
+	v20080924-1925:1.15
+	v20060925-1700:1.8
+	v20060919-0800:1.8
+	M1_20:1.8
+	v20060904-1500:1.8
+	v20060713-1700:1.8
+	R1_0_maintenance:1.8.0.2
+	R1_0:1.8
+	v20060627-1200:1.8
+	v20060626-1420:1.8
+	v20060620-0400:1.8
+	v20060616-1200:1.7
+	v20060609-1400:1.3
+	v20060531-1730:1.1
+	v20060526-1200:1.1
+	v20060519-0800:1.1
+	v20060512-1000:1.1
+	I20060512-1000:1.1
+	I20060428-1300:1.1
+	I20060424-0500:1.1
+	I20060424-0300:1.1
+	M6_10:1.1
+	I20060407-1200:1.1
+	I20060331-1000:1.1
+	I20060324-0300:1.1
+	I20060317-1300:1.1
+	I20060317-1200:1.1
+	I20060316-1300:1.1
+	I20060309-1300:1.1
+	M5_10:1.1
+	S20060303-1600:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.15
+date	2006.09.19.12.19.40;	author dstadnik;	state dead;
+branches;
+next	1.14;
+
+1.14
+date	2006.09.15.12.18.10;	author dstadnik;	state Exp;
+branches;
+next	1.13;
+
+1.13
+date	2006.09.11.16.53.47;	author dstadnik;	state Exp;
+branches;
+next	1.12;
+
+1.12
+date	2006.09.07.15.35.40;	author dstadnik;	state Exp;
+branches;
+next	1.11;
+
+1.11
+date	2006.09.06.19.38.36;	author dstadnik;	state Exp;
+branches;
+next	1.10;
+
+1.10
+date	2006.09.06.19.03.09;	author dstadnik;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2006.09.05.12.18.28;	author dstadnik;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2006.06.19.08.13.43;	author dstadnik;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2006.06.15.10.05.34;	author dstadnik;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2006.06.14.15.00.55;	author dstadnik;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.06.14.14.40.40;	author dstadnik;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.06.14.14.25.18;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.06.06.10.31.37;	author dstadnik;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.06.01.13.18.46;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.03.01.12.46.08;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.15
+log
+@move pages and model of simple graph and tool wizards in dedicated package; provide i18n
+@
+text
+@/*
+ * Copyright (c) 2006 Eclipse.org
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Dmitry Stadnik - initial API and implementation
+ */
+package org.eclipse.gmf.internal.bridge.wizards.pages;
+
+import java.util.Iterator;
+
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.gmf.internal.bridge.resolver.DomainModelSource;
+import org.eclipse.gmf.internal.bridge.resolver.DomainModelSourceImpl;
+import org.eclipse.gmf.internal.bridge.resolver.Resolution;
+import org.eclipse.gmf.internal.bridge.resolver.ResolvedItem;
+import org.eclipse.gmf.internal.bridge.resolver.StructureBuilder;
+import org.eclipse.gmf.internal.bridge.ui.Plugin;
+import org.eclipse.jface.viewers.ColumnPixelData;
+import org.eclipse.jface.viewers.ColumnWeightData;
+import org.eclipse.jface.viewers.TableLayout;
+import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.jface.wizard.WizardPage;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeColumn;
+
+/**
+ * @@author dstadnik
+ */
+public class DefinitionPage extends WizardPage {
+
+	private final StructureBuilder structureBuilder;
+
+	private final DomainModelSource domainModelSource;
+
+	private DomainModelSourceImpl currentModelSource;
+
+	private TreeViewer viewer;
+
+	private Button deselectAllButton;
+
+	private Button recognizeButton;
+
+	public DefinitionPage(String pageId, StructureBuilder structureBuilder, DomainModelSource domainModelSource) {
+		super(pageId);
+		this.structureBuilder = structureBuilder;
+		this.domainModelSource = domainModelSource;
+	}
+
+	protected GridData createFillBothGridData(int span) {
+		GridData data = new GridData();
+		data.verticalAlignment = GridData.FILL;
+		data.grabExcessVerticalSpace = true;
+		data.horizontalAlignment = GridData.FILL;
+		data.grabExcessHorizontalSpace = true;
+		data.horizontalSpan = span;
+		return data;
+	}
+
+	protected GridData createFillHorzGridData(int span) {
+		GridData data = new GridData();
+		data.horizontalAlignment = GridData.FILL;
+		data.grabExcessHorizontalSpace = true;
+		data.horizontalSpan = span;
+		return data;
+	}
+
+	public void createControl(Composite parent) {
+		setPageComplete(false);
+		setControl(createDomainModelGroup(parent));
+	}
+
+	private Composite createDomainModelGroup(Composite parent) {
+		Composite plate = new Composite(parent, SWT.NONE);
+		GridLayout layout = new GridLayout(2, false);
+		layout.verticalSpacing = 12;
+		plate.setLayout(layout);
+		Label domainModelElementsLabel = new Label(plate, SWT.NONE);
+		domainModelElementsLabel.setText("Domain model elements to process:");
+		domainModelElementsLabel.setLayoutData(createFillHorzGridData(2));
+		Composite viewerPlate = createViewerGroup(plate);
+		viewerPlate.setLayoutData(createFillBothGridData(2));
+		plate.setLayoutData(createFillBothGridData(1));
+		return plate;
+	}
+
+	private Composite createViewerGroup(Composite parent) {
+		Composite plate = new Composite(parent, SWT.NONE);
+		GridLayout layout = new GridLayout(2, false);
+		layout.verticalSpacing = 12;
+		plate.setLayout(layout);
+		viewer = createViewer(plate);
+		viewer.getControl().setLayoutData(createFillBothGridData(1));
+		Composite buttonsPlate = createDomainModelButtons(plate);
+		buttonsPlate.setLayoutData(new GridData(GridData.FILL_VERTICAL));
+		return plate;
+	}
+
+	private Composite createDomainModelButtons(Composite parent) {
+		Composite plate = new Composite(parent, SWT.NONE);
+		GridLayout layout = new GridLayout(1, false);
+		layout.verticalSpacing = 12;
+		plate.setLayout(layout);
+		deselectAllButton = new Button(plate, SWT.PUSH);
+		deselectAllButton.setLayoutData(createFillHorzGridData(1));
+		deselectAllButton.setText("Deselect All");
+		deselectAllButton.addSelectionListener(new SelectionListener() {
+
+			public void widgetDefaultSelected(SelectionEvent e) {
+			}
+
+			public void widgetSelected(SelectionEvent e) {
+				deselectChildren(getModel());
+				viewer.refresh(true);
+			}
+
+			private void deselectChildren(ResolvedItem item) {
+				for (Iterator it = item.getChildren().iterator(); it.hasNext();) {
+					ResolvedItem child = (ResolvedItem) it.next();
+					child.setResolution(null);
+					deselectChildren(child);
+				}
+			}
+		});
+		recognizeButton = new Button(plate, SWT.PUSH);
+		recognizeButton.setLayoutData(createFillHorzGridData(1));
+		recognizeButton.setText("Defaults");
+		recognizeButton.addSelectionListener(new SelectionListener() {
+
+			public void widgetDefaultSelected(SelectionEvent e) {
+			}
+
+			public void widgetSelected(SelectionEvent e) {
+				final EPackage contents = currentModelSource.getContents();
+				viewer.setInput(contents == null ? null : structureBuilder.process(currentModelSource));
+				viewer.expandAll();
+				if (contents != null) {
+					setPageComplete(validatePage());
+				} else {
+					setPageComplete(true);
+				}
+			}
+		});
+		return plate;
+	}
+
+	protected TreeViewer createViewer(Composite parent) {
+		final Tree tree = new Tree(parent, SWT.SINGLE | SWT.H_SCROLL | SWT.V_SCROLL | SWT.BORDER | SWT.FULL_SELECTION);
+		TableLayout layout = new TableLayout() {
+
+			private boolean firstTime = true;
+
+			public void layout(Composite c, boolean flush) {
+				super.layout(c, flush);
+				if (!firstTime) {
+					return;
+				}
+				int cawidth = c.getClientArea().width;
+
+				// XXX: Layout is being called with an invalid value the first time
+				// it is being called on Linux. This method resets the
+				// Layout to null so we make sure we run it only when
+				// the value is OK.
+				if (cawidth <= 1) {
+					return;
+				}
+
+				TreeColumn elementColumn = ((Tree) c).getColumn(0);
+				int vsbWidth = tree.getVerticalBar().getSize().x + 9; // 9 is magic since vsbw is not enough
+				int width = elementColumn.getWidth() - vsbWidth;
+				if (width < 0) {
+					width = 0;
+				}
+				elementColumn.setWidth(width);
+				firstTime = false;
+			}
+		};
+		tree.setLayout(layout);
+		tree.setHeaderVisible(true);
+		// tree.setLinesVisible(true);
+
+		TreeColumn elementColumn = new TreeColumn(tree, SWT.LEFT);
+		elementColumn.setText("Element");
+		elementColumn.setResizable(true);
+		layout.addColumnData(new ColumnWeightData(1, 32, true));
+
+		addResolutionColumn(tree, Resolution.NODE, Plugin.NODE_ICON);
+		addResolutionColumn(tree, Resolution.LINK, Plugin.LINK_ICON);
+		if (structureBuilder.isWithLabels()) {
+			addResolutionColumn(tree, Resolution.LABEL, Plugin.LABEL_ICON);
+		}
+
+		return viewer = DomainModelViewerFactory.createViewer(tree, structureBuilder.isWithLabels());
+	}
+
+	protected TreeColumn addResolutionColumn(Tree tree, Resolution resolution, String iconId) {
+		TreeColumn column = new TreeColumn(tree, SWT.CENTER);
+		// column.setText(resolution.getName());
+		column.setImage(Plugin.getDefault().getImageRegistry().get(iconId));
+		column.setResizable(false);
+		((TableLayout) tree.getLayout()).addColumnData(new ColumnPixelData(18, false, true));
+		return column;
+	}
+
+	protected boolean validatePage() {
+		return true;
+	}
+
+	public void setVisible(boolean visible) {
+		super.setVisible(visible);
+		if (!visible) {
+			return;
+		}
+		final EPackage contents = domainModelSource.getContents();
+		if (currentModelSource != null && currentModelSource.like(domainModelSource)) {
+			return; // domain model source is the same; do not reset viewer
+		}
+		currentModelSource = createDomainModelSource(contents, domainModelSource.getDiagramElement());
+		assert currentModelSource != null;
+		viewer.setInput(contents == null ? null : structureBuilder.process(currentModelSource));
+		viewer.expandAll();
+		viewer.getControl().pack();
+		if (contents != null) {
+			// domain model is loaded ok
+			setPageComplete(validatePage());
+		} else {
+			// empty domain model
+			setPageComplete(true);
+		}
+		((Composite) getControl()).layout(true, true);
+	}
+
+	protected DomainModelSourceImpl createDomainModelSource(EPackage contents, EClass diagramElement) {
+		return new DomainModelSourceImpl(contents, diagramElement);
+	}
+
+	public ResolvedItem getModel() {
+		return (ResolvedItem) viewer.getInput();
+	}
+}
+@
+
+
+1.14
+log
+@#126531 Wizards that infer tooling and graph definitions should be able to add results to the existing models
+@
+text
+@@
+
+
+1.13
+log
+@#149163 GMFGraph/GMFTool Simple Model wizard, do not rebuild model elements tree on changing Diagram Element
+@
+text
+@d18 2
+d49 1
+a49 1
+	private DomainModelSourceImpl processedModelSource;
+d147 2
+a148 3
+				EPackage contents = domainModelSource.getContents();
+				EClass diagramElement = domainModelSource.getDiagramElement();
+				viewer.setInput(contents == null ? null : structureBuilder.process(contents, diagramElement));
+d227 2
+a228 3
+		EPackage contents = domainModelSource.getContents();
+		EClass diagramElement = domainModelSource.getDiagramElement();
+		if (processedModelSource != null && processedModelSource.like(domainModelSource)) {
+d231 3
+a233 2
+		processedModelSource = new DomainModelSourceImpl(contents, diagramElement);
+		viewer.setInput(contents == null ? null : structureBuilder.process(contents, diagramElement));
+d246 4
+@
+
+
+1.12
+log
+@#156342 Simple graph and tool def wizards should use common domain model selection page
+@
+text
+@d47 2
+d223 18
+a240 14
+		if (visible) {
+			EPackage contents = domainModelSource.getContents();
+			EClass diagramElement = domainModelSource.getDiagramElement();
+			viewer.setInput(contents == null ? null : structureBuilder.process(contents, diagramElement));
+			viewer.expandAll();
+			viewer.getControl().pack();
+			if (contents != null) {
+				// domain model is loaded ok
+				setPageComplete(validatePage());
+			} else {
+				// empty domain model
+				setPageComplete(true);
+			}
+			((Composite) getControl()).layout(true, true);
+d242 1
+@
+
+
+1.11
+log
+@#149161 GMFGraph/GMFTool Simple Model wizard, do not resize columns in model elements tree on rezising the dialog.
+@
+text
+@a13 3
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+a27 1
+import org.eclipse.swt.custom.StackLayout;
+a34 1
+import org.eclipse.swt.widgets.Text;
+a46 6
+	private final DiagramElementSelector diagramElementSelector;
+
+	private Composite innerPlate;
+
+	private StackLayout innerPlateLayout;
+
+a52 2
+	private Text errorDetails;
+
+a56 1
+		diagramElementSelector = new DiagramElementSelector();
+a77 5
+		innerPlate = new Composite(parent, SWT.NONE);
+		innerPlate.setLayoutData(createFillBothGridData(1));
+		innerPlate.setLayout(innerPlateLayout = new StackLayout());
+		innerPlateLayout.topControl = createDomainModelGroup(innerPlate);
+		createErrorGroup(innerPlate);
+d79 1
+a79 1
+		setControl(innerPlate);
+a86 12
+		if (diagramElementSelector != null) {
+			diagramElementSelector.createControl(plate);
+			diagramElementSelector.control.addSelectionListener(new SelectionListener() {
+
+				public void widgetSelected(SelectionEvent e) {
+					updateDiagramElement();
+				}
+
+				public void widgetDefaultSelected(SelectionEvent e) {
+				}
+			});
+		}
+a107 13
+	private Composite createErrorGroup(Composite parent) {
+		Composite plate = new Composite(parent, SWT.NONE);
+		GridLayout layout = new GridLayout();
+		layout.verticalSpacing = 12;
+		plate.setLayout(layout);
+		Label errorDescription = new Label(plate, SWT.NONE);
+		errorDescription.setText("Error loading domain model:");
+		errorDescription.setLayoutData(createFillHorzGridData(1));
+		errorDetails = new Text(plate, SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
+		errorDetails.setLayoutData(createFillBothGridData(1));
+		return plate;
+	}
+
+d144 2
+a145 1
+				viewer.setInput(contents == null ? null : structureBuilder.process(contents, null));
+a146 3
+				if (diagramElementSelector != null) {
+					diagramElementSelector.setDomainModel(getModel());
+				}
+a151 1
+				showDomainModelControls();
+d221 1
+a221 1
+		if (visible && domainModelSource.update()) {
+d223 2
+a224 1
+			viewer.setInput(contents == null ? null : structureBuilder.process(contents, null));
+a228 3
+				if (diagramElementSelector != null) {
+					diagramElementSelector.setDomainModel(getModel());
+				}
+a229 1
+				showDomainModelControls();
+d231 2
+a232 22
+				if (domainModelSource.getErrorStatus() == null) {
+					// empty domain model
+					if (diagramElementSelector != null) {
+						diagramElementSelector.setDomainModel(null);
+					}
+					setPageComplete(true);
+					showDomainModelControls();
+				} else {
+					// error loading domain model
+					setPageComplete(false);
+					try {
+						ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						PrintStream ps = new PrintStream(baos);
+						domainModelSource.getErrorStatus().getException().printStackTrace(ps);
+						ps.flush();
+						baos.flush();
+						errorDetails.setText(baos.toString());
+					} catch (IOException e) {
+						// never happens
+					}
+					showErrorDetailsControls();
+				}
+d234 1
+a234 1
+			innerPlate.layout(true, true);
+a237 21
+	private void updateDiagramElement() {
+		ResolvedItem item = getDiagramElement();
+		if (item == null) {
+			return;
+		}
+		EPackage contents = domainModelSource.getContents();
+		viewer.setInput(contents == null ? null : structureBuilder.process(contents, (EClass) item.getDomainRef()));
+		viewer.expandAll();
+		if (diagramElementSelector != null) {
+			diagramElementSelector.setDomainModel(getModel());
+		}
+	}
+
+	protected void showDomainModelControls() {
+		innerPlateLayout.topControl = innerPlate.getChildren()[0];
+	}
+
+	protected void showErrorDetailsControls() {
+		innerPlateLayout.topControl = innerPlate.getChildren()[1];
+	}
+
+a240 4
+
+	public ResolvedItem getDiagramElement() {
+		return diagramElementSelector == null ? null : diagramElementSelector.getDiagramElement();
+	}
+@
+
+
+1.10
+log
+@remove 'trace' code
+@
+text
+@d205 1
+a205 1
+		Tree tree = new Tree(parent, SWT.SINGLE | SWT.H_SCROLL | SWT.V_SCROLL | SWT.BORDER | SWT.FULL_SELECTION);
+d208 2
+d212 13
+d226 2
+a227 1
+				int width = elementColumn.getWidth() - 8; // shrink resizable column by right scroller width
+d232 1
+@
+
+
+1.9
+log
+@#148810 There is no need to show labels in wizard that creates tooling definition
+@
+text
+@a33 1
+import org.eclipse.swt.graphics.Color;
+a37 1
+import org.eclipse.swt.widgets.Display;
+a92 1
+		innerPlate.setBackground(new Color(Display.getDefault(), 0,0,255));
+@
+
+
+1.8
+log
+@#129322 Allow to select domain model element on definition page that will be used as diagram canvas element
+@
+text
+@d50 1
+a50 1
+	private StructureBuilder structureBuilder;
+d52 1
+a52 1
+	private DomainModelSource domainModelSource;
+d54 1
+a54 1
+	private DiagramElementSelector diagramElementSelector;
+d232 3
+a234 1
+		addResolutionColumn(tree, Resolution.LABEL, Plugin.LABEL_ICON);
+d236 1
+a236 1
+		return viewer = DomainModelViewerFactory.createViewer(tree);
+@
+
+
+1.7
+log
+@refactor diagram element selector
+@
+text
+@d19 1
+d34 1
+d39 1
+d72 1
+a72 1
+		//diagramElementSelector = new DiagramElementSelector();
+d95 1
+d111 9
+d292 13
+@
+
+
+1.6
+log
+@refactor def page
+@
+text
+@a16 2
+import java.util.Collection;
+import java.util.Comparator;
+a17 2
+import java.util.Set;
+import java.util.TreeSet;
+a18 1
+import org.eclipse.emf.ecore.EClass;
+a19 1
+import org.eclipse.gmf.internal.bridge.resolver.NodePattern;
+a22 1
+import org.eclipse.gmf.internal.bridge.resolver.TypeLinkPattern;
+a35 1
+import org.eclipse.swt.widgets.Combo;
+d51 1
+a51 1
+	private boolean allowDiagramElementSelection;
+a56 6
+	private Combo diagramElementSelector;
+
+	private Button excludeContainedNodesChoice;
+
+	private Button excludeLinksChoice;
+
+d65 1
+a65 1
+	public DefinitionPage(String pageId, StructureBuilder structureBuilder, DomainModelSource domainModelSource, boolean allowDiagramElementSelection) {
+d69 1
+a69 1
+		this.allowDiagramElementSelection = allowDiagramElementSelection;
+d105 2
+a106 17
+		if (allowDiagramElementSelection) {
+			Label diagramElementLabel = new Label(plate, SWT.NONE);
+			diagramElementLabel.setText("Diagram element:");
+			diagramElementLabel.setLayoutData(new GridData());
+			diagramElementSelector = new Combo(plate, SWT.DROP_DOWN);
+			diagramElementSelector.setLayoutData(createFillHorzGridData(1));
+			diagramElementSelector.addSelectionListener(new SelectionListener() {
+
+				public void widgetSelected(SelectionEvent e) {
+					// TODO : validate selection
+				}
+
+				public void widgetDefaultSelected(SelectionEvent e) {
+				}
+			});
+			excludeContainedNodesChoice = createChoice(plate, "Exclude types that are resolved as nodes and have container");
+			excludeLinksChoice = createChoice(plate, "Exclude types that are resolved as links");
+a128 18
+	private Button createChoice(Composite plate, String text) {
+		Label dummy = new Label(plate, SWT.NONE);
+		dummy.setLayoutData(new GridData());
+		Button choice = new Button(plate, SWT.CHECK);
+		choice.setText(text);
+		choice.setLayoutData(createFillHorzGridData(1));
+		choice.addSelectionListener(new SelectionListener() {
+
+			public void widgetSelected(SelectionEvent e) {
+				updateDiagramElementSelector();
+			}
+
+			public void widgetDefaultSelected(SelectionEvent e) {
+			}
+		});
+		return choice;
+	}
+
+d178 1
+a178 1
+				viewer.setInput(contents == null ? null : structureBuilder.process(contents));
+d180 3
+a182 1
+				updateDiagramElementSelector();
+d241 1
+a241 1
+			viewer.setInput(contents == null ? null : structureBuilder.process(contents));
+d246 3
+a248 1
+				updateDiagramElementSelector();
+d254 3
+a256 1
+					updateDiagramElementSelector();
+d292 1
+a292 67
+		if (!allowDiagramElementSelection) {
+			return null;
+		}
+		return findResolvedItemByTypeName(getModel(), diagramElementSelector.getText());
+	}
+
+	private ResolvedItem findResolvedItemByTypeName(ResolvedItem item, String typeName) {
+		if (item.getDomainRef() instanceof EClass && ((EClass) item.getDomainRef()).getName().equals(typeName)) {
+			return item;
+		}
+		for (Iterator it = item.getChildren().iterator(); it.hasNext();) {
+			ResolvedItem result = findResolvedItemByTypeName((ResolvedItem) it.next(), typeName);
+			if (result != null) {
+				return result;
+			}
+		}
+		return null;
+	}
+
+	private void updateDiagramElementSelector() {
+		if (!allowDiagramElementSelection) {
+			return;
+		}
+		Set types = new TreeSet(new Comparator() {
+
+			public int compare(Object arg0, Object arg1) {
+				EClass type0 = (EClass) ((ResolvedItem) arg0).getDomainRef();
+				EClass type1 = (EClass) ((ResolvedItem) arg1).getDomainRef();
+				return type0.getName().compareToIgnoreCase(type1.getName());
+			}
+		});
+		if (viewer.getInput() != null) {
+			collectResolvedDomainTypes(types, (ResolvedItem) viewer.getInput());
+		}
+		String contents = diagramElementSelector.getText();
+		diagramElementSelector.removeAll();
+		for (Iterator it = types.iterator(); it.hasNext();) {
+			EClass type = (EClass) ((ResolvedItem) it.next()).getDomainRef();
+			diagramElementSelector.add(type.getName());
+			if (contents.equals(type.getName())) {
+				diagramElementSelector.setText(contents);
+			}
+		}
+		if (diagramElementSelector.getText().length() == 0 && diagramElementSelector.getItemCount() > 0) {
+			diagramElementSelector.setText(diagramElementSelector.getItem(0));
+		}
+		if (!contents.equals(diagramElementSelector.getText())) {
+			// TODO : update resolution tree
+		}
+	}
+
+	private void collectResolvedDomainTypes(Collection types, ResolvedItem item) {
+		if (item.getDomainRef() instanceof EClass) {
+			boolean ignore = false;
+			if (excludeContainedNodesChoice.getSelection()) {
+				ignore |= item.getPattern() instanceof NodePattern;
+			}
+			if (excludeLinksChoice.getSelection()) {
+				ignore |= item.getPattern() instanceof TypeLinkPattern;
+			}
+			if (!ignore) {
+				types.add(item);
+			}
+		}
+		for (Iterator it = item.getChildren().iterator(); it.hasNext();) {
+			collectResolvedDomainTypes(types, (ResolvedItem) it.next());
+		}
+@
+
+
+1.5
+log
+@rearrange buttons
+@
+text
+@a19 1
+import java.util.List;
+a22 1
+import org.eclipse.emf.common.notify.AdapterFactory;
+a24 2
+import org.eclipse.emf.ecore.provider.EcoreItemProviderAdapterFactory;
+import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider;
+a30 2
+import org.eclipse.jface.viewers.CellEditor;
+import org.eclipse.jface.viewers.CheckboxCellEditor;
+a32 5
+import org.eclipse.jface.viewers.ICellModifier;
+import org.eclipse.jface.viewers.ILabelProvider;
+import org.eclipse.jface.viewers.ITableLabelProvider;
+import org.eclipse.jface.viewers.ITreeContentProvider;
+import org.eclipse.jface.viewers.LabelProvider;
+a34 1
+import org.eclipse.jface.viewers.Viewer;
+a39 1
+import org.eclipse.swt.graphics.Image;
+a48 1
+import org.eclipse.swt.widgets.TreeItem;
+d134 1
+a134 1
+			excludeContainedNodesChoice = createChoice(plate, "Exclude types that are resolved as nodes that have a container");
+d266 1
+a266 30
+		final TreeViewer viewer = new TreeViewer(tree);
+		viewer.setContentProvider(new ResolverContentProvider());
+		AdapterFactory adapterFactory = new EcoreItemProviderAdapterFactory();
+		viewer.setLabelProvider(new ResolverLabelProvider(new AdapterFactoryLabelProvider(adapterFactory)));
+
+		viewer.setColumnProperties(new String[] { "no", Resolution.NODE.getName(), Resolution.LINK.getName(), Resolution.LABEL.getName() });
+		viewer.setCellEditors(new CellEditor[] { null, new CheckboxCellEditor(), new CheckboxCellEditor(), new CheckboxCellEditor() });
+		viewer.setCellModifier(new ICellModifier() {
+
+			public Object getValue(Object element, String property) {
+				ResolvedItem item = (ResolvedItem) element;
+				return Boolean.valueOf(item.getResolution() == Resolution.getByName(property));
+			}
+
+			public boolean canModify(Object element, String property) {
+				return true;
+			}
+
+			public void modify(Object element, String property, Object value) {
+				ResolvedItem item = (ResolvedItem) ((TreeItem) element).getData();
+				Resolution resolution = Resolution.getByName(property);
+				if (!item.isPossibleResolution(resolution)) {
+					return;
+				}
+				item.setResolution(((Boolean) value).booleanValue() ? resolution : null);
+				viewer.update(item, new String[] { Resolution.NODE.getName(), Resolution.LINK.getName(), Resolution.LABEL.getName() });
+			}
+		});
+
+		return viewer;
+a400 72
+
+	protected static class ResolverContentProvider implements ITreeContentProvider {
+
+		public void dispose() {
+		}
+
+		public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+		}
+
+		public Object getParent(Object element) {
+			return ((ResolvedItem) element).getParent();
+		}
+
+		public Object[] getChildren(Object parentElement) {
+			List children = ((ResolvedItem) parentElement).getChildren();
+			return children.toArray();
+		}
+
+		public boolean hasChildren(Object element) {
+			List children = ((ResolvedItem) element).getChildren();
+			return !children.isEmpty();
+		}
+
+		public Object[] getElements(Object inputElement) {
+			return getChildren(inputElement);
+		}
+	}
+
+	protected static class ResolverLabelProvider extends LabelProvider implements ITableLabelProvider {
+
+		private ILabelProvider domainLabelProvider;
+
+		public ResolverLabelProvider(ILabelProvider domainLabelProvider) {
+			this.domainLabelProvider = domainLabelProvider;
+		}
+
+		public String getColumnText(Object element, int columnIndex) {
+			if (columnIndex == 0) {
+				Object domainRef = ((ResolvedItem) element).getDomainRef();
+				return domainLabelProvider.getText(domainRef);
+			} else {
+				return null;
+			}
+		}
+
+		public Image getColumnImage(Object element, int columnIndex) {
+			if (columnIndex == 0) {
+				Object domainRef = ((ResolvedItem) element).getDomainRef();
+				return domainLabelProvider.getImage(domainRef);
+			}
+			ResolvedItem item = (ResolvedItem) element;
+			Image checkedIcon = Plugin.getDefault().getImageRegistry().get(Plugin.CHECKED_ICON);
+			Image uncheckedIcon = Plugin.getDefault().getImageRegistry().get(Plugin.UNCHECKED_ICON);
+			if (columnIndex == 1) {
+				if (!item.isPossibleResolution(Resolution.NODE)) {
+					return null;
+				}
+				return Resolution.NODE == item.getResolution() ? checkedIcon : uncheckedIcon;
+			} else if (columnIndex == 2) {
+				if (!item.isPossibleResolution(Resolution.LINK)) {
+					return null;
+				}
+				return Resolution.LINK == item.getResolution() ? checkedIcon : uncheckedIcon;
+			} else if (columnIndex == 3) {
+				if (!item.isPossibleResolution(Resolution.LABEL)) {
+					return null;
+				}
+				return Resolution.LABEL == item.getResolution() ? checkedIcon : uncheckedIcon;
+			}
+			return null;
+		}
+	}
+@
+
+
+1.4
+log
+@tweak tree layout; by default the right column is partially closed by scroller
+@
+text
+@d122 1
+a122 1
+		innerPlateLayout.topControl = createDomainModelGroupEx(innerPlate);
+a127 56
+	private Composite createDomainModelGroupEx(Composite parent) {
+		Composite plate = new Composite(parent, SWT.NONE);
+		plate.setLayout(new GridLayout(2, false));
+		Composite domainModelPlate = createDomainModelGroup(plate);
+		domainModelPlate.setLayoutData(createFillBothGridData(1));
+		Composite buttonsPlate = new Composite(plate, SWT.NONE);
+		GridLayout layout = new GridLayout(1, false);
+		layout.verticalSpacing = 12;
+		buttonsPlate.setLayout(layout);
+		GridData layoutData = new GridData(GridData.FILL_VERTICAL);
+		buttonsPlate.setLayoutData(layoutData);
+		deselectAllButton = new Button(buttonsPlate, SWT.PUSH);
+		deselectAllButton.setLayoutData(createFillHorzGridData(1));
+		deselectAllButton.setText("Deselect All");
+		deselectAllButton.addSelectionListener(new SelectionListener() {
+
+			public void widgetDefaultSelected(SelectionEvent e) {
+			}
+
+			public void widgetSelected(SelectionEvent e) {
+				deselectChildren(getModel());
+				viewer.refresh(true);
+			}
+
+			private void deselectChildren(ResolvedItem item) {
+				for (Iterator it = item.getChildren().iterator(); it.hasNext();) {
+					ResolvedItem child = (ResolvedItem) it.next();
+					child.setResolution(null);
+					deselectChildren(child);
+				}
+			}
+		});
+		recognizeButton = new Button(buttonsPlate, SWT.PUSH);
+		recognizeButton.setLayoutData(createFillHorzGridData(1));
+		recognizeButton.setText("Restore Defaults");
+		recognizeButton.addSelectionListener(new SelectionListener() {
+
+			public void widgetDefaultSelected(SelectionEvent e) {
+			}
+
+			public void widgetSelected(SelectionEvent e) {
+				EPackage contents = domainModelSource.getContents();
+				viewer.setInput(contents == null ? null : structureBuilder.process(contents));
+				viewer.expandAll();
+				updateDiagramElementSelector();
+				if (contents != null) {
+					setPageComplete(validatePage());
+				} else {
+					setPageComplete(true);
+				}
+				showDomainModelControls();
+			}
+		});
+		return plate;
+	}
+
+d154 11
+d166 3
+a168 1
+		viewer.getControl().setLayoutData(createFillBothGridData(2));
+d203 50
+@
+
+
+1.3
+log
+@#145477 Empty gmfgraph model is created when user skips definition page
+@
+text
+@d137 2
+d248 12
+a259 1
+		TableLayout layout = new TableLayout();
+@
+
+
+1.2
+log
+@#130749 Add 'Select All', 'Deselect All' and 'Restore Default' actions to the definition page
+@
+text
+@d124 1
+a124 1
+		setPageComplete(validatePage());
+@
+
+
+1.1
+log
+@#129892 Move graphdef and tooldef wizards from codegen.ui to bridge.ui plugin
+@
+text
+@d87 4
+d122 1
+a122 1
+		innerPlateLayout.topControl = createDomainModelGroup(innerPlate);
+d128 54
+d313 1
+d319 1
+d324 1
+@
+

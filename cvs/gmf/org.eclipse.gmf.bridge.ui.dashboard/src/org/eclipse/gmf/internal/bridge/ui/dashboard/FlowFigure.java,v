@@ -1,0 +1,242 @@
+head	1.2;
+access;
+symbols
+	v20080722-1827:1.2
+	R2_1_maintenance:1.2.0.6
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080417-1610:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.4
+	R2_0:1.2
+	R4_20:1.2
+	v20070621-0000:1.2
+	RC3_20:1.2
+	v20070601-1400:1.2
+	v20070413-1300:1.2
+	v20070405-2000:1.2
+	v20070330-1300:1.2
+	v20060316-0600:1.2
+	v20070228-2000:1.2
+	v20070208-1800:1.2
+	M4_20:1.2
+	v20061222-1800:1.2
+	v20061214-0000:1.2
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061013-1330:1.2
+	v20060925-1700:1.2
+	v20060919-0800:1.2
+	M1_20:1.2
+	v20060713-1700:1.2
+	R1_0_maintenance:1.2.0.2
+	R1_0:1.2
+	v20060627-1200:1.2
+	v20060616-1200:1.2
+	v20060531-1730:1.2
+	v20060519-0800:1.2
+	I20060424-0500:1.2
+	I20060424-0300:1.2
+	M6_10:1.2
+	I20060407-1200:1.2
+	I20060331-1000:1.1
+	I20060324-0300:1.1
+	I20060317-1300:1.1
+	I20060317-1200:1.1
+	I20060316-1300:1.1
+	I20060309-1300:1.1
+	M5_10:1.1
+	S20060303-1600:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2006.04.05.12.33.42;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.03.01.14.19.17;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@#124852 add domain genmodel
+@
+text
+@/*
+ * Copyright (c) 2006 Eclipse.org
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Dmitry Stadnik - initial API and implementation
+ */
+package org.eclipse.gmf.internal.bridge.ui.dashboard;
+
+import org.eclipse.draw2d.ArrowLocator;
+import org.eclipse.draw2d.Connection;
+import org.eclipse.draw2d.ConnectionAnchor;
+import org.eclipse.draw2d.ConnectionLocator;
+import org.eclipse.draw2d.ConnectionRouter;
+import org.eclipse.draw2d.DelegatingLayout;
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.Polyline;
+import org.eclipse.draw2d.RotatableDecoration;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.draw2d.geometry.PointList;
+import org.eclipse.draw2d.geometry.Rectangle;
+
+/**
+ * @@author dstadnik
+ */
+public class FlowFigure extends Polyline implements Connection {
+
+	private RotatableDecoration startArrow, endArrow;
+
+	public FlowFigure() {
+		setLayoutManager(new DelegatingLayout());
+		addPoint(new Point(0, 0));
+		addPoint(new Point(100, 100));
+	}
+
+	/**
+	 * Returns the bounds which holds all the points in this polyline connection. Returns any previously existing bounds, else calculates by unioning all the children's dimensions.
+	 * 
+	 * @@return the bounds
+	 */
+	public Rectangle getBounds() {
+		if (bounds == null) {
+			super.getBounds();
+			for (int i = 0; i < getChildren().size(); i++) {
+				IFigure child = (IFigure) getChildren().get(i);
+				bounds.union(child.getBounds());
+			}
+		}
+		return bounds;
+	}
+
+	/**
+	 * @@return the source decoration (may be null)
+	 */
+	protected RotatableDecoration getSourceDecoration() {
+		return startArrow;
+	}
+
+	/**
+	 * @@return the target decoration (may be null)
+	 */
+	protected RotatableDecoration getTargetDecoration() {
+		return endArrow;
+	}
+
+	public void setPoints(PointList points) {
+		super.setPoints(points);
+		layout(); // update arrows
+	}
+
+	public void layout() {
+		Rectangle oldBounds = bounds;
+		super.layout();
+		bounds = null;
+		if (!getBounds().contains(oldBounds)) {
+			getParent().translateToParent(oldBounds);
+			getUpdateManager().addDirtyRegion(getParent(), oldBounds);
+		}
+		repaint();
+		fireFigureMoved();
+	}
+
+	/**
+	 * Sets the decoration to be used at the start of the {@@link Connection}.
+	 * 
+	 * @@param dec
+	 *            the new source decoration
+	 */
+	public void setSourceDecoration(RotatableDecoration dec) {
+		if (startArrow == dec) {
+			return;
+		}
+		if (startArrow != null) {
+			remove(startArrow);
+		}
+		startArrow = dec;
+		if (startArrow != null) {
+			add(startArrow, new ArrowLocator(this, ConnectionLocator.SOURCE));
+		}
+	}
+
+	/**
+	 * Sets the decoration to be used at the end of the {@@link Connection}.
+	 * 
+	 * @@param dec
+	 *            the new target decoration
+	 */
+	public void setTargetDecoration(RotatableDecoration dec) {
+		if (endArrow == dec) {
+			return;
+		}
+		if (endArrow != null) {
+			remove(endArrow);
+		}
+		endArrow = dec;
+		if (endArrow != null) {
+			add(endArrow, new ArrowLocator(this, ConnectionLocator.TARGET));
+		}
+	}
+
+	// fake connection methods
+
+	public ConnectionRouter getConnectionRouter() {
+		return null;
+	}
+
+	public void setConnectionRouter(ConnectionRouter router) {
+	}
+
+	public Object getRoutingConstraint() {
+		return null;
+	}
+
+	public void setRoutingConstraint(Object cons) {
+	}
+
+	public ConnectionAnchor getSourceAnchor() {
+		return null;
+	}
+
+	public void setSourceAnchor(ConnectionAnchor anchor) {
+	}
+
+	public ConnectionAnchor getTargetAnchor() {
+		return null;
+	}
+
+	public void setTargetAnchor(ConnectionAnchor anchor) {
+	}
+}
+@
+
+
+1.1
+log
+@#129930 moved from oeg.codegen.ui
+@
+text
+@d24 1
+d70 5
+@
+

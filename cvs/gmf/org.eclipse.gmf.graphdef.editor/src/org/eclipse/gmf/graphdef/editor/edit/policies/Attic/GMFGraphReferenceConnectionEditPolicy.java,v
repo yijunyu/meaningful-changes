@@ -1,0 +1,281 @@
+head	1.6;
+access;
+symbols
+	v20070208-1800:1.5
+	M4_20:1.5
+	v20061214-0000:1.5
+	M3_20:1.5
+	v20061013-1330:1.5
+	M1_20:1.5
+	v20060713-1700:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	v20060627-1200:1.5
+	v20060616-1200:1.5
+	v20060609-1400:1.4
+	v20060531-1730:1.3
+	I20060424-0300:1.1
+	M6_10:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.6
+date	2007.02.09.20.08.28;	author atikhomirov;	state dead;
+branches;
+next	1.5;
+commitid	179c45ccd4b34567;
+
+1.5
+date	2006.06.14.18.40.09;	author ahunter;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.06.02.15.08.29;	author ashatalin;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.05.31.19.52.51;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.04.20.16.36.28;	author ashatalin;	state dead;
+branches;
+next	1.1;
+
+1.1
+date	2006.04.14.12.58.23;	author ashatalin;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@[173496] akarjakina - updated gmfgraph.editor bootstrap sample with recent GMF changes
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Borland Software Corporation - initial API and implementation
+ */
+package org.eclipse.gmf.graphdef.editor.edit.policies;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.gef.EditPart;
+import org.eclipse.gef.Request;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CompoundCommand;
+import org.eclipse.gef.commands.UnexecutableCommand;
+import org.eclipse.gef.editparts.AbstractConnectionEditPart;
+import org.eclipse.gef.editpolicies.ConnectionEditPolicy;
+import org.eclipse.gef.requests.GroupRequest;
+import org.eclipse.gmf.runtime.diagram.core.commands.DeleteCommand;
+import org.eclipse.gmf.runtime.diagram.ui.commands.ICommandProxy;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.GraphicalEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+import org.eclipse.gmf.runtime.diagram.ui.preferences.IPreferenceConstants;
+import org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper;
+import org.eclipse.gmf.runtime.diagram.ui.requests.GroupRequestViaKeyboard;
+import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest;
+import org.eclipse.gmf.runtime.notation.View;
+import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.util.Assert;
+import org.eclipse.swt.widgets.Display;
+
+/**
+ * @@generated
+ */
+public class GMFGraphReferenceConnectionEditPolicy extends ConnectionEditPolicy {
+
+	/**
+	 * @@generated
+	 */
+	private static final String DELETE_FROM_DIAGRAM_DLG_TITLE = DiagramUIMessages.PromptingDeleteAction_DeleteFromDiagramDialog_Title;
+
+	/**
+	 * @@generated
+	 */
+	private static final String DELETE_FROM_DIAGRAM_DLG_MESSAGE = DiagramUIMessages.PromptingDeleteAction_DeleteFromDiagramDialog_Message;
+
+	/**
+	 * @@generated
+	 */
+	private static final String DELETE_FROM_MODEL_DLG_TOGGLE_LABEL = DiagramUIMessages.MessageDialogWithToggle_DoNotPromptAgainToggle_label;
+
+	/**
+	 * @@generated
+	 */
+	protected final Command getDeleteCommand(GroupRequest deleteRequest) {
+		boolean isDeleteFromKeyBoard = deleteRequest instanceof GroupRequestViaKeyboard;
+		if (shouldDeleteSemantic()) {
+			return createDeleteSemanticCommand(deleteRequest);
+		} else {
+			boolean proceedToDeleteView = true;
+			if (isDeleteFromKeyBoard) {
+				GroupRequestViaKeyboard groupRequestViaKeyboard = (GroupRequestViaKeyboard) deleteRequest;
+				if (groupRequestViaKeyboard.isShowInformationDialog()) {
+					proceedToDeleteView = showPrompt();
+					groupRequestViaKeyboard.setShowInformationDialog(false);
+					if (!(proceedToDeleteView))
+						return UnexecutableCommand.INSTANCE;
+				}
+			}
+			return createDeleteViewCommand(deleteRequest);
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected boolean shouldDeleteSemantic() {
+		Assert.isTrue(getHost() instanceof AbstractConnectionEditPart);
+		AbstractConnectionEditPart cep = (AbstractConnectionEditPart) getHost();
+		boolean isCanonical = false;
+		if (cep.getSource() != null)
+			isCanonical = IsCanonical(cep.getSource());
+		if (cep.getTarget() != null)
+			return isCanonical ? isCanonical : IsCanonical(cep.getTarget());
+		return isCanonical;
+	}
+
+	/**
+	 * @@generated
+	 */
+	private boolean IsCanonical(EditPart ep) {
+		EditPart parent = ep.getParent();
+		return parent instanceof GraphicalEditPart ? ((GraphicalEditPart) parent).isCanonical() : false;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected Command createDeleteViewCommand(GroupRequest deleteRequest) {
+		TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost()).getEditingDomain();
+		return new ICommandProxy(new DeleteCommand(editingDomain, (View) getHost().getModel()));
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected Command createDeleteSemanticCommand(GroupRequest deleteRequest) {
+		TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost()).getEditingDomain();
+		EditCommandRequestWrapper semReq = new EditCommandRequestWrapper(new DestroyElementRequest(editingDomain, false), deleteRequest.getExtendedData());
+		Command semanticCmd = getHost().getCommand(semReq);
+		if (semanticCmd != null && semanticCmd.canExecute()) {
+			CompoundCommand cc = new CompoundCommand();
+			cc.add(semanticCmd);
+			return cc;
+		}
+		return null;
+	}
+
+	/**
+	 * @@generated
+	 */
+	private boolean showPrompt() {
+		boolean prompt = ((IPreferenceStore) ((IGraphicalEditPart) getHost()).getDiagramPreferencesHint().getPreferenceStore()).getBoolean(IPreferenceConstants.PREF_PROMPT_ON_DEL_FROM_DIAGRAM);
+		if (prompt)
+			if (showMessageDialog())
+				return true;
+			else
+				return false;
+		return true;
+	}
+
+	/**
+	 * @@generated
+	 */
+	private boolean showMessageDialog() {
+		MessageDialogWithToggle dialog = MessageDialogWithToggle.openYesNoQuestion(Display.getCurrent().getActiveShell(), DELETE_FROM_DIAGRAM_DLG_TITLE, DELETE_FROM_DIAGRAM_DLG_MESSAGE,
+				DELETE_FROM_MODEL_DLG_TOGGLE_LABEL, false, (IPreferenceStore) ((IGraphicalEditPart) getHost()).getDiagramPreferencesHint().getPreferenceStore(),
+				IPreferenceConstants.PREF_PROMPT_ON_DEL_FROM_DIAGRAM);
+		if (dialog.getReturnCode() == IDialogConstants.YES_ID)
+			return true;
+		else
+			return false;
+	}
+
+	/**
+	 * @@generated
+	 */
+	public Command getCommand(Request request) {
+		if (request instanceof GroupRequestViaKeyboard) {
+			return getDeleteCommand((GroupRequest) request);
+		}
+		return super.getCommand(request);
+	}
+}
+@
+
+
+1.5
+log
+@[139856] gmf_head anthonyh 060614 EtoolsProxyCommand should be renamed to ICommandProxy
+@
+text
+@@
+
+
+1.4
+log
+@#139594 Create diagrams for non-root element of domain model.
+@
+text
+@d23 1
+a23 1
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+d107 1
+a107 1
+		return new EtoolsProxyCommand(new DeleteCommand(editingDomain, (View) getHost().getModel()));
+@
+
+
+1.3
+log
+@#144251 Example ecore diagram editor creates invalid ecore file
+
+Should be possible to remove reference-only links.
+@
+text
+@d1 1
+a1 1
+/**
+@
+
+
+1.2
+log
+@Updating with latest changes in templates + palette.
+@
+text
+@d1 10
+d115 1
+a115 1
+		EditCommandRequestWrapper semReq = new EditCommandRequestWrapper(new DestroyElementRequest(editingDomain, false));
+@
+
+
+1.1
+log
+@.gmfgen model updated with new plugin name.
+@
+text
+@@
+

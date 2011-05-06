@@ -1,0 +1,506 @@
+head	1.4;
+access;
+symbols
+	v20080924-1925:1.4
+	v20080917-1925:1.4
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	I20060227-1730:1.2
+	I20060216-1945:1.2
+	I20060210-1715:1.2
+	I20060209-1815:1.2
+	I20060203-0830:1.2
+	I20060129-1145:1.2
+	I20060127-0900:1.2
+	I20060120-1530:1.2
+	I20060113-1700:1.2
+	M4_10:1.2
+	I20060107-1100:1.2
+	I20060105-1630:1.2
+	I20051230-1230:1.2
+	I20051223-1100:1.2
+	M3_10:1.2
+	I20051118-1245:1.2
+	I20051111-1800:1.2
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2006.03.01.22.49.06;	author cmahoney;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2006.02.28.02.31.07;	author cmahoney;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.27.24;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.18.19.30;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@Bugzilla#129803 gmf_head cmahoney 060301 Deleting node leaves connection connected to space
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2004, 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.notation.providers.internal.semproc;
+
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.InternalEObject;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.emf.transaction.util.TransactionUtil;
+import org.eclipse.gmf.runtime.emf.core.internal.util.EMFCoreConstants;
+import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+import org.eclipse.gmf.runtime.emf.core.util.PackageUtil;
+import org.eclipse.gmf.runtime.notation.Diagram;
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+import org.eclipse.gmf.runtime.notation.View;
+
+/**
+ * The following class implements the UML semantic procedures.
+ * 
+ * @@author rafikj
+ */
+public class NotationSemProc {
+
+	private static NotationPackage notation = NotationPackage.eINSTANCE;
+
+	private static Set autoNamedElements = new HashSet();
+
+	private static Set nonAutoNamedElements = new HashSet();
+
+	static {
+
+		autoNamedElements.add(notation.getDiagram());
+	}
+
+	/**
+	 * Handle sem-proc event.
+	 */
+	public static void handleEvent(Notification event) {
+
+		int eventType = event.getEventType();
+
+		Object notifier = event.getNotifier();
+
+		Object feature = event.getFeature();
+
+		Object newValue = event.getNewValue();
+
+		if (notifier instanceof EObject) {
+
+			EObject eObject = (EObject) notifier;
+
+			if ((feature instanceof EReference)
+				&& (((EReference) feature).isContainment())) {
+
+				if ((eventType == Notification.ADD)
+					&& (newValue instanceof EObject)) {
+
+					autoName(eObject, (EReference) feature, (EObject) newValue);
+
+				} else if ((eventType == Notification.ADD_MANY)
+					&& (newValue instanceof Collection)) {
+
+					autoName(eObject, (EReference) feature,
+						(Collection) newValue);
+
+				} else if (((eventType == Notification.SET) || (eventType == Notification.UNSET))) {
+
+					if (newValue instanceof EObject) {
+
+						autoName(eObject, (EReference) feature,
+							(EObject) newValue);
+
+					}
+
+				}
+			}
+
+			if ((eventType == Notification.REMOVE || eventType == Notification.REMOVE_MANY)
+				&& eObject.eContainer() == null) {
+				preProcessDestroy(eObject);
+			}
+		}
+	}
+
+	/**
+	 * Can I auto-name object?
+	 */
+	private static boolean canAutoName(EClass eClass) {
+
+		if (autoNamedElements.contains(eClass))
+			return true;
+
+		if (nonAutoNamedElements.contains(eClass))
+			return false;
+
+		Iterator i = eClass.getESuperTypes().iterator();
+
+		while (i.hasNext()) {
+
+			if (canAutoName((EClass) i.next()))
+				return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Auto-name objects.
+	 */
+	private static void autoName(EObject container, EReference reference,
+			Collection objects) {
+
+		for (Iterator i = objects.iterator(); i.hasNext();) {
+
+			Object object = i.next();
+
+			if (object instanceof EObject) {
+
+				EObject eObject = (EObject) object;
+
+				autoName(container, reference, eObject);
+			}
+		}
+	}
+
+	/**
+	 * Auto-name object.
+	 */
+	private static void autoName(EObject container, EReference reference,
+			EObject eObject) {
+
+		String name = null;
+
+		if (eObject instanceof Diagram)
+			name = ((Diagram) eObject).getName();
+
+		else
+			return;
+
+		if (((name == null) || (name.equals(EMFCoreConstants.EMPTY_STRING))
+			&& (canAutoName(eObject.eClass())))) {
+
+			name = PackageUtil.getLocalizedName(eObject.eClass());
+
+			if (reference.isMany()) {
+
+				Set set = new HashSet();
+
+				Iterator i = ((Collection) container.eGet(reference))
+					.iterator();
+
+				while (i.hasNext()) {
+
+					Object sibling = i.next();
+
+					if (sibling != null) {
+
+						String n = null;
+
+						if (sibling instanceof Diagram)
+							n = ((Diagram) sibling).getName();
+
+						if (n != null)
+							set.add(n);
+					}
+				}
+
+				for (int j = 1; j <= Integer.MAX_VALUE; j++) {
+
+					String n = name + j;
+
+					if (!set.contains(n)) {
+
+						name = n;
+						break;
+					}
+				}
+			}
+
+			if (eObject instanceof Diagram)
+				((Diagram) eObject).setName(name);
+		}
+	}
+
+	/**
+	 * Pre-process destroy.
+	 */
+	private static void preProcessDestroy(EObject eObject) {
+
+		Collection semanticReferencers = EMFCoreUtil.getReferencers(eObject,
+			new EReference[] {NotationPackage.eINSTANCE
+				.getView_Element()});
+
+		for (Iterator i = semanticReferencers.iterator(); i.hasNext();) {
+
+			EObject referencer = (EObject) i.next();
+
+			if (referencer != null) {
+				EMFCoreUtil.destroy(referencer);
+			}
+		}
+
+		if (eObject instanceof View) {
+
+			View view = (View) eObject;
+
+			Collection allEdges = new HashSet();
+
+			allEdges.addAll(view.getSourceEdges());
+			allEdges.addAll(view.getTargetEdges());
+			
+			TransactionalEditingDomain domain = TransactionUtil
+				.getEditingDomain(eObject);
+
+
+			for (Iterator i = allEdges.iterator(); i.hasNext();) {
+
+				EObject edge = EMFCoreUtil.resolve(domain, (InternalEObject) i.next());
+
+				if (edge != null)
+					EMFCoreUtil.destroy(edge);
+			}
+
+			Collection nodeEntryKeys = EMFCoreUtil
+				.getReferencers(eObject,
+					new EReference[] {NotationPackage.eINSTANCE
+						.getNodeEntry_Key()});
+
+			for (Iterator i = nodeEntryKeys.iterator(); i.hasNext();) {
+
+				EObject nodeEntry = (EObject) i.next();
+
+				if (nodeEntry != null)
+					EMFCoreUtil.destroy(nodeEntry);
+			}
+		}
+	}
+}@
+
+
+1.3
+log
+@Bugzilla#113850 gmf_head cmahoney 060227 Diagram plug-in adoption of EMF transaction API enhancements
+@
+text
+@@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2002, 2004 IBM Corporation and others.
+a19 1
+import org.eclipse.emf.ecore.EAttribute;
+d24 5
+a28 9
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.gmf.runtime.emf.core.EventTypes;
+import org.eclipse.gmf.runtime.emf.core.edit.MEditingDomain;
+import org.eclipse.gmf.runtime.emf.core.internal.domain.MSLEditingDomain;
+import org.eclipse.gmf.runtime.emf.core.internal.util.MSLConstants;
+import org.eclipse.gmf.runtime.emf.core.util.EObjectUtil;
+import org.eclipse.gmf.runtime.emf.core.util.MetaModelUtil;
+import org.eclipse.gmf.runtime.emf.core.util.ProxyUtil;
+a62 1
+		Object oldValue = event.getOldValue();
+a75 2
+					postProcessAdd(eObject, (EObject) newValue);
+
+a81 12
+					postProcessAdd(eObject, (Collection) newValue);
+
+				} else if ((eventType == Notification.REMOVE)
+					&& (oldValue instanceof EObject)) {
+
+					postProcessRemove(eObject, (EObject) oldValue);
+
+				} else if ((eventType == Notification.REMOVE_MANY)
+					&& (oldValue instanceof Collection)) {
+
+					postProcessRemove(eObject, (Collection) oldValue);
+
+a88 1
+						postProcessAdd(eObject, (EObject) newValue);
+a90 2
+					if (oldValue instanceof EObject)
+						postProcessRemove(eObject, (EObject) oldValue);
+a91 7
+
+			} else if (feature instanceof EAttribute) {
+
+				if ((eventType == Notification.SET)
+					|| (eventType == Notification.UNSET))
+					postProcessSet(eObject, (EAttribute) feature, newValue,
+						oldValue);
+d94 2
+a95 4
+			if (eventType == EventTypes.CREATE)
+				postProcessCreate(eObject);
+
+			else if (eventType == EventTypes.DESTROY)
+d97 1
+d156 1
+a156 1
+		if (((name == null) || (name.equals(MSLConstants.EMPTY_STRING))
+d159 1
+a159 1
+			name = MetaModelUtil.getLocalName(eObject.eClass());
+a201 66
+	 * Post-process add.
+	 */
+	private static void postProcessAdd(EObject newContainer, Collection objects) {
+
+		for (Iterator i = objects.iterator(); i.hasNext();) {
+
+			Object object = i.next();
+
+			if (object instanceof EObject) {
+
+				EObject eObject = (EObject) object;
+
+				postProcessAdd(newContainer, eObject);
+			}
+		}
+	}
+
+	/**
+	 * Post-process add.
+	 */
+	private static void postProcessAdd(EObject newContainer, EObject eObject) {
+		// do nothing.
+	}
+
+	/**
+	 * Post-process remove.
+	 */
+	private static void postProcessRemove(EObject oldContainer,
+			Collection objects) {
+
+		for (Iterator i = objects.iterator(); i.hasNext();) {
+
+			Object object = i.next();
+
+			if (object instanceof EObject) {
+
+				EObject eObject = (EObject) object;
+
+				postProcessRemove(oldContainer, eObject);
+			}
+		}
+	}
+
+	/**
+	 * Post-process remove.
+	 */
+	private static void postProcessRemove(EObject oldContainer, EObject eObject) {
+		// do nothing.
+	}
+
+	/**
+	 * Post-process an attribute set.
+	 */
+	private static void postProcessSet(EObject eObject, EAttribute attribute,
+			Object newValue, Object oldValue) {
+		// do nothing.
+	}
+
+	/**
+	 * Post-process create.
+	 */
+	private static void postProcessCreate(EObject eObject) {
+		// do nothing.
+	}
+
+	/**
+d206 1
+a206 1
+		Collection semanticReferencers = EObjectUtil.getReferencers(eObject,
+d215 1
+a215 1
+				EObjectUtil.destroy(referencer);
+d228 2
+a229 9
+			Resource resource = eObject.eResource();
+			MSLEditingDomain domain = null;
+
+			if (resource != null)
+				domain = (MSLEditingDomain) MEditingDomain
+					.getEditingDomain(resource);
+
+			if (domain == null)
+				domain = (MSLEditingDomain) MEditingDomain.INSTANCE;
+d234 1
+a234 1
+				EObject edge = ProxyUtil.resolve(domain, (InternalEObject) i.next());
+d237 1
+a237 1
+					EObjectUtil.destroy(edge);
+d240 1
+a240 1
+			Collection nodeEntryKeys = EObjectUtil
+d250 1
+a250 1
+					EObjectUtil.destroy(nodeEntry);
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2002, 2004.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

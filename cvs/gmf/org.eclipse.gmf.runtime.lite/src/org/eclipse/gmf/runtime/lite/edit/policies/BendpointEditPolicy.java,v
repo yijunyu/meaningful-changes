@@ -1,0 +1,350 @@
+head	1.6;
+access;
+symbols
+	v20080722-1827:1.6
+	R2_1_maintenance:1.6.0.4
+	Root_R2_1_maintenance:1.6
+	R2_1_0:1.6
+	v20080425-1959:1.6
+	v20071108-0000:1.6
+	v20071003-0000:1.6
+	v20070921-0000:1.6
+	v20070903-0000:1.6
+	v20070809-0000:1.6
+	R2_0_maintenance:1.6.0.2
+	R2_0:1.6
+	R4_20:1.6
+	v20070621-0000:1.6
+	RC3_20:1.6
+	v20070601-1400:1.6
+	v20070525-1500:1.6
+	v20070518-1300:1.6
+	v20070427-0600:1.6
+	v20070420-1000:1.6
+	v20070413-1300:1.6
+	v20070405-1100:1.6
+	v20070330-1300:1.6
+	v20060330-1300:1.6
+	v20070322-1100:1.6
+	v20060316-0600:1.5
+	v20070307-0700:1.4
+	v20070228-2000:1.4
+	v20070208-1800:1.4
+	M4_20:1.4
+	v20061222-1800:1.4
+	v20061218-1200:1.4
+	v20061214-0000:1.4
+	v20061120-1300:1.4
+	M3_20:1.4
+	v20061117-0800:1.4
+	v20061013-1330:1.2
+	M1_20:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.6
+date	2007.03.16.18.54.19;	author bblajer;	state Exp;
+branches;
+next	1.5;
+commitid	7fc945fae7db4567;
+
+1.5
+date	2007.03.15.16.43.32;	author bblajer;	state Exp;
+branches;
+next	1.4;
+commitid	61a145f977b34567;
+
+1.4
+date	2006.10.25.15.39.45;	author bblajer;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.10.25.13.21.10;	author bblajer;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.10.02.12.29.37;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.09.01.16.14.11;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@EObjects that are not attached to any resource should be treated as not read only
+@
+text
+@/**
+ * Copyright (c) 2006 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.edit.policies;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.draw2d.Connection;
+import org.eclipse.draw2d.geometry.Dimension;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.draw2d.geometry.PointList;
+import org.eclipse.emf.common.command.AbstractCommand;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.emf.transaction.util.TransactionUtil;
+import org.eclipse.gef.Request;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.requests.BendpointRequest;
+import org.eclipse.gmf.runtime.lite.commands.WrappingCommand;
+import org.eclipse.gmf.runtime.lite.requests.RequestConstants;
+import org.eclipse.gmf.runtime.lite.requests.SetAllBendpointsRequest;
+import org.eclipse.gmf.runtime.notation.Edge;
+import org.eclipse.gmf.runtime.notation.NotationFactory;
+import org.eclipse.gmf.runtime.notation.RelativeBendpoints;
+import org.eclipse.gmf.runtime.notation.datatype.RelativeBendpoint;
+
+
+public class BendpointEditPolicy extends org.eclipse.gef.editpolicies.BendpointEditPolicy {
+	protected Edge getDiagramEdge() {
+		return (Edge) getHost().getModel();
+	}
+
+	@@Override
+	public Command getCommand(Request request) {
+		if (RequestConstants.REQ_SET_ALL_BENDPOINTS.equals(request.getType())) {
+			return getSetAllBendpointsCommand((SetAllBendpointsRequest) request);
+		}
+		return super.getCommand(request);
+	}
+
+	protected Command getSetAllBendpointsCommand(SetAllBendpointsRequest request) {
+		return getModifyBendpointCommand(new BendpointSetter(request.getPoints()));
+	}
+
+	protected Command getCreateBendpointCommand(BendpointRequest request) {
+		return getModifyBendpointCommand(new BendpointCreator(request.getIndex(), request.getLocation()));
+	}
+
+	protected Command getDeleteBendpointCommand(BendpointRequest request) {
+		return getModifyBendpointCommand(new BendpointDeleter(request.getIndex()));
+	}
+
+	protected Command getMoveBendpointCommand(BendpointRequest request) {
+		return getModifyBendpointCommand(new BendpointMover(request.getIndex(), request.getLocation()));
+	}
+
+	private Command getModifyBendpointCommand(final BendpointModifier modifier) {
+		TransactionalEditingDomain editingDomain = TransactionUtil.getEditingDomain(getDiagramEdge().getDiagram().getElement());
+		return new WrappingCommand(editingDomain, new BendpointModificationCommand(modifier));
+	}
+
+	private class BendpointModificationCommand extends AbstractCommand {
+		private BendpointModifier bendpointModifier; 
+		private List oldPoints;
+		private Point mySourceRef;
+		private Point myTargetRef;
+
+		public BendpointModificationCommand(BendpointModifier bendpointModifier) {
+			this.bendpointModifier = bendpointModifier;
+		}
+
+		@@Override
+		protected boolean prepare() {
+			TransactionalEditingDomain domain = TransactionUtil.getEditingDomain(getDiagramEdge());
+			if (domain != null && domain.isReadOnly(getDiagramEdge().eResource())) {
+				return false;
+			}
+			Connection connection = getConnection();
+			mySourceRef = connection.getSourceAnchor().getReferencePoint().getCopy();
+			connection.translateToRelative(mySourceRef);
+			myTargetRef = connection.getTargetAnchor().getReferencePoint().getCopy();
+			connection.translateToRelative(myTargetRef);
+			return true;
+		}
+
+		public void execute() {
+			RelativeBendpoints bendpoints = (RelativeBendpoints) getDiagramEdge().getBendpoints();
+			if (bendpoints == null) {
+				bendpoints = NotationFactory.eINSTANCE.createRelativeBendpoints();
+				getDiagramEdge().setBendpoints(bendpoints);
+			}
+			oldPoints = bendpoints.getPoints();
+			List newPoints = new ArrayList(oldPoints);
+			bendpointModifier.applyModification(newPoints, new BendpointConverter() {
+				public RelativeBendpoint convert(Point point) {
+					getConnection().translateToRelative(point);
+					Dimension s = point.getDifference(mySourceRef);
+					Dimension t = point.getDifference(myTargetRef);
+					return new RelativeBendpoint(s.width, s.height, t.width, t.height);
+				}
+			});
+			bendpoints.setPoints(newPoints);
+		}
+
+		public void undo() {
+			RelativeBendpoints bendpoints = (RelativeBendpoints) getDiagramEdge().getBendpoints();
+			bendpoints.setPoints(oldPoints);
+		}
+
+		public void redo() {
+			execute();
+		}
+	}
+
+	private static interface BendpointConverter {
+		public RelativeBendpoint convert(Point point);
+	}
+
+	private static interface BendpointModifier {
+		public void applyModification(List/*<RelativeBendpoint>*/ originalBendpoints, BendpointConverter converter);
+	}
+
+	private static class BendpointDeleter implements BendpointModifier {
+		private int index;
+
+		public BendpointDeleter(int index) {
+			this.index = index;
+		}
+
+		public void applyModification(List originalBendpoints, BendpointConverter converter) {
+			originalBendpoints.remove(index);
+		}
+	}
+
+	private static class BendpointMover implements BendpointModifier {
+		private int index;
+
+		private Point point;
+
+		public BendpointMover(int index, Point point) {
+			this.index = index;
+			this.point = point;
+		}
+
+		public void applyModification(List originalBendpoints, BendpointConverter converter) {
+			originalBendpoints.set(index, converter.convert(point));
+		}
+	}
+
+	private static class BendpointCreator implements BendpointModifier {
+		private int index;
+
+		private Point point;
+
+		public BendpointCreator(int index, Point point) {
+			this.index = index;
+			this.point = point;
+		}
+
+		public void applyModification(List originalBendpoints, BendpointConverter converter) {
+			originalBendpoints.add(index, converter.convert(point));
+		}
+	}
+
+	private static class BendpointSetter implements BendpointModifier {
+		private PointList myPoints;
+
+		public BendpointSetter(PointList points) {
+			myPoints = points;
+		}
+
+		public void applyModification(List originalBendpoints, BendpointConverter converter) {
+			originalBendpoints.clear();
+			for(int i = 0, iMax = myPoints.size(); i < iMax; i++) {
+				originalBendpoints.add(converter.convert(myPoints.getPoint(i)));
+			}
+		}
+	}
+}
+@
+
+
+1.5
+log
+@[164018] Command generation seperated from Parts for commands that operate with labels;
+API to display label text, apply modifications and update after (external) modifications isolated from generated code;
+Moved as much common generated code as possible to BaseTreeEditPart;
+[165700] Support diagrams in read-only mode: all EMF commands that are not composed of standard EMF commands, but modify EMF models directly should query the editing domain for read-onliness of the resource they operate on.
+@
+text
+@d83 1
+a83 1
+			if (domain == null || domain.isReadOnly(getDiagramEdge().eResource())) {
+@
+
+
+1.4
+log
+@Avoid NPE on sequence: create a link, create a bendpoint on it, undo, undo, redo, redo.
+@
+text
+@d82 4
+@
+
+
+1.3
+log
+@When the zoom level is not 1.0, the link jumps when modifying bendpoints
+@
+text
+@d73 2
+d80 10
+a90 5
+			Connection connection = getConnection();
+			final Point ptRef1 = connection.getSourceAnchor().getReferencePoint().getCopy();
+			connection.translateToRelative(ptRef1);
+			final Point ptRef2 = connection.getTargetAnchor().getReferencePoint().getCopy();
+			connection.translateToRelative(ptRef2);
+d101 2
+a102 2
+					Dimension s = point.getDifference(ptRef1);
+					Dimension t = point.getDifference(ptRef2);
+a116 4
+
+		public boolean canExecute() {
+			return true;
+		}
+@
+
+
+1.2
+log
+@[158023] bblajer - Diagram Layout
+@
+text
+@d93 1
+@
+
+
+1.1
+log
+@[155040] bblajer - Common Lite runtime functionality moved to dedicated plugin
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Eclipse.org
+d20 1
+d24 1
+d28 2
+d41 12
+d164 15
+@
+

@@ -1,0 +1,609 @@
+head	1.5;
+access;
+symbols
+	v20081020-0700:1.5
+	v20080722-1827:1.5
+	R2_1_maintenance:1.5.0.4
+	Root_R2_1_maintenance:1.5
+	R2_1_0:1.5
+	v20080425-1959:1.5
+	v20080322-0000:1.5
+	v20080222-1200:1.5
+	v20070809-0000:1.5
+	R2_0_maintenance:1.5.0.2
+	R2_0:1.5
+	R4_20:1.5
+	RC3_20:1.5
+	v20070601-1400:1.5
+	v20070518-1300:1.5
+	v20070330-1300:1.5
+	M4_20:1.5
+	v20061214-0000:1.5
+	M3_20:1.5
+	v20061013-1330:1.5
+	M1_20:1.4
+	v20060810-1700:1.4.2.2
+	v20060721-1130:1.4.2.1
+	v20060713-1700:1.4.2.1
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	v20060627-1200:1.4
+	v20060616-1200:1.4
+	v20060531-1730:1.4
+	I20060424-0500:1.4
+	I20060424-0300:1.4
+	M6_10:1.4
+	I20060407-1200:1.4
+	I20060331-1000:1.4
+	I20060324-0300:1.4
+	I20060317-1300:1.3
+	I20060317-1200:1.3
+	I20060316-1300:1.3
+	I20060309-1300:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.5
+date	2006.10.03.14.52.57;	author ahunter;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.03.22.18.53.16;	author ldamus;	state Exp;
+branches
+	1.4.2.1;
+next	1.3;
+
+1.3
+date	2006.03.14.19.45.19;	author ldamus;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.03.10.22.35.53;	author ldamus;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.03.06.23.23.14;	author ldamus;	state Exp;
+branches;
+next	;
+
+1.4.2.1
+date	2006.07.13.20.25.17;	author ldamus;	state Exp;
+branches;
+next	1.4.2.2;
+
+1.4.2.2
+date	2006.08.08.18.55.13;	author ldamus;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@gmf_head ahunter 061003 Merge 1.0.1 Runtime to HEAD 2.0
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.common.ui.action.actions.global;
+
+import org.eclipse.core.commands.operations.IUndoContext;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.gmf.runtime.common.ui.action.global.GlobalAction;
+import org.eclipse.gmf.runtime.common.ui.action.global.GlobalActionId;
+import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.util.IPropertyChangeListener;
+import org.eclipse.jface.util.PropertyChangeEvent;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.ui.operations.RedoActionHandler;
+
+/**
+ * Global Redo Action.
+ * <P>
+ * Extension of the GMF {@@link GlobalAction} class that delegates redo behaviour
+ * to the undoable operation framework's {@@link RedoActionHandler}.
+ * <P>
+ * The undo context can be set through {@@link #setUndoContext(IUndoContext)}.
+ * If it is not explicitly set, the undo context will be derived by adapting the
+ * workbench part to {@@link IUndoContext}.
+ * 
+ * @@author vramaswa
+ */
+public final class GlobalRedoAction extends GlobalAction {
+
+	/**
+	 * My operation framework action handler delegate.
+	 */
+	private RedoActionHandler delegate;
+
+	/**
+	 * My undo context.
+	 */
+	private IUndoContext undoContext;
+
+	/**
+	 * Property change listener to listen for changes in my delegate.
+	 */
+	private IPropertyChangeListener listener;
+
+	/**
+	 * Initializes me with a workbench page.
+	 * 
+	 * @@param workbenchPage
+	 *            the page
+	 */
+	public GlobalRedoAction(IWorkbenchPage workbenchPage) {
+		super(workbenchPage);
+	}
+
+	/**
+	 * Initializes me with a workbench part.
+	 * 
+	 * @@param workbenchPart
+	 *            the part
+	 */
+	public GlobalRedoAction(IWorkbenchPart workbenchPart) {
+		super(workbenchPart);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.common.ui.action.internal.global.GlobalAction#getActionId()
+	 */
+	public String getActionId() {
+		return GlobalActionId.REDO;
+	}
+
+	/**
+	 * Extends the superclass implementation to update the operation history
+	 * undo action handler to which I delegate.
+	 */
+	protected void setWorkbenchPart(IWorkbenchPart workbenchPart) {
+		super.setWorkbenchPart(workbenchPart);
+		initializeWithContext(getUndoContext());
+	}
+
+	/**
+	 * Initializes me with a new undo <code>context</code>.
+	 * 
+	 * @@param context
+	 *            the undo context
+	 */
+	protected void initializeWithContext(IUndoContext context) {
+		if (delegate != null) {
+			delegate.removePropertyChangeListener(getDelegateListener());
+			delegate.dispose();
+			delegate = null;
+		}
+
+		if (context != null) {
+			IWorkbenchPart part = getWorkbenchPart();
+
+			if (part != null) {
+				delegate = new RedoActionHandler(part.getSite(), context);
+				delegate.setPruneHistory(true);
+				delegate.addPropertyChangeListener(getDelegateListener());
+			}
+		}
+
+		// force enablement update in UI
+		boolean enabled = isEnabled();
+		firePropertyChange(IAction.ENABLED, Boolean.valueOf(!enabled), Boolean
+				.valueOf(enabled));
+	}
+
+	/**
+	 * Gets my property change listener to listen for changes in my delegate.
+	 */
+	private IPropertyChangeListener getDelegateListener() {
+		if (listener == null) {
+			listener = new IPropertyChangeListener() {
+
+				public void propertyChange(PropertyChangeEvent event) {
+					// propagate to my own listeners
+					firePropertyChange(event.getProperty(),
+							event.getOldValue(), event.getNewValue());
+				}
+			};
+		}
+		return listener;
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public ImageDescriptor getImageDescriptor() {
+		if (delegate != null) {
+			return delegate.getImageDescriptor();
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public ImageDescriptor getDisabledImageDescriptor() {
+		if (delegate != null) {
+			return delegate.getDisabledImageDescriptor();
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public ImageDescriptor getHoverImageDescriptor() {
+		if (delegate != null) {
+			return delegate.getHoverImageDescriptor();
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public String getText() {
+		if (delegate != null) {
+			return delegate.getText();
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public String getToolTipText() {
+		if (delegate != null) {
+			return delegate.getToolTipText();
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public String getDescription() {
+		if (delegate != null) {
+			return delegate.getDescription();
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public boolean isEnabled() {
+		if (delegate != null) {
+			return delegate.isEnabled();
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public boolean isHandled() {
+		if (delegate != null) {
+			return delegate.isHandled();
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public void setChecked(boolean checked) {
+		if (delegate != null) {
+			delegate.setChecked(checked);
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	protected void doRun(IProgressMonitor progressMonitor) {
+		if (delegate != null) {
+			Object key = new Object();
+			if (GlobalUndoRedoLock.INSTANCE.acquire(key)) {
+				try {
+					delegate.run();
+				} finally {
+					GlobalUndoRedoLock.INSTANCE.release(key);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Delegates to the operation framework action handler.
+	 */
+	public void refresh() {
+		if (delegate != null) {
+			delegate.update();
+		}
+		setText(getText());
+	}
+
+	/**
+	 * Sets my undo context. It will no longer be derived from the workbench
+	 * part.
+	 * 
+	 * @@param undoContext
+	 *            my undo context
+	 */
+	public final void setUndoContext(IUndoContext context) {
+		this.undoContext = context;
+		initializeWithContext(context);
+	}
+
+	/**
+	 * Gets my undo context. If it has not been explicitly set, derives the undo
+	 * context from my workbench part.
+	 * 
+	 * @@return my undo context. May be <code>null</code> if no one has set my
+	 *         undo context and my workbench part does not adapt to
+	 *         {@@link IUndoContext}.
+	 */
+	public final IUndoContext getUndoContext() {
+
+		if (undoContext == null) {
+			IWorkbenchPart part = getWorkbenchPart();
+
+			if (part != null) {
+				return (IUndoContext) part.getAdapter(IUndoContext.class);
+			}
+		}
+		return undoContext;
+	}
+
+	/**
+	 * Listens to the operation history events.
+	 */
+	protected boolean isOperationHistoryListener() {
+		return true;
+	}
+
+	/**
+	 * Sets my delegate to <code>null</code>.
+	 */
+	public void dispose() {
+
+		if (delegate != null) {
+		    // Doesn't call delegate.dispose() because the delegate is itself a
+            // part listener and will dispose of itself when its part closes.
+            // See https://bugs.eclipse.org/bugs/show_bug.cgi?id=131781
+			delegate.removePropertyChangeListener(getDelegateListener());
+			delegate = null;
+		}
+
+		super.dispose();
+	}
+	
+	/**
+	 * No work indicator type since my delegate takes care of showing progress.
+	 */
+	public WorkIndicatorType getWorkIndicatorType() {
+		return WorkIndicatorType.NONE;
+	}
+
+}
+@
+
+
+1.4
+log
+@[131781] gmf_head ldamus 060322 Dispose does not disable GlobalUndoAction and GlobalRedoAction
+@
+text
+@d241 8
+a248 1
+			delegate.run();
+d316 7
+@
+
+
+1.4.2.1
+log
+@[149315 gmf_R1_0_maintenance cvogt 060713 prevent global Undo / Redo actions from nested execution
+@
+text
+@d241 1
+a241 8
+			Object key = new Object();
+			if (GlobalUndoRedoLock.INSTANCE.acquire(key)) {
+				try {
+					delegate.run();
+				} finally {
+					GlobalUndoRedoLock.INSTANCE.release(key);
+				}
+			}
+@
+
+
+1.4.2.2
+log
+@[150641] gmf_R1_0_maintenance ldamus 060808 GlobalUndoAction does not need to have 'busy' work indicator type
+@
+text
+@a315 7
+	
+	/**
+	 * No work indicator type since my delegate takes care of showing progress.
+	 */
+	public WorkIndicatorType getWorkIndicatorType() {
+		return WorkIndicatorType.NONE;
+	}
+@
+
+
+1.3
+log
+@[131781] gmf_head ldamus 060314 Dispose does not disable GlobalUndoAction and GlobalRedoAction
+@
+text
+@d295 1
+a295 1
+	 * Disposes my delegate.
+d300 3
+a303 1
+			delegate.dispose();
+@
+
+
+1.2
+log
+@[131404] gmf_head ldamus 060310 GlobalUndoAction and GlobalRedoAction don't update their delegates when the undo context changes
+@
+text
+@d44 5
+a48 5
+    
+    /**
+     * My undo context.
+     */
+    private IUndoContext undoContext;
+d90 47
+a136 1
+        initializeWithContext(getUndoContext());	
+a137 40
+    
+    /**
+     * Initializes me with a new undo <code>context</code>.
+     * 
+     * @@param context
+     *            the undo context
+     */
+    protected void initializeWithContext(IUndoContext context) {
+        if (context != null) {
+            if (delegate != null) {
+                delegate.removePropertyChangeListener(getDelegateListener());
+                delegate.dispose();
+            }
+
+            delegate = new RedoActionHandler(getWorkbenchPart().getSite(), context);
+            delegate.addPropertyChangeListener(getDelegateListener());
+
+            // force enablement update in UI
+            boolean enabled = isEnabled();
+            firePropertyChange(IAction.ENABLED, Boolean.valueOf(!enabled),
+                    Boolean.valueOf(enabled));
+        }
+    }
+    
+    /**
+     * Gets my property change listener to listen for changes in my delegate.
+     */
+    private IPropertyChangeListener getDelegateListener() {
+        if (listener == null) {
+            listener = new IPropertyChangeListener() {
+
+                public void propertyChange(PropertyChangeEvent event) {
+                    // propagate to my own listeners
+                    firePropertyChange(event.getProperty(),
+                        event.getOldValue(), event.getNewValue());
+                }
+            };
+        }
+        return listener;
+    }
+d252 54
+a305 1
+        setText(getText());
+a306 38
+    
+    /**
+     * Sets my undo context.
+     * 
+     * @@param undoContext
+     *            my undo context
+     */
+    public final void setUndoContext(IUndoContext undoContext) {
+        this.undoContext = undoContext;
+        initializeWithContext(undoContext);
+    }
+    
+    /**
+     * Gets my undo context. If it has not been explicitly set, derives the undo
+     * context from my workbench part.
+     * 
+     * @@return my undo context. May be <code>null</code> if no one has set my
+     *         undo context and my workbench part does not adapt to
+     *         {@@link IUndoContext}.
+     */
+    public final IUndoContext getUndoContext() {
+
+        if (undoContext == null) {
+            IWorkbenchPart part = getWorkbenchPart();
+
+            if (part != null) {
+                return (IUndoContext) part.getAdapter(IUndoContext.class);
+            }
+        }
+        return undoContext;
+    }
+    
+    /**
+     * Listens to the operation history events.
+     */
+    protected boolean isOperationHistoryListener() {
+        return true;
+    }
+@
+
+
+1.1
+log
+@[130642] gmf_head ldamus 060306 GlobalUndoAction and GlobalRedoAction need to be public
+@
+text
+@d90 15
+d106 2
+a107 1
+        IUndoContext context = getUndoContext();
+d109 6
+a114 15
+		if (context != null) {
+			if (delegate != null) {
+				delegate.removePropertyChangeListener(getDelegateListener());
+				delegate.dispose();
+			}
+
+			delegate = new RedoActionHandler(workbenchPart.getSite(), context);
+			delegate.addPropertyChangeListener(getDelegateListener());
+
+			// force enablement update in UI
+			boolean enabled = isEnabled();
+			firePropertyChange(IAction.ENABLED, Boolean.valueOf(!enabled),
+					Boolean.valueOf(enabled));
+		}
+	}
+d257 1
+@
+

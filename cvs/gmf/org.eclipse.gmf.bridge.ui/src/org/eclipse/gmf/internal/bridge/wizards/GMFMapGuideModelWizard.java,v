@@ -1,0 +1,329 @@
+head	1.3;
+access;
+symbols
+	v20080924-1925:1.3
+	v20080722-1827:1.3
+	v20080716-1642:1.3
+	R2_1_maintenance:1.2.0.4
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080417-1610:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20080215-1500:1.2
+	v20080207-0207:1.2
+	v20071124-0000:1.2
+	v20071108-0000:1.2
+	v20070903-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	v20070621-0000:1.2
+	RC3_20:1.2
+	v20070608-1300:1.2
+	v20070605-1400:1.2
+	v20070601-1400:1.2
+	v20070520-1200:1.2
+	v20070518-1300:1.2
+	v20070420-1000:1.2
+	v20070413-1300:1.2
+	v20070405-2000:1.2
+	v20070330-1300:1.2
+	v20070322-1100:1.2
+	v20060316-0600:1.2
+	v20070301-1200:1.2
+	v20070228-2000:1.2
+	v20070208-1800:1.2
+	M4_20:1.2
+	v20061214-0000:1.2
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061013-1330:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2008.07.10.12.29.44;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+commitid	7c3e487600b74567;
+
+1.2
+date	2006.11.22.17.34.12;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+commitid	112b45648a134567;
+
+1.1
+date	2006.09.22.18.32.21;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@[217307] - "Add extension model" action: impossible use for additing nondeployed models
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.bridge.wizards;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Observable;
+import java.util.Observer;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IWorkspace;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.resource.ContentHandler;
+import org.eclipse.emf.ecore.xmi.XMLResource;
+import org.eclipse.gmf.gmfgraph.Canvas;
+import org.eclipse.gmf.internal.bridge.ui.Plugin;
+import org.eclipse.gmf.internal.bridge.wizards.pages.EntriesPage;
+import org.eclipse.gmf.internal.bridge.wizards.pages.Messages;
+import org.eclipse.gmf.internal.bridge.wizards.pages.NewMapFileCreationPage;
+import org.eclipse.gmf.internal.bridge.wizards.pages.WizardInput;
+import org.eclipse.gmf.internal.common.ui.ResourceLocationProvider;
+import org.eclipse.gmf.mappings.CanvasMapping;
+import org.eclipse.gmf.mappings.presentation.MapRefModelPages;
+import org.eclipse.gmf.tooldef.GMFToolFactory;
+import org.eclipse.gmf.tooldef.Palette;
+import org.eclipse.gmf.tooldef.ToolRegistry;
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.wizard.Wizard;
+import org.eclipse.ui.INewWizard;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.actions.WorkspaceModifyOperation;
+
+/**
+ * @@author artem
+ */
+public class GMFMapGuideModelWizard extends Wizard implements INewWizard {
+
+	protected IStructuredSelection mySelection;
+
+	protected final WizardInput myHolder;
+
+	protected final MapRefModelPages refPages;
+
+	private IWorkbench myWorkbench;
+
+	private ToolRegistry myRegistry;
+
+	public GMFMapGuideModelWizard() {
+		setNeedsProgressMonitor(true);
+		setWindowTitle(Messages.wizardTitle);
+		myHolder = new WizardInput() {
+
+			public EPackage getDomainModel() {
+				return refPages.getDomainModel();
+			}
+
+			public Canvas getCanvasDef() {
+				return refPages.getCanvas();
+			}
+
+			public ToolRegistry getToolDef() {
+				if (isNewBlankToolDef()) {
+					return myRegistry;
+				}
+				Palette palette = refPages.getPalette();
+				if (palette == null) {
+					return null;
+				}
+				return (ToolRegistry) palette.eContainer();
+			}
+
+			public boolean isNewBlankToolDef() {
+				return refPages.shouldCreateNewToolingModel(false);
+			}
+		};
+		refPages = new MapRefModelPages(true, myHolder.getResourceSet()) {
+
+			/*
+			 * graph page is the last since tooling should be selected
+			 * prior to canvas update; see WizardInput.feedDefaultMapping()
+			 */
+			public void addPages(Wizard wizard, ISelection selection) {
+				ResourceLocationProvider rloc = new ResourceLocationProvider(selection);
+				addDomainPage(wizard, rloc);
+				addToolPage(wizard, rloc);
+				addGraphPage(wizard, rloc);
+			}
+		};
+	}
+
+	public void addPages() {
+		addNewFilePage();
+		refPages.addPages(this, mySelection);
+		refPages.getDomainModelSelectionPage().setModelRequired(true);
+		refPages.getGraphModelSelectionPage().setModelRequired(true);
+		refPages.getToolModelSelectionPage().setModelRequired(true);
+		refPages.getDomainModelExt().addObserver(new Observer() {
+
+			public void update(Observable o, Object arg) {
+				CanvasMapping cm = myHolder.getMapping().getDiagram();
+				cm.setDomainModel((EPackage) arg);
+			}
+		});
+		refPages.getDomainElementExt().addObserver(new Observer() {
+
+			public void update(Observable o, Object arg) {
+				CanvasMapping cm = myHolder.getMapping().getDiagram();
+				cm.setDomainMetaElement((EClass) arg);
+			}
+		});
+		refPages.getCanvasExt().addObserver(new Observer() {
+
+			public void update(Observable o, Object arg) {
+				CanvasMapping cm = myHolder.getMapping().getDiagram();
+				cm.setDiagramCanvas((Canvas) arg);
+				myHolder.feedDefaultMapping();
+			}
+		});
+		refPages.allowNewToolingModel();
+		refPages.getCreateNewToolingModelExt().addObserver(new Observer() {
+
+			public void update(Observable o, Object arg) {
+				if (((Boolean) arg).booleanValue()) {
+					createBlankToolDef();
+				}
+			}
+		});
+		addDoMapPage();
+	}
+
+	@@SuppressWarnings("unchecked")
+	public URI createBlankToolDef() {
+		checkUnload(myRegistry);
+		myRegistry = null;
+		IPath toolDefFile = myHolder.getMappingFile().getFullPath().removeFileExtension().addFileExtension(WizardInput.TOOLDEF_FILE_EXT);
+		String baseName = myHolder.getMappingFile().getFullPath().removeFileExtension().lastSegment();
+		int i = 1;
+		final IWorkspace wr = myHolder.getMappingFile().getProject().getWorkspace();
+		while (wr.getRoot().findMember(toolDefFile) != null) {
+			toolDefFile = toolDefFile.removeLastSegments(1).append(baseName + i).addFileExtension(WizardInput.TOOLDEF_FILE_EXT);
+			i++;
+		}
+		URI toolDefURI = URI.createPlatformResourceURI(toolDefFile.toString(), true);
+		myRegistry = GMFToolFactory.eINSTANCE.createToolRegistry();
+		myRegistry.setPalette(GMFToolFactory.eINSTANCE.createPalette());
+		myHolder.getResourceSet().createResource(toolDefURI, ContentHandler.UNSPECIFIED_CONTENT_TYPE).getContents().add(myRegistry);
+		return toolDefURI;
+	}
+
+	private void checkUnload(EObject eobj) {
+		if (eobj == null) {
+			return;
+		}
+		if (eobj.eResource().getResourceSet() == myHolder.getResourceSet() && eobj.eResource().isLoaded()) {
+			eobj.eResource().unload();
+		}
+	}
+
+	protected void addNewFilePage() {
+		addPage(new NewMapFileCreationPage(mySelection, myHolder));
+	}
+
+	protected void addDoMapPage() {
+		addPage(new EntriesPage(myHolder));
+	}
+
+	public void init(IWorkbench workbench, IStructuredSelection selection) {
+		myWorkbench = workbench;
+		mySelection = selection;
+	}
+
+	public boolean performFinish() {
+		WorkspaceModifyOperation operation = new WorkspaceModifyOperation() {
+
+			protected void execute(IProgressMonitor progressMonitor) {
+				try {
+					Map<String, Object> options = new HashMap<String, Object>();
+					options.put(XMLResource.OPTION_ENCODING, "UTF-8"); //$NON-NLS-1$
+					if (myHolder.isNewBlankToolDef()) {
+						myHolder.getToolDef().eResource().save(options);
+					}
+					myHolder.getMapping().eResource().save(options);
+				} catch (Exception ex) {
+					Plugin.log(ex);
+				} finally {
+					progressMonitor.done();
+				}
+			}
+		};
+
+		try {
+			getContainer().run(false, false, operation);
+			WizardUtil.selectReveal(myWorkbench, new StructuredSelection(getModelFile()));
+			WizardUtil.openInEditor(myWorkbench, getModelFile());
+		} catch (InvocationTargetException ex) {
+			return false;
+		} catch (InterruptedException ex) {
+			return false;
+		} catch (PartInitException ex) {
+			Plugin.log(ex);
+		}
+		return true;
+	}
+
+	public IFile getModelFile() {
+		return myHolder.getMappingFile();
+	}
+
+	public WizardInput getWizardInput() {
+		return myHolder;
+	}
+}
+@
+
+
+1.2
+log
+@Removing warnings
+@
+text
+@d28 1
+d164 1
+a164 1
+		myHolder.getResourceSet().createResource(toolDefURI).getContents().add(myRegistry);
+@
+
+
+1.1
+log
+@#142460 Inconsistent buttons in GMFMap creation wizard
+@
+text
+@d160 1
+a160 1
+		URI toolDefURI = URI.createPlatformResourceURI(toolDefFile.toString());
+@
+

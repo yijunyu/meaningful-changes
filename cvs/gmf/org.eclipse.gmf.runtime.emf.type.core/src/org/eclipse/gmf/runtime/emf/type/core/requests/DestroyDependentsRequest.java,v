@@ -1,0 +1,834 @@
+head	1.7;
+access;
+symbols
+	v20081020-0700:1.7
+	v20080807-1333:1.7
+	v20080807-1325:1.7
+	v20080731-1520:1.7
+	v20080725-1738:1.7
+	v20080722-1827:1.7
+	R2_1_maintenance:1.7.0.2
+	Root_R2_1_maintenance:1.7
+	R2_1_0:1.7
+	v20080425-1959:1.7
+	v20080328-1605:1.7
+	v20080222-1200:1.6
+	v20080114-2222:1.6
+	v20080107-1111:1.6
+	v20071130-1111:1.6
+	v20071124-0000:1.6
+	v20070809-0000:1.6
+	R2_0_maintenance:1.6.0.2
+	R2_0:1.6
+	R4_20:1.6
+	RC3_20:1.6
+	v20070601-1400:1.6
+	v20070518-1300:1.6
+	v20070403-1500:1.6
+	v20070330-1300:1.6
+	v20070208-1800:1.6
+	M4_20:1.6
+	v20061214-0000:1.6
+	M3_20:1.6
+	v20061117-0800:1.6
+	v20061013-1330:1.6
+	v20060919-0800:1.5.2.2
+	v20060907-1100:1.5.2.2
+	M1_20:1.5
+	v20060831-1500:1.5.2.2
+	v20060817-1500:1.5.2.1
+	v20060803-1200:1.5
+	v20060721-1130:1.5
+	v20060713-1700:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	v20060627-1200:1.5
+	v20060616-1200:1.5
+	v20060609-1400:1.4
+	v20060531-1730:1.3
+	v20060530-1930:1.3
+	v20060526-1200:1.3
+	v20060519-0800:1.3
+	I20060505-1400:1.2
+	I20060428-1300:1.2
+	I20060424-0500:1.1
+	I20060424-0300:1.1
+	M6_10:1.1
+	I20060407-1200:1.1
+	I20060331-1000:1.1
+	I20060324-0300:1.1
+	I20060317-1300:1.1
+	I20060317-1200:1.1
+	I20060316-1300:1.1
+	I20060309-1300:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.7
+date	2008.03.28.17.49.28;	author ahunter;	state Exp;
+branches;
+next	1.6;
+commitid	5ef647ed2fa84567;
+
+1.6
+date	2006.10.03.15.06.38;	author ahunter;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.06.12.18.46.23;	author ldamus;	state Exp;
+branches
+	1.5.2.1;
+next	1.4;
+
+1.4
+date	2006.06.08.14.47.39;	author ldamus;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.05.17.14.00.28;	author ldamus;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.04.26.20.14.33;	author ldamus;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.03.07.02.40.34;	author ldamus;	state Exp;
+branches;
+next	;
+
+1.5.2.1
+date	2006.08.11.18.39.08;	author ldamus;	state Exp;
+branches;
+next	1.5.2.2;
+
+1.5.2.2
+date	2006.08.28.20.36.12;	author ldamus;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.7
+log
+@[208938] gmf-head cvogt 080328 [Commands] redundant call to populateCacheMap in DestroyDependentsRequest
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2006, 2008 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.emf.type.core.requests;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.eclipse.emf.common.util.TreeIterator;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.emf.transaction.util.TransactionUtil;
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+import org.eclipse.gmf.runtime.emf.type.core.EditHelperContext;
+import org.eclipse.gmf.runtime.emf.type.core.ElementTypeRegistry;
+import org.eclipse.gmf.runtime.emf.type.core.IClientContext;
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+import org.eclipse.gmf.runtime.emf.type.core.internal.l10n.EMFTypeCoreMessages;
+import org.eclipse.gmf.runtime.emf.type.core.internal.requests.RequestCacheEntries;
+
+/**
+ * Request to destroy the dependents of a model element.  It is expected that
+ * the request will be served primarily by advice, which can invoke the
+ * {@@link #getDestroyDependentCommand(EObject)} to obtain a command to destroy
+ * an object dependent on the {@@linkplain #getElementToDestroy() element being destroyed}
+ * and have it added to the edit command.  However, an edit helper can also
+ * provide an "instead" command by overriding its
+ * <code>getDestroyDependentsCommand(DestroyDependentsRequest)</code> method
+ * to do the same.
+ * <p>
+ * The destruction of dependents is an edit requested of the element being
+ * destroyed, unlike the {@@link DestroyElementRequest}, which is requested of
+ * the <em>container</em> of the element being destroyed.
+ * </p>
+ * 
+ * @@author Christian W. Damus (cdamus)
+ */
+public class DestroyDependentsRequest extends DestroyRequest {
+	
+	/**
+	 * The element to destroy.
+	 */
+	private EObject elementToDestroy;
+	private EObject ctorElementToDestroy;
+	
+	/**
+	 * Other objects dependent on the primary object that should also be destroyed.
+	 */
+	private Set dependentElementsToDestroy;
+	private Set immutableViewOfDependents;
+	
+	/**
+	 * Constructs a new request to destroy the dependents of a model element.
+	 * 
+	 * @@param editingDomain
+	 *            the editing domain in which I am requesting to make model
+	 * @@param elementToDestroy
+	 *            the element to be destroyed
+	 * @@param confirmationRequired
+	 *            <code>true</code> if the user should be prompted to confirm
+	 *            the element deletion, <code>false</code> otherwise.
+	 */
+	public DestroyDependentsRequest(TransactionalEditingDomain editingDomain,
+			EObject elementToDestroy, boolean confirmationRequired) {
+
+		super(editingDomain, confirmationRequired);		
+		this.elementToDestroy = elementToDestroy;
+		// keep it until we populate the set, beacuse someone might construct us with some element but later call
+		// setElementToDestroy(...) with a different element and the original behaviour would have added them both to the set
+		ctorElementToDestroy = elementToDestroy;
+	}	
+    
+	/**
+	 * Gets the element to be destroyed.
+	 * 
+	 * @@return the element to be destroyed
+	 */
+	public final EObject getElementToDestroy() {
+		return elementToDestroy;
+	}
+
+	/**
+	 * Sets the element to be destroyed.
+	 * 
+	 * @@param elementToDestroy
+	 *            the element to be destroyed
+	 */
+	public final void setElementToDestroy(EObject elementToDestroy) {
+		this.elementToDestroy = elementToDestroy;
+		if (elementToDestroy != null) {
+			internalGetDependentElementsToDestroy().add(elementToDestroy);
+		}
+	}
+
+	public EObject getContainer() {
+		if (getElementToDestroy() != null) {
+			return getElementToDestroy().eContainer();
+		}
+		return null;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.emf.type.core.edithelper.IEditCommandRequest#getElementsToEdit()
+	 */
+	public List getElementsToEdit() {
+		if (getElementToDestroy() != null) {
+			return Collections.singletonList(getElementToDestroy());
+		}
+		return super.getElementsToEdit();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.emf.type.core.edithelper.AbstractEditCommandRequest#getDefaultLabel()
+	 */
+	protected String getDefaultLabel() {
+		return EMFTypeCoreMessages.Request_Label_DestroyDependents;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @@see org.eclipse.gmf.runtime.emf.type.core.edithelper.IEditCommandRequest#getEditHelperContext()
+	 */
+	public Object getEditHelperContext() {
+		IClientContext context = getClientContext();
+		
+		if (context == null) {
+			return getElementToDestroy();
+		} else {
+			return new EditHelperContext(getElementToDestroy(), context);
+		}
+	}
+
+    /**
+     * Derives the editing domain from the object to be destroyed, if it hasn't
+     * already been specified.
+     */
+    public TransactionalEditingDomain getEditingDomain() {
+        TransactionalEditingDomain result = super.getEditingDomain();
+
+        if (result == null) {
+            result = TransactionUtil.getEditingDomain(getElementToDestroy());
+            if (result != null) {
+				setEditingDomain(result);
+			}
+        }
+        return result;
+    }
+
+    /**
+     * Obtains the <em>mutable</em> set of dependent elements to destroy.
+     * 
+     * @@return the set of dependent elements
+     */
+    
+    protected final Set internalGetDependentElementsToDestroy() {
+		if (dependentElementsToDestroy == null) {
+			Map cacheMaps = (Map) getParameter(RequestCacheEntries.Cache_Maps);
+			if (cacheMaps != null) {
+				dependentElementsToDestroy = (Set) cacheMaps
+					.get(RequestCacheEntries.Dependent_Elements);
+			} else {
+				dependentElementsToDestroy = new HashSet();
+			}
+			
+			immutableViewOfDependents = Collections.unmodifiableSet(dependentElementsToDestroy);
+			
+			if (ctorElementToDestroy != null) {
+				dependentElementsToDestroy.add(ctorElementToDestroy);
+				populateCacheMap(null, ctorElementToDestroy);				
+			}
+
+			ctorElementToDestroy = null;
+		}
+		return dependentElementsToDestroy;
+	}
+    
+    /**
+     * Obtains an immutable view of the set of dependent elements to destroy.
+     * 
+     * @@return the immutable set of dependent elements
+     */
+    public final Set getDependentElementsToDestroy() {
+		if (immutableViewOfDependents == null) {
+			internalGetDependentElementsToDestroy();//this should ensure we are initialized
+		}
+		return immutableViewOfDependents;
+	}
+	
+    /**
+     * Obtains a command that destroys the specified <code>dependent</code> of
+     * the {@@linkplain #getElementToDestroy() element to be destroyed}, if it
+     * is not already being destroyed by the processing of the current
+     * {@@link DestroyElementRequest}.  This command can then be composed with
+     * others by the edit helper processing the <code>DestroyDependentsRequest</code>.
+     * 
+     * @@param dependent an object dependent on the element being destroyed,
+     *     which must also be destroyed
+     *     
+     * @@return a command to destroy the <code>dependent</code>, or
+     *     <code>null</code> if the element is already being destroyed
+     *     
+     * @@throws IllegalArgumentException on an attempt to destroy the
+     *    {@@linkplain #getElementToDestroy() element to be destroyed} (as a
+     *    dependent of itself)
+     * @@throws NullPointerException on attempt to destroy a <code>null</code>
+     *    dependent
+     *    
+     * @@see #getDestroyDependentsCommand(Collection)
+     */
+	public ICommand getDestroyDependentCommand(EObject dependent) {
+		ICommand result = null;
+
+		if (addDependentElementToDestroy(dependent)) {
+			//record the element that we are destroying, for later restoration
+			EObject elementBeingDestroyed = getElementToDestroy();
+			
+			try {
+				DestroyElementRequest destroy = new DestroyElementRequest(
+					getEditingDomain(), dependent, isConfirmationRequired());
+
+				// propagate my parameters
+				destroy.addParameters(getParameters());
+				
+				// propagate the dependents information to detect cycles
+				destroy.setParameter(
+						DestroyElementRequest.DESTROY_DEPENDENTS_REQUEST_PARAMETER,
+						this);
+				setElementToDestroy(dependent);
+				
+				Object eHelperContext = destroy.getEditHelperContext();
+				
+				IElementType context = populateCacheMap(eHelperContext, dependent);				
+
+				if (context == null) {
+					context = ElementTypeRegistry.getInstance().getElementType(
+						eHelperContext);
+				}
+
+				if (context != null) {
+					result = context.getEditCommand(destroy);
+				}
+			} finally {
+				// restore the element that we are destroying
+				setElementToDestroy(elementBeingDestroyed);
+			}
+		}
+
+		return result;
+	}
+	
+	private IElementType populateCacheMap(Object eHelperContext, EObject dependent) {
+		IElementType context = null;
+		Map cacheMaps = (Map) getParameter(RequestCacheEntries.Cache_Maps);
+		if (cacheMaps != null) {
+			//beacareful, this one here call populateCacheMap(...) if the set was null and cacheMaps exist,
+			//so before that you should instantiate the DependentElementsToDestroy set
+			Set dependents = internalGetDependentElementsToDestroy(); 
+			//May be this guy was a context-of-a-dependent, and we had populated its cache map already
+			if (cacheMaps.get(dependent) == null) {
+				Map parentMap = new HashMap();
+				cacheMaps.put(dependent, parentMap);
+				RequestCacheEntries.initializeEObjCache(dependent, parentMap);
+			}
+
+			TreeIterator it = dependent.eAllContents();
+			while (it.hasNext()) {
+				EObject eObj = (EObject) it.next();
+				dependents.add(eObj);
+				if (cacheMaps.get(eObj) == null) {
+					Map map = new HashMap();
+					cacheMaps.put(eObj, map);
+					RequestCacheEntries.initializeEObjCache(eObj, map);
+				}
+			}
+			
+			if (eHelperContext != null) {
+				Map eHelperMap = (Map) cacheMaps.get(eHelperContext);
+				if (eHelperMap == null && (eHelperContext instanceof EObject)) {
+					eHelperMap = new HashMap();
+					cacheMaps.put(eHelperContext, eHelperMap);
+					RequestCacheEntries.initializeEObjCache(
+						(EObject) eHelperContext, eHelperMap);
+				}
+
+				if (eHelperMap != null) {
+					context = (IElementType) eHelperMap
+						.get(RequestCacheEntries.Element_Type);
+				}
+			}
+		}//if (cacheMaps != null)
+
+		return context;
+	}
+	
+
+	
+	/**
+     * Obtains a command that destroys the specified <code>dependents</code> of
+     * the {@@linkplain #getElementToDestroy() element to be destroyed}, if they
+     * are not already being destroyed by the processing of the current
+     * {@@link DestroyElementRequest}.  This command can then be composed with
+     * others by the edit helper processing the <code>DestroyDependentsRequest</code>.
+	 * 
+	 * @@param dependents dependents of the element being destroyed
+	 * 
+	 * @@return a command to destroy all of the specified <code>dependents</code>,
+	 *     or <code>null</code> if they are all already being destroyed
+	 *     
+	 * @@see #getDestroyDependentCommand(EObject)
+	 */
+	public ICommand getDestroyDependentsCommand(Collection dependents) {
+		ICommand result = null;
+		
+        for (Iterator i = dependents.iterator(); i.hasNext();) {
+        	result = CompositeCommand.compose(
+        			result,
+        			getDestroyDependentCommand((EObject) i.next()));
+        }
+        
+        return result;
+	}
+   
+    /**
+     * Indicates that the command that fulfils this request will also destroy
+     * the specified dependent of the
+     * {@@link #getElementToDestroy() element to be destroyed}.  Note that
+     * contained elements are implicitly considered to be dependent; they need
+     * not be handled by this mechanism.
+     * <p>
+     * Advice that provides a command to destroy a dependent element
+     * <em>must</em> indicate that fact by calling this method (only after
+     * checking whether it isn't already
+     * {@@link #isElementToBeDestroyed(EObject) being destroyed}, anyway).
+     * </p>
+     *  
+     * @@param dependent another object to destroy, which is dependent on the
+     *     element for which we are requesting destruction
+     * 
+     * @@return <code>true</code> if the <code>dependent</code> was not already
+     *     in the set of elements being destroyed; <code>false</code>, otherwise
+     * 
+     * @@throws IllegalArgumentException on an attempt to add the
+     *    {@@link #getElementToDestroy() element to be destroyed} as a dependent
+     *    of itself
+     * @@throws NullPointerException on attempt to add a <code>null</code> object
+     *    
+     * @@see #isElementToBeDestroyed(EObject)
+     * @@see #getElementToDestroy()
+     * @@see #getDestroyDependentCommand(EObject)
+     */
+    protected boolean addDependentElementToDestroy(EObject dependent) {
+    	if (dependent == null) {
+    		throw new NullPointerException("dependent is null"); //$NON-NLS-1$
+    	}
+    	
+    	if (dependent == getElementToDestroy()) {
+    		throw new IllegalArgumentException("dependent is the element being destroyed"); //$NON-NLS-1$
+    	}
+    	
+    	if (!isElementToBeDestroyed(dependent)) {
+    		return internalGetDependentElementsToDestroy().add(dependent);
+    	}
+    	
+    	return false;
+    }
+    
+    /**
+     * Queries whether the specified element will be destroyed as a result of
+     * the fulfillment of this request.  An element will be destroyed if it
+     * or any of its ancestors is the
+     * {@@linkplain #getElementToDestroy() element to be destroyed} or one of its
+     * {@@linkplain #getDependentElementsToDestroy() dependents}.
+     * 
+     * @@param eObject an element
+     * 
+     * @@return <code>true</code> if the command that fulfils this request
+     *     would destroy the specified element; <code>false</code> if a new
+     *     command would have to be composed with it to destroy the element
+     */
+    protected boolean isElementToBeDestroyed(EObject eObject) {
+    	boolean result = false;
+    	EObject eObj = getElementToDestroy();
+    	Set set = internalGetDependentElementsToDestroy();
+    	
+    	while (!(result || (eObject == null))) {
+			result = (eObject == eObj) || set.contains(eObject);
+			eObject = eObject.eContainer();
+		}
+    	
+    	return result;
+    }
+}@
+
+
+1.6
+log
+@gmf_head ahunter 061003 Merge 1.0.1 Runtime to HEAD 2.0
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 IBM Corporation and others.
+a191 5
+			if (elementToDestroy != null
+				&& (elementToDestroy != ctorElementToDestroy)) {
+				dependentElementsToDestroy.add(elementToDestroy);
+				populateCacheMap(null, ctorElementToDestroy);	
+			}
+@
+
+
+1.5
+log
+@[146559] gmf_head ldamus 060612 Public access is required to the destroy dependents request and the initial element to be destroyed
+@
+text
+@d16 2
+d20 1
+d23 1
+d34 1
+d54 1
+a54 1
+
+d59 1
+d64 2
+a65 2
+	private final Set dependentElementsToDestroy = new java.util.HashSet();
+	private final Set immutableViewOfDependents = Collections.unmodifiableSet(dependentElementsToDestroy);
+d81 1
+a81 2
+		super(editingDomain, confirmationRequired);
+		dependentElementsToDestroy.add(elementToDestroy);
+d83 4
+a86 1
+	}
+d105 3
+d162 3
+d174 1
+d176 25
+a200 2
+    	return dependentElementsToDestroy;
+    }
+d208 5
+a212 2
+    	return immutableViewOfDependents;
+    }
+d237 1
+a237 1
+		
+d239 1
+a239 1
+			// record the element that we are destroying, for later restoration
+d244 2
+a245 4
+						getEditingDomain(),
+						dependent,
+						isConfirmationRequired());
+				
+d255 1
+a255 2
+				IElementType context = ElementTypeRegistry.getInstance().getElementType(
+						destroy.getEditHelperContext());
+d257 7
+d272 1
+a272 1
+		
+d276 46
+d407 2
+d411 3
+a413 5
+    		result = (eObject == getElementToDestroy())
+    			|| internalGetDependentElementsToDestroy().contains(eObject);
+    		
+    		eObject = eObject.eContainer();
+    	}
+@
+
+
+1.5.2.1
+log
+@[150982] gmf_R1_0_maintenance syedatif 060811 Bookmark view not sync with diagram eidtor
+@
+text
+@a96 1
+		dependentElementsToDestroy.add(elementToDestroy);
+@
+
+
+1.5.2.2
+log
+@[155233] gmf_R1_0_maintenance ylulu 060828 Deleting and element using the EditHelpers could be enhanced
+@
+text
+@a15 2
+import java.util.HashMap;
+import java.util.HashSet;
+a17 1
+import java.util.Map;
+a19 1
+import org.eclipse.emf.common.util.TreeIterator;
+a29 1
+import org.eclipse.gmf.runtime.emf.type.core.internal.requests.RequestCacheEntries;
+d49 1
+a49 1
+	
+a53 1
+	private EObject ctorElementToDestroy;
+d58 2
+a59 2
+	private Set dependentElementsToDestroy;
+	private Set immutableViewOfDependents;
+d75 2
+a76 1
+		super(editingDomain, confirmationRequired);		
+d78 1
+a78 4
+		// keep it until we populate the set, beacuse someone might construct us with some element but later call
+		// setElementToDestroy(...) with a different element and the original behaviour would have added them both to the set
+		ctorElementToDestroy = elementToDestroy;
+	}	
+d97 1
+a97 3
+		if (elementToDestroy != null) {
+			internalGetDependentElementsToDestroy().add(elementToDestroy);
+		}
+a151 3
+            if (result != null) {
+				setEditingDomain(result);
+			}
+a160 1
+    
+d162 2
+a163 25
+		if (dependentElementsToDestroy == null) {
+			Map cacheMaps = (Map) getParameter(RequestCacheEntries.Cache_Maps);
+			if (cacheMaps != null) {
+				dependentElementsToDestroy = (Set) cacheMaps
+					.get(RequestCacheEntries.Dependent_Elements);
+			} else {
+				dependentElementsToDestroy = new HashSet();
+			}
+			
+			immutableViewOfDependents = Collections.unmodifiableSet(dependentElementsToDestroy);
+			
+			if (ctorElementToDestroy != null) {
+				dependentElementsToDestroy.add(ctorElementToDestroy);
+				populateCacheMap(null, ctorElementToDestroy);				
+			}
+
+			if (elementToDestroy != null
+				&& (elementToDestroy != ctorElementToDestroy)) {
+				dependentElementsToDestroy.add(elementToDestroy);
+				populateCacheMap(null, ctorElementToDestroy);	
+			}
+			ctorElementToDestroy = null;
+		}
+		return dependentElementsToDestroy;
+	}
+d171 2
+a172 5
+		if (immutableViewOfDependents == null) {
+			internalGetDependentElementsToDestroy();//this should ensure we are initialized
+		}
+		return immutableViewOfDependents;
+	}
+d197 1
+a197 1
+
+d199 1
+a199 1
+			//record the element that we are destroying, for later restoration
+d204 4
+a207 2
+					getEditingDomain(), dependent, isConfirmationRequired());
+
+d217 2
+a218 1
+				Object eHelperContext = destroy.getEditHelperContext();
+a219 7
+				IElementType context = populateCacheMap(eHelperContext, dependent);				
+
+				if (context == null) {
+					context = ElementTypeRegistry.getInstance().getElementType(
+						eHelperContext);
+				}
+
+d228 1
+a228 1
+
+a231 46
+	private IElementType populateCacheMap(Object eHelperContext, EObject dependent) {
+		IElementType context = null;
+		Map cacheMaps = (Map) getParameter(RequestCacheEntries.Cache_Maps);
+		if (cacheMaps != null) {
+			//beacareful, this one here call populateCacheMap(...) if the set was null and cacheMaps exist,
+			//so before that you should instantiate the DependentElementsToDestroy set
+			Set dependents = internalGetDependentElementsToDestroy(); 
+			//May be this guy was a context-of-a-dependent, and we had populated its cache map already
+			if (cacheMaps.get(dependent) == null) {
+				Map parentMap = new HashMap();
+				cacheMaps.put(dependent, parentMap);
+				RequestCacheEntries.initializeEObjCache(dependent, parentMap);
+			}
+
+			TreeIterator it = dependent.eAllContents();
+			while (it.hasNext()) {
+				EObject eObj = (EObject) it.next();
+				dependents.add(eObj);
+				if (cacheMaps.get(eObj) == null) {
+					Map map = new HashMap();
+					cacheMaps.put(eObj, map);
+					RequestCacheEntries.initializeEObjCache(eObj, map);
+				}
+			}
+			
+			if (eHelperContext != null) {
+				Map eHelperMap = (Map) cacheMaps.get(eHelperContext);
+				if (eHelperMap == null && (eHelperContext instanceof EObject)) {
+					eHelperMap = new HashMap();
+					cacheMaps.put(eHelperContext, eHelperMap);
+					RequestCacheEntries.initializeEObjCache(
+						(EObject) eHelperContext, eHelperMap);
+				}
+
+				if (eHelperMap != null) {
+					context = (IElementType) eHelperMap
+						.get(RequestCacheEntries.Element_Type);
+				}
+			}
+		}//if (cacheMaps != null)
+
+		return context;
+	}
+	
+
+	
+a316 2
+    	EObject eObj = getElementToDestroy();
+    	Set set = internalGetDependentElementsToDestroy();
+d319 5
+a323 3
+			result = (eObject == eObj) || set.contains(eObject);
+			eObject = eObject.eContainer();
+		}
+@
+
+
+1.4
+log
+@[145763] gmf_head ldamus 060608 Composite destroy command contains duplicates
+@
+text
+@a28 1
+import org.eclipse.gmf.runtime.emf.type.core.internal.InternalRequestParameters;
+d212 1
+a212 1
+						InternalRequestParameters.DESTROY_DEPENDENTS_REQUEST_PARAMETER,
+@
+
+
+1.3
+log
+@[137749] gmf_head ldamus 060517 Transfer GEF Request's extended data into IEditCommandRequest's parameters
+@
+text
+@d77 1
+@
+
+
+1.2
+log
+@[136760] gmf_head ldamus 060426  ElementTypeRegistry prevents deployment of different applications sharing the same metamodel
+@
+text
+@d207 3
+@
+
+
+1.1
+log
+@[129773] gmf_head cdamus 060306 EMFCoreUtil.destroy() cannot destroy non-contained dependents
+@
+text
+@d25 1
+d27 1
+d133 7
+a139 1
+		return getElementToDestroy();
+@
+

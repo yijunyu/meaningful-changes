@@ -1,0 +1,197 @@
+head	1.4;
+access;
+symbols
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	I20060227-1730:1.3
+	I20060216-1945:1.3
+	I20060210-1715:1.3
+	I20060209-1815:1.3
+	I20060203-0830:1.3
+	I20060129-1145:1.3
+	I20060127-0900:1.3
+	I20060120-1530:1.3
+	I20060113-1700:1.3
+	M4_10:1.3;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2006.02.28.19.07.38;	author atikhomirov;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2006.01.13.18.30.14;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.01.13.17.51.28;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.01.13.17.21.02;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@Introduced separate plugin for Tooling UI, moved mapping wizard of #114186 to this plugin.
+Wizard got some NLS, respect selection, open-created-model-in-editor improvements as well as aligned with recent gmfmap changes.
+Plus, some refactorings to address user-prioritized strategies to select nodes/links doubled number of classes we had.
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.wizards.pages;
+
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.gmf.gmfgraph.Canvas;
+import org.eclipse.gmf.gmfgraph.util.Assistant;
+import org.eclipse.gmf.internal.codegen.wizards.pages.ModelURISelector.Loader;
+import org.eclipse.gmf.tooldef.ToolRegistry;
+import org.eclipse.jface.wizard.WizardPage;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.MenuItem;
+
+/**
+ * @@author artem
+ */
+public class InputPage extends WizardPage implements Loader {
+	private ModelURISelector ecoreSelector;
+	private ModelURISelector gmfgraphSelector;
+	private ModelURISelector tooldefSelector;
+
+	private final WizardInput holder; 
+	public InputPage(WizardInput input) {
+		super("inputPage");
+		holder = input;
+		setPageComplete(false);
+	}
+
+	public void createControl(Composite parent) {
+		ecoreSelector = new ModelURISelector("Domain Model", "ecore", this);
+		gmfgraphSelector = new ModelURISelector("Graphical Definition", "gmfgraph", this);
+		tooldefSelector = new ModelURISelector("Tooling Definition", "gmftool", this);
+		Composite p = new Composite(parent, SWT.NONE);
+		GridLayout l = new GridLayout(1, false);
+		l.verticalSpacing = 30;
+		p.setLayout(l);
+		Control c = ecoreSelector.createControl(p);
+		final Listener lll = new Listener() {
+			public void handleEvent(Event event) {
+				ecoreSelector.setURIText((String) event.widget.getData());
+			}
+		};
+		new MenuItem(ecoreSelector.getBrowseMenu(), SWT.SEPARATOR);
+		MenuItem ii = new MenuItem(ecoreSelector.getBrowseMenu(), SWT.PUSH);
+		ii.setText("Use ECore");
+		ii.setData("platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore");
+		ii.addListener(SWT.Selection, lll);
+
+		c.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		c = gmfgraphSelector.createControl(p);
+		c.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		gmfgraphSelector.setURIText(Assistant.getBasicGraphDef());
+		new MenuItem(gmfgraphSelector.getBrowseMenu(), SWT.SEPARATOR);
+		MenuItem mi = new MenuItem(gmfgraphSelector.getBrowseMenu(), SWT.PUSH);
+		mi.setText("Use Basic");
+		mi.addListener(SWT.Selection, new Listener() {
+			public void handleEvent(Event event) {
+				gmfgraphSelector.setURIText(Assistant.getBasicGraphDef());
+			}
+		});
+		c = tooldefSelector.createControl(p);
+		c.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		c.setEnabled(false);
+		setControl(p);
+	}
+
+	public void run(ModelURISelector selector, String uriText) {
+		URI uri = URI.createURI(uriText);
+		Resource r = holder.getResourceSet().getResource(uri, true);
+		if (selector == ecoreSelector) {
+			if (r != null && r.getContents().get(0) instanceof EPackage) {
+				holder.setDomainModel((EPackage) r.getContents().get(0));
+			}
+		} else if (selector == gmfgraphSelector) {
+			if (r != null && r.getContents().get(0) instanceof Canvas) {
+				holder.setGraphDef((Canvas) r.getContents().get(0));
+			}
+		} else {
+			if (r != null && r.getContents().get(0) instanceof ToolRegistry) {
+				holder.setToolDef((ToolRegistry) r.getContents().get(0));
+			}
+		}
+		setPageComplete(holder.isReady2Go());
+	}
+}
+@
+
+
+1.3
+log
+@turn tooling definition control off not to confuse users
+no syserr dumps
+@
+text
+@@
+
+
+1.2
+log
+@leave only ECore.ecore sample uri
+@
+text
+@d80 1
+a87 1
+			System.err.println("Ecore:" + uriText);
+a91 1
+			System.err.println("Graph:" + uriText);
+a95 1
+			System.err.println("Tool:" + uriText);
+@
+
+
+1.1
+log
+@Moving towards #114186 - wizard to define map model (although almost no-op now)
+@
+text
+@a54 3
+		MenuItem ii = new MenuItem(ecoreSelector.getBrowseMenu(), SWT.PUSH);
+		ii.setText("s1");
+		ii.setData("platform:/resource/webdesign_sample/models/test1.ecore");
+d60 3
+a62 3
+		ii.addListener(SWT.Selection, lll);
+		ii = new MenuItem(ecoreSelector.getBrowseMenu(), SWT.PUSH);
+		ii.setText("ecore");
+@
+

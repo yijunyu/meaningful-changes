@@ -1,0 +1,357 @@
+head	1.2;
+access;
+symbols
+	v20081022-1925:1.2
+	v20081020-0700:1.2
+	ocl_qvt:1.2.0.6
+	Root_ocl_qvt:1.2
+	v20080722-1827:1.2
+	v20080718-1731:1.2
+	v20080716-1600:1.2
+	v20080716-1642:1.2
+	R2_1_maintenance:1.2.0.4
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080528-1052:1.2
+	v20080516-1143:1.2
+	v20080417-1610:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20071130-1111:1.2
+	v20071124-0000:1.2
+	v20071108-0000:1.2
+	v20071003-0000:1.2
+	v20070921-0000:1.2
+	v20070903-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	RC3_20:1.2
+	v20070608-1300:1.2
+	v20070605-1400:1.2
+	v20070601-1400:1.2
+	v20070518-1300:1.2
+	v20070420-1000:1.2
+	v20070405-1100:1.2
+	v20070403-1500:1.2
+	v20070330-1300:1.2
+	v20070208-1800:1.2
+	v20070103-0300:1.2
+	M4_20:1.2
+	M3_20:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2006.10.23.18.58.22;	author atikhomirov;	state Exp;
+branches
+	1.2.6.1;
+next	1.1;
+
+1.1
+date	2006.10.18.20.33.51;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.2.6.1
+date	2008.08.05.12.49.25;	author atikhomirov;	state Exp;
+branches;
+next	1.2.6.2;
+commitid	546c48984c4a4567;
+
+1.2.6.2
+date	2008.08.06.14.05.35;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	35b4899afa74567;
+
+
+desc
+@@
+
+
+1.2
+log
+@finals
+@
+text
+@/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.ast;
+
+import java.util.Set;
+
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.EvaluationException;
+import org.eclipse.gmf.internal.xpand.expression.ast.Expression;
+import org.eclipse.gmf.internal.xpand.model.ProtectedRegion;
+import org.eclipse.gmf.internal.xpand.model.ProtectedRegionSyntaxException;
+import org.eclipse.gmf.internal.xpand.model.XpandExecutionContext;
+
+/**
+ * @@author Sven Efftinge
+ */
+public class ProtectStatement extends Statement {
+
+    private final Expression commentStart;
+
+    private final Expression commentEnd;
+
+    private final Statement[] body;
+
+    private final Expression id;
+
+    private final boolean disable;
+
+    public ProtectStatement(final int start, final int end, final int line, final Expression commentStart,
+            final Expression commentEnd, final Statement[] body, final Expression id, final boolean disable) {
+        super(start, end, line);
+        this.commentStart = commentStart;
+        this.commentEnd = commentEnd;
+        this.body = body;
+        this.id = id;
+        this.disable = disable;
+    }
+
+    public Statement[] getBody() {
+        return body;
+    }
+
+    public Expression getCommentEnd() {
+        return commentEnd;
+    }
+
+    public Expression getCommentStart() {
+        return commentStart;
+    }
+
+    public Expression getId() {
+        return id;
+    }
+
+    public void analyze(final XpandExecutionContext ctx, final Set<AnalysationIssue> issues) {
+        getCommentStart().analyze(ctx, issues);
+        getCommentEnd().analyze(ctx, issues);
+        getId().analyze(ctx, issues);
+
+        for (int i = 0; i < getBody().length; i++) {
+            getBody()[i].analyze(ctx, issues);
+        }
+    }
+
+    @@Override
+    public void evaluateInternal(final XpandExecutionContext ctx) {
+        final String cStart = nullSave(getCommentStart().evaluate(ctx));
+        if (cStart == null) {
+			throw new EvaluationException("NullEvaluation!", getCommentStart());
+		}
+        final String cEnd = nullSave(getCommentEnd().evaluate(ctx));
+        if (cEnd == null) {
+			throw new EvaluationException("NullEvaluation!", getCommentEnd());
+		}
+        final String id = nullSave(getId().evaluate(ctx));
+        if (id == null) {
+			throw new EvaluationException("NullEvaluation!", getId());
+		}
+
+        ProtectedRegion region = null;
+        if (ctx.getProtectedRegionResolver() != null) {
+            region = ctx.getProtectedRegionResolver().getProtectedRegion(id.toString());
+        } else {
+            throw new RuntimeException("No protected region resolver configured!");
+        }
+
+        if (region == null) {
+            region = ctx.getProtectedRegionResolver().createProtectedRegion(id, disable);
+            ctx.getOutput().write(region.getStartString(cStart, cEnd));
+            for (int i = 0; i < getBody().length; i++) {
+                getBody()[i].evaluate(ctx);
+            }
+            ctx.getOutput().write(region.getEndString(cStart, cEnd));
+        } else {
+            ctx.getOutput().write(region.getStartString(cStart, cEnd));
+            try {
+                ctx.getOutput().write(region.getBody(cStart, cEnd));
+            } catch (final ProtectedRegionSyntaxException e) {
+                throw new EvaluationException(e.getMessage(), getId());
+            }
+            ctx.getOutput().write(region.getEndString(cStart, cEnd));
+        }
+
+    }
+
+    private String nullSave(final Object string) {
+        return string != null ? string.toString() : "";
+    }
+
+}
+@
+
+
+1.2.6.1
+log
+@[243154] Use OCL instead of home-grown expression language
+@
+text
+@d2 3
+a4 1
+ * Copyright (c) 2005, 2008 Sven Efftinge and others.
+d12 2
+a13 1
+ *     Artem Tikhomirov (Borland) - Migration to OCL expressions
+d21 1
+a24 2
+import org.eclipse.gmf.internal.xpand.ocl.ExpressionHelper;
+import org.eclipse.ocl.cst.OCLExpressionCS;
+d31 1
+a31 1
+    private final ExpressionHelper commentStart;
+d33 1
+a33 1
+    private final ExpressionHelper commentEnd;
+d37 1
+a37 1
+    private final ExpressionHelper id;
+d41 2
+a42 2
+    public ProtectStatement(final int start, final int end, final int line, final OCLExpressionCS commentStart,
+            final OCLExpressionCS commentEnd, final Statement[] body, final OCLExpressionCS id, final boolean disable) {
+d44 2
+a45 2
+        this.commentStart = new ExpressionHelper(commentStart);
+        this.commentEnd = new ExpressionHelper(commentEnd);
+d47 1
+a47 1
+        this.id = new ExpressionHelper(id);
+d51 16
+d68 3
+a70 3
+        commentStart.analyze(ctx, issues);
+        commentEnd.analyze(ctx, issues);
+        id.analyze(ctx, issues);
+d72 2
+a73 2
+        for (int i = 0; i < body.length; i++) {
+            body[i].analyze(ctx, issues);
+d79 1
+a79 2
+    	// FIXME REVISIT!!!
+        final String cStart = nullSave(commentStart.evaluate(ctx));
+d81 1
+a81 1
+			throw new EvaluationException("NullEvaluation!", this, commentStart.getCST());
+d83 1
+a83 1
+        final String cEnd = nullSave(commentEnd.evaluate(ctx));
+d85 1
+a85 1
+			throw new EvaluationException("NullEvaluation!", this, commentEnd.getCST());
+d87 3
+a89 3
+        final String idv = nullSave(id.evaluate(ctx));
+        if (idv == null) {
+			throw new EvaluationException("NullEvaluation!", this, id.getCST());
+d94 1
+a94 1
+            region = ctx.getProtectedRegionResolver().getProtectedRegion(idv);
+d100 1
+a100 1
+            region = ctx.getProtectedRegionResolver().createProtectedRegion(idv, disable);
+d102 2
+a103 2
+            for (int i = 0; i < body.length; i++) {
+                body[i].evaluate(ctx);
+d111 1
+a111 1
+                throw new EvaluationException(e.getMessage(), this, id.getCST());
+a117 1
+    // FIXME STUPID CODE?! never returns null while each use of the method checks for null
+@
+
+
+1.2.6.2
+log
+@[243154] Use OCL instead of home-grown expression language. Refactored to eliminate context specific to expressions (moving towards using OCL environment for that), split modifiable (context-specific) and static execution data.
+@
+text
+@d16 5
+a20 3
+import org.eclipse.gmf.internal.xpand.model.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.model.EvaluationException;
+import org.eclipse.gmf.internal.xpand.model.ExecutionContext;
+d49 1
+a49 1
+    public void analyze(final ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+d60 1
+a60 1
+    public void evaluateInternal(final ExecutionContext ctx) {
+d75 23
+a97 23
+//        ProtectedRegion region = null;
+//        if (ctx.getProtectedRegionResolver() != null) {
+//            region = ctx.getProtectedRegionResolver().getProtectedRegion(idv);
+//        } else {
+//            throw new RuntimeException("No protected region resolver configured!");
+//        }
+//
+//        if (region == null) {
+//            region = ctx.getProtectedRegionResolver().createProtectedRegion(idv, disable);
+//            ctx.getOutput().write(region.getStartString(cStart, cEnd));
+//            for (int i = 0; i < body.length; i++) {
+//                body[i].evaluate(ctx);
+//            }
+//            ctx.getOutput().write(region.getEndString(cStart, cEnd));
+//        } else {
+//            ctx.getOutput().write(region.getStartString(cStart, cEnd));
+//            try {
+//                ctx.getOutput().write(region.getBody(cStart, cEnd));
+//            } catch (final ProtectedRegionSyntaxException e) {
+//                throw new EvaluationException(e.getMessage(), this, id.getCST());
+//            }
+//            ctx.getOutput().write(region.getEndString(cStart, cEnd));
+//        }
+@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@d27 1
+a27 3
+ * *
+ * 
+ * @@author Sven Efftinge *
+d31 1
+a31 1
+    private Expression commentStart;
+d33 1
+a33 1
+    private Expression commentEnd;
+d35 1
+a35 1
+    private Statement[] body;
+d37 1
+a37 1
+    private Expression id;
+d39 1
+a39 1
+    private boolean disable;
+@
+

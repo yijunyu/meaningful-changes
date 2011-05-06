@@ -1,0 +1,256 @@
+head	1.3;
+access;
+symbols
+	v20080722-1827:1.3
+	R2_1_maintenance:1.3.0.4
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080603-1553:1.3
+	v20080507-2230:1.3
+	v20080425-1959:1.3
+	v20080417-1610:1.3
+	v20080322-0000:1.3
+	v20080222-1200:1.3
+	v20080215-1500:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.2
+	R2_0:1.3
+	R4_20:1.3
+	v20070621-0000:1.3
+	RC3_20:1.2
+	v20070601-1400:1.2
+	v20070520-1200:1.2
+	v20070504-1000:1.2
+	v20070405-1100:1.2
+	v20070330-1300:1.2
+	v20070322-1100:1.2
+	v20060316-0600:1.1
+	v20070208-1800:1.1
+	M4_20:1.1
+	v20061218-1200:1.1
+	v20061214-0000:1.1
+	v20061120-1300:1.1
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061027-1200:1.1.2.1
+	v20061013-1330:1.1
+	v20060925-1700:1.1.2.1
+	v20060919-0800:1.1.2.1
+	M1_20:1.1
+	v20060904-1500:1.1
+	v20060831-1500:1.1
+	v20060803-1200:1.1
+	v20060713-1700:1.1
+	R1_0_maintenance:1.1.0.2
+	R1_0:1.1
+	v20060627-1200:1.1
+	v20060626-1420:1.1
+	v20060616-1200:1.1
+	v20060531-1730:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.3
+date	2007.06.21.14.09.59;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	1941467a86b54567;
+
+1.2
+date	2007.03.21.23.23.57;	author radvorak;	state Exp;
+branches;
+next	1.1;
+commitid	10c44601be8c4567;
+
+1.1
+date	2006.05.30.19.09.13;	author radvorak;	state Exp;
+branches
+	1.1.2.1;
+next	;
+
+1.1.2.1
+date	2006.09.13.23.07.18;	author rgronback;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@fix copyright years
+@
+text
+@/*
+ * Copyright (c) 2005, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0 which
+ * accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: 
+ *    Radek Dvorak (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.validate.regexp;
+
+import java.text.MessageFormat;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EDataType;
+import org.eclipse.emf.ecore.ETypedElement;
+import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.gmf.internal.validate.Annotations;
+import org.eclipse.gmf.internal.validate.DebugOptions;
+import org.eclipse.gmf.internal.validate.DefUtils;
+import org.eclipse.gmf.internal.validate.GMFValidationPlugin;
+import org.eclipse.gmf.internal.validate.Messages;
+import org.eclipse.gmf.internal.validate.StatusCodes;
+import org.eclipse.gmf.internal.validate.Trace;
+import org.eclipse.gmf.internal.validate.expressions.AbstractExpression;
+import org.eclipse.gmf.internal.validate.expressions.IEvaluationEnvironment;
+import org.eclipse.gmf.internal.validate.expressions.IParseEnvironment;
+import org.eclipse.osgi.util.NLS;
+
+class RegularExpressionAdapter extends AbstractExpression {	
+	private Pattern pattern;
+	private boolean isNegation;
+	
+	public RegularExpressionAdapter(String body, EClassifier context, IParseEnvironment extEnv, boolean isNegation) {
+		super(body, context, extEnv);
+		
+		this.isNegation = isNegation;
+		try {
+			this.pattern = Pattern.compile(body);
+			if(!(context instanceof EDataType)) {
+				setStatus(GMFValidationPlugin.createStatus(IStatus.WARNING, 0, NLS.bind(Messages.expressionRequiresEDataTypeAsContext, getLanguage()), null));				
+			}
+		} catch (PatternSyntaxException e) {
+			setInvalidExprStatus(e);
+		} catch(RuntimeException e) {
+			setUnexpectedParseError(e);			
+		}
+	}
+	
+	public String getLanguage() {
+		return isNegation ? Annotations.NEG_REGEXP_KEY : Annotations.REGEXP_KEY;
+	}
+	
+	public boolean isLooselyTyped() {	
+		return false;
+	}
+	
+	public boolean isAssignableTo(EClassifier ecoreType) {
+		// ask Ecore to check if the type can be assigned a boolean value
+		return ecoreType.isInstance(Boolean.TRUE);			
+	}
+	
+	public boolean isAssignableToElement(ETypedElement typedElement) {
+		return typedElement.getEType() != null && isAssignableTo(typedElement.getEType());
+	}
+	
+	public EClassifier getResultType() {
+		return DefUtils.getCanonicalEcorePackageClassifier(EcorePackage.eINSTANCE.getEBooleanObject());
+	}
+
+	protected Object doEvaluate(Object context) {
+		if(this.pattern == null || context == null) {
+			return null;
+		}
+		String contextInstance = null;
+		if (context instanceof EDataType) {
+			contextInstance = EcoreUtil.convertToString((EDataType) context, contextInstance);
+		}
+		Matcher matcher = this.pattern.matcher(String.valueOf(contextInstance));
+		boolean matches = matcher.matches();
+		return Boolean.valueOf(isNegation ? !matches : matches);
+	}
+	
+	protected Object doEvaluate(Object context, IEvaluationEnvironment extEnvironment) {
+		return doEvaluate(context);
+	}
+	
+	private void setInvalidExprStatus(Exception exception) {
+		String message = MessageFormat.format(
+				Messages.invalidExpressionBody, 
+				new Object[] { getBody(), exception.getLocalizedMessage() });
+		
+		setStatus(GMFValidationPlugin.createStatus(
+				IStatus.ERROR, StatusCodes.INVALID_VALUE_EXPRESSION, message, exception));
+		Trace.catching(DebugOptions.EXCEPTIONS_CATCHING, exception);			
+	}	
+	
+	private void setUnexpectedParseError(Exception e) {
+		setStatus(GMFValidationPlugin.createStatus(
+				IStatus.ERROR, StatusCodes.UNEXPECTED_PARSE_ERROR, 
+				Messages.unexpectedExprParseError, e));
+		GMFValidationPlugin.log(getStatus());
+		Trace.catching(DebugOptions.EXCEPTIONS_CATCHING, e);			
+	}	
+}
+@
+
+
+1.2
+log
+@[178360] Get rid of deprecated code use in org.eclipse.gmf.validate plug-in
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005 Borland Software Corporation
+d112 1
+a112 1
+}@
+
+
+1.1
+log
+@#144518 Support negation of 'regexp' in gmf models expressions
+@
+text
+@a24 1
+import org.eclipse.emf.ocl.parser.EcoreEnvironment;
+d66 2
+a67 1
+		return isTypeConformantTo(ecoreType);			
+d71 1
+a71 5
+		EClassifier oclType = EcoreEnvironment.getOCLType(typedElement);
+		if(oclType == null) {
+			return false;
+		}
+		return isTypeConformantTo(oclType);
+d74 1
+a74 2
+	public EClassifier getResultType() {	
+		//FIXME
+d77 1
+a77 1
+	
+a94 4
+	private boolean isTypeConformantTo(EClassifier otherType) {
+		return otherType == EcorePackage.eINSTANCE.getEBoolean() || otherType == EcorePackage.eINSTANCE.getEBooleanObject();
+	}
+	
+@
+
+
+1.1.2.1
+log
+@[153901] Updated copyright date from 2005 to 2005, 2006 for those changed in CVS in 2006 (based on Tom/Anthony's script).
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005, 2006 Borland Software Corporation
+@
+

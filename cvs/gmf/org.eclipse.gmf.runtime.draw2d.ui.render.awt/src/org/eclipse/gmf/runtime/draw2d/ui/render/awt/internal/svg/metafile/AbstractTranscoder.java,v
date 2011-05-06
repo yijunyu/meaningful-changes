@@ -1,0 +1,436 @@
+head	1.4;
+access;
+symbols
+	v20081020-0700:1.4
+	v20080903-1520:1.4
+	v20080903-1510:1.4
+	v20080722-1827:1.4
+	R2_1_maintenance:1.4.0.2
+	Root_R2_1_maintenance:1.4
+	R2_1_0:1.4
+	v20080603-1553:1.4
+	v20080527-1255:1.4
+	v20080507-2230:1.4
+	v20080425-1959:1.2
+	v20080328-1605:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20071003-0000:1.2
+	v20070928-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	RC3_20:1.2
+	v20070614-1400:1.2
+	v20070608-1300:1.2
+	v20070601-1400:1.2
+	v20070504-1000:1.2
+	v20070330-1300:1.2
+	v20070221-1500:1.2
+	v20070208-1800:1.2
+	v20070105-1200:1.1.2.1
+	M4_20:1.2
+	v20061218-1500:1.1.2.1
+	v20061214-0000:1.2
+	M3_20:1.2
+	v20061013-1330:1.2
+	v20060919-0800:1.1.2.1
+	v20060907-1100:1.1
+	M1_20:1.1
+	v20060803-1200:1.1
+	v20060713-1700:1.1
+	R1_0_maintenance:1.1.0.2
+	R1_0:1.1
+	v20060627-1200:1.1
+	v20060616-1200:1.1
+	v20060609-1400:1.1
+	v20060531-1730:1.1
+	I20060505-1400:1.1
+	I20060424-0500:1.1
+	I20060424-0300:1.1
+	M6_10:1.1
+	I20060407-1200:1.1
+	I20060331-1000:1.1
+	I20060324-0300:1.1
+	I20060317-1300:1.1
+	I20060317-1200:1.1
+	I20060316-1300:1.1
+	I20060309-1300:1.1
+	M5_10:1.1
+	S20060303-1600:1.1
+	I20060227-1730:1.1
+	I20060216-1945:1.1
+	I20060210-1715:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2008.05.08.02.00.49;	author ahunter;	state Exp;
+branches;
+next	1.3;
+commitid	24b448225ed14567;
+
+1.3
+date	2008.05.07.18.07.27;	author aboyko;	state Exp;
+branches;
+next	1.2;
+commitid	782f4821efde4567;
+
+1.2
+date	2006.10.03.15.05.26;	author ahunter;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.02.10.15.42.02;	author sshaw;	state Exp;
+branches
+	1.1.2.1;
+next	;
+
+1.1.2.1
+date	2006.09.13.16.44.41;	author ahunter;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@[229256] gmf_head aboyko 080507 GMF can't render SVG's with xlinked or embedded images.
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.metafile;
+
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+
+import org.apache.batik.dom.svg.SVGDOMImplementation;
+import org.apache.batik.svggen.SVGGraphics2D;
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.Draw2dRenderPlugin;
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.Draw2dRenderDebugOptions;
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.metafile.DeviceContext;
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.metafile.IRenderToPath;
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.metafile.IRenderableObject;
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.metafile.ITraceMe;
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.metafile.Record;
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.metafile.TranscoderException;
+import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.svg.SVGDocument;
+
+
+/**
+ * Abstract base class for both the WMFTranscoder and the EMFTranscoder.  Implements the common
+ * functionality.  May be extended to provide a new type of transcoder.
+ * 
+ * @@author dhabib
+ */
+public abstract class AbstractTranscoder 
+{
+	private static boolean 	m_gDebugMode						= false;
+	private Dimension 		m_size								= new Dimension( 100, 100 );
+
+	/**
+	 * Puts the transcoder in 'debug' mode so messages are written out using System.out
+	 * instead of using the Trace/Debug stuff.  This is so we can operate without
+	 * eclipse.
+	 */
+	static void setDebugMode()
+	{
+		m_gDebugMode = true;
+	}
+	
+	/**
+	 * Logs the specified message.  If we are in 'debug' mode it will log the message to
+	 * the output console.  If we are running as a plugin, it will log the
+	 * message using the core 
+	 * @@param message
+	 */
+	static void logMessage( String message )
+	{
+		if( m_gDebugMode )
+		{	
+			System.out.println( message );
+		}
+		else
+		{	
+			// We may not handle all types of selections.
+			Trace.trace(	Draw2dRenderPlugin.getInstance(), 
+							Draw2dRenderDebugOptions.DEBUG, 
+							message );
+		}
+	}
+	
+	/**
+	 * Sets the size, in pixels, of the metafile output.  In the case of the WMF/APM and the EMF
+	 * transcoder, this information is contained in the header record, so after initializing that
+	 * record they will call this method.
+	 * @@param size
+	 */
+	public void setSize( Dimension size )
+	{
+		m_size = size;
+	}
+	
+	/**
+	 * Retrieves the current size, in pixels, of the metafile output.
+	 * @@return
+	 */
+	public Dimension getSize()
+	{
+		return new Dimension( m_size );
+	}
+
+	/**
+	 * Translate an input stream containing a metafile to an output stream containing SVG.
+	 * @@param input - Contains Metafile Data
+	 * @@param output - After successful transcoding, contains generated SVG output.
+	 * @@throws TranscoderException
+	 */
+	public void transcode( InputStream input, OutputStream output) throws TranscoderException
+	{
+		transcode(input, output, SVGDOMImplementation.SVG_NAMESPACE_URI);
+	}
+	
+	/**
+	 * Translate an input stream containing a metafile to an output stream containing SVG.
+	 * @@param input - Contains Metafile Data
+	 * @@param output - After successful transcoding, contains generated SVG output.
+	 * @@param url - document namespace url
+	 * @@throws TranscoderException
+	 */
+	public void transcode( InputStream input, OutputStream output, String url ) throws TranscoderException
+	{
+		if( input == null )
+		{
+			throw new IllegalArgumentException( "Parameter 'input' may not be null" );	//$NON-NLS-1$
+		}
+		else if( output == null )
+		{
+			throw new IllegalArgumentException( "Parameter 'output' may not be null" );	//$NON-NLS-1$
+		}
+
+		try
+		{
+			BufferedInputStream stream = new BufferedInputStream( input );
+			
+			// Create the DOM
+			DOMImplementation	impl 	= SVGDOMImplementation.getDOMImplementation();
+			String 				svgNS 	= url;
+			SVGDocument 		doc 	= (SVGDocument)impl.createDocument( svgNS, "svg", null );	//$NON-NLS-1$
+
+			// Create the SVG converter.
+			SVGGraphics2D svg = new SVGGraphics2D( doc );
+			
+			// There seems to be a bug in the batik libraries.  It appears that
+			// there are some variables that are not set properly at initialization
+			// time.  This sets the variable so it works.
+			svg.getGeneratorContext().setPrecision( 3 );
+
+			// Iterate over the input stream and paint into the svg graphics object.
+			iterateRecords( stream, svg );
+	
+			// Get the size from the header.
+			svg.setSVGCanvasSize( m_size );
+	
+			Writer writer = new OutputStreamWriter( output, "UTF-8" );//$NON-NLS-1$
+			svg.stream( writer );
+		}
+		catch( IOException e )
+		{
+				throw new TranscoderException( e );
+		}
+	}
+	
+	/**
+	 * Parses the metafile records in the stream , rendering them into
+	 * the provided Graphics object.
+	 * @@param stream
+	 * @@param g
+	 * @@throws TranscoderException
+	 */
+	private void iterateRecords(	BufferedInputStream stream, 
+									Graphics2D g ) throws TranscoderException, IOException
+	{
+		DeviceContext context = new DeviceContext();
+
+		int 	index = 0;
+		Record 	rec;
+		
+		while( (rec = getNextRecord( stream, index )) != null )
+		{
+			index++;
+			
+			try
+			{
+				String output = null;
+				IRenderableObject svgConverter = getConverter( rec );
+				
+				if( svgConverter != null )
+				{
+					if( context.getGdiPath().isOpen() &&
+						svgConverter instanceof IRenderToPath )
+					{
+						// Rendering to a path and this converter handles paths.
+						IRenderToPath pathRender = (IRenderToPath) svgConverter;
+						pathRender.render( context );
+						if (m_gDebugMode) {
+							output = buildOutput(rec, "IRenderToPath", index); //$NON-NLS-1$
+						}
+					}
+					else
+					{
+						svgConverter.render( g, context );
+						if (m_gDebugMode) {
+							output = buildOutput(rec, "IRenderableObject", index); //$NON-NLS-1$
+						}
+					}
+					if (m_gDebugMode && svgConverter instanceof ITraceMe) {
+						output += ' ' + svgConverter.toString();
+					}
+				}
+				else
+				{
+					// Unconditionally trace this
+					output = buildOutput(rec, "Unhandled", index); //$NON-NLS-1$
+				}
+ 				logMessage( output );
+ 			}
+			catch (org.apache.batik.transcoder.TranscoderException e)
+			{
+				throw new TranscoderException(e);
+			}
+			catch (TranscoderException e)
+			{
+				throw e;
+			}
+ 			catch( Exception e )
+ 			{
+ 				String output = buildOutput(
+					rec,
+					"Exception while processing",//$NON-NLS-1$
+					index) + ":\n" + e.toString(); //$NON-NLS-1$
+				logMessage( output );
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private String _thisClassName = null;
+	private String buildOutput(Record rec, String msg, int ix) {
+		if (_thisClassName == null) {
+			_thisClassName = getClass().getName();
+			_thisClassName = _thisClassName.substring(_thisClassName.lastIndexOf('.') + 1);
+		}
+		StringBuffer sb = new StringBuffer();
+		sb.append(_thisClassName);
+		sb.append(", record " + ix + ' ');//$NON-NLS-1$
+		sb.append(msg + "  metafile record type "); //$NON-NLS-1$
+		sb.append(rec.getType() + " = "+ getUserFriendlyName( rec.getType() ));//$NON-NLS-1$
+
+		return sb.toString();
+	}
+
+	/**
+	 * Reads the next metafile record from the provided stream.  Returns 'null' 
+	 * if at the end of the set of records.
+	 * @@param stream Contains the data to read the record from.
+	 * @@param curRecord Contains the current record number.
+	 * @@return Next metafile record in the stream, or null if the last record has been read.
+	 * @@throws IOException
+	 */
+	protected abstract Record getNextRecord(	BufferedInputStream stream,
+												int curRecord ) throws IOException;
+
+	/**
+	 * This method takes a metafile record and instantiates a class 
+	 * implementing IRenderableObject to handle that type of record.
+	 * This method will initialize the newly created converter
+	 * with the data contained in the record.
+	 * @@param stream
+	 * @@return A handler for the specified record, or null if no handler exists.
+	 * @@throws TranscoderException
+	 */
+	protected abstract IRenderableObject getConverter( Record rec ) throws TranscoderException;
+	
+
+	/**
+	 * Returns the user friendly name for the specified record type.
+	 * @@param recordType
+	 * @@return The user friendly name for the specified record type.
+	 */
+	protected abstract String getUserFriendlyName( int recordType );
+}
+@
+
+
+1.3
+log
+@[229256] gmf_head aboyko 080507 GMF can't render SVG's with xlinked or embedded images.
+@
+text
+@d104 11
+@
+
+
+1.2
+log
+@gmf_head ahunter 061003 Merge 1.0.1 Runtime to HEAD 2.0
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2004, 2006 IBM Corporation and others.
+d104 1
+d107 1
+a107 1
+	public void transcode( InputStream input, OutputStream output ) throws TranscoderException
+d124 1
+a124 1
+			String 				svgNS 	= SVGDOMImplementation.SVG_NAMESPACE_URI;
+@
+
+
+1.1
+log
+@bugzilla 119319 gmf-head sshaw 060210 Support extensibility for RenderedImageFactory
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2004 IBM Corporation and others.
+@
+
+
+1.1.2.1
+log
+@[153901] gmf_R1_0_maintenance tmacdoug 060913 Sweep copyright files for anything changed in 2006
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2004, 2006 IBM Corporation and others.
+@
+

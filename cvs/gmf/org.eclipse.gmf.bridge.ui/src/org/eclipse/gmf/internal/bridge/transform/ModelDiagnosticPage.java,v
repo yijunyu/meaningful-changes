@@ -1,0 +1,162 @@
+head	1.1;
+access;
+symbols
+	v20080924-1925:1.1
+	v20080722-1827:1.1
+	v20080716-1642:1.1
+	R2_1_maintenance:1.1.0.4
+	Root_R2_1_maintenance:1.1
+	R2_1_0:1.1
+	v20080417-1610:1.1
+	v20080322-0000:1.1
+	v20080222-1200:1.1
+	v20080215-1500:1.1
+	v20080207-0207:1.1
+	v20071124-0000:1.1
+	v20071108-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1
+	RC3_20:1.1
+	v20070608-1300:1.1
+	v20070605-1400:1.1
+	v20070601-1400:1.1
+	v20070520-1200:1.1
+	v20070518-1300:1.1
+	v20070420-1000:1.1
+	v20070413-1300:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2007.04.12.14.40.18;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	5f58461e44d04567;
+
+
+desc
+@@
+
+
+1.1
+log
+@[181896] afedorov - Allow transformation wizard to complete if there are errors in the resulting gmfgen model
+refactored not to define extra strings for page names, titles and descriptions moved to owning pages.
+@
+text
+@/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Fedorov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.bridge.transform;
+
+import org.eclipse.emf.common.ui.DiagnosticComposite;
+import org.eclipse.emf.common.util.Diagnostic;
+import org.eclipse.jface.wizard.WizardPage;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+
+
+abstract class ModelDiagnosticPage extends WizardPage {
+	
+	private DiagnosticComposite myDiagnosticComposite;
+	private Button myIgnoreButton;
+
+
+	ModelDiagnosticPage(String pageName) {
+		super(pageName);
+	}
+
+	void applyValidation() {
+		boolean ignore = myIgnoreButton.getSelection();
+		setIgnoreOption(ignore);
+		setPageComplete(ignore);
+	}
+
+	public void createControl(Composite parent) {
+		Composite plate = new Composite(parent, SWT.NONE);
+		{
+			GridLayout layout = new GridLayout();
+			plate.setLayout(layout);
+
+			GridData data = new GridData();
+			data.verticalAlignment = GridData.FILL;
+			data.horizontalAlignment = GridData.FILL;
+			data.grabExcessHorizontalSpace = true;
+			plate.setLayoutData(data);
+		}
+		createDiagnosticComposite(plate);
+		createIgnoreButton(plate);
+		setControl(plate);
+
+	}
+
+	private void createDiagnosticComposite(Composite parent) {
+		myDiagnosticComposite = new DiagnosticComposite(parent, SWT.NONE);
+		myDiagnosticComposite.initialize(null);
+		myDiagnosticComposite.setShowRootDiagnostic(true);
+		myDiagnosticComposite.setSeverityMask(Diagnostic.ERROR);
+		GridData data = new GridData(SWT.FILL, SWT.FILL, true, true);
+		myDiagnosticComposite.setLayoutData(data);
+	}
+	
+	private void createIgnoreButton(Composite parent) {
+		myIgnoreButton = new Button(parent, SWT.CHECK);
+		myIgnoreButton.setText(Messages.MapModelDiagnosticPage_btn_ignore_text);
+		setButtonLayoutData(myIgnoreButton);
+		myIgnoreButton.addSelectionListener(new SelectionAdapter(){
+			
+			@@Override
+			public void widgetSelected(org.eclipse.swt.events.SelectionEvent e) {
+				applyValidation();
+			}
+			
+		});
+	}
+
+	protected abstract boolean getIgnoreOption();
+
+	protected TransformToGenModelOperation getOperation() {
+		TransformToGenModelWizard wizard = (TransformToGenModelWizard) getWizard();
+		return wizard.getTransformOperation();
+	}
+	
+	protected abstract Diagnostic getValidationResult();
+
+	private void initControls() {
+		Diagnostic diagnostic = getValidationResult();
+		myDiagnosticComposite.setDiagnostic(diagnostic);
+		boolean ignore = getIgnoreOption();
+		myIgnoreButton.setSelection(ignore);
+		setPageComplete(ignore);
+	}
+
+	protected abstract void setIgnoreOption(boolean ignore);
+
+	@@Override
+	public void setVisible(boolean visible) {
+		if (visible) {
+			initControls();
+		}
+		super.setVisible(visible);
+	}
+	
+}
+@

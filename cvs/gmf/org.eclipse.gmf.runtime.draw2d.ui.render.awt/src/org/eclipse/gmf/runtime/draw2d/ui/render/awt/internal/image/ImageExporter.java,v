@@ -1,0 +1,397 @@
+head	1.3;
+access;
+symbols
+	v20081020-0700:1.3
+	v20080903-1520:1.3
+	v20080903-1510:1.3
+	v20080722-1827:1.3
+	R2_1_maintenance:1.3.0.2
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080603-1553:1.3
+	v20080527-1255:1.3
+	v20080507-2230:1.2
+	v20080425-1959:1.2
+	v20080328-1605:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20071003-0000:1.2
+	v20070928-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	RC3_20:1.2
+	v20070614-1400:1.2
+	v20070608-1300:1.2
+	v20070601-1400:1.2
+	v20070504-1000:1.2
+	v20070330-1300:1.2
+	v20070221-1500:1.2
+	v20070208-1800:1.2
+	v20070105-1200:1.1.2.1
+	M4_20:1.2
+	v20061218-1500:1.1.2.1
+	v20061214-0000:1.2
+	M3_20:1.1
+	v20061013-1330:1.1
+	v20060919-0800:1.1
+	v20060907-1100:1.1
+	M1_20:1.1
+	v20060803-1200:1.1
+	v20060713-1700:1.1
+	R1_0_maintenance:1.1.0.2
+	R1_0:1.1
+	v20060627-1200:1.1
+	v20060616-1200:1.1
+	v20060609-1400:1.1
+	v20060531-1730:1.1
+	I20060505-1400:1.1
+	I20060424-0500:1.1
+	I20060424-0300:1.1
+	M6_10:1.1
+	I20060407-1200:1.1
+	I20060331-1000:1.1
+	I20060324-0300:1.1
+	I20060317-1300:1.1
+	I20060317-1200:1.1
+	I20060316-1300:1.1
+	I20060309-1300:1.1
+	M5_10:1.1
+	S20060303-1600:1.1
+	I20060227-1730:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.3
+date	2008.05.23.03.17.38;	author aboyko;	state Exp;
+branches;
+next	1.2;
+commitid	49a6483637514567;
+
+1.2
+date	2006.11.22.12.52.02;	author ldamus;	state Exp;
+branches;
+next	1.1;
+commitid	552c456447f24567;
+
+1.1
+date	2006.02.21.16.07.11;	author sshaw;	state Exp;
+branches
+	1.1.2.1;
+next	;
+
+1.1.2.1
+date	2006.11.22.12.35.49;	author ldamus;	state Exp;
+branches;
+next	;
+commitid	449e456444254567;
+
+
+desc
+@@
+
+
+1.3
+log
+@[233585] gmf_head aboyko 080522 [ImageSupport] Diagram Image Export API additions to enable BIRT integration
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2006, 2008 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.image;
+
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import org.apache.batik.transcoder.TranscoderException;
+import org.apache.batik.transcoder.TranscoderOutput;
+import org.apache.batik.transcoder.image.ImageTranscoder;
+import org.apache.batik.transcoder.image.JPEGTranscoder;
+import org.apache.batik.transcoder.image.PNGTranscoder;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.gmf.runtime.common.core.command.FileModificationValidator;
+import org.eclipse.gmf.runtime.common.core.util.Log;
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.Draw2dRenderPlugin;
+
+
+/**
+ * Class utility for exporting to JPEG, TIFF and PNG file formats.
+ * @@author sshaw
+ */
+public class ImageExporter {
+    
+    static public final String JPEG_FILE = "JPEG"; //$NON-NLS-1$
+    static public final String PNG_FILE = "PNG"; //$NON-NLS-1$
+    
+    /**
+     * Allows export of an image to specific supported image file formats.
+     * 
+     * @@param destination the <code>IPath</code> that is the path of the destination file to be created.
+     * @@param image the <code>BufferedImage</code> class to be exported to the image file format.
+     * @@param imageFormat the <code>String</code> that is the type of image file format to export to.  Can
+     * be one of <code>JPEG_FILE</code> or <code>PNG_FILE</code>
+     * @@param monitor the <code>IProgressMonitor</code> that will update the progress monitor during the operation.
+     */
+    public static void exportToFile(IPath destination, BufferedImage image,
+            String imageFormat, IProgressMonitor monitor) 
+        throws CoreException {
+
+        IStatus fileModificationStatus = createFile(destination);
+        
+        if (!fileModificationStatus.isOK()) {
+        	// can't write to the file
+        	return;
+        }
+        
+        try {
+            FileOutputStream os = new FileOutputStream(destination.toOSString());
+            exportToOutputStream(os, image, imageFormat, monitor);
+            os.close();
+            monitor.worked(1);
+            refreshLocal(destination);
+        } catch (IOException ex) {
+            Log.error(Draw2dRenderPlugin.getInstance(), IStatus.ERROR, ex
+                .getMessage(), ex);
+            IStatus status =
+                new Status(IStatus.ERROR, "exportToFile", IStatus.OK, //$NON-NLS-1$
+                    ex.getMessage(), null);
+            throw new CoreException(status);
+        }
+    }
+    
+    /**
+     * Allows export of an image to specific supported image file formats.
+	 *
+     * @@param stream stream to write the data to
+     * @@param image the image
+     * @@param imageFormat image format
+     * @@param monitor progress monitor
+     * @@throws CoreException
+     */
+    public static void exportToOutputStream(OutputStream stream, BufferedImage image,
+			String imageFormat, IProgressMonitor monitor) throws CoreException {
+		monitor.worked(1);
+		ImageTranscoder imageTranscoder = null;
+		BufferedImage newImg = image;
+
+		if (imageFormat == JPEG_FILE) {
+			imageTranscoder = new JPEGTranscoder();
+			if (image.getType() != BufferedImage.TYPE_INT_RGB) {
+				newImg = new BufferedImage(image.getWidth(), image.getHeight(),
+						BufferedImage.TYPE_INT_RGB);
+				Graphics g = newImg.getGraphics();
+				g.drawImage(image, 0, 0, null);
+				g.dispose();
+			}
+			imageTranscoder.addTranscodingHint(JPEGTranscoder.KEY_QUALITY,
+					new Float(0.65));
+		} else if (imageFormat == PNG_FILE) {
+			imageTranscoder = new PNGTranscoder();
+		} else {
+			throw new IllegalArgumentException();
+		}
+
+		TranscoderOutput to = new TranscoderOutput(stream);
+
+		try {
+			imageTranscoder.writeImage(newImg, to);
+		} catch (TranscoderException e) {
+			Log.error(Draw2dRenderPlugin.getInstance(), IStatus.ERROR, e
+					.getMessage(), e);
+			IStatus status = new Status(IStatus.ERROR,
+					"exportToStream", IStatus.OK, //$NON-NLS-1$
+					e.getMessage(), null);
+			throw new CoreException(status);
+		}
+		monitor.worked(1);
+	}
+    
+    /**
+	 * create a file in the workspace if the destination is in a project in the
+	 * workspace.
+	 * 
+	 * @@param destination
+	 *            the destination file.
+	 * @@return the status from validating the file for editing
+	 * @@exception CoreException
+	 *                if this method fails
+	 */
+    private static IStatus createFile(IPath destination)
+        throws CoreException {
+        IFile file = ResourcesPlugin.getWorkspace().getRoot()
+            .getFileForLocation(destination);
+        if (file != null && !file.exists()) {
+            File osFile = new File(destination.toOSString());
+            if (osFile.exists()) {
+                file.refreshLocal(IResource.DEPTH_ZERO, null);
+            } else {
+                ResourcesPlugin.getWorkspace().getRoot().refreshLocal(
+                    IResource.DEPTH_INFINITE, null);
+                InputStream input = new ByteArrayInputStream(new byte[0]);
+                file.create(input, false, null);
+            }
+        }
+        
+        if (file != null) {
+        	return FileModificationValidator.approveFileModification(new IFile[] {file});
+        }
+        return Status.OK_STATUS;
+    }
+
+    /**
+     * refresh the file in the workspace if the destination is in a project in
+     * the workspace.
+     * 
+     * @@param destination
+     *            the destination file.
+     * @@exception CoreException if this method fails
+     */
+    private static void refreshLocal(IPath destination)
+        throws CoreException {
+        IFile file = ResourcesPlugin.getWorkspace().getRoot()
+            .getFileForLocation(destination);
+        if (file != null) {
+            file.refreshLocal(IResource.DEPTH_ZERO, null);
+        }
+    }
+}
+@
+
+
+1.2
+log
+@[157648] gmf_head ldamus 061122 Error if try to replace a diagram img file, checked in under source control
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 IBM Corporation and others.
+d21 1
+a69 2
+        monitor.worked(1);
+
+d72 1
+a72 39
+            monitor.worked(1);
+
+            ImageTranscoder imageTranscoder = null;
+            BufferedImage newImg = image;
+            
+            if (imageFormat == JPEG_FILE) {
+                imageTranscoder = new JPEGTranscoder();
+                if (image.getType() != BufferedImage.TYPE_INT_RGB) {
+                    newImg = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+                    Graphics g = newImg.getGraphics();
+                    g.drawImage(image, 0, 0, null);
+                    g.dispose();
+                }
+                imageTranscoder.addTranscodingHint(
+                    JPEGTranscoder.KEY_QUALITY,
+                    new Float(0.65));
+            }
+            else if (imageFormat == PNG_FILE) {
+                imageTranscoder = new PNGTranscoder();
+            }
+            else {
+                throw new IllegalArgumentException();
+            }
+            
+            TranscoderOutput to = new TranscoderOutput(os);
+                
+            try {
+                imageTranscoder.writeImage(newImg, to);
+            } catch (TranscoderException e) {
+                Log.error(Draw2dRenderPlugin.getInstance(), IStatus.ERROR, e
+                    .getMessage(), e);
+                IStatus status =
+                    new Status(IStatus.ERROR, "exportToFile", IStatus.OK, //$NON-NLS-1$
+                        e.getMessage(), null);
+                throw new CoreException(status);
+            }
+            
+            monitor.worked(1);
+
+d87 7
+a93 7
+     * create a file in the workspace if the destination is in a project in the
+     * workspace.
+     * 
+     * @@param destination
+     *            the destination file.
+     * @@return the status from validating the file for editing
+     * @@exception CoreException if this method fails
+d95 48
+@
+
+
+1.1
+log
+@bugzilla 128743 gmf-head sshaw 060221 Support PNG as an export image file format
+bugzilla 125478 gmf-head sshaw 060221 Improve rendering quality to external image bitmap format...
+@
+text
+@d35 1
+d62 7
+a68 1
+        createFile(destination);
+d131 1
+d134 1
+a134 1
+    private static void createFile(IPath destination)
+d149 5
+@
+
+
+1.1.2.1
+log
+@[157648] gmf_R1_0_maintenance ldamus 061122 Error if try to replace a diagram img file, checked in under source control
+@
+text
+@a34 1
+import org.eclipse.gmf.runtime.common.core.command.FileModificationValidator;
+d61 1
+a61 7
+        IStatus fileModificationStatus = createFile(destination);
+        
+        if (!fileModificationStatus.isOK()) {
+        	// can't write to the file
+        	return;
+        }
+        
+a123 1
+     * @@return the status from validating the file for editing
+d126 1
+a126 1
+    private static IStatus createFile(IPath destination)
+a140 5
+        
+        if (file != null) {
+        	return FileModificationValidator.approveFileModification(new IFile[] {file});
+        }
+        return Status.OK_STATUS;
+@
+

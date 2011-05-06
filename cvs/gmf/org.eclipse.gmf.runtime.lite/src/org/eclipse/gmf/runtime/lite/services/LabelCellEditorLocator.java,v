@@ -1,0 +1,158 @@
+head	1.2;
+access;
+symbols
+	v20080722-1827:1.2
+	R2_1_maintenance:1.2.0.2
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080425-1959:1.2
+	v20071108-0000:1.2
+	v20071003-0000:1.2
+	v20070921-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	v20070621-0000:1.1
+	RC3_20:1.1
+	v20070601-1400:1.1
+	v20070525-1500:1.1
+	v20070518-1300:1.1
+	v20070427-0600:1.1
+	v20070420-1000:1.1
+	v20070413-1300:1.1
+	v20070405-1100:1.1
+	v20070330-1300:1.1
+	v20060330-1300:1.1
+	v20070322-1100:1.1
+	v20060316-0600:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2007.09.18.10.18.29;	author bblajer;	state Exp;
+branches;
+next	1.1;
+commitid	6a7646efa5f54567;
+
+1.1
+date	2007.03.15.16.43.32;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	61a145f977b34567;
+
+
+desc
+@@
+
+
+1.2
+log
+@Font for inplace-edit should be reused from label font if zoom level is 100%
+@
+text
+@/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.services;
+
+import org.eclipse.draw2d.FigureUtilities;
+import org.eclipse.draw2d.Label;
+import org.eclipse.draw2d.geometry.Dimension;
+import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.gef.EditPartViewer;
+import org.eclipse.gef.editparts.ZoomManager;
+import org.eclipse.gef.tools.CellEditorLocator;
+import org.eclipse.jface.viewers.CellEditor;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
+
+/**
+ * Places cell editor over the label. Respects the zoom level and adjusts the font size accordingly.
+ */
+public class LabelCellEditorLocator implements CellEditorLocator {
+	private final EditPartViewer myViewer;
+	private final Label myLabel;
+
+	public LabelCellEditorLocator(EditPartViewer viewer, Label label) {
+		myViewer = viewer;
+		myLabel = label;
+	}
+
+	public void relocate(CellEditor celleditor) {
+		Rectangle rect = getLabel().getTextBounds();
+		getLabel().translateToAbsolute(rect);
+		if (getLabel().getFont() != null) {
+			ZoomManager zoomManager = getZoomManager();
+			double zoomLevel = zoomManager == null ? 1.0 : zoomManager.getZoom();
+			if (zoomLevel > 1.0) {
+				FontData[] datas = getLabel().getFont().getFontData();
+				for(int i = 0; i < datas.length; i++) {
+					datas[i].height *= zoomLevel;
+				}
+				final Font font = new Font(getLabel().getFont().getDevice(), datas);
+				celleditor.getControl().setFont(font);
+				celleditor.getControl().addDisposeListener(new DisposeListener() {
+					public void widgetDisposed(DisposeEvent e) {
+						font.dispose();
+					}
+				});
+			} else {
+				celleditor.getControl().setFont(getLabel().getFont());
+			}
+		}
+		int avr = FigureUtilities.getFontMetrics(celleditor.getControl().getFont()).getAverageCharWidth();
+		rect.setSize(new Dimension(celleditor.getControl().computeSize(SWT.DEFAULT, SWT.DEFAULT)).expand(avr * 2, 0));
+		celleditor.getControl().setBounds(rect.x, rect.y, rect.width, rect.height);
+	}
+
+	protected ZoomManager getZoomManager() {
+		return (ZoomManager) myViewer.getProperty(ZoomManager.class.toString());
+	}
+
+	protected Label getLabel() {
+		return myLabel;
+	}
+}
+@
+
+
+1.1
+log
+@[164018] Command generation seperated from Parts for commands that operate with labels;
+API to display label text, apply modifications and update after (external) modifications isolated from generated code;
+Moved as much common generated code as possible to BaseTreeEditPart;
+[165700] Support diagrams in read-only mode: all EMF commands that are not composed of standard EMF commands, but modify EMF models directly should query the editing domain for read-onliness of the resource they operate on.
+@
+text
+@d43 17
+a59 6
+		ZoomManager zoomManager = getZoomManager();
+		double zoomLevel = zoomManager == null ? 1.0 : zoomManager.getZoom();
+		if (zoomLevel > 1.0 && getLabel().getFont() != null) {
+			FontData[] datas = getLabel().getFont().getFontData();
+			for(int i = 0; i < datas.length; i++) {
+				datas[i].height *= zoomLevel;
+a60 7
+			final Font font = new Font(getLabel().getFont().getDevice(), datas);
+			celleditor.getControl().setFont(font);
+			celleditor.getControl().addDisposeListener(new DisposeListener() {
+				public void widgetDisposed(DisposeEvent e) {
+					font.dispose();
+				}
+			});
+@
+

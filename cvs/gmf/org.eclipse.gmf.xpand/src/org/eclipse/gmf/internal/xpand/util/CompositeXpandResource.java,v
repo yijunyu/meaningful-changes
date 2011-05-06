@@ -1,0 +1,257 @@
+head	1.1;
+access;
+symbols
+	v20081022-1925:1.1
+	v20081020-0700:1.1
+	ocl_qvt:1.1.0.4
+	Root_ocl_qvt:1.1
+	v20080722-1827:1.1
+	v20080718-1731:1.1
+	v20080716-1600:1.1
+	v20080716-1642:1.1
+	R2_1_maintenance:1.1.0.2
+	Root_R2_1_maintenance:1.1
+	R2_1_0:1.1
+	v20080528-1052:1.1
+	v20080516-1143:1.1
+	v20080417-1610:1.1
+	v20080322-0000:1.1
+	v20080222-1200:1.1
+	v20071130-1111:1.1
+	v20071108-0000:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2007.10.29.16.58.23;	author atikhomirov;	state Exp;
+branches
+	1.1.4.1;
+next	;
+commitid	5b914726112d4567;
+
+1.1.4.1
+date	2008.08.06.14.05.34;	author atikhomirov;	state Exp;
+branches;
+next	1.1.4.2;
+commitid	35b4899afa74567;
+
+1.1.4.2
+date	2008.08.08.16.44.54;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	f6e489c78054567;
+
+
+desc
+@@
+
+
+1.1
+log
+@[207437] Resources to be composed from several sources
+@
+text
+@/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.internal.xpand.util;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.eclipse.gmf.internal.xpand.ResourceManager;
+import org.eclipse.gmf.internal.xpand.ast.Advice;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.model.XpandAdvice;
+import org.eclipse.gmf.internal.xpand.model.XpandDefinition;
+import org.eclipse.gmf.internal.xpand.model.XpandExecutionContext;
+import org.eclipse.gmf.internal.xpand.model.XpandResource;
+
+/**
+ * Composes several Xpand ast trees into a single resource. Definitions are merged: 
+ * if definitions with duplicate signatures are found, the one that comes first (i.e., from a more recent source) wins. 
+ * Advice declarations are aggregated: if several advice declarations have the same signature, all are returned in the order
+ * in which they are declared.
+ */
+class CompositeXpandResource implements XpandResource {
+	private final XpandResource[] myDefinitions;
+	private final XpandResource[] myAdvices;
+	private XpandAdvice[] myCachedAdvices;
+	private XpandDefinition[] myCachedDefinitions;
+	private String[] myImportedNamespaces;
+	private String[] myImportedExtensions;
+
+	/**
+	 * Creates a composite resource from a non-empty array of definition resources and optional advice resources.
+	 * @@param manager Resource manager used to create this resource. It will not be remembered by the resource.
+	 * @@param definitions an array of definition resources. Must not be empty.
+	 * @@param advices an array of advice resources or <code>null</code> if no advice resources are available.
+	 */
+	public CompositeXpandResource(ResourceManager manager, XpandResource[] definitions, XpandResource[] advices) {
+		myDefinitions = definitions;
+		myAdvices = advices == null ? NO_RESOURCES : advices;
+		ArrayList<XpandDefinition> allDefinitions = new ArrayList<XpandDefinition>();
+		HashSet<DefinitionSignature> signatures = new HashSet<DefinitionSignature>();
+		XpandExecutionContext context = ContextFactory.createXpandContext(manager);
+		//Definitions are merged in the following order: first, all advice resources from newest to oldest, then all 
+		//non-advice resources, from newest to oldest.
+		mergeDefinitions(context, myAdvices, allDefinitions, signatures);
+		mergeDefinitions(context, myDefinitions, allDefinitions, signatures);
+		myCachedDefinitions = allDefinitions.toArray(new XpandDefinition[allDefinitions.size()]);
+		//Advice declarations are collected (without merging) in the order from oldest to newest.
+		//Only advice resources are taken into consideration.
+		if (advices != null) {
+			ArrayList<XpandAdvice> allAdvices = new ArrayList<XpandAdvice>();
+			collectAdvices(myAdvices, allAdvices);
+			myCachedAdvices = allAdvices.toArray(new XpandAdvice[allAdvices.size()]);
+		} else {
+			myCachedAdvices = NO_ADVICE;
+		}
+	}
+
+	private void mergeDefinitions(XpandExecutionContext context, XpandResource[] resources, List<XpandDefinition> collector, Set<DefinitionSignature> usedSignatures) {
+		for (int i = 0; i < resources.length; i++) {
+			XpandResource nextResource = resources[i];
+			context = context.cloneWithResource(nextResource);
+			XpandDefinition[] definitions = nextResource.getDefinitions();
+			for (XpandDefinition nextDefinition : definitions) {
+				DefinitionSignature signature = DefinitionSignature.create(context, nextDefinition);
+				if (signature == null || usedSignatures.contains(signature)) {
+					continue;
+				}
+				usedSignatures.add(signature);
+				collector.add(nextDefinition);
+			}
+		}
+	}
+
+	private void collectAdvices(XpandResource[] resources, List<XpandAdvice> collector) {
+		for (int i = resources.length - 1; i >= 0; i--) {
+			XpandResource nextResource = resources[i];
+			XpandAdvice[] advices = nextResource.getAdvices();
+			for (XpandAdvice nextAdvice : advices) {
+				collector.add(nextAdvice);
+			}
+		}
+	}
+
+	public XpandAdvice[] getAdvices() {
+		return myCachedAdvices;
+	}
+
+	public XpandDefinition[] getDefinitions() {
+		return myCachedDefinitions;
+	}
+
+	public String getFullyQualifiedName() {
+		return myDefinitions[0].getFullyQualifiedName();
+	}
+
+	public String[] getImportedExtensions() {
+		if (myImportedExtensions == null) {
+			LinkedHashSet<String> result = new LinkedHashSet<String>();
+			for (XpandResource nextResource : myDefinitions) {
+				for (String nextImport : nextResource.getImportedExtensions()) {
+					result.add(nextImport);
+				}
+			}
+			for (XpandResource nextResource : myAdvices) {
+				for (String nextImport : nextResource.getImportedExtensions()) {
+					result.add(nextImport);
+				}
+			}
+			myImportedExtensions = result.toArray(new String[result.size()]);
+		}
+		return myImportedExtensions;
+	}
+
+	public String[] getImportedNamespaces() {
+		if (myImportedNamespaces == null) {
+			LinkedHashSet<String> result = new LinkedHashSet<String>();
+			for (XpandResource nextResource : myDefinitions) {
+				for (String nextImport : nextResource.getImportedNamespaces()) {
+					result.add(nextImport);
+				}
+			}
+			for (XpandResource nextResource : myAdvices) {
+				for (String nextImport : nextResource.getImportedNamespaces()) {
+					result.add(nextImport);
+				}
+			}
+			myImportedNamespaces = result.toArray(new String[result.size()]);
+		}
+		return myImportedNamespaces;
+	}
+
+	public void analyze(XpandExecutionContext ctx, Set<AnalysationIssue> issues) {
+		for (XpandResource next : myDefinitions) {
+			next.analyze(ctx, issues);
+		}
+		for (XpandResource next : myAdvices) {
+			next.analyze(ctx, issues);
+		}
+	}
+
+	private static final XpandResource[] NO_RESOURCES = new XpandResource[0];
+	private static final Advice[] NO_ADVICE = new Advice[0];
+}
+@
+
+
+1.1.4.1
+log
+@[243154] Use OCL instead of home-grown expression language. Refactored to eliminate context specific to expressions (moving towards using OCL environment for that), split modifiable (context-specific) and static execution data.
+@
+text
+@d1 2
+a2 2
+/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+d10 1
+a10 2
+ *     bblajer - initial API and implementation
+ *     Artem Tikhomirov (Borland) - Migration to OCL expressions
+d22 1
+a22 1
+import org.eclipse.gmf.internal.xpand.model.AnalysationIssue;
+d25 1
+a25 1
+import org.eclipse.gmf.internal.xpand.model.ExecutionContext;
+d53 1
+a53 1
+		ExecutionContext context = ContextFactory.createXpandContext(manager);
+d70 1
+a70 1
+	private void mergeDefinitions(ExecutionContext context, XpandResource[] resources, List<XpandDefinition> collector, Set<DefinitionSignature> usedSignatures) {
+d144 1
+a144 1
+	public void analyze(ExecutionContext ctx, Set<AnalysationIssue> issues) {
+@
+
+
+1.1.4.2
+log
+@[243154] Use OCL instead of home-grown expression language - need to relax constraint on non-null output to allow analyze phase
+@
+text
+@a23 2
+import org.eclipse.gmf.internal.xpand.model.ExecutionContextImpl;
+import org.eclipse.gmf.internal.xpand.model.Scope;
+d54 1
+a54 1
+		ExecutionContext context = new ExecutionContextImpl(new Scope(manager, null, null));
+@
+
+

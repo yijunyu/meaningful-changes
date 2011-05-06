@@ -1,0 +1,470 @@
+head	1.7;
+access;
+symbols
+	v20080722-1827:1.7
+	R2_1_maintenance:1.7.0.4
+	Root_R2_1_maintenance:1.7
+	R2_1_0:1.7
+	v20080603-1553:1.7
+	v20080507-2230:1.7
+	v20080425-1959:1.7
+	v20080417-1610:1.7
+	v20080322-0000:1.7
+	v20080222-1200:1.7
+	v20080215-1500:1.7
+	v20070809-0000:1.7
+	R2_0_maintenance:1.7.0.2
+	R2_0:1.7
+	R4_20:1.7
+	v20070621-0000:1.7
+	RC3_20:1.6
+	v20070601-1400:1.6
+	v20070520-1200:1.6
+	v20070504-1000:1.6
+	v20070405-1100:1.6
+	v20070330-1300:1.6
+	v20070322-1100:1.6
+	v20060316-0600:1.4
+	v20070208-1800:1.3
+	M4_20:1.3
+	v20061218-1200:1.3
+	v20061214-0000:1.3
+	v20061120-1300:1.3
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061027-1200:1.2.2.1
+	v20061013-1330:1.2
+	v20060925-1700:1.2.2.1
+	v20060919-0800:1.2.2.1
+	M1_20:1.2
+	v20060904-1500:1.2
+	v20060831-1500:1.2
+	v20060803-1200:1.2
+	v20060713-1700:1.2
+	R1_0_maintenance:1.2.0.2
+	R1_0:1.2
+	v20060627-1200:1.2
+	v20060626-1420:1.2
+	v20060616-1200:1.2
+	v20060531-1730:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.7
+date	2007.06.21.14.09.59;	author atikhomirov;	state Exp;
+branches;
+next	1.6;
+commitid	1941467a86b54567;
+
+1.6
+date	2007.03.20.16.18.20;	author atikhomirov;	state Exp;
+branches;
+next	1.5;
+commitid	71244600094b4567;
+
+1.5
+date	2007.03.19.16.49.07;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+commitid	5cb545febf024567;
+
+1.4
+date	2007.03.14.12.59.24;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	110745f7f1aa4567;
+
+1.3
+date	2006.11.20.17.30.41;	author radvorak;	state Exp;
+branches;
+next	1.2;
+commitid	1fc64561e63f4567;
+
+1.2
+date	2006.05.18.14.41.54;	author radvorak;	state Exp;
+branches
+	1.2.2.1;
+next	1.1;
+
+1.1
+date	2006.05.18.13.58.29;	author radvorak;	state Exp;
+branches;
+next	;
+
+1.2.2.1
+date	2006.09.13.23.07.18;	author rgronback;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.7
+log
+@fix copyright years
+@
+text
+@/*
+ * Copyright (c) 2005, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0 which
+ * accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: 
+ *    Radek Dvorak (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.validate;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.emf.common.util.DiagnosticChain;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EDataType;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.ETypedElement;
+import org.eclipse.emf.ecore.EValidator;
+import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.gmf.internal.validate.expressions.AbstractExpression;
+import org.eclipse.gmf.internal.validate.expressions.EnvironmentProvider;
+import org.eclipse.gmf.internal.validate.expressions.ExpressionProviderRegistry;
+import org.eclipse.gmf.internal.validate.expressions.IEvaluationEnvironment;
+import org.eclipse.gmf.internal.validate.expressions.IModelExpression;
+import org.eclipse.gmf.internal.validate.expressions.IModelExpressionProvider;
+import org.eclipse.gmf.internal.validate.expressions.IParseEnvironment;
+import org.eclipse.gmf.validate.ValidationOptions;
+import org.eclipse.osgi.util.NLS;
+
+
+public class AbstractValidator implements EValidator {
+	protected static final String DIAGNOSTIC_SOURCE = "org.eclipse.gmf.validation"; //$NON-NLS-1$	
+	
+	private static final Object ROOT_TARGET_OBJECT_KEY = new Object(); 	
+
+	protected AbstractValidator() {
+	}
+	
+	protected static ExpressionCache getExpressionCache(String language, Map<Object, Object> context) {
+		return getExpressionCache(context).getCache(language);
+	}
+	
+	protected static IModelExpression getExpression(String language, String body, EClassifier contextClassifier, Map<Object, Object> context) {
+		EPackage.Registry reg = ExternModelImport.getPackageRegistry(context);
+		IParseEnvironment env = null;
+		if(reg != null) {
+			env = EnvironmentProvider.createParseEnv();
+			env.setImportRegistry(reg);
+		}
+		return getExpression(language, body, contextClassifier, env, context);
+	}
+	
+	protected static IModelExpression getExpression(String language, String body, 
+			EClassifier contextClassifier, IParseEnvironment env, Map<Object, Object> context) {
+		ExpressionCache cache = getExpressionCache(language, context);
+		if(cache == null) {
+			// no provider for the given language found in registry
+			return new NoProviderExpression(language, body, contextClassifier);
+		} 
+		
+		// initializer EPackages cross-referenced from the validated model 
+		// to be visible in EMFT ocl environment lookup 
+		if(Annotations.OCL_KEY.equals(language) && body != null && body.indexOf("::") > 0) { //$NON-NLS-1$
+			EObject validationTarget = getRootTargetObject(context);
+			ExternModelImport importer = ExternModelImport.getImporter(context, validationTarget);				
+			importer.intializeExternPackages(validationTarget);
+		}
+
+		return cache.getExpression(body, contextClassifier, env);
+	}
+	
+	protected static SubstitutionLabelProvider getLabelProvider(Map<Object, Object> context) {
+		if(context != null && context.containsKey(SubstitutionLabelProvider.class)) {
+			Object provider = context.get(SubstitutionLabelProvider.class);
+			assert provider instanceof SubstitutionLabelProvider : "Invalid label provider"; //$NON-NLS-1$ 
+			return (SubstitutionLabelProvider)provider;
+		}
+		return LabelProvider.INSTANCE;
+	}
+
+	protected static EObject getRootTargetObject(Map<Object, Object> context) {
+		Object rootObj = context.get(ROOT_TARGET_OBJECT_KEY);
+		assert rootObj == null || rootObj instanceof EObject;
+		return (EObject)rootObj;
+	}
+	
+	private static void ensureRootTargetInitialized(EObject target, Map<Object, Object> context) {
+		if(context != null && !context.containsKey(ROOT_TARGET_OBJECT_KEY)) {
+			setRootTargetObject(target, context);
+		}
+	}
+	
+	private static void setRootTargetObject(EObject targetObject, Map<Object, Object> context) {
+		assert !context.containsKey(ROOT_TARGET_OBJECT_KEY);
+		context.put(ROOT_TARGET_OBJECT_KEY, EcoreUtil.getRootContainer(targetObject, true)); 		
+	}
+	
+	private static MultiProviderCache getExpressionCache(Map<Object, Object> context) {
+		if(context != null) {
+			MultiProviderCache cache = (MultiProviderCache)context.get(MultiProviderCache.class);
+			if(cache == null) {
+				cache = new MultiProviderCache();
+				context.put(MultiProviderCache.class, new MultiProviderCache());
+			}
+			return cache;
+		}
+		if(Trace.shouldTrace(DebugOptions.DEBUG)) {
+			Trace.trace("Performance warning: Validation should run in a context for caching"); //$NON-NLS-1$
+		}
+		return new MultiProviderCache();
+	}	
+	
+	/**
+	 * @@return Validation options for the given context. If not options is set to context,
+	 * 	the {@@link ValidationOptions#getDefault()} default options } are returned.
+	 */
+	static ValidationOptions getOptions(Map<Object, Object> context) {
+		if(context != null) {
+			ValidationOptions options = (ValidationOptions)context.get(ValidationOptions.class);
+			return options != null ? options : ValidationOptions.getDefault();
+		}
+		return ValidationOptions.getDefault();
+	}
+		
+	/**
+	 * 
+	 * @@param options
+	 * @@param context
+	 * @@throws IllegalArgumentException
+	 */
+	static void setOptions(ValidationOptions options, Map<Object, Object> context) {
+		if(context == null) {
+			throw new IllegalArgumentException("Null validation options"); //$NON-NLS-1$
+		}
+		if(options.isUseGmfLabelSubtitution()) {
+			context.put(SubstitutionLabelProvider.class, LabelProvider.INSTANCE);
+		}
+		context.put(ValidationOptions.class, options);
+	}	
+	
+	public boolean validate(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context) {
+		ensureRootTargetInitialized(eObject, context);
+		return true;
+	}
+
+	public boolean validate(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map<Object, Object> context) {		
+		return true;
+	}
+
+	public boolean validate(EObject eObject, DiagnosticChain diagnostics, Map<Object, Object> context) {
+		ensureRootTargetInitialized(eObject, context);		
+		return true;
+	}
+	
+	
+	private static class ProviderCache extends ExpressionCache {
+		private IModelExpressionProvider expressionProvider;
+
+		public ProviderCache(IModelExpressionProvider expressionProvider) {
+			this.expressionProvider = expressionProvider;
+		}
+
+		protected IModelExpression createExpressionEntry(String body, EClassifier context, IParseEnvironment extEnv) {
+			if (expressionProvider != null) {
+				return expressionProvider.createExpression(body, context, extEnv);
+			}
+			return new NoProviderExpression("", body, context); //$NON-NLS-1$
+		}
+	}	
+	
+	
+	private static class MultiProviderCache {
+		private HashMap<String, ExpressionCache> lang2ProviderMap = new HashMap<String, ExpressionCache>();
+		
+		public MultiProviderCache() { 			
+		}
+		/**
+		 * Gets expression cache for the given expression language.
+		 * 
+		 * @@param language
+		 *            identifier of the language supported by the provider to be
+		 *            retrieved.
+		 * @@return expression cache for the given provider or <code>null</code>
+		 *         in case the no provider is available for the specified
+		 *         language.
+		 */
+		public ExpressionCache getCache(String language) {
+			ExpressionCache cache = lang2ProviderMap.get(language);
+			if (cache == null) {
+				IModelExpressionProvider provider = ExpressionProviderRegistry.getInstance().getProvider(language);
+				if (provider == null) {
+					return null;
+				}
+				cache = new ProviderCache(provider);
+				lang2ProviderMap.put(language, cache);
+			}
+			return cache;
+		}
+	}
+	
+	private static class NoProviderExpression extends AbstractExpression {
+		private String lang;
+		
+		public NoProviderExpression(final String language, String body, EClassifier context) {
+			super(body, context, null);
+			this.lang = language;
+			String message = NLS.bind(Messages.noExpressionProviderAvailable, language);
+			IStatus status = new Status(IStatus.ERROR, GMFValidationPlugin.getPluginId(),
+					StatusCodes.EXPRESSION_PROVIDER_NOT_AVAILABLE, message, null);			
+			setStatus(status);
+		}
+
+		public boolean isAssignableToElement(ETypedElement typedElement) {
+			return false;
+		}
+
+		public boolean isAssignableTo(EClassifier ecoreType) {
+			return false;
+		}
+		
+		public String getLanguage() {
+			return lang;
+		}
+
+		protected Object doEvaluate(Object context) {
+			return null;
+		}
+
+		protected Object doEvaluate(Object context, IEvaluationEnvironment extEnvironment) {
+			return null;
+		}
+	}	
+}
+@
+
+
+1.6
+log
+@EMF 2.3 M5 and Java 5 cleanup
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005 Borland Software Corporation
+d241 1
+a241 1
+}@
+
+
+1.5
+log
+@EMF 2.3 M5 and Java 5 cleanup
+@
+text
+@d101 1
+a101 2
+	@@SuppressWarnings("unchecked")
+	private static void setRootTargetObject(EObject targetObject, Map context) {
+d106 1
+a106 2
+	@@SuppressWarnings("unchecked")
+	private static MultiProviderCache getExpressionCache(Map context) {
+d139 1
+a139 2
+	@@SuppressWarnings("unchecked")
+	static void setOptions(ValidationOptions options, Map context) {
+@
+
+
+1.4
+log
+@Regenerated graphdef, tooldef and gmfmap models with EMF 2.3 M5 Generics, updated code to be "generified"
+@
+text
+@d47 1
+a47 1
+	protected static ExpressionCache getExpressionCache(String language, Map context) {
+d51 1
+a51 1
+	protected static IModelExpression getExpression(String language, String body, EClassifier contextClassifier, Map context) {
+d62 1
+a62 1
+			EClassifier contextClassifier, IParseEnvironment env, Map context) {
+d80 1
+a80 1
+	protected static SubstitutionLabelProvider getLabelProvider(Map context) {
+d89 1
+a89 1
+	protected static EObject getRootTargetObject(Map context) {
+d127 1
+a127 1
+	static ValidationOptions getOptions(Map context) {
+@
+
+
+1.3
+log
+@[164840] Migrate 'org.eclipse.gmf.validate' plugin to Java 5
+@
+text
+@d95 1
+a95 1
+	private static void ensureRootTargetInitialized(EObject target, Map context) {
+d152 1
+a152 1
+	public boolean validate(EClass eClass, EObject eObject, DiagnosticChain diagnostics, Map context) {
+d157 1
+a157 1
+	public boolean validate(EDataType eDataType, Object value, DiagnosticChain diagnostics, Map context) {		
+d161 1
+a161 1
+	public boolean validate(EObject eObject, DiagnosticChain diagnostics, Map context) {
+@
+
+
+1.2
+log
+@stick to 1.4 JDK source compatibility
+@
+text
+@d101 1
+d107 1
+d141 1
+d184 1
+a184 1
+		private HashMap lang2ProviderMap = new HashMap();
+d199 1
+a199 1
+			ExpressionCache cache = (ExpressionCache) lang2ProviderMap.get(language);
+@
+
+
+1.2.2.1
+log
+@[153901] Updated copyright date from 2005 to 2005, 2006 for those changed in CVS in 2006 (based on Tom/Anthony's script).
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005, 2006 Borland Software Corporation
+@
+
+
+1.1
+log
+@gmf.validation plugin created
+@
+text
+@d71 1
+a71 1
+		if(Annotations.OCL_KEY.equals(language) && body != null && body.contains("::")) { //$NON-NLS-1$
+@
+

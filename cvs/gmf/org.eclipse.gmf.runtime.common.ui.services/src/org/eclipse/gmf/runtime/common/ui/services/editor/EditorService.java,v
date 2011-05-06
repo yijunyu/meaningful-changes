@@ -1,0 +1,325 @@
+head	1.4;
+access;
+symbols
+	v20081020-0700:1.4
+	v20080722-1827:1.4
+	v20080718-1700:1.4
+	v20080718-1731:1.4
+	R2_1_maintenance:1.4.0.6
+	Root_R2_1_maintenance:1.4
+	R2_1_0:1.4
+	v20080612-1229:1.4
+	v20080425-1959:1.4
+	v20080222-1200:1.4
+	v20070809-0000:1.4
+	R2_0_maintenance:1.4.0.4
+	R2_0:1.4
+	R4_20:1.4
+	RC3_20:1.4
+	v20070601-1400:1.4
+	v20070518-1300:1.4
+	v20070504-1000:1.4
+	v20070420-1000:1.4
+	v20070330-1300:1.4
+	v20070208-1800:1.4
+	v20070105-1200:1.4
+	v20070103-0300:1.4
+	M4_20:1.4
+	v20061218-1500:1.4
+	v20061218-1200:1.4
+	v20061214-0000:1.4
+	M3_20:1.4
+	v20061013-1330:1.4
+	v20061012-1100:1.4
+	v20060925-1700:1.4
+	v20060919-0800:1.4
+	M1_20:1.4
+	v20060831-1500:1.4
+	v20060824-1600:1.4
+	v20060803-1200:1.4
+	v20060721-1130:1.4
+	v20060713-1700:1.4
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	v20060627-1200:1.4
+	v20060616-1200:1.4
+	v20060609-1400:1.4
+	v20060531-1730:1.4
+	v20060526-1200:1.4
+	v20060519-0800:1.4
+	I20060424-0500:1.4
+	I20060424-0300:1.4
+	M6_10:1.4
+	I20060407-1200:1.4
+	I20060331-1000:1.4
+	I20060324-0300:1.4
+	I20060317-1300:1.4
+	I20060317-1200:1.4
+	I20060316-1300:1.4
+	I20060309-1300:1.4
+	M5_10:1.4
+	S20060303-1600:1.4
+	I20060227-1730:1.4
+	I20060216-1945:1.4
+	I20060210-1715:1.4
+	I20060209-1815:1.4
+	I20060203-0830:1.4
+	I20060202-1415:1.4
+	I20060129-1145:1.4
+	I20060127-0900:1.4
+	I20060120-1530:1.4
+	I20060113-1700:1.4
+	M4_10:1.4
+	I20060107-1100:1.4
+	I20060105-1630:1.4
+	I20051230-1230:1.4
+	I20051223-1100:1.4
+	I20051217-0925:1.4
+	I20051124-2000:1.4
+	M3_10:1.4
+	I20051118-1245:1.4
+	I20051111-1800:1.4
+	I20051106-0900:1.4
+	v20051030:1.4;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2005.10.04.20.18.22;	author ahunter;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.09.22.20.06.55;	author ahunter;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.27.15;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.16.25;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@Bugzilla 110635 gmf_head keithc 051004 Delay configuration of services
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2005 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.common.ui.services.editor;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.gmf.runtime.common.core.service.ExecutionStrategy;
+import org.eclipse.gmf.runtime.common.core.service.IOperation;
+import org.eclipse.gmf.runtime.common.core.service.Service;
+import org.eclipse.gmf.runtime.common.ui.services.internal.CommonUIServicesPlugin;
+
+/**
+ * A service for manipulating editors
+ * 
+ * @@author melaasar
+ */
+public class EditorService
+	extends Service
+	implements IEditorProvider {
+
+	/**
+	 * The singleton instance of the editor service.
+	 */
+	private final static EditorService instance = new EditorService();
+
+	static {
+		instance.configureProviders(CommonUIServicesPlugin.getPluginId(), "editorProviders"); //$NON-NLS-1$
+	}
+
+	/**
+	 * Constructs a new editor service.
+	 */
+	protected EditorService() {
+		super(true);
+	}
+
+	/**
+	 * Retrieves the singleton instance of the editor service.
+	 * 
+	 * @@return The editor service singleton.
+	 */
+	public static EditorService getInstance() {
+		return instance;
+	}
+
+	/**
+	 * Executes the specified operation using the FIRST execution strategy.
+	 * 
+	 * @@return The result of executing the model operation.
+	 * @@param operation
+	 *            The model operation to be executed.
+	 */
+	private Object execute(IOperation operation) {
+		List results = execute(ExecutionStrategy.FIRST, operation);
+		return results.isEmpty() ? null
+			: results.get(0);
+	}
+
+	/**
+	 * Opens an editor with the given editor input
+	 * 
+	 * @@param editorInput
+	 *            the editor input object
+	 * 
+	 * @@see IEditorProvider#openEditor(IEditorInput)
+	 */
+	public IEditorPart openEditor(IEditorInput editorInput) {
+		assert null != editorInput;
+
+		IEditorPart editor = (IEditorPart) execute(new OpenEditorOperation(
+			editorInput));
+		return editor;
+	}
+
+	/** a map of all registered editors */
+	private Map editorsMap;
+
+	/**
+	 * Returns the editorsMap.
+	 * 
+	 * @@return Map of editors
+	 */
+	protected Map getEditorsMap() {
+		if (editorsMap == null)
+			editorsMap = new HashMap();
+		return editorsMap;
+	}
+
+	/**
+	 * Method registerEditor registers the editor with the editor service should
+	 * be called by the editor upon initialization
+	 * 
+	 * @@param editor
+	 *            to be registered in the editor service
+	 */
+	public void registerEditor(IEditorPart editor) {
+		assert null != editor;
+
+		String editorId = editor.getEditorSite().getId();
+		List editors = (List) getEditorsMap().get(editorId);
+		if (editors == null) {
+			editors = new ArrayList();
+			getEditorsMap().put(editorId, editors);
+		}
+		editors.add(editor);
+	}
+
+	/**
+	 * Method unregisterEditor unregisters the editor from the editor service
+	 * should be called by the editor upon getting disposed
+	 * 
+	 * @@param editor
+	 *            to unregister from the editor service
+	 */
+	public void unregisterEditor(IEditorPart editor) {
+		assert null != editor;
+
+		String editorId = editor.getEditorSite().getId();
+		List editors = (List) getEditorsMap().get(editorId);
+		assert null != editors;
+		assert (editors.contains(editor));
+		editors.remove(editor);
+	}
+
+	/**
+	 * Returns all registered editors with given id
+	 * 
+	 * @@param editorId
+	 *            returned editors must have this String id
+	 * @@return List editors matching the String editorId
+	 */
+	public List getRegisteredEditors(String editorId) {
+		return (List) getEditorsMap().get(editorId);
+	}
+
+	/**
+	 * Return a list of all editor parts
+	 * 
+	 * @@return List of IEditorPart editors.
+	 */
+	public List getRegisteredEditorParts() {
+		List allEditors = new ArrayList();
+		Iterator iter = getEditorsMap().values().iterator();
+
+		while (iter.hasNext())
+			allEditors.addAll((Collection) iter.next());
+
+		return allEditors;
+	}
+
+}@
+
+
+1.3
+log
+@Bugzilla Bug 110372 gmf_head ahunter 050922 EditorService throws an assertion when given a bad IEditorInput
+@
+text
+@d27 1
+d43 4
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@a83 1
+		assert null != editor;
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2002, 2005.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

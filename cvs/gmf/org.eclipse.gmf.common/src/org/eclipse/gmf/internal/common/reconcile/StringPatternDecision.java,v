@@ -1,0 +1,132 @@
+head	1.2;
+access;
+symbols
+	v20081015-1925:1.2
+	v20080930-1130:1.2
+	v20080926-1245:1.2
+	v20080924-1925:1.2
+	v20080722-1827:1.2
+	v20080716-1642:1.2
+	R2_1_maintenance:1.2.0.4
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080610-1132:1.2
+	v20080521:1.2
+	v20080516-1143:1.2
+	v20080508-2000:1.2
+	v20080417-1610:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20071108-0000:1.2
+	v20070903-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	v20070621-0000:1.2
+	RC3_20:1.2
+	v20070605-1400:1.2
+	v20070601-1400:1.2
+	v20070525-1500:1.2
+	v20070520-1200:1.2
+	v20070518-1300:1.2
+	v20070427-0600:1.2
+	v20070420-1000:1.2
+	v20070413-1300:1.2
+	v20070405-1100:1.2
+	v20070330-1300:1.1
+	v20060330-1300:1.1
+	v20070322-1100:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2007.04.04.16.30.03;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	52254613d28b4567;
+
+1.1
+date	2007.03.20.17.52.00;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	610746001f3f4567;
+
+
+desc
+@@
+
+
+1.2
+log
+@bit of refactoring
+@
+text
+@/*
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Michael Golubev (Borland) - initial API and implementation
+ */
+
+package org.eclipse.gmf.internal.common.reconcile;
+
+import java.util.regex.Pattern;
+
+import org.eclipse.emf.ecore.EAttribute;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EcorePackage;
+
+/**
+ * XXX [artem] actually, either StringPatternDecision should be abstract, or renamed to
+ * OldValueNotByPatternDecision to better reflect its implementation
+ */
+public class StringPatternDecision extends Decision {
+	protected final Pattern myPattern;
+	
+	public StringPatternDecision(String valuePattern, EAttribute attribute){
+		this(Pattern.compile(valuePattern), attribute);
+	}
+	
+	public StringPatternDecision(Pattern valuePattern, EAttribute attribute){
+		super(attribute);
+		if (attribute.getEAttributeType() != EcorePackage.eINSTANCE.getEString()){
+			throw new IllegalArgumentException("Expected string attribute");
+		}
+		if (attribute.getUpperBound() != 1){
+			throw new IllegalArgumentException("Expected multiplicity [0..1] or [1]");
+		}
+		myPattern = valuePattern;
+	}
+	
+	public void apply(EObject current, EObject old) {
+		String oldValue = (String)old.eGet(getFeature());
+		if (oldValue != null && !myPattern.matcher(oldValue).matches()){
+			preserveOld(current, old);
+		} else {
+			acceptNew(current, old);
+		}
+	}
+
+}
+@
+
+
+1.1
+log
+@merged DecisionMaker and Decision into single Decision class, subclasses renamed accordingly (DefaultDecisionMaker as DefaultDecision and StringPatternDecisionMaker as StringPatternDecision).
+@
+text
+@d21 4
+d26 1
+a26 1
+	private final Pattern myPattern;
+@
+

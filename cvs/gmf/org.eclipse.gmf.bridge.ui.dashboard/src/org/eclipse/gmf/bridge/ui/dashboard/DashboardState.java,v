@@ -1,0 +1,547 @@
+head	1.5;
+access;
+symbols
+	v20080722-1827:1.5
+	R2_1_maintenance:1.5.0.4
+	Root_R2_1_maintenance:1.5
+	R2_1_0:1.5
+	v20080417-1610:1.5
+	v20080322-0000:1.5
+	v20080222-1200:1.5
+	v20070809-0000:1.5
+	R2_0_maintenance:1.5.0.2
+	R2_0:1.5
+	R4_20:1.5
+	v20070621-0000:1.5
+	RC3_20:1.5
+	v20070601-1400:1.5
+	v20070413-1300:1.5
+	v20070405-2000:1.4
+	v20070330-1300:1.4
+	v20060316-0600:1.4
+	v20070228-2000:1.4
+	v20070208-1800:1.3
+	M4_20:1.3
+	v20061222-1800:1.3
+	v20061214-0000:1.3
+	M3_20:1.2
+	v20061117-0800:1.2
+	v20061013-1330:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2007.04.13.12.10.34;	author dstadnik;	state Exp;
+branches;
+next	1.4;
+commitid	183c461f73394567;
+
+1.4
+date	2007.02.23.18.39.27;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+commitid	7bd445df34de4567;
+
+1.3
+date	2006.11.22.17.34.27;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+commitid	115e45648a234567;
+
+1.2
+date	2006.11.01.09.59.30;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.10.03.14.20.39;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@[168935] Allow to generate gmfgen models for RCP application on dashboard
+@
+text
+@/*
+ * Copyright (c) 2006, 2007 Eclipse.org
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Dmitry Stadnik - initial API and implementation
+ */
+package org.eclipse.gmf.bridge.ui.dashboard;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.ProjectScope;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.gmf.internal.bridge.ui.dashboard.Plugin;
+import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
+
+/**
+ * EXPERIMENTAL
+ * 
+ * @@author dstadnik
+ */
+public final class DashboardState {
+
+	private static final String PREF_KEY = "gmf_dashboard"; //$NON-NLS-1$
+
+	private static final String OPTION_PREFIX = "option_"; //$NON-NLS-1$
+
+	private static final String DM_KEY = "domainModel"; //$NON-NLS-1$
+
+	private static final String DGM_KEY = "domainGenerationModel"; //$NON-NLS-1$
+
+	private static final String GDM_KEY = "graphicalDefinitionModel"; //$NON-NLS-1$
+
+	private static final String TDM_KEY = "toolingDefinitionModel"; //$NON-NLS-1$
+
+	private static final String MM_KEY = "mappingModel"; //$NON-NLS-1$
+
+	private static final String GM_KEY = "generationModel"; //$NON-NLS-1$
+
+	private URI dm;
+
+	private URI dgm;
+
+	private URI gdm;
+
+	private URI tdm;
+
+	private URI mm;
+
+	private URI gm;
+
+	private Set<String> enabledOptions;
+
+	private IProject project;
+
+	public DashboardState() {
+		enabledOptions = new HashSet<String>();
+	}
+
+	public DashboardState(IProject project) {
+		this();
+		this.project = project;
+		Preferences prefs = getPreferences();
+		if (prefs != null) {
+			readOptions(prefs);
+			dm = read(prefs, DM_KEY);
+			dgm = read(prefs, DGM_KEY);
+			gdm = read(prefs, GDM_KEY);
+			tdm = read(prefs, TDM_KEY);
+			mm = read(prefs, MM_KEY);
+			gm = read(prefs, GM_KEY);
+		}
+	}
+
+	public URI getDM() {
+		return dm;
+	}
+
+	public URI getDGM() {
+		return dgm;
+	}
+
+	public URI getGDM() {
+		return gdm;
+	}
+
+	public URI getTDM() {
+		return tdm;
+	}
+
+	public URI getMM() {
+		return mm;
+	}
+
+	public URI getGM() {
+		return gm;
+	}
+
+	public void setDM(URI uri) {
+		dm = uri;
+		write(DM_KEY, dm);
+	}
+
+	public void setDGM(URI uri) {
+		dgm = uri;
+		write(DGM_KEY, dgm);
+	}
+
+	public void setGDM(URI uri) {
+		gdm = uri;
+		write(GDM_KEY, gdm);
+	}
+
+	public void setTDM(URI uri) {
+		tdm = uri;
+		write(TDM_KEY, tdm);
+	}
+
+	public void setMM(URI uri) {
+		mm = uri;
+		write(MM_KEY, mm);
+	}
+
+	public void setGM(URI uri) {
+		gm = uri;
+		write(GM_KEY, gm);
+	}
+
+	public void setDM(IFile file) {
+		dm = getURI(file);
+		write(DM_KEY, dm);
+	}
+
+	public void setDGM(IFile file) {
+		dgm = getURI(file);
+		write(DGM_KEY, dgm);
+	}
+
+	public void setGDM(IFile file) {
+		gdm = getURI(file);
+		write(GDM_KEY, gdm);
+	}
+
+	public void setTDM(IFile file) {
+		tdm = getURI(file);
+		write(TDM_KEY, tdm);
+	}
+
+	public void setMM(IFile file) {
+		mm = getURI(file);
+		write(MM_KEY, mm);
+	}
+
+	public void setGM(IFile file) {
+		gm = getURI(file);
+		write(GM_KEY, gm);
+	}
+
+	private static URI getURI(IFile file) {
+		if (file == null) {
+			return null;
+		}
+		return URI.createPlatformResourceURI(file.getFullPath().toString(), true);
+	}
+
+	public int getModelsCount() {
+		return 6;
+	}
+
+	public int getSpecifiedModelsCount() {
+		int count = 0;
+		if (dm != null) {
+			count++;
+		}
+		if (dgm != null) {
+			count++;
+		}
+		if (gdm != null) {
+			count++;
+		}
+		if (tdm != null) {
+			count++;
+		}
+		if (mm != null) {
+			count++;
+		}
+		if (gm != null) {
+			count++;
+		}
+		return count;
+	}
+
+	public boolean getOption(String name) {
+		return enabledOptions.contains(name);
+	}
+
+	public void setOption(String name, boolean value) {
+		if (name == null) {
+			throw new IllegalArgumentException();
+		}
+		if (value) {
+			enabledOptions.add(name);
+		} else {
+			enabledOptions.remove(name);
+		}
+		Preferences prefs = getPreferences();
+		if (prefs == null) {
+			return;
+		}
+		String key = OPTION_PREFIX + name;
+		if (value) {
+			prefs.put(key, "*"); //$NON-NLS-1$
+		} else {
+			prefs.remove(key);
+		}
+		savePreferences(prefs);
+	}
+
+	private void readOptions(Preferences prefs) {
+		try {
+			for (String key : prefs.keys()) {
+				if (key.startsWith(OPTION_PREFIX)) {
+					enabledOptions.add(key.substring(OPTION_PREFIX.length()));
+				}
+			}
+		} catch (BackingStoreException e) {
+			IStatus status = Plugin.createError("Unable to read options", e);
+			Plugin.getDefault().getLog().log(status);
+		}
+	}
+
+	private URI read(Preferences prefs, String key) {
+		String s = prefs.get(key, null);
+		if (s == null) {
+			return null;
+		}
+		try {
+			return URI.createURI(s);
+		} catch (IllegalArgumentException e) {
+			IStatus status = Plugin.createError("Invalid URI", e);
+			Plugin.getDefault().getLog().log(status);
+		}
+		return null;
+	}
+
+	private void write(String key, URI uri) {
+		if (project == null) {
+			return;
+		}
+		String s = null;
+		if (uri != null) {
+			s = uri.toString();
+		}
+		Preferences prefs = getPreferences();
+		prefs.put(key, s);
+		savePreferences(prefs);
+	}
+
+	private void savePreferences(Preferences prefs) {
+		try {
+			prefs.flush();
+		} catch (BackingStoreException e) {
+			IStatus status = Plugin.createError("Unable to update state", e);
+			Plugin.getDefault().getLog().log(status);
+		}
+	}
+
+	private Preferences getPreferences() {
+		if (project == null) {
+			return null;
+		}
+		Preferences node = getExistingPreferences();
+		if (node != null) {
+			return node;
+		}
+		return new ProjectScope(project).getNode(Plugin.getPluginID()).node(PREF_KEY);
+	}
+
+	private Preferences getExistingPreferences() {
+		if (project == null) {
+			return null;
+		}
+		Preferences node = Platform.getPreferencesService().getRootNode().node(ProjectScope.SCOPE);
+		try {
+			if (!node.nodeExists(project.getName())) {
+				return null;
+			}
+			node = node.node(project.getName());
+			if (!node.nodeExists(Plugin.getPluginID())) {
+				return null;
+			}
+			node = node.node(Plugin.getPluginID());
+			if (!node.nodeExists(PREF_KEY)) {
+				return null;
+			}
+			return node.node(PREF_KEY);
+		} catch (BackingStoreException e) {
+			IStatus status = Plugin.createError("Unable to read state", e);
+			Plugin.getDefault().getLog().log(status);
+		}
+		return null;
+	}
+}
+@
+
+
+1.4
+log
+@[169277] Use project local store to save dashboard prefs
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Eclipse.org
+d14 3
+d18 2
+d21 1
+d34 4
+d62 3
+a64 1
+	private Preferences prefs;
+d67 1
+d70 13
+a82 8
+	public DashboardState(Preferences prefs) {
+		this.prefs = prefs;
+		dm = read(DM_KEY);
+		dgm = read(DGM_KEY);
+		gdm = read(GDM_KEY);
+		tdm = read(TDM_KEY);
+		mm = read(MM_KEY);
+		gm = read(GM_KEY);
+d203 14
+a216 1
+	private URI read(String key) {
+d218 21
+a238 1
+			return null;
+d240 3
+d257 3
+d264 1
+d266 4
+d277 36
+@
+
+
+1.3
+log
+@Removing warnings
+@
+text
+@d15 1
+d17 3
+a19 1
+import org.eclipse.ui.IMemento;
+d52 2
+d57 8
+a64 4
+	public DashboardState(IMemento memento) {
+		if (memento != null) {
+			read(memento);
+		}
+d93 1
+d98 1
+d103 1
+d108 1
+d113 1
+d118 1
+d123 1
+d128 1
+d133 1
+d138 1
+d143 1
+d148 1
+d185 5
+a189 11
+	private void read(IMemento memento) {
+		dm = read(memento, DM_KEY);
+		dgm = read(memento, DGM_KEY);
+		gdm = read(memento, GDM_KEY);
+		tdm = read(memento, TDM_KEY);
+		mm = read(memento, MM_KEY);
+		gm = read(memento, GM_KEY);
+	}
+
+	private static URI read(IMemento memento, String key) {
+		String s = memento.getString(key);
+d196 2
+d202 1
+a202 10
+	public void write(IMemento memento) {
+		write(memento, DM_KEY, dm);
+		write(memento, DGM_KEY, dgm);
+		write(memento, GDM_KEY, gdm);
+		write(memento, TDM_KEY, tdm);
+		write(memento, MM_KEY, mm);
+		write(memento, GM_KEY, gm);
+	}
+
+	private static void write(IMemento memento, String key, URI uri) {
+d207 7
+a213 1
+		memento.putString(key, s);
+@
+
+
+1.2
+log
+@use uris instead of file names in dashboard
+@
+text
+@d134 1
+a134 1
+		return URI.createPlatformResourceURI(file.getFullPath().toString());
+@
+
+
+1.1
+log
+@allow other plugins to contribute actions to the dashboard
+@
+text
+@d14 4
+d23 15
+a37 1
+public class DashboardState {
+d39 1
+a39 1
+	public String dmFileName;
+d41 1
+a41 1
+	public String dgmFileName;
+d43 1
+a43 1
+	public String gdmFileName;
+d45 1
+a45 1
+	public String tdmFileName;
+d47 1
+a47 1
+	public String mmFileName;
+d49 87
+a135 1
+	public String gmFileName;
+d143 1
+a143 1
+		if (dmFileName != null) {
+d146 1
+a146 1
+		if (dgmFileName != null) {
+d149 1
+a149 1
+		if (gdmFileName != null) {
+d152 1
+a152 1
+		if (tdmFileName != null) {
+d155 1
+a155 1
+		if (mmFileName != null) {
+d158 1
+a158 1
+		if (gmFileName != null) {
+d163 38
+@
+

@@ -1,0 +1,191 @@
+head	1.1;
+access;
+symbols
+	ocl_qvt:1.1.0.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2008.07.29.15.57.58;	author ashatalin;	state dead;
+branches
+	1.1.2.1;
+next	;
+commitid	33cb488f3dd14567;
+
+1.1.2.1
+date	2008.07.29.15.57.58;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.2;
+commitid	33cb488f3dd14567;
+
+1.1.2.2
+date	2008.08.28.15.51.00;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	35c448b6c95d4567;
+
+
+desc
+@@
+
+
+1.1
+log
+@file Template.java was initially added on branch ocl_qvt.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@Xtend-based implementation of XPand extensions was separated into .migration plugin.
+@
+text
+@a0 126
+/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.ast;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.TypeNameUtil;
+import org.eclipse.gmf.internal.xpand.expression.ast.SyntaxElement;
+import org.eclipse.gmf.internal.xpand.model.XpandAdvice;
+import org.eclipse.gmf.internal.xpand.model.XpandDefinition;
+import org.eclipse.gmf.internal.xpand.model.XpandExecutionContext;
+import org.eclipse.gmf.internal.xpand.model.XpandResource;
+
+/**
+ * @@author Sven Efftinge
+ */
+public class Template extends SyntaxElement implements XpandResource {
+    private final NamespaceImport[] imports;
+
+    private final Definition[] definitions;
+
+    private final ImportDeclaration[] extensions;
+
+    private final Advice[] advices;
+
+	private String qualifiedName;
+
+    public ImportDeclaration[] getExtensions() {
+        return extensions;
+    }
+
+    public String getFullyQualifiedName() {
+    	// XXX what's the reason to have both file name and qualified name?
+        return qualifiedName == null ? getFileName() : qualifiedName;
+    }
+
+    public void setFullyQualifiedName(String name) {
+    	qualifiedName = name;
+    }
+
+    public Template(final int start, final int end, final int line, final NamespaceImport[] imports,
+            final ImportDeclaration[] extensions, final Definition[] definitions, final Advice[] advices) {
+        super(start, end, line);
+        this.imports = imports;
+        this.extensions = extensions;
+        for (Definition element : definitions) {
+            element.setOwner(this);
+        }
+        this.definitions = definitions;
+        for (Advice element : advices) {
+            element.setOwner(this);
+        }
+        this.advices = advices;
+    }
+
+    public XpandDefinition[] getDefinitions() {
+        return definitions;
+    }
+
+    public NamespaceImport[] getImports() {
+        return imports;
+    }
+
+    public void analyze(XpandExecutionContext ctx, final Set<AnalysationIssue> issues) {
+        ctx = (XpandExecutionContext) ctx.cloneWithResource(this);
+        for (Definition element : definitions) {
+            element.analyze(ctx, issues);
+        }
+        for (Advice element : advices) {
+            element.analyze(ctx, issues);
+        }
+    }
+
+    private String[] commonPrefixes = null;
+
+    public String[] getImportedNamespaces() {
+        if (commonPrefixes == null) {
+            final List<String> l = new ArrayList<String>();
+            // FIXME no fqn in imported ns!
+            final String thisNs = TypeNameUtil.withoutLastSegment(getFullyQualifiedName());
+
+            if (thisNs != null) {
+				l.add(thisNs);
+			}
+            for (NamespaceImport anImport : getImports()) {
+                l.add(anImport.getImportString());
+            }
+            commonPrefixes = l.toArray(new String[l.size()]);
+        }
+        return commonPrefixes;
+    }
+
+    String[] importedExtensions = null;
+
+    public String[] getImportedExtensions() {
+        if (importedExtensions == null) {
+            final List<String> l = new ArrayList<String>();
+            for (int i = 0; i < getExtensions().length; i++) {
+                final ImportDeclaration anImport = getExtensions()[i];
+                l.add(anImport.getImportString().getValue());
+            }
+            importedExtensions = l.toArray(new String[l.size()]);
+        }
+        return importedExtensions;
+    }
+
+    public XpandAdvice[] getAdvices() {
+        return advices;
+    }
+
+}
+@
+
+
+1.1.2.2
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ First step toward .xpt migration.
+@
+text
+@d56 1
+a56 1
+    public Template(final int start, final int end, final int line, final int startOffset, final int endOffset, final NamespaceImport[] imports,
+d58 1
+a58 1
+        super(start, end, line, startOffset, endOffset);
+@
+
+

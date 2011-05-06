@@ -1,0 +1,211 @@
+head	1.6;
+access;
+symbols
+	v20070330-1300:1.5
+	v20070228-2000:1.5
+	v20070208-1800:1.5
+	M4_20:1.4
+	v20061222-1800:1.4
+	v20061214-0000:1.4
+	M3_20:1.2
+	v20061117-0800:1.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.6
+date	2007.04.05.20.56.27;	author atikhomirov;	state dead;
+branches;
+next	1.5;
+commitid	46274615627a4567;
+
+1.5
+date	2007.01.09.13.57.26;	author dstadnik;	state Exp;
+branches;
+next	1.4;
+commitid	3ae945a39f464567;
+
+1.4
+date	2006.11.24.18.02.53;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+commitid	7f88456733cc4567;
+
+1.3
+date	2006.11.22.17.35.57;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+commitid	124a45648a7d4567;
+
+1.2
+date	2006.11.03.18.07.28;	author bblajer;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.11.01.10.05.45;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@deprecated map->genmodel transformation action removed
+@
+text
+@/*
+ * Copyright (c) 2005,2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.popup.actions;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.dialogs.IInputValidator;
+import org.eclipse.jface.dialogs.InputDialog;
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IObjectActionDelegate;
+import org.eclipse.ui.IWorkbenchPart;
+
+/**
+ * .gmfmap to .gmfgen
+ * 
+ * @@author artem
+ */
+public class TransformToGenModelAction implements IObjectActionDelegate {
+
+	private IWorkbenchPart myPart;
+
+	private IFile mapFile;
+
+	private IFile genFile;
+
+	public void setActivePart(IAction action, IWorkbenchPart targetPart) {
+		myPart = targetPart;
+	}
+
+	public void selectionChanged(IAction action, ISelection selection) {
+		mapFile = (IFile) ((IStructuredSelection) selection).getFirstElement();
+	}
+
+	public void run(IAction action) {
+		initDestinationFile();
+		if (genFile == null) {
+			return;
+		}
+		TransformToGenModelOperation op = new TransformToGenModelOperation();
+		op.setName(action.getText());
+		op.setShell(getShell());
+		op.setMapModelURI(URI.createPlatformResourceURI(mapFile.getFullPath().toString(), true));
+		op.setGenModelURI(URI.createPlatformResourceURI(genFile.getFullPath().toString(), true));
+		//Temporary fix for https://bugs.eclipse.org/bugs/show_bug.cgi?id=163358
+		if (Platform.getBundle("org.eclipse.gmf.codegen.lite") == null) {
+			op.setUseRuntimeFigures(true);
+			op.setUseMapMode(true);
+		}
+		op.run();
+	}
+
+	private void initDestinationFile() {
+		genFile = null;
+		final IPath destPath = mapFile.getFullPath().removeFileExtension().addFileExtension("gmfgen"); //$NON-NLS-1$
+		final IPath destLocation = destPath.removeLastSegments(1);
+		final String defFileName = destPath.lastSegment();
+		InputDialog dlg = new InputDialog(getShell(), "Target model file", "Please specify name of the file to save diagram genmodel to", defFileName, new IInputValidator() {
+
+			public String isValid(String newText) {
+				IStatus s = ResourcesPlugin.getWorkspace().validatePath(destLocation.append(newText).toOSString(), IResource.FILE);
+				return s.isOK() ? null : s.getMessage();
+			}
+		});
+		if (dlg.open() != InputDialog.OK) {
+			return;
+		}
+		genFile = ResourcesPlugin.getWorkspace().getRoot().getFile(destLocation.append(dlg.getValue()));
+	}
+
+	public IFile getGenModelFile() {
+		return genFile;
+	}
+
+	private Shell getShell() {
+		return myPart.getSite().getShell();
+	}
+}
+@
+
+
+1.5
+log
+@[169958] ask for rcp option
+@
+text
+@@
+
+
+1.4
+log
+@add option to produce genmodel for rcp application
+@
+text
+@a64 1
+			op.setRCP(false);
+@
+
+
+1.3
+log
+@Removing warnings
+@
+text
+@d63 3
+a65 2
+			op.setUseRuntimeFigures(Boolean.TRUE);
+			op.setUseMapMode(Boolean.TRUE);
+@
+
+
+1.2
+log
+@Temporary workaround for #163358: It should be possible to create gmfgen model without runtime-specific figures
+@
+text
+@d59 2
+a60 2
+		op.setMapModelURI(URI.createPlatformResourceURI(mapFile.getFullPath().toString()));
+		op.setGenModelURI(URI.createPlatformResourceURI(genFile.getFullPath().toString()));
+@
+
+
+1.1
+log
+@add 'Action' suffix to action class name
+@
+text
+@d19 1
+d61 5
+a65 2
+		op.setUseRuntimeFigures(Boolean.TRUE);
+		op.setUseMapMode(Boolean.TRUE);
+@
+

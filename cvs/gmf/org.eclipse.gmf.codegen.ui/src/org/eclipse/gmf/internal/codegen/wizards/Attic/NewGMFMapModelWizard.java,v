@@ -1,0 +1,220 @@
+head	1.5;
+access;
+symbols
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	I20060227-1730:1.4
+	I20060216-1945:1.4
+	I20060210-1715:1.4
+	I20060209-1815:1.4
+	I20060203-0830:1.4
+	I20060129-1145:1.4
+	I20060127-0900:1.4
+	I20060120-1530:1.4
+	I20060113-1700:1.3
+	M4_10:1.3;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2006.02.28.19.07.38;	author atikhomirov;	state dead;
+branches;
+next	1.4;
+
+1.4
+date	2006.01.18.17.47.09;	author dstadnik;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.01.13.19.32.07;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.01.13.19.09.08;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.01.13.17.21.02;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@Introduced separate plugin for Tooling UI, moved mapping wizard of #114186 to this plugin.
+Wizard got some NLS, respect selection, open-created-model-in-editor improvements as well as aligned with recent gmfmap changes.
+Plus, some refactorings to address user-prioritized strategies to select nodes/links doubled number of classes we had.
+@
+text
+@/*
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.wizards;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.emf.ecore.xmi.XMLResource;
+import org.eclipse.gmf.internal.codegen.wizards.pages.EntriesPage;
+import org.eclipse.gmf.internal.codegen.wizards.pages.InputPage;
+import org.eclipse.gmf.internal.codegen.wizards.pages.NewMappingFileCreationPage;
+import org.eclipse.gmf.internal.codegen.wizards.pages.RootElementPage;
+import org.eclipse.gmf.internal.codegen.wizards.pages.WizardInput;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.wizard.Wizard;
+import org.eclipse.ui.INewWizard;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.actions.WorkspaceModifyOperation;
+
+/**
+ * @@author artem
+ */
+public class NewGMFMapModelWizard extends Wizard implements INewWizard {
+
+	private IStructuredSelection selection;
+
+	private WizardInput myHolder;
+
+	public NewGMFMapModelWizard() {
+		setNeedsProgressMonitor(true);
+		setWindowTitle("Ecore to GMFGraph model");
+	}
+
+	public void addPages() {
+		final NewMappingFileCreationPage p = new NewMappingFileCreationPage(selection);
+		p.setTitle("GMFMap Model");
+		p.setDescription("Create a new GMFMap model");
+		addPage(p);
+		myHolder = new WizardInput(p.getResultContainer());
+		InputPage p1 = new InputPage(myHolder);
+		p1.setTitle("Source Models");
+		p1.setDescription("Select domain, graphical and tooling definition models");
+		addPage(p1);
+		RootElementPage p2 = new RootElementPage(myHolder);
+		p2.setTitle("Diagram Element");
+		p2.setDescription("Choose element of domain model to act as top-level container, associated with diagram");
+		addPage(p2);
+		EntriesPage p3 = new EntriesPage(myHolder);
+		p3.setTitle("Mapping");
+		p3.setDescription("Map domain model elements");
+		addPage(p3);
+	}
+
+	public void init(IWorkbench workbench, IStructuredSelection selection) {
+		this.selection = selection;
+	}
+
+	public boolean performFinish() {
+		WorkspaceModifyOperation operation = new WorkspaceModifyOperation() {
+			protected void execute(IProgressMonitor progressMonitor) {
+				try {
+					Map options = new HashMap();
+					options.put(XMLResource.OPTION_ENCODING, "UTF-8");
+					myHolder.getMapping().eResource().save(options);
+				} catch (Exception ex) {
+					IStatus s = new Status(IStatus.ERROR, "org.eclipse.gmf.codegen.ui", 0, ex.getMessage(), ex);
+					Platform.getLog(Platform.getBundle("org.eclipse.gmf.codegen.ui")).log(s);
+				} finally {
+					progressMonitor.done();
+				}
+			}
+		};
+
+		try {
+			getContainer().run(false, false, operation);
+		} catch (InvocationTargetException ex) {
+			return false;
+		} catch (InterruptedException ex) {
+			return false;
+		}
+		return true;
+	}
+
+	public IFile getModelFile() {
+		return myHolder.getMappingFile();
+	}
+}
+@
+
+
+1.4
+log
+@set created file names in dashboard
+@
+text
+@@
+
+
+1.3
+log
+@#114186
+@
+text
+@d18 1
+d99 3
+@
+
+
+1.2
+log
+@set page titles and descriptions
+@
+text
+@a17 1
+import org.eclipse.core.resources.IFile;
+a21 2
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.resource.Resource;
+a42 2
+	private IFile[] resultContainer;
+
+d53 1
+a53 2
+		resultContainer = p.getResultContainer();
+		myHolder = new WizardInput();
+a75 3
+					URI res = URI.createPlatformResourceURI(resultContainer[0].getFullPath().toString());
+					Resource r = myHolder.getResourceSet().createResource(res);
+					r.getContents().add(myHolder.getMapping());
+d78 1
+a78 1
+					r.save(options);
+@
+
+
+1.1
+log
+@Moving towards #114186 - wizard to define map model (although almost no-op now)
+@
+text
+@d55 2
+d60 12
+a71 3
+		addPage(new InputPage(myHolder));
+		addPage(new RootElementPage(myHolder));
+		addPage(new EntriesPage(myHolder));
+@
+

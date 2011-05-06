@@ -1,0 +1,496 @@
+head	1.1;
+access;
+symbols
+	ocl_qvt:1.1.0.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2008.07.29.15.57.43;	author ashatalin;	state dead;
+branches
+	1.1.2.1;
+next	;
+commitid	33cb488f3dd14567;
+
+1.1.2.1
+date	2008.07.29.15.57.43;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.2;
+commitid	33cb488f3dd14567;
+
+1.1.2.2
+date	2008.08.08.18.54.11;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.3;
+commitid	b5f489c96514567;
+
+1.1.2.3
+date	2008.08.19.15.18.37;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.4;
+commitid	32fd48aae4494567;
+
+1.1.2.4
+date	2008.08.28.15.51.00;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.5;
+commitid	35c448b6c95d4567;
+
+1.1.2.5
+date	2008.09.17.12.24.38;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.6;
+commitid	77f248d0f7054567;
+
+1.1.2.6
+date	2008.09.19.12.58.41;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.7;
+commitid	e12648d3a2014567;
+
+1.1.2.7
+date	2008.09.26.18.15.48;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	2780148dd26d24567;
+
+
+desc
+@@
+
+
+1.1
+log
+@file FeatureCall.java was initially added on branch ocl_qvt.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@Xtend-based implementation of XPand extensions was separated into .migration plugin.
+@
+text
+@a0 262
+/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.expression.ast;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EEnum;
+import org.eclipse.emf.ecore.EEnumLiteral;
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.gmf.internal.xpand.BuiltinMetaModel;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.EvaluationException;
+import org.eclipse.gmf.internal.xpand.expression.ExecutionContext;
+import org.eclipse.gmf.internal.xpand.expression.SyntaxConstants;
+import org.eclipse.gmf.internal.xpand.expression.Variable;
+
+/**
+ * @@author Sven Efftinge
+ * @@author Arno Haase
+ */
+public class FeatureCall extends Expression {
+
+    private Expression target;
+
+    private final Identifier name;
+
+    public FeatureCall(final int start, final int end, final int line, final Identifier name, final Expression target) {
+        super(start, end, line);
+        this.target = target;
+        this.name = name;
+    }
+
+    public Expression getTarget() {
+        return target;
+    }
+
+    public void setTarget(final Expression target) {
+        this.target = target;
+    }
+
+    public Identifier getName() {
+        return name;
+    }
+
+    public EEnumLiteral getEnumLiteral(final ExecutionContext ctx) {
+        if (name.getValue().indexOf(SyntaxConstants.NS_DELIM) != -1) {
+            String typeName = name.getValue();
+            typeName = typeName.substring(0, typeName.lastIndexOf(SyntaxConstants.NS_DELIM));
+            final EClassifier type = ctx.getTypeForName(typeName);
+            if (type != null) {
+            	if (false == (type instanceof EEnum)) {
+            		return null;
+            	}
+                final String litName = name.getValue().substring(
+                        name.getValue().lastIndexOf(SyntaxConstants.NS_DELIM) + SyntaxConstants.NS_DELIM.length());
+                return ((EEnum) type).getEEnumLiteral(litName);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * evaluates in the following order if (target==null) 1) enumeration literal
+     * 2) variable 3) implicite var (e.g. this) 4) type literal
+     * 
+     * otherwise it's a property
+     */
+    @@Override
+    public Object evaluateInternal(final ExecutionContext ctx) {
+        Object targetObj = null;
+        if (target == null) {
+            final EEnumLiteral staticProp = getEnumLiteral(ctx);
+            if (staticProp != null) {
+            	// XXX write tests to make sure
+            	// switch (enumField) case EnumName::LITERAL1 
+            	// works
+				return staticProp.getInstance();
+			}
+            Variable var = ctx.getVariable(getName().getValue());
+            if (var != null) {
+				return var.getValue();
+			}
+
+            var = ctx.getVariable(ExecutionContext.IMPLICIT_VARIABLE);
+            if (var != null) {
+                targetObj = var.getValue();
+                if (targetObj == null) {
+					return null;
+				}
+            }
+        } else {
+            targetObj = getTarget().evaluate(ctx);
+            if (targetObj == null) {
+				return null;
+			}
+        }
+        if (targetObj != null) {
+    		EClassifier targetObjType = BuiltinMetaModel.getType(targetObj);
+            final EStructuralFeature p = BuiltinMetaModel.getAttribute(targetObjType, getName().getValue());
+            if ((p == null) && (targetObj instanceof Collection)) {
+                return handleCollection(ctx, (Collection) targetObj);
+            }
+            if (p != null) {
+				return BuiltinMetaModel.getValue(p, targetObj);
+			}
+        }
+        if (target == null) {
+            // type literal ?
+            final EClassifier type = ctx.getTypeForName(getName().getValue());
+            if (type != null) {
+				return type;
+			}
+        }
+        if (getName().getValue().indexOf(SyntaxConstants.NS_DELIM) != -1) {
+			throw new EvaluationException("Couldn't find enum literal or type '" + getName().getValue() + "'", this);
+		}
+        if (target == null) {
+			throw new EvaluationException("Couldn't find type or property '" + getName().getValue() + "'", this);
+		} else {
+			throw new EvaluationException("Couldn't find property '" + getName().getValue() + "' for type "
+                    + findEClassifier(targetObj, ctx).getName(), this);
+		}
+    }
+
+	private Object handleCollection(final ExecutionContext ctx, final Collection col) {
+		final List<Object> result = new ArrayList<Object>();
+		for (final Iterator iter = col.iterator(); iter.hasNext();) {
+		    final Object element = iter.next();
+	        final EClassifier type = BuiltinMetaModel.getType(element);
+		    final EStructuralFeature prop = BuiltinMetaModel.getAttribute(type, getName().getValue());
+		    if (prop == null) {
+		        throw new EvaluationException("Couldn't find property '" + getName().getValue()
+		                + "' for inner type " + type + "'", this);
+		    } else {
+		        final Object r = BuiltinMetaModel.getValue(prop, element);
+		        if (r instanceof Collection) {
+		            result.addAll((Collection<?>) r);
+		        } else {
+		            result.add(r);
+		        }
+		    }
+		}
+		return result;
+	}
+
+    /**
+     * analyzes in the following order if (target==null) 1) enumeration literal
+     * 2) variable 3) implicite var (e.g. this) 4) type literal
+     * 
+     * otherwise it's a property
+     */
+    public EClassifier analyze(final ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+        EClassifier targetType = null;
+        // XXX hmm, all visible invocations of createFeatureCall always pass null 
+        // as target. Perhaps, some subclasses pass non-null, though needs some investigation
+        if (target == null) {
+            // enum literal
+            final EEnumLiteral staticProp = getEnumLiteral(ctx);
+            if (staticProp != null) {
+				return BuiltinMetaModel.getReturnType(staticProp);
+			}
+
+            // variable
+            Variable var = ctx.getVariable(getName().getValue());
+            if (var != null) {
+            	assert var.getValue() == null || var.getValue() instanceof EClassifier : "variable should hold EClassifier";
+				return (EClassifier) var.getValue();
+			}
+
+            // implicite variable 'this'
+            var = ctx.getVariable(ExecutionContext.IMPLICIT_VARIABLE);
+            if (var != null) {
+                targetType = (EClassifier) var.getValue();
+            }
+
+        } else {
+            targetType = analyzeTarget(ctx, issues);
+            if (targetType == null) {
+				return null;
+			}
+        }
+
+        String additionalMsg = "";
+        // simple property
+        if (targetType != null) {
+            EStructuralFeature p = BuiltinMetaModel.getAttribute(targetType, getName().getValue());
+            if (p != null) {
+				return BuiltinMetaModel.getTypedElementType(p);
+			}
+
+            if ((p == null) && BuiltinMetaModel.isParameterizedType(targetType)) {
+                final EClassifier innerEClassifier = BuiltinMetaModel.getInnerType(targetType);
+                p = BuiltinMetaModel.getAttribute(innerEClassifier, getName().getValue());
+                if (p != null) {
+                    EClassifier rt = p.getEType();
+                    if (BuiltinMetaModel.isParameterizedType(rt)) {
+                        rt = BuiltinMetaModel.getInnerType(rt);
+                    }
+                    return BuiltinMetaModel.getListType(rt);
+                }
+                additionalMsg = " or inner type '" + innerEClassifier + "'";
+            }
+        }
+        if (target == null) {
+            final EClassifier type = ctx.getTypeForName(getName().getValue());
+            if (type != null) {
+                return EcorePackage.eINSTANCE.getEClass();
+            }
+        }
+
+        if (target == null) {
+            String txt = "";
+            if (targetType != null) {
+                txt = targetType.getName() + " property, ";
+            }
+            issues.add(new AnalysationIssue(AnalysationIssue.Type.FEATURE_NOT_FOUND, "Unknown " + txt
+                    + "variable, type or enumeration literal '" + getName().getValue() + "'", this));
+            return null;
+        }
+
+        issues.add(new AnalysationIssue(AnalysationIssue.Type.FEATURE_NOT_FOUND, "Couldn't find property '"
+                + getName().getValue() + "' for type '" + targetType.getName() + "'" + additionalMsg, this));
+        return null;
+
+    }
+
+    protected EClassifier analyzeTarget(final ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+        return getTarget().analyze(ctx, issues);
+    }
+
+    protected EClassifier findEClassifier(final Object value, final ExecutionContext ctx) {
+        final EClassifier t = BuiltinMetaModel.getType(value);
+        if (t == null) {
+            throw new EvaluationException("Unkown object type : " + value.getClass().getName(), this);
+        }
+        return t;
+    }
+
+    @@Override
+    public String toString() {
+        return (getTarget() != null ? getTarget().toString() + "." : "") + name.getValue();
+    }
+
+}
+@
+
+
+1.1.2.2
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ Correctly transforming collection types on implicit collect operations for FeatureCall expression + unit-tests.
+@
+text
+@d4 1
+a4 1
+ * Copyright (c) 2005-2008 Sven Efftinge and others.
+a11 1
+ *     Alexander Shatalin (Borland)
+a22 1
+import org.eclipse.emf.ecore.EClass;
+a33 4
+import org.eclipse.gmf.internal.xpand.migration.ExpressionAnalyzeTrace;
+import org.eclipse.gmf.internal.xpand.migration.FeatureCallTrace;
+import org.eclipse.gmf.internal.xpand.migration.MigrationExecutionContext;
+import org.eclipse.gmf.internal.xpand.migration.FeatureCallTrace.Type;
+d178 1
+a178 3
+				EClassifier result = BuiltinMetaModel.getReturnType(staticProp);
+				createAnalyzeTrace(ctx, new FeatureCallTrace(result, staticProp));
+				return result;
+d183 1
+a183 1
+			if (var != null) {
+d185 1
+a185 3
+            	EClassifier result = (EClassifier) var.getValue();
+            	createAnalyzeTrace(ctx, new FeatureCallTrace(result, Type.ENV_VAR_REF));
+				return result;
+a196 1
+            	createAnalyzeTrace(ctx, new FeatureCallTrace(null, Type.UNDESOLVED_TARGET_TYPE));
+d206 1
+a206 3
+				EClassifier result = BuiltinMetaModel.getTypedElementType(p);
+				createAnalyzeTrace(ctx, new FeatureCallTrace(result, p, targetType));
+				return result;
+d213 1
+a213 1
+                    EClassifier rt = BuiltinMetaModel.getTypedElementType(p);
+d217 1
+a217 3
+                    EClass result = BuiltinMetaModel.getListType(rt);
+                    createAnalyzeTrace(ctx, new FeatureCallTrace(result, targetType));
+					return result;
+a224 1
+            	createAnalyzeTrace(ctx, new FeatureCallTrace(null, Type.UNSUPPORTED_CLASSIFIER_REF));
+a243 7
+    
+    protected void createAnalyzeTrace(ExecutionContext ctx, ExpressionAnalyzeTrace trace) {
+    	if (false == ctx instanceof MigrationExecutionContext) {
+    		return;
+    	}
+    	((MigrationExecutionContext) ctx).getTraces().put(this, trace);
+    }
+@
+
+
+1.1.2.3
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ Transforming Collection type on CollectionExpression migration.
+@
+text
+@d24 1
+d184 3
+a186 1
+				return createAnalyzeTrace(ctx, new FeatureCallTrace(BuiltinMetaModel.getReturnType(staticProp), staticProp));
+d193 3
+a195 1
+            	return createAnalyzeTrace(ctx, new FeatureCallTrace((EClassifier) var.getValue(), Type.ENV_VAR_REF));
+d207 2
+a208 1
+            	return createAnalyzeTrace(ctx, new FeatureCallTrace(null, Type.UNDESOLVED_TARGET_TYPE));
+d217 3
+a219 1
+				return createAnalyzeTrace(ctx, new FeatureCallTrace(BuiltinMetaModel.getTypedElementType(p), p, targetType));
+d230 3
+a232 1
+                    return createAnalyzeTrace(ctx, new FeatureCallTrace(BuiltinMetaModel.getListType(rt), targetType));
+d261 3
+a263 3
+    protected EClassifier createAnalyzeTrace(ExecutionContext ctx, ExpressionAnalyzeTrace trace) {
+    	if (ctx instanceof MigrationExecutionContext) {
+    		((MigrationExecutionContext) ctx).getTraces().put(this, trace);
+d265 1
+a265 1
+    	return trace.getResultType();
+@
+
+
+1.1.2.4
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ First step toward .xpt migration.
+@
+text
+@d50 2
+a51 2
+    public FeatureCall(final int start, final int end, final int line, final int startOffset, final int endOffset, final Identifier name, final Expression target) {
+        super(start, end, line, startOffset, endOffset);
+a61 1
+        startOffset = target.getStartOffset();
+@
+
+
+1.1.2.5
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ - ModelManager for model name substitutions was added
+ - OclCs class added
+ - FeatureCall positions calculation corrected
+ - implicit/explicit extension first parameter migration with unit-tests
+@
+text
+@d62 1
+a274 8
+    
+    @@Override
+    public int getStartOffset() {
+    	if (getTarget() != null) {
+    		return getTarget().getStartOffset();
+    	}
+    	return super.getStartOffset();
+    }
+@
+
+
+1.1.2.6
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ - Problem with infix operation migration in expand corrected.
+ - Skipping analyze warnings on migration.
+@
+text
+@d277 1
+a277 1
+    	if (getTarget() != null && super.getStartOffset() > getTarget().getStartOffset()) {
+@
+
+
+1.1.2.7
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ - more gentle collection operations migration implemented
+@
+text
+@d35 1
+d37 1
+d251 7
+@
+
+

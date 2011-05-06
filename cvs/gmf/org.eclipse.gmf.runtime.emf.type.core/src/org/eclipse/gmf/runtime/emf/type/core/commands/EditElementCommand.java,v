@@ -1,0 +1,472 @@
+head	1.4;
+access;
+symbols
+	v20081020-0700:1.4
+	v20080807-1333:1.4
+	v20080807-1325:1.4
+	v20080731-1520:1.4
+	v20080725-1738:1.4
+	v20080722-1827:1.4
+	R2_1_maintenance:1.4.0.4
+	Root_R2_1_maintenance:1.4
+	R2_1_0:1.4
+	v20080425-1959:1.4
+	v20080328-1605:1.4
+	v20080222-1200:1.4
+	v20080114-2222:1.4
+	v20080107-1111:1.4
+	v20071130-1111:1.4
+	v20071124-0000:1.4
+	v20070809-0000:1.4
+	R2_0_maintenance:1.4.0.2
+	R2_0:1.4
+	R4_20:1.4
+	RC3_20:1.4
+	v20070601-1400:1.4
+	v20070518-1300:1.4
+	v20070403-1500:1.4
+	v20070330-1300:1.4
+	v20070208-1800:1.4
+	M4_20:1.4
+	v20061214-0000:1.4
+	M3_20:1.4
+	v20061117-0800:1.4
+	v20061013-1330:1.4
+	v20060919-0800:1.3.2.1
+	v20060907-1100:1.3.2.1
+	M1_20:1.3
+	v20060831-1500:1.3.2.1
+	v20060817-1500:1.3
+	v20060803-1200:1.3
+	v20060721-1130:1.3
+	v20060713-1700:1.3
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3
+	v20060627-1200:1.3
+	v20060616-1200:1.3
+	v20060609-1400:1.3
+	v20060531-1730:1.3
+	v20060530-1930:1.3
+	v20060526-1200:1.3
+	v20060519-0800:1.3
+	I20060505-1400:1.3
+	I20060428-1300:1.3
+	I20060424-0500:1.3
+	I20060424-0300:1.3
+	M6_10:1.3
+	I20060407-1200:1.3
+	I20060331-1000:1.3
+	I20060324-0300:1.3
+	I20060317-1300:1.3
+	I20060317-1200:1.3
+	I20060316-1300:1.3
+	I20060309-1300:1.3
+	M5_10:1.3
+	S20060303-1600:1.3
+	I20060227-1730:1.3
+	I20060216-1945:1.3
+	I20060210-1715:1.2
+	I20060209-1815:1.2
+	I20060203-0830:1.2
+	I20060129-1145:1.2
+	I20060127-0900:1.2
+	I20060120-1530:1.2
+	I20060113-1700:1.2
+	M4_10:1.2
+	I20060107-1100:1.2
+	I20060105-1630:1.2
+	I20051230-1230:1.2
+	I20051223-1100:1.2
+	M3_10:1.2
+	I20051118-1245:1.2
+	I20051111-1800:1.2
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2006.10.03.15.06.37;	author ahunter;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.02.13.19.12.20;	author ldamus;	state Exp;
+branches
+	1.3.2.1;
+next	1.2;
+
+1.2
+date	2005.09.12.21.26.55;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.43;	author sshaw;	state Exp;
+branches;
+next	;
+
+1.3.2.1
+date	2006.08.28.20.36.12;	author ldamus;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@gmf_head ahunter 061003 Merge 1.0.1 Runtime to HEAD 2.0
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2005, 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.emf.type.core.commands;
+
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+import org.eclipse.gmf.runtime.emf.type.core.internal.requests.RequestCacheEntries;
+import org.eclipse.gmf.runtime.emf.type.core.requests.IEditCommandRequest;
+
+/**
+ * Abstract superclass for commands that modify model elements.
+ * 
+ * @@author ldamus
+ */
+public abstract class EditElementCommand
+	extends AbstractTransactionalCommand {
+
+	/**
+	 * The element to be modified.
+	 */
+	private EObject elementToEdit;
+
+	/**
+	 * The edit request that carries the required command parameters.
+	 */
+	private final IEditCommandRequest request;
+
+	/**
+	 * The kind of model element that can be modified by this command.
+	 */
+	private EClass eClass = null;
+
+	/**
+	 * Constructs a new command instance.
+	 * 
+	 * @@param label
+	 *            the command label
+	 * @@param elementToEdit
+	 *            the element to be modified
+	 * @@param request
+	 *            the edt request
+	 */
+	protected EditElementCommand(String label, EObject elementToEdit,
+			IEditCommandRequest request) {
+
+		super(request.getEditingDomain(), label, getAffectedFiles(request));
+		this.elementToEdit = elementToEdit;
+		this.request = request;
+	}
+	
+    protected static List getAffectedFiles(IEditCommandRequest request) {
+		Map cacheMaps = (Map) request
+			.getParameter(RequestCacheEntries.Cache_Maps);
+		if (cacheMaps != null) {
+			return (List) cacheMaps.get(RequestCacheEntries.Affected_Files);
+		}
+
+		List result = new ArrayList();
+		List elements = request.getElementsToEdit();
+		int size;
+		if (elements != null && ((size = elements.size()) > 0)) {
+			if (size == 1) {
+				Resource resource = ((EObject) elements.get(0)).eResource();
+				if (resource != null) {
+					IFile file = WorkspaceSynchronizer.getFile(resource);
+					if (file != null) {
+						result.add(file);
+					}
+				}
+			} else {
+				Map resourcesToFileMap = new HashMap();
+				for (int i = 0; i < size; ++i) {
+					Resource resource = ((EObject) elements.get(i)).eResource();
+					if (resource != null) {
+						Object file = resourcesToFileMap.get(resource);
+						//if it is in the Map, then it is in the List already as well
+						if (file == null) {
+							file = WorkspaceSynchronizer.getFile(resource);
+							if (file != null) {
+								resourcesToFileMap.put(resource, file);
+								result.add(file);
+							}
+						}
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Checks that the element to be modified by this command is of the correct
+	 * kind.
+	 */
+	public boolean canExecute() {
+
+		if (getEClass() != null) {
+			return getEClass().isSuperTypeOf(getEClassToEdit());
+		}
+		return true;
+	}
+
+	/**
+	 * Gets the element to be modified by this command.
+	 * 
+	 * @@return the element to be modified
+	 */
+	protected EObject getElementToEdit() {
+		return elementToEdit;
+	}
+	
+	protected EClass getEClassToEdit() {
+		return getElementToEdit().eClass();
+	}
+	
+	/**
+	 * Sets the element to be modified by this command.
+	 * 
+	 * @@return the element to be modified
+	 */
+	protected void setElementToEdit(EObject element) {
+		this.elementToEdit = element;
+	}
+
+	/**
+	 * Gets the edit request.
+	 * 
+	 * @@return the edit request
+	 */
+	protected IEditCommandRequest getRequest() {
+		return request;
+	}
+
+	/**
+	 * Gets the kind of element that can be modified by this command.
+	 * 
+	 * @@return the kind of element
+	 */
+	protected EClass getEClass() {
+		return eClass;
+	}
+
+	/**
+	 * Sets the kind of element that can be modified by this command.
+	 * 
+	 * @@param eClass
+	 *            the kind of element
+	 */
+	protected void setEClass(EClass eClass) {
+		this.eClass = eClass;
+	}
+
+	/**
+	 * Convenience method to check the status of <code>commandRequest</code>.
+	 * 
+	 * @@param commandResult
+	 *            the command result to check
+	 * @@return <code>true</code> if the result is OK, <code>false</code>
+	 *         otherwise.
+	 */
+	protected boolean isOK(CommandResult commandResult) {
+		return commandResult.getStatus().getCode() == IStatus.OK;
+	}
+}@
+
+
+1.3
+log
+@[112826] gmf_head ldamus 060213 Adopt Eclipse 3.1 Operation History Framework
+@
+text
+@d16 1
+a16 1
+import java.util.Iterator;
+d18 1
+d28 1
+d71 1
+a71 1
+    
+d73 38
+a110 20
+        
+        List result = new ArrayList();
+        List elements = request.getElementsToEdit();
+        
+        if (elements != null) {
+            
+            for (Iterator i = elements.iterator(); i.hasNext();) {
+                Resource resource = ((EObject) i.next()).eResource();
+                
+                if (resource != null) {
+                    IFile file = WorkspaceSynchronizer.getFile(resource);
+                    
+                    if (file != null) {
+                        result.add(file);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+@
+
+
+1.3.2.1
+log
+@[155233] gmf_R1_0_maintenance ylulu 060828 Deleting and element using the EditHelpers could be enhanced
+@
+text
+@d16 1
+a16 1
+import java.util.HashMap;
+a17 1
+import java.util.Map;
+a26 1
+import org.eclipse.gmf.runtime.emf.type.core.internal.requests.RequestCacheEntries;
+d69 1
+a69 1
+	
+d71 20
+a90 38
+		Map cacheMaps = (Map) request
+			.getParameter(RequestCacheEntries.Cache_Maps);
+		if (cacheMaps != null) {
+			return (List) cacheMaps.get(RequestCacheEntries.Affected_Files);
+		}
+
+		List result = new ArrayList();
+		List elements = request.getElementsToEdit();
+		int size;
+		if (elements != null && ((size = elements.size()) > 0)) {
+			if (size == 1) {
+				Resource resource = ((EObject) elements.get(0)).eResource();
+				if (resource != null) {
+					IFile file = WorkspaceSynchronizer.getFile(resource);
+					if (file != null) {
+						result.add(file);
+					}
+				}
+			} else {
+				Map resourcesToFileMap = new HashMap();
+				for (int i = 0; i < size; ++i) {
+					Resource resource = ((EObject) elements.get(i)).eResource();
+					if (resource != null) {
+						Object file = resourcesToFileMap.get(resource);
+						//if it is in the Map, then it is in the List already as well
+						if (file == null) {
+							file = WorkspaceSynchronizer.getFile(resource);
+							if (file != null) {
+								resourcesToFileMap.put(resource, file);
+								result.add(file);
+							}
+						}
+					}
+				}
+			}
+		}
+		return result;
+	}
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005 IBM Corporation and others.
+a13 1
+import java.util.Collection;
+d15 5
+d23 2
+a24 2
+
+import org.eclipse.gmf.runtime.common.core.command.AbstractCommand;
+d26 1
+d35 1
+a35 1
+	extends AbstractCommand {
+d65 1
+a65 1
+		super(label);
+d69 22
+d96 1
+a96 1
+	public boolean isExecutable() {
+a102 8
+	
+	public boolean isUndoable() {
+		return true;
+	}
+	
+	public boolean isRedoable() {
+		return true;
+	}
+a164 8
+	
+	
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.common.core.command.AbstractCommand#getAffectedObjects()
+	 */
+	public Collection getAffectedObjects() {
+		return request.getElementsToEdit();
+	}
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2005.  All Rights Reserved.                    |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

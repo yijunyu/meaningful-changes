@@ -1,0 +1,228 @@
+head	1.3;
+access;
+symbols
+	v20080722-1827:1.3
+	R2_1_maintenance:1.3.0.2
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080425-1959:1.3
+	v20071108-0000:1.3
+	v20071003-0000:1.3
+	v20070921-0000:1.2.2.1
+	v20070903-0000:1.3
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	v20070621-0000:1.2
+	RC3_20:1.2
+	v20070601-1400:1.2
+	v20070525-1500:1.2
+	v20070518-1300:1.2
+	v20070427-0600:1.2
+	v20070420-1000:1.2
+	v20070413-1300:1.2
+	v20070405-1100:1.2
+	v20070330-1300:1.1
+	v20060330-1300:1.1
+	v20070322-1100:1.1
+	v20060316-0600:1.1
+	v20070307-0700:1.1
+	v20070228-2000:1.1
+	v20070208-1800:1.1
+	M4_20:1.1
+	v20061222-1800:1.1
+	v20061218-1200:1.1
+	v20061214-0000:1.1
+	v20061120-1300:1.1
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061013-1330:1.1
+	M1_20:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.3
+date	2007.07.04.13.22.23;	author bblajer;	state Exp;
+branches;
+next	1.2;
+commitid	4058468b9f0d4567;
+
+1.2
+date	2007.04.04.17.06.10;	author bblajer;	state Exp;
+branches
+	1.2.2.1;
+next	1.1;
+commitid	55444613db024567;
+
+1.1
+date	2006.09.01.16.14.11;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.2.2.1
+date	2007.09.17.16.01.50;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	7ad046eea4ed4567;
+
+
+desc
+@@
+
+
+1.3
+log
+@Eliminated Jet templates in lite version;
+i18n in lite RT;
+For generated classes whose names are not directly modifiable via gmfgen file, consistent className/qualifiedClassName template is exposed (and used throughout the generation process, including the Generator);
+Link labels and external node labels are not selectable, but movable;
+Inner elements are not selectable with marquee tool;
+Fixed copyright statements throughout the lite RT.
+@
+text
+@/**
+ * Copyright (c) 2006 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.properties;
+
+import java.text.MessageFormat;
+
+import org.eclipse.emf.common.util.BasicEList;
+import org.eclipse.emf.common.util.EList;
+import org.eclipse.emf.edit.provider.IItemPropertySource;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.ui.views.properties.IPropertySource;
+import org.eclipse.ui.views.properties.IPropertySource2;
+
+/**
+ * Copied from <code>org.eclipse.gef.ui.properties.SetValueCommand</code> to provide EMF compatibility.
+ */
+class SetValueCommand extends Command {
+	protected Object propertyValue;
+	protected Object propertyName;
+	protected Object undoValue;
+	protected boolean resetOnUndo;
+	protected IPropertySource target;
+
+	public SetValueCommand() {
+		super(""); //$NON-NLS-1$
+	}
+
+	public SetValueCommand(String propLabel) {
+		super(MessageFormat.format("Set {0} property", new Object[]{propLabel}).trim());
+	}
+
+	public boolean canExecute() {
+		return true;
+	}
+
+	public void execute() {
+		/*
+		 * Fix for Bug# 54250
+		 * IPropertySource.isPropertySet(String) returns false both when there is no default 
+		 * value, and when there is a default value and the property is set to that value.
+		 * To correctly determine if a reset should be done during undo, we compare the
+		 * return value of isPropertySet(String) before and after setPropertyValue(...) is
+		 * invoked.  If they are different (it must have been false before and true after --
+		 * it cannot be the other way around), then that means we need to reset.
+		 */
+		boolean wasPropertySet = getTarget().isPropertySet(propertyName);
+		undoValue = getTarget().getPropertyValue(propertyName);
+		if (undoValue instanceof IPropertySource) {
+			undoValue = ((IPropertySource) undoValue).getEditableValue();
+		} else if (undoValue instanceof IItemPropertySource) {
+			undoValue = ((IItemPropertySource) undoValue).getEditableValue(propertyName);
+			if (undoValue instanceof EList) {
+				EList theValue = new BasicEList();
+				theValue.addAll((EList) undoValue);
+				undoValue = theValue;
+			}
+		}
+		if (propertyValue instanceof IPropertySource) {
+			propertyValue = ((IPropertySource) propertyValue).getEditableValue();
+		}
+		getTarget().setPropertyValue(propertyName, propertyValue);
+		if (getTarget() instanceof IPropertySource2) {
+			resetOnUndo = !wasPropertySet
+					&& ((IPropertySource2) getTarget()).isPropertyResettable(propertyName);
+		} else {
+			resetOnUndo = !wasPropertySet && getTarget().isPropertySet(propertyName);
+		}
+		if (resetOnUndo) {
+			undoValue = null;
+		}
+	}
+
+	public IPropertySource getTarget() {
+		return target;
+	}
+
+	public void setTarget(IPropertySource aTarget) {
+		target = aTarget;
+	}
+
+	public void redo() {
+		execute();
+	}
+
+	public void setPropertyId(Object pName) {
+		propertyName = pName;
+	}
+
+	public void setPropertyValue(Object val) {
+		propertyValue = val;
+	}
+
+	public void undo() {
+		if (resetOnUndo) {
+			getTarget().resetPropertyValue(propertyName);
+		} else {
+			getTarget().setPropertyValue(propertyName, undoValue);
+		}
+	}
+}
+@
+
+
+1.2
+log
+@[180967]: Change of a multi-valued property via property sheet should be undone correctly
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Eclipse.org
+@
+
+
+1.2.2.1
+log
+@Fixed copyright statements throughout the lite RT
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation
+@
+
+
+1.1
+log
+@[155040] bblajer - Common Lite runtime functionality moved to dedicated plugin
+@
+text
+@d16 2
+d61 5
+@
+

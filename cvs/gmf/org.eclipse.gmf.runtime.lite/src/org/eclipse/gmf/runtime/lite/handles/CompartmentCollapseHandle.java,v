@@ -1,0 +1,221 @@
+head	1.3;
+access;
+symbols
+	v20080722-1827:1.3
+	R2_1_maintenance:1.3.0.4
+	Root_R2_1_maintenance:1.3
+	R2_1_0:1.3
+	v20080425-1959:1.3
+	v20071108-0000:1.3
+	v20071003-0000:1.3
+	v20070921-0000:1.3
+	v20070903-0000:1.3
+	v20070809-0000:1.3
+	R2_0_maintenance:1.3.0.2
+	R2_0:1.3
+	R4_20:1.3
+	v20070621-0000:1.3
+	RC3_20:1.3
+	v20070601-1400:1.3
+	v20070525-1500:1.3
+	v20070518-1300:1.3
+	v20070427-0600:1.3
+	v20070420-1000:1.3
+	v20070413-1300:1.3
+	v20070405-1100:1.3
+	v20070330-1300:1.3
+	v20060330-1300:1.3
+	v20070322-1100:1.3
+	v20060316-0600:1.3
+	v20070307-0700:1.3
+	v20070228-2000:1.3
+	v20070208-1800:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.3
+date	2007.01.17.16.24.40;	author bblajer;	state Exp;
+branches;
+next	1.2;
+commitid	3dda45ae4dc84567;
+
+1.2
+date	2007.01.12.21.50.33;	author bblajer;	state Exp;
+branches;
+next	1.1;
+commitid	251e45a802a74567;
+
+1.1
+date	2007.01.11.19.16.08;	author bblajer;	state Exp;
+branches;
+next	;
+commitid	6b9e45a68cf74567;
+
+
+desc
+@@
+
+
+1.3
+log
+@Prevented NPE when deleting an node with compartments
+@
+text
+@/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer - initial API and implementation
+ */
+package org.eclipse.gmf.runtime.lite.handles;
+
+import org.eclipse.emf.transaction.NotificationFilter;
+import org.eclipse.emf.transaction.ResourceSetChangeEvent;
+import org.eclipse.emf.transaction.ResourceSetListener;
+import org.eclipse.emf.transaction.ResourceSetListenerImpl;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.emf.transaction.util.TransactionUtil;
+import org.eclipse.gef.DragTracker;
+import org.eclipse.gef.GraphicalEditPart;
+import org.eclipse.gmf.internal.runtime.lite.PluginImages;
+import org.eclipse.gmf.runtime.notation.DrawerStyle;
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+import org.eclipse.gmf.runtime.notation.View;
+import org.eclipse.swt.graphics.Image;
+
+public class CompartmentCollapseHandle extends CompartmentNameHandle {
+	private ResourceSetListener myResourceSetListener;
+	private TransactionalEditingDomain myDomain;
+
+	public CompartmentCollapseHandle(GraphicalEditPart owner, String title) {
+		super(owner, title);	//XXX: temporary
+		View ownerView = getOwnerView();
+		NotificationFilter filter = NotificationFilter.createNotifierFilter(ownerView).and(NotificationFilter.createFeatureFilter(NotationPackage.eINSTANCE.getView_Styles()));
+		NotificationFilter childrenFilter = NotificationFilter.createNotifierFilter(ownerView).and(
+			NotificationFilter.createFeatureFilter(NotationPackage.eINSTANCE.getView_PersistedChildren()).or(
+				NotificationFilter.createFeatureFilter(NotationPackage.eINSTANCE.getView_TransientChildren())));
+		filter = filter.or(childrenFilter);
+		DrawerStyle drawerStyle = (DrawerStyle) ownerView.getStyle(NotationPackage.eINSTANCE.getDrawerStyle());
+		if (drawerStyle != null) {
+			NotificationFilter styleFilter = NotificationFilter.createNotifierFilter(drawerStyle).and(NotificationFilter.createFeatureFilter(NotationPackage.eINSTANCE.getDrawerStyle_Collapsed()));
+			filter = filter.or(styleFilter);
+		}
+		myResourceSetListener = new ResourceSetListenerImpl(filter) {
+			@@Override
+			public boolean isAggregatePrecommitListener() {
+				return true;
+			}
+			@@Override
+			public void resourceSetChanged(ResourceSetChangeEvent event) {
+				updateIcon();
+			}
+		};
+		updateIcon();
+	}
+
+	private void updateIcon() {
+		getLabel().setIcon(getCollapseIcon());
+	}
+
+	private Image getCollapseIcon() {
+		if (isEmptyContents()) {
+			return null;
+		}
+		if (isCollapsed()) {
+			return PluginImages.get(PluginImages.IMG_HANDLE_COLLAPSE);
+		} else {
+			return PluginImages.get(PluginImages.IMG_HANDLE_EXPAND);
+		}
+	}
+
+	private boolean isCollapsed() {
+		View ownerView = getOwnerView();
+		if (ownerView == null) {
+			return false;
+		}
+		DrawerStyle drawerStyle = (DrawerStyle) ownerView.getStyle(NotationPackage.eINSTANCE.getDrawerStyle());
+		return drawerStyle != null && drawerStyle.isCollapsed();
+	}
+
+	private View getOwnerView() {
+		return getOwner().getModel() instanceof View ? (View) getOwner().getModel() : null;
+	}
+
+	@@Override
+	public void addNotify() {
+		super.addNotify();
+		View ownerView = getOwnerView();
+		myDomain = TransactionUtil.getEditingDomain(ownerView);
+		if (myDomain != null) {
+			myDomain.addResourceSetListener(myResourceSetListener);
+		}
+	}
+
+	@@Override
+	public void removeNotify() {
+		if (myDomain != null) {
+			myDomain.removeResourceSetListener(myResourceSetListener);
+			myDomain = null;
+		}
+		super.removeNotify();
+	}
+
+	@@Override
+	public DragTracker getDragTracker() {
+		if (getOwnerView() != null && !isEmptyContents()) {
+			return new CompartmentCollapseTracker(getOwner());
+		}
+		return null;
+	}
+
+	/**
+	 * See https://bugs.eclipse.org/bugs/show_bug.cgi?id=170341
+	 */
+	protected boolean isEmptyContents() {
+		if (isCollapsed()) {
+			return getOwnerView() == null || getOwnerView().getVisibleChildren().isEmpty();
+		} else {
+			return getOwner().getChildren().isEmpty();
+		}
+	}
+}
+@
+
+
+1.2
+log
+@[170340]: Expand collapsed compartments automatically when new elements are added to it;
+[170341]: Expand/Collapse handles should not be available for empty compartments.
+@
+text
+@d18 1
+d30 1
+d90 4
+a93 1
+		TransactionUtil.getEditingDomain(ownerView).addResourceSetListener(myResourceSetListener);
+d98 4
+a101 2
+		View ownerView = getOwnerView();
+		TransactionUtil.getEditingDomain(ownerView).removeResourceSetListener(myResourceSetListener);
+@
+
+
+1.1
+log
+@[170248]: Beautify compartments generated for the lite version
+@
+text
+@d34 4
+d61 3
+d100 1
+a100 1
+		if (getOwnerView() != null) {
+d105 11
+@
+

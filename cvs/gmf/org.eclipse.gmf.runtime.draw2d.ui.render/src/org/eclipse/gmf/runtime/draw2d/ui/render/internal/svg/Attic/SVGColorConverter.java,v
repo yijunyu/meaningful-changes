@@ -1,0 +1,261 @@
+head	1.4;
+access;
+symbols
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	I20060209-1815:1.3
+	I20060203-0830:1.3
+	I20060129-1145:1.3
+	I20060127-0900:1.3
+	I20060120-1530:1.3
+	I20060113-1700:1.3
+	M4_10:1.3
+	I20060107-1100:1.3
+	I20060105-1630:1.3
+	I20051230-1230:1.3
+	I20051223-1100:1.3
+	I20051217-0925:1.3
+	I20051208-2000:1.3
+	I20051201-1800:1.2
+	I20051124-2000:1.2
+	M3_10:1.2
+	I20051118-1245:1.2
+	I20051111-1800:1.2
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2006.02.10.19.18.31;	author sshaw;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2005.12.05.19.18.18;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.24.38;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.49;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@bugzilla 119319 gmf-head sshaw 060210 Support extensibility for RenderedImageFactory
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2005 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.draw2d.ui.render.internal.svg;
+
+import java.awt.Color;
+
+import org.apache.batik.dom.svg.SVGOMDocument;
+import org.apache.batik.svggen.SVGColor;
+import org.apache.batik.svggen.SVGGeneratorContext;
+import org.apache.batik.svggen.SVGPaintDescriptor;
+import org.apache.batik.util.SVGConstants;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.svg.SVGSVGElement;
+import org.w3c.dom.traversal.NodeFilter;
+import org.w3c.dom.traversal.NodeIterator;
+
+/**
+ * @@author sshaw
+ *
+ * Utility class that will replace Black and white with corresponding outline and
+ * fill colors respectively.
+ */
+public class SVGColorConverter {
+	
+	static private SVGColorConverter INSTANCE = new SVGColorConverter();
+	
+	/**
+	 * getInstance
+	 * Implementation of the singleton pattern
+	 * 
+	 * @@return the Singleton Instance of SVGColorConverter
+	 */
+	static public SVGColorConverter getInstance() {
+		return INSTANCE;
+	}
+	/**
+	 * 
+	 */
+	private SVGColorConverter() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	
+	/**
+	 * replaceDocumentColors
+	 * Given an SVGOMDocument, this method will replace all fill, stroke and gradient
+	 * colors with values that are based in.  Black color will be replaced by the given
+	 * outlineColor and White color will be replaced by the given fillColor.
+	 * 
+	 * @@param svgDoc SVGOMDocument to perform the replace on.
+	 * @@param fillColor This is the fill color that will replace all occurrences of white
+	 * @@param outlineColor This is the outline color that will replace all occurrences of black.
+	 */
+	public void replaceDocumentColors(SVGOMDocument svgDoc, Color fillColor, Color outlineColor) {
+		SVGSVGElement svgRoot = svgDoc.getRootElement();
+		NodeIterator ni = svgDoc.createNodeIterator(svgRoot, NodeFilter.SHOW_ALL, null, true);
+		Node node = ni.nextNode();
+		while (node != null) {
+			if (node.getNodeType() == Node.ELEMENT_NODE) {
+				Element element = (Element)node; 
+				
+				if (fillColor != null) {
+					setColorAttribute(svgDoc, element, SVGConstants.SVG_FILL_ATTRIBUTE, false, fillColor);
+					setColorAttribute(svgDoc, element, SVGConstants.SVG_STOP_COLOR_ATTRIBUTE, false, fillColor);
+				}
+				
+				if (outlineColor != null) {
+					setColorAttribute(svgDoc, element, SVGConstants.SVG_STROKE_ATTRIBUTE, true, outlineColor);
+					setColorAttribute(svgDoc, element, SVGConstants.SVG_STOP_COLOR_ATTRIBUTE, true, outlineColor);
+				}
+			}
+			
+			node = ni.nextNode();
+		}
+	}
+	
+	public static final String SEMICOLON = ";"; //$NON-NLS-1$
+	public static final String COLON = ":"; 	//$NON-NLS-1$		
+
+	private boolean isBlack(String color) {
+		return color.equals( "#000000" ) || color.toUpperCase().equals("BLACK");//$NON-NLS-1$//$NON-NLS-2$
+	}
+	
+	private boolean isWhite(String color) {
+		return color.equals( "#FFFFFF" ) || color.toUpperCase().equals("WHITE");//$NON-NLS-1$//$NON-NLS-2$
+	}	
+	
+	/**
+	 * setColorAttribute
+	 * Utility function that will set the color attribute to the specified color
+	 * 
+	 * @@param element Element to set the attribute color of
+	 * @@param attributeName String attribute name, usually one of SVGConstants.SVG_FILL_ATTRIBUTE or
+	 * SVGConstants.SVG_STROKE_ATTRIBUTE
+	 * @@param boolean black is true if replace with color, false to replace white.
+	 * @@param color Color to change the attribute to.
+	 */
+	protected void setColorAttribute(SVGOMDocument svgDoc, Element element, String attributeName, boolean black, Color color) {
+		SVGPaintDescriptor svgPD = SVGColor.toSVG(color, SVGGeneratorContext.createDefault(svgDoc));
+
+		if (element.hasAttribute(attributeName)) {
+			String value = element.getAttribute(attributeName);
+
+			// Only change the Stroke color if the current color is black
+			if( attributeName.equals(SVGConstants.SVG_STROKE_ATTRIBUTE) ||
+				attributeName.equals(SVGConstants.SVG_FILL_ATTRIBUTE)) {
+				
+				if( (black && isBlack(value)) || (!black && isWhite(value)) ) {  
+					element.setAttribute(attributeName, svgPD.getPaintValue());
+				}
+			}
+		}
+		else if (element.hasAttribute(SVGConstants.SVG_STYLE_TAG)) {
+			//TODO There must be a better way to set fill / outline color with the Batik libraries.
+			String style = element.getAttribute(SVGConstants.SVG_STYLE_TAG);
+						
+			String preColor = ""; //$NON-NLS-1$
+			int nStart = style.indexOf(attributeName + COLON);
+			if (nStart != -1) {
+				if (nStart > 0)
+					preColor = style.substring(0, nStart - 1);
+								
+				String postColor = ""; //$NON-NLS-1$
+				int nEnd = style.indexOf(SEMICOLON, nStart);
+				if (nEnd == -1)
+					nEnd = style.length();
+				if (nEnd < style.length() - 1)
+					postColor = style.substring(nEnd + 1, style.length());
+				
+				String currentColor = style.substring(nStart+attributeName.length() + 1, nEnd);
+				if( (black && isBlack(currentColor)) || (!black && isWhite(currentColor))) {
+					if (!currentColor.equals(SVGConstants.SVG_NONE_VALUE)) {				
+						StringBuffer styleBuffer = new StringBuffer(style.length() + 5);
+						styleBuffer.append(preColor);
+						styleBuffer.append(" "); //$NON-NLS-1$
+						styleBuffer.append(attributeName);
+						styleBuffer.append(COLON);
+						styleBuffer.append(svgPD.getPaintValue());
+						if (!postColor.equals("")) {	//$NON-NLS-1$
+							styleBuffer.append(SEMICOLON);
+							styleBuffer.append(postColor);
+						}
+						String styleNew = styleBuffer.toString();
+										
+						element.setAttribute(SVGConstants.SVG_STYLE_TAG, styleNew);
+					}
+			    }
+			}
+		}
+	}
+}
+@
+
+
+1.3
+log
+@bugzilla 111436 gmf-head sshaw 051205 Improve performance of SVG transcoder
+@
+text
+@@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d118 1
+a118 1
+				if( (black && isBlack(value)) || (!black && isWhite(value)) ) {  //$NON-NLS-1$//$NON-NLS-2$
+d141 1
+a141 1
+				if( (black && isBlack(currentColor)) || (!black && isWhite(currentColor))) {//$NON-NLS-1$ //$NON-NLS-2$
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 7
+/****************************************************************************
+Licensed Materials - Property of IBM
+(C) Copyright IBM Corp. 2005. All Rights Reserved.
+
+US Government Users Restricted Rights - Use, duplication or disclosure
+restricted by GSA ADP Schedule Contract with IBM Corp.
+*****************************************************************************/
+@
+

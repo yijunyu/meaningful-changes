@@ -1,0 +1,517 @@
+head	1.7;
+access;
+symbols
+	v20081020-0700:1.7
+	v20080722-1827:1.7
+	R2_1_maintenance:1.7.0.2
+	Root_R2_1_maintenance:1.7
+	R2_1_0:1.7
+	v20080425-1959:1.7
+	v20080222-1200:1.6
+	v20080215-1500:1.6
+	v20070809-0000:1.6
+	R2_0_maintenance:1.6.0.2
+	R2_0:1.6
+	R4_20:1.6
+	v20070621-0000:1.6
+	RC3_20:1.6
+	v20070601-1400:1.6
+	v20070518-1300:1.6
+	v20070403-1500:1.6
+	v20070330-1300:1.6
+	M4_20:1.6
+	v20061214-0000:1.6
+	M3_20:1.6
+	v20061013-1330:1.6
+	v20060919-0800:1.5.2.1
+	M1_20:1.5
+	v20060728-0500:1.5
+	v20060721-1130:1.5
+	v20060713-1700:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	v20060627-1200:1.5
+	v20060616-1200:1.5
+	v20060531-1730:1.5
+	v20060519-0800:1.5
+	I20060505-1400:1.5
+	I20060428-1300:1.4
+	I20060424-0500:1.4
+	I20060424-0300:1.4
+	M6_10:1.4
+	I20060407-1200:1.4
+	I20060331-1000:1.4
+	I20060324-0300:1.4
+	I20060317-1300:1.4
+	I20060317-1200:1.4
+	I20060316-1300:1.4
+	I20060309-1300:1.4
+	M5_10:1.4
+	S20060303-1600:1.4
+	I20060227-1730:1.4
+	I20060216-1945:1.4
+	I20060210-1715:1.4
+	I20060209-1815:1.4
+	I20060203-0830:1.4
+	I20060129-1145:1.4
+	I20060127-0900:1.4
+	I20060120-1530:1.4
+	I20060113-1700:1.4
+	M4_10:1.4
+	I20060107-1100:1.4
+	I20060105-1630:1.4
+	I20051230-1230:1.4
+	I20051223-1100:1.4
+	M3_10:1.4
+	I20051118-1245:1.4
+	I20051111-1800:1.4
+	I20051106-0900:1.4
+	v20051030:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.7
+date	2008.04.22.21.06.55;	author ahunter;	state Exp;
+branches;
+next	1.6;
+commitid	172a480e536e4567;
+
+1.6
+date	2006.10.03.15.05.21;	author ahunter;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2006.04.28.20.17.38;	author sshaw;	state Exp;
+branches
+	1.5.2.1;
+next	1.4;
+
+1.4
+date	2005.10.31.19.43.53;	author vramaswamy;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.09.12.21.28.21;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.08.14.47.30;	author vramaswamy;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.43;	author sshaw;	state Exp;
+branches;
+next	;
+
+1.5.2.1
+date	2006.09.13.16.46.22;	author ahunter;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.7
+log
+@[227655] gmf-head ahunter 080422 Clipboard support used for copy/paste does not preserve order
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2005, 2008 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+
+package org.eclipse.gmf.runtime.emf.clipboard.core;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.gmf.runtime.emf.clipboard.core.internal.ClipboardPlugin;
+import org.eclipse.gmf.runtime.emf.clipboard.core.internal.ClipboardSupportManager;
+import org.eclipse.gmf.runtime.emf.clipboard.core.internal.DefaultClipboardSupport;
+import org.eclipse.gmf.runtime.emf.clipboard.core.internal.PasteOperation;
+import org.eclipse.gmf.runtime.emf.clipboard.core.internal.SerializationEMFResource;
+
+
+/**
+ * Utility for the creation of
+ * {@@link org.eclipse.gmf.runtime.emf.clipboard.core.IClipboardSupport} instances for
+ * specific EMF metamodels, and for copy/paste operations to and from a String
+ * form for use on the system clipboard.
+ *
+ * @@author Christian W. Damus (cdamus)
+ */
+public class ClipboardUtil {
+	/**
+	 * Hint to perform "weak" merges when resolving paste collisions by merging.
+	 * Weak merges will merge the content of multiplicity-many features but
+	 * will not replace existing values in scalar features.
+	 * <p>
+	 * This hint is specified on a per-object basis.
+	 * </p>
+	 * 
+	 * @@see #MERGE_HINT_STRONG
+	 */
+	public final static String MERGE_HINT_WEAK = "*merge=weak"; //$NON-NLS-1$
+
+	/**
+	 * Hint to perform "strong" merges when resolving paste collisions by merging.
+	 * Strong merges will merge the content of multiplicity-many features and
+	 * will also replace existing values in scalar features.  This is the
+	 * default merge behaviour.
+	 * <p>
+	 * This hint is specified on a per-object basis.
+	 * </p>
+	 * 
+	 * @@see #MERGE_HINT_WEAK
+	 */
+	public final static String MERGE_HINT_STRONG = "*merge=strong"; //$NON-NLS-1$
+
+	/**
+	 * Hint to retain the original element's ID when pasting it.  Normally used
+	 * only when implementing a "move" operation, rather than a "copy".
+	 * <p>
+	 * This hint is specified on a per-object basis.
+	 * </p>
+	 */
+	public final static String RECYCLE_HINT_ID = "*recycle=id"; //$NON-NLS-1$
+
+	/**
+	 * Hint to ignore the recycle hint when pasting objects that were copied
+	 * with the recycle hint.  This essentially forces IDs to be regenerated
+	 * even when the copier asked for them to be reused.  This would be
+	 * appropriate, for example, on the second and subsequent paste of elements
+	 * that had been cut and already pasted once.
+	 * <p>
+	 * This hint applies to all objects:  use it as a key in the hint map with
+	 * a boolean value to indicate whether it is enabled.
+	 * </p>
+	 */
+	public final static String IGNORE_RECYCLE_HINT_ID = "*ignore_recycle=id"; //$NON-NLS-1$
+
+	/**
+	 * Hint to attempt to paste into the parent of target element if target
+	 * element doesn't accept the copied element.
+	 * <p>
+	 * This hint is specified on a per-object basis.
+	 * </p>
+	 */
+	public final static String PASTE_TO_TARGET_PARENT = "*paste=parent"; //$NON-NLS-1$
+
+	/**
+	 * Hint indicating that the elements to be pasted were harvested, rather
+	 * than just copied.
+	 * <p>
+	 * This hint is specified on a per-object basis.
+	 * </p>
+	 */
+	public final static String HARVESTED_ELEMENT = "*paste=harvest"; //$NON-NLS-1$
+
+
+	private static final String PASTE_SELECTION_FROM_STRING = "pasteElementsFromString"; //$NON-NLS-1$
+
+	private static final String COPY_SELECTION_TO_STRING = "copyElementsToString"; //$NON-NLS-1$
+
+	
+	/**
+	 * Not instantiable by clients.
+	 */
+	private ClipboardUtil() {
+		super();
+	}
+	
+	/**
+	 * Serializes elements to a string suitable for putting on the system
+	 * clipboard.
+	 * 
+	 * @@param eObjects a collection of {@@link EObject}s to be serialized
+	 * @@param hints a mapping of hints (defined as constants on this class), or
+	 *     <code>null</code> to provide no hints
+	 * @@param monitor a progress monitor to track progress, or
+	 *     <code>null</code> if no progress feedback is required
+	 * 
+	 * @@return the serial form of the <code>eObjects</code>
+	 */
+	public static String copyElementsToString(Collection eObjects, Map hints,
+			IProgressMonitor monitor) {
+		try {
+			if (monitor == null) {
+				monitor = new NullProgressMonitor();
+			}
+			
+			monitor.beginTask(CopyOperation.COPY,
+				CopyOperation.TOTAL_WORK);
+			
+			// as long as we do not support heterogeneous copy, we need to
+			//   look at the first object in the client's original collection
+			//   in case they try to force a certain clipboard support by
+			//   ordering a particular element to the front (bug 136975)
+			EObject first = eObjects.isEmpty()? null : (EObject) eObjects.iterator().next();
+			eObjects = ClipboardSupportUtil.getCopyElements(eObjects);
+			
+			if (eObjects.isEmpty() == false) {
+				if (hints == null) {
+					hints = new HashMap();
+				}
+				CopyOperation copyOperation = new CopyOperation(
+					monitor,
+					createClipboardSupport(first.eClass()),
+					eObjects, hints);
+				return copyOperation.copy();
+			}
+		} catch (Exception ex) {
+			handleException(ex, COPY_SELECTION_TO_STRING);
+		} finally {
+			monitor.done();
+		}
+		return null;
+	}
+
+	/**
+	 * Deerializes elements from a string (obtained from the system clipboard)
+	 * and pastes them into the specified target element.
+	 * 
+	 * @@param string the string containing the elements to be pasted
+	 * @@param targetElement the element into which the new elements are to be
+	 *     pasted
+	 * @@param hints a mapping of hints (defined as constants on this class), or
+	 *     <code>null</code> to provide no hints
+	 * @@param monitor a progress monitor to track progress, or
+	 *     <code>null</code> if no progress feedback is required
+	 * 
+	 * @@return the newly pasted {@@link EObject}s
+	 */
+	public static Collection pasteElementsFromString(String string,
+			EObject targetElement, final Map hints, IProgressMonitor monitor) {
+		return pasteElementsFromStringDelagate(string, new PasteTarget(targetElement), hints, monitor);
+	}
+	
+	/**
+	 * Deerializes elements from a string (obtained from the system clipboard)
+	 * and pastes them into the specified target element.
+	 * 
+	 * @@param string the string containing the elements to be pasted
+	 * @@param targetElement the element into which the new elements are to be
+	 *     pasted
+	 * @@param hints a mapping of hints (defined as constants on this class), or
+	 *     <code>null</code> to provide no hints
+	 * @@param monitor a progress monitor to track progress, or
+	 *     <code>null</code> if no progress feedback is required
+	 * 
+	 * @@return the newly pasted {@@link EObject}s
+	 */
+	public static Collection pasteElementsFromString(String string,
+			Resource targetElement, final Map hints, IProgressMonitor monitor) {
+		return pasteElementsFromStringDelagate(string, new PasteTarget(targetElement), hints, monitor);
+	}
+
+	/**
+	 * Deerializes elements from a string (obtained from the system clipboard)
+	 * and pastes them into the specified target element.
+	 * 
+	 * @@param string the string containing the elements to be pasted
+	 * @@param targetElement the element into which the new elements are to be
+	 *     pasted
+	 * @@param hints a mapping of hints (defined as constants on this class), or
+	 *     <code>null</code> to provide no hints
+	 * @@param monitor a progress monitor to track progress, or
+	 *     <code>null</code> if no progress feedback is required
+	 * 
+	 * @@return the newly pasted {@@link EObject}s
+	 */
+	private static Collection pasteElementsFromStringDelagate(String string,
+			PasteTarget targetElement, final Map hints, IProgressMonitor monitor) {
+		Set result = null;
+		
+		try {
+			if (monitor == null) {
+				monitor = new NullProgressMonitor();
+			}
+			
+			monitor.beginTask(BasePasteOperation.PASTE,
+				PasteOperation.TOTAL_WORK);
+			IClipboardSupport helper = targetElement.isResource()
+				? DefaultClipboardSupport.getInstance()
+				: createClipboardSupport(((EObject)targetElement.getObject()).eClass());
+			if (string.length() == 0) {
+				return Collections.EMPTY_SET;
+			}
+			PasteOperation pasteProcess = new PasteOperation(
+				monitor, helper, string, targetElement,
+				SerializationEMFResource.LOAD_OPTIONS, hints);
+			pasteProcess.paste();
+			result = pasteProcess.getPastedElementSet();
+			helper.performPostPasteProcessing(result);
+		} catch (Exception ex) {
+			handleException(ex, PASTE_SELECTION_FROM_STRING);
+		} finally {
+			monitor.done();
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * handles the exception, does tracing ...etc.
+	 * 
+	 * @@param ex
+	 *            the exception to hanlde
+	 * @@param methodname
+	 *            the calling method
+	 */
+	private static void handleException(Exception ex, String methodname) {
+		if (ex instanceof OperationCanceledException) {
+			ClipboardPlugin.catching(ClipboardUtil.class,
+				methodname, ex);
+		} else {
+			ClipboardPlugin.throwing(ClipboardUtil.class,
+				methodname, ex);
+			throw (ex instanceof RuntimeException) ? (RuntimeException) ex
+				: new RuntimeException("Copy-Paste General Error", ex);//$NON-NLS-1$
+		}
+	}
+	
+	/**
+	 * Obtains the clipboard copy/paste support utility, if any, for the
+	 * specified <code>eClass</code>'s metamodel.  If the metamodel does not
+	 * have a dedicated clipboard support implementation, then a default
+	 * implementation is provided that implements semantics similar to the
+	 * {@@link org.eclipse.emf.ecore.util.EcoreUtil.Copier} class.
+	 * 
+	 * @@param eClass a metaclass
+	 * @@return the <code>eClass</code>'s metamodel's clipboard support
+	 *      utility, or a null implementation if none is registered for it
+	 *      (not actually <code>null</code>)
+	 */
+	public static IClipboardSupport createClipboardSupport(EClass eClass) {
+		IClipboardSupport result = DefaultClipboardSupport.getInstance();
+		EPackage ePackage = eClass.getEPackage();
+		IClipboardSupportFactory factory = ClipboardSupportManager.lookup(ePackage);
+		
+		if (factory != null) {
+			result = factory.newClipboardSupport(ePackage);
+		}
+		
+		return result;
+	}
+
+}
+@
+
+
+1.6
+log
+@gmf_head ahunter 061003 Merge 1.0.1 Runtime to HEAD 2.0
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005, 2006 IBM Corporation and others.
+d17 1
+d153 1
+a153 1
+					hints = Collections.EMPTY_MAP;
+@
+
+
+1.5
+log
+@bugzilla 136975 gmf-head sshaw 060428 ExecutionException undoing drag and drop operation...
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005 IBM Corporation and others.
+@
+
+
+1.5.2.1
+log
+@[153901] gmf_R1_0_maintenance tmacdoug 060913 Sweep copyright files for anything changed in 2006
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2005, 2006 IBM Corporation and others.
+@
+
+
+1.4
+log
+@bugzilla 107880 gmf_head cvogt 051031 ClipboardUtil should support copying of resource roots
+@
+text
+@d142 6
+d149 1
+d156 1
+a156 1
+					createClipboardSupport(((EObject) eObjects.toArray()[0]).eClass()),
+@
+
+
+1.3
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d26 1
+a26 1
+
+d177 38
+d224 3
+a226 1
+			IClipboardSupport helper = createClipboardSupport(targetElement.eClass());
+@
+
+
+1.2
+log
+@Bugzilla 108844, Revisit all provisional APIs and move back to internal as needed for the EMF runtime plugins, September 8, 2005
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2005.  All Rights Reserved.                    |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d28 1
+@
+

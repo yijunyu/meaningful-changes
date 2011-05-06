@@ -1,0 +1,127 @@
+head	1.2;
+access;
+symbols
+	v20081022-1925:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2006.11.02.18.30.45;	author atikhomirov;	state dead;
+branches;
+next	1.1;
+
+1.1
+date	2006.10.18.20.33.52;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@changed ids not to clash with oaw plugins (just in case), get rid of nature nobody seemed to be really using
+@
+text
+@/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.build;
+
+import org.eclipse.core.resources.ICommand;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IProjectDescription;
+import org.eclipse.core.resources.IProjectNature;
+import org.eclipse.core.runtime.CoreException;
+
+public class OawNature implements IProjectNature {
+
+    private IProject project;
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.core.resources.IProjectNature#configure()
+     */
+    public void configure() throws CoreException {
+        final IProjectDescription desc = project.getDescription();
+        final ICommand[] commands = desc.getBuildSpec();
+
+        for (ICommand element : commands) {
+            if (element.getBuilderName().equals(OawBuilder.getBUILDER_ID())) {
+				return;
+			}
+        }
+
+        final ICommand[] newCommands = new ICommand[commands.length + 1];
+        System.arraycopy(commands, 0, newCommands, 0, commands.length);
+        final ICommand command = desc.newCommand();
+        command.setBuilderName(OawBuilder.getBUILDER_ID());
+        newCommands[newCommands.length - 1] = command;
+        desc.setBuildSpec(newCommands);
+        project.setDescription(desc, null);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.core.resources.IProjectNature#deconfigure()
+     */
+    public void deconfigure() throws CoreException {
+        final IProjectDescription description = getProject().getDescription();
+        final ICommand[] commands = description.getBuildSpec();
+        for (int i = 0; i < commands.length; ++i) {
+            if (commands[i].getBuilderName().equals(OawBuilder.getBUILDER_ID())) {
+                final ICommand[] newCommands = new ICommand[commands.length - 1];
+                System.arraycopy(commands, 0, newCommands, 0, i);
+                System.arraycopy(commands, i + 1, newCommands, i, commands.length - i - 1);
+                description.setBuildSpec(newCommands);
+                return;
+            }
+        }
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.core.resources.IProjectNature#getProject()
+     */
+    public IProject getProject() {
+        return project;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.core.resources.IProjectNature#setProject(org.eclipse.core.resources.IProject)
+     */
+    public void setProject(final IProject project) {
+        this.project = project;
+    }
+
+}
+@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@@
+

@@ -1,0 +1,979 @@
+head	1.9;
+access;
+symbols
+	v20080722-1827:1.9
+	v20080718-1700:1.9
+	v20080718-1731:1.9
+	v20080716-1642:1.9
+	R2_1_maintenance:1.9.0.2
+	Root_R2_1_maintenance:1.9
+	R2_1_0:1.9
+	v20080610-1132:1.9
+	v20080603-1553:1.9
+	v20080528-1052:1.9
+	v20080521:1.9
+	v20080516-1143:1.9
+	v20080512-1200:1.9
+	v20080510-0100:1.8
+	v20080507-1326:1.8
+	v20080501-1739:1.8
+	v20080425-1959:1.8
+	v20080411-0411:1.8
+	v20080404-1111:1.8
+	v20080322-0000:1.8
+	v20080114-2222:1.6
+	v20071214-1111:1.6
+	v20070809-0000:1.6
+	R2_0_maintenance:1.6.0.2
+	R2_0:1.6
+	R4_20:1.6
+	v20070621-0000:1.6
+	RC3_20:1.6
+	v20070605-1400:1.6
+	v20070601-1400:1.6
+	v20070520-1200:1.5
+	v20070420-1000:1.5
+	v20070405-2000:1.5
+	v20070405-1100:1.5
+	v20070330-1300:1.5
+	v20070307-0700:1.5
+	v20070221-1500:1.4
+	v20070208-1800:1.3
+	M4_20:1.3
+	v20061214-0000:1.3
+	M3_20:1.3
+	v20061013-1330:1.3
+	M1_20:1.3
+	v20060713-1700:1.3
+	R1_0_maintenance:1.3.0.2
+	R1_0:1.3
+	v20060627-1200:1.3
+	v20060616-1200:1.2
+	v20060609-1400:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.9
+date	2008.05.12.17.40.17;	author ashatalin;	state Exp;
+branches;
+next	1.8;
+commitid	a53482880fd4567;
+
+1.8
+date	2008.03.07.12.50.34;	author ashatalin;	state Exp;
+branches;
+next	1.7;
+commitid	179447d13a164567;
+
+1.7
+date	2008.02.22.13.07.59;	author ashatalin;	state Exp;
+branches;
+next	1.6;
+commitid	4c5647bec9294567;
+
+1.6
+date	2007.05.31.15.52.31;	author ashatalin;	state Exp;
+branches;
+next	1.5;
+commitid	49f1465eef2c4567;
+
+1.5
+date	2007.03.02.15.39.20;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+commitid	717a45e845234567;
+
+1.4
+date	2007.02.09.20.08.31;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	179c45ccd4b34567;
+
+1.3
+date	2006.06.26.18.38.20;	author ashatalin;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.06.12.11.46.43;	author ashatalin;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.06.08.08.40.35;	author ashatalin;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.9
+log
+@[230191] - Start using FeatureTracker/AttachAdapter for listening model changes in org.eclipse.gmf.graphdef.editor
+@
+text
+@/*
+ *  Copyright (c) 2006, 2007 Borland Software Corporation and others.
+ *  All rights reserved. This program and the accompanying materials
+ *  are made available under the terms of the Eclipse Public License v1.0
+ *  which accompanies this distribution, and is available at
+ *  http://www.eclipse.org/legal/epl-v10.html
+ * 
+ *  Contributors:
+ *      Borland Software Corporation - initial API and implementation
+ */
+package org.eclipse.gmf.graphdef.editor.edit.parts;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.Label;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.transaction.RunnableWithResult;
+import org.eclipse.gef.AccessibleEditPart;
+import org.eclipse.gef.EditPolicy;
+import org.eclipse.gef.GraphicalEditPart;
+import org.eclipse.gef.Request;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.editpolicies.NonResizableEditPolicy;
+import org.eclipse.gef.handles.NonResizableHandleKit;
+import org.eclipse.gef.requests.DirectEditRequest;
+import org.eclipse.gef.tools.DirectEditManager;
+import org.eclipse.gmf.graphdef.editor.edit.policies.GMFGraphTextSelectionEditPolicy;
+import org.eclipse.gmf.graphdef.editor.providers.GMFGraphElementTypes;
+import org.eclipse.gmf.graphdef.editor.providers.GMFGraphParserProvider;
+import org.eclipse.gmf.runtime.common.ui.services.parser.IParser;
+import org.eclipse.gmf.runtime.common.ui.services.parser.IParserEditStatus;
+import org.eclipse.gmf.runtime.common.ui.services.parser.ParserEditStatus;
+import org.eclipse.gmf.runtime.common.ui.services.parser.ParserOptions;
+import org.eclipse.gmf.runtime.common.ui.services.parser.ParserService;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.CompartmentEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ITextAwareEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.LabelDirectEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramColorRegistry;
+import org.eclipse.gmf.runtime.diagram.ui.requests.RequestConstants;
+import org.eclipse.gmf.runtime.diagram.ui.tools.TextDirectEditManager;
+import org.eclipse.gmf.runtime.draw2d.ui.figures.WrappingLabel;
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+import org.eclipse.gmf.runtime.emf.ui.services.parser.ISemanticParser;
+import org.eclipse.gmf.runtime.notation.FontStyle;
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+import org.eclipse.gmf.runtime.notation.View;
+import org.eclipse.jface.text.contentassist.IContentAssistProcessor;
+import org.eclipse.jface.viewers.ICellEditorValidator;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.accessibility.AccessibleEvent;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.Image;
+
+/**
+ * @@generated
+ */
+public class FigureGalleryNameEditPart extends CompartmentEditPart implements ITextAwareEditPart {
+
+	/**
+	 * @@generated
+	 */
+	public static final int VISUAL_ID = 5009;
+
+	/**
+	 * @@generated
+	 */
+	private DirectEditManager manager;
+
+	/**
+	 * @@generated
+	 */
+	private IParser parser;
+
+	/**
+	 * @@generated
+	 */
+	private List parserElements;
+
+	/**
+	 * @@generated
+	 */
+	private String defaultText;
+
+	/**
+	 * @@generated
+	 */
+	public FigureGalleryNameEditPart(View view) {
+		super(view);
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void createDefaultEditPolicies() {
+		super.createDefaultEditPolicies();
+		installEditPolicy(EditPolicy.DIRECT_EDIT_ROLE, new LabelDirectEditPolicy());
+		installEditPolicy(EditPolicy.PRIMARY_DRAG_ROLE, new NonResizableEditPolicy() {
+
+			protected List createSelectionHandles() {
+				List handles = new ArrayList();
+				NonResizableHandleKit.addMoveHandle((GraphicalEditPart) getHost(), handles);
+				return handles;
+			}
+
+			public Command getCommand(Request request) {
+				return null;
+			}
+
+			public boolean understandsRequest(Request request) {
+				return false;
+			}
+		});
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected String getLabelTextHelper(IFigure figure) {
+		if (figure instanceof WrappingLabel) {
+			return ((WrappingLabel) figure).getText();
+		} else {
+			return ((Label) figure).getText();
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void setLabelTextHelper(IFigure figure, String text) {
+		if (figure instanceof WrappingLabel) {
+			((WrappingLabel) figure).setText(text);
+		} else {
+			((Label) figure).setText(text);
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected Image getLabelIconHelper(IFigure figure) {
+		if (figure instanceof WrappingLabel) {
+			return ((WrappingLabel) figure).getIcon();
+		} else {
+			return ((Label) figure).getIcon();
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void setLabelIconHelper(IFigure figure, Image icon) {
+		if (figure instanceof WrappingLabel) {
+			((WrappingLabel) figure).setIcon(icon);
+		} else {
+			((Label) figure).setIcon(icon);
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void setLabel(WrappingLabel figure) {
+		unregisterVisuals();
+		setFigure(figure);
+		defaultText = getLabelTextHelper(figure);
+		registerVisuals();
+		refreshVisuals();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected List getModelChildren() {
+		return Collections.EMPTY_LIST;
+	}
+
+	/**
+	 * @@generated
+	 */
+	public IGraphicalEditPart getChildBySemanticHint(String semanticHint) {
+		return null;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected EObject getParserElement() {
+		return resolveSemanticElement();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected Image getLabelIcon() {
+		EObject parserElement = getParserElement();
+		if (parserElement == null) {
+			return null;
+		}
+		return GMFGraphElementTypes.getImage(parserElement.eClass());
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected String getLabelText() {
+		String text = null;
+		EObject parserElement = getParserElement();
+		if (parserElement != null && getParser() != null) {
+			text = getParser().getPrintString(new EObjectAdapter(parserElement), getParserOptions().intValue());
+		}
+		if (text == null || text.length() == 0) {
+			text = defaultText;
+		}
+		return text;
+	}
+
+	/**
+	 * @@generated
+	 */
+	public void setLabelText(String text) {
+		setLabelTextHelper(getFigure(), text);
+		Object pdEditPolicy = getEditPolicy(EditPolicy.PRIMARY_DRAG_ROLE);
+		if (pdEditPolicy instanceof GMFGraphTextSelectionEditPolicy) {
+			((GMFGraphTextSelectionEditPolicy) pdEditPolicy).refreshFeedback();
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	public String getEditText() {
+		if (getParserElement() == null || getParser() == null) {
+			return ""; //$NON-NLS-1$
+		}
+		return getParser().getEditString(new EObjectAdapter(getParserElement()), getParserOptions().intValue());
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected boolean isEditable() {
+		return getParser() != null;
+	}
+
+	/**
+	 * @@generated
+	 */
+	public ICellEditorValidator getEditTextValidator() {
+		return new ICellEditorValidator() {
+
+			public String isValid(final Object value) {
+				if (value instanceof String) {
+					final EObject element = getParserElement();
+					final IParser parser = getParser();
+					try {
+						IParserEditStatus valid = (IParserEditStatus) getEditingDomain().runExclusive(new RunnableWithResult.Impl() {
+
+							public void run() {
+								setResult(parser.isValidEditString(new EObjectAdapter(element), (String) value));
+							}
+						});
+						return valid.getCode() == ParserEditStatus.EDITABLE ? null : valid.getMessage();
+					} catch (InterruptedException ie) {
+						ie.printStackTrace();
+					}
+				}
+
+				// shouldn't get here
+				return null;
+			}
+		};
+	}
+
+	/**
+	 * @@generated
+	 */
+	public IContentAssistProcessor getCompletionProcessor() {
+		if (getParserElement() == null || getParser() == null) {
+			return null;
+		}
+		return getParser().getCompletionProcessor(new EObjectAdapter(getParserElement()));
+	}
+
+	/**
+	 * @@generated
+	 */
+	public ParserOptions getParserOptions() {
+		return ParserOptions.NONE;
+	}
+
+	/**
+	 * @@generated
+	 */
+	public IParser getParser() {
+		if (parser == null) {
+			String parserHint = ((View) getModel()).getType();
+			IAdaptable hintAdapter = new GMFGraphParserProvider.HintAdapter(GMFGraphElementTypes.FigureGallery_2008, getParserElement(), parserHint);
+			parser = ParserService.getInstance().getParser(hintAdapter);
+		}
+		return parser;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected DirectEditManager getManager() {
+		if (manager == null) {
+			setManager(new TextDirectEditManager(this, TextDirectEditManager.getTextCellEditorClass(this), GMFGraphEditPartFactory.getTextCellEditorLocator(this)));
+		}
+		return manager;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void setManager(DirectEditManager manager) {
+		this.manager = manager;
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void performDirectEdit() {
+		getManager().show();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void performDirectEdit(Point eventLocation) {
+		if (getManager().getClass() == TextDirectEditManager.class) {
+			((TextDirectEditManager) getManager()).show(eventLocation.getSWTPoint());
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	private void performDirectEdit(char initialCharacter) {
+		if (getManager() instanceof TextDirectEditManager) {
+			((TextDirectEditManager) getManager()).show(initialCharacter);
+		} else {
+			performDirectEdit();
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void performDirectEditRequest(Request request) {
+		final Request theRequest = request;
+		try {
+			getEditingDomain().runExclusive(new Runnable() {
+
+				public void run() {
+					if (isActive() && isEditable()) {
+						if (theRequest.getExtendedData().get(RequestConstants.REQ_DIRECTEDIT_EXTENDEDDATA_INITIAL_CHAR) instanceof Character) {
+							Character initialChar = (Character) theRequest.getExtendedData().get(RequestConstants.REQ_DIRECTEDIT_EXTENDEDDATA_INITIAL_CHAR);
+							performDirectEdit(initialChar.charValue());
+						} else if ((theRequest instanceof DirectEditRequest) && (getEditText().equals(getLabelText()))) {
+							DirectEditRequest editRequest = (DirectEditRequest) theRequest;
+							performDirectEdit(editRequest.getLocation());
+						} else {
+							performDirectEdit();
+						}
+					}
+				}
+			});
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void refreshVisuals() {
+		super.refreshVisuals();
+		refreshLabel();
+		refreshFont();
+		refreshFontColor();
+		refreshUnderline();
+		refreshStrikeThrough();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void refreshLabel() {
+		setLabelTextHelper(getFigure(), getLabelText());
+		setLabelIconHelper(getFigure(), getLabelIcon());
+		Object pdEditPolicy = getEditPolicy(EditPolicy.PRIMARY_DRAG_ROLE);
+		if (pdEditPolicy instanceof GMFGraphTextSelectionEditPolicy) {
+			((GMFGraphTextSelectionEditPolicy) pdEditPolicy).refreshFeedback();
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void refreshUnderline() {
+		FontStyle style = (FontStyle) getFontStyleOwnerView().getStyle(NotationPackage.eINSTANCE.getFontStyle());
+		if (style != null && getFigure() instanceof WrappingLabel) {
+			((WrappingLabel) getFigure()).setTextUnderline(style.isUnderline());
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void refreshStrikeThrough() {
+		FontStyle style = (FontStyle) getFontStyleOwnerView().getStyle(NotationPackage.eINSTANCE.getFontStyle());
+		if (style != null && getFigure() instanceof WrappingLabel) {
+			((WrappingLabel) getFigure()).setTextStrikeThrough(style.isStrikeThrough());
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void refreshFont() {
+		FontStyle style = (FontStyle) getFontStyleOwnerView().getStyle(NotationPackage.eINSTANCE.getFontStyle());
+		if (style != null) {
+			FontData fontData = new FontData(style.getFontName(), style.getFontHeight(), (style.isBold() ? SWT.BOLD : SWT.NORMAL) | (style.isItalic() ? SWT.ITALIC : SWT.NORMAL));
+			setFont(fontData);
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void setFontColor(Color color) {
+		getFigure().setForegroundColor(color);
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void addSemanticListeners() {
+		if (getParser() instanceof ISemanticParser) {
+			EObject element = resolveSemanticElement();
+			parserElements = ((ISemanticParser) getParser()).getSemanticElementsBeingParsed(element);
+			for (int i = 0; i < parserElements.size(); i++) {
+				addListenerFilter("SemanticModel" + i, this, (EObject) parserElements.get(i)); //$NON-NLS-1$
+			}
+		} else {
+			super.addSemanticListeners();
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void removeSemanticListeners() {
+		if (parserElements != null) {
+			for (int i = 0; i < parserElements.size(); i++) {
+				removeListenerFilter("SemanticModel" + i); //$NON-NLS-1$
+			}
+		} else {
+			super.removeSemanticListeners();
+		}
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected AccessibleEditPart getAccessibleEditPart() {
+		if (accessibleEP == null) {
+			accessibleEP = new AccessibleGraphicalEditPart() {
+
+				public void getName(AccessibleEvent e) {
+					e.result = getLabelTextHelper(getFigure());
+				}
+			};
+		}
+		return accessibleEP;
+	}
+
+	/**
+	 * @@generated
+	 */
+	private View getFontStyleOwnerView() {
+		return getPrimaryView();
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void addNotationalListeners() {
+		super.addNotationalListeners();
+		addListenerFilter("PrimaryView", this, getPrimaryView()); //$NON-NLS-1$
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void removeNotationalListeners() {
+		super.removeNotationalListeners();
+		removeListenerFilter("PrimaryView"); //$NON-NLS-1$
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected void handleNotificationEvent(Notification event) {
+		Object feature = event.getFeature();
+		if (NotationPackage.eINSTANCE.getFontStyle_FontColor().equals(feature)) {
+			Integer c = (Integer) event.getNewValue();
+			setFontColor(DiagramColorRegistry.getInstance().getColor(c));
+		} else if (NotationPackage.eINSTANCE.getFontStyle_Underline().equals(feature)) {
+			refreshUnderline();
+		} else if (NotationPackage.eINSTANCE.getFontStyle_StrikeThrough().equals(feature)) {
+			refreshStrikeThrough();
+		} else if (NotationPackage.eINSTANCE.getFontStyle_FontHeight().equals(feature) || NotationPackage.eINSTANCE.getFontStyle_FontName().equals(feature)
+				|| NotationPackage.eINSTANCE.getFontStyle_Bold().equals(feature) || NotationPackage.eINSTANCE.getFontStyle_Italic().equals(feature)) {
+			refreshFont();
+		} else {
+			if (getParser() != null && getParser().isAffectingEvent(event, getParserOptions().intValue())) {
+				refreshLabel();
+			}
+			if (getParser() instanceof ISemanticParser) {
+				ISemanticParser modelParser = (ISemanticParser) getParser();
+				if (modelParser.areSemanticElementsAffected(null, event)) {
+					removeSemanticListeners();
+					if (resolveSemanticElement() != null) {
+						addSemanticListeners();
+					}
+					refreshLabel();
+				}
+			}
+		}
+		super.handleNotificationEvent(event);
+	}
+
+	/**
+	 * @@generated
+	 */
+	protected IFigure createFigure() {
+		// Parent should assign one using setLabel() method
+		return null;
+	}
+
+}
+@
+
+
+1.8
+log
+@Updating with new figures code + setting proper layout for diahram elements
+@
+text
+@d550 1
+@
+
+
+1.7
+log
+@Updating gmfgaph editor:
+- Setting default size of all graphical elements to 0,0
+- updating aspect templates to reflect latest changes
+- regenerating code
+@
+text
+@a47 1
+import org.eclipse.gmf.runtime.draw2d.ui.figures.WrapLabel;
+d170 1
+a170 1
+	public void setLabel(WrapLabel figure) {
+@
+
+
+1.6
+log
+@[190196] akarjakina - Adjust GMFGraph Editor according recent gmfgraph metamodel with support for FigureDescriptor introduced
+@
+text
+@d49 1
+d128 2
+a129 2
+		if (figure instanceof WrapLabel) {
+			return ((WrapLabel) figure).getText();
+d139 2
+a140 2
+		if (figure instanceof WrapLabel) {
+			((WrapLabel) figure).setText(text);
+d150 2
+a151 2
+		if (figure instanceof WrapLabel) {
+			return ((WrapLabel) figure).getIcon();
+d161 2
+a162 2
+		if (figure instanceof WrapLabel) {
+			((WrapLabel) figure).setIcon(icon);
+d197 1
+a197 2
+		EObject element = resolveSemanticElement();
+		return element != null ? element : (View) getModel();
+d216 3
+a218 2
+		if (getParser() != null) {
+			text = getParser().getPrintString(new EObjectAdapter(getParserElement()), getParserOptions().intValue());
+d241 1
+a241 1
+		if (getParser() == null) {
+d287 1
+a287 1
+		if (getParser() == null) {
+d412 2
+a413 2
+		if (style != null && getFigure() instanceof WrapLabel) {
+			((WrapLabel) getFigure()).setTextUnderline(style.isUnderline());
+d422 2
+a423 2
+		if (style != null && getFigure() instanceof WrapLabel) {
+			((WrapLabel) getFigure()).setTextStrikeThrough(style.isStrikeThrough());
+@
+
+
+1.5
+log
+@[176026] akarjakina - Fix notation background and foreground colors update
+[173499] akarjakina - Add custom form-based property sections fro figure attributes
+@
+text
+@d3 7
+a9 7
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Borland Software Corporation - initial API and implementation
+d17 1
+d35 1
+a49 1
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+a50 1
+import org.eclipse.gmf.runtime.emf.ui.services.parser.ParserHintAdapter;
+d70 1
+a70 1
+	public static final int VISUAL_ID = 5004;
+d305 1
+a305 9
+			ParserHintAdapter hintAdapter = new ParserHintAdapter(getParserElement(), parserHint) {
+
+				public Object getAdapter(Class adapter) {
+					if (IElementType.class.equals(adapter)) {
+						return GMFGraphElementTypes.FigureGallery_2004;
+					}
+					return super.getAdapter(adapter);
+				}
+			};
+@
+
+
+1.4
+log
+@[173496] akarjakina - updated gmfgraph.editor bootstrap sample with recent GMF changes
+@
+text
+@d56 1
+d440 1
+a440 2
+			FontData fontData = new FontData(style.getFontName(), style.getFontHeight(), (style.isBold() ? org.eclipse.swt.SWT.BOLD : org.eclipse.swt.SWT.NORMAL)
+					| (style.isItalic() ? org.eclipse.swt.SWT.ITALIC : org.eclipse.swt.SWT.NORMAL));
+@
+
+
+1.3
+log
+@Updating templates + Correcting XYLayoutData creation strategy (default value)
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation and others.
+d13 1
+a13 4
+import org.eclipse.gef.EditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ITextAwareEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.LabelDirectEditPolicy;
+import org.eclipse.gmf.runtime.notation.View;
+a18 1
+
+a19 1
+
+a20 1
+
+a21 1
+
+a22 1
+
+d24 2
+d27 3
+a29 1
+
+a30 1
+
+a31 1
+
+a32 3
+
+import org.eclipse.gmf.graphdef.editor.part.GMFGraphDiagramEditorPlugin;
+
+a33 1
+
+a38 1
+
+d41 2
+a42 1
+
+a43 1
+
+a44 1
+
+a45 1
+
+a46 1
+
+a47 1
+
+a48 1
+
+a50 1
+
+d53 1
+a53 3
+
+import org.eclipse.jface.resource.ImageDescriptor;
+
+a54 1
+
+a55 3
+
+import org.eclipse.swt.SWT;
+
+a56 1
+
+d104 16
+d203 3
+a205 3
+		ImageDescriptor descriptor = GMFGraphDiagramEditorPlugin.getInstance().getItemImageDescriptor(getParserElement());
+		if (descriptor == null) {
+			descriptor = ImageDescriptor.getMissingImageDescriptor();
+d207 1
+a207 1
+		return descriptor.createImage();
+d249 1
+a249 1
+		return getEditText() != null;
+d439 2
+a440 1
+			FontData fontData = new FontData(style.getFontName(), style.getFontHeight(), (style.isBold() ? SWT.BOLD : SWT.NORMAL) | (style.isItalic() ? SWT.ITALIC : SWT.NORMAL));
+d555 1
+a555 1
+		// Parent should assign one using setLabel method
+@
+
+
+1.2
+log
+@Updating with new templates.
+@
+text
+@a54 2
+import org.eclipse.gmf.runtime.diagram.ui.preferences.IPreferenceConstants;
+
+a70 3
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.preference.PreferenceConverter;
+
+d425 1
+a425 1
+		FontStyle style = (FontStyle) getPrimaryView().getStyle(NotationPackage.eINSTANCE.getFontStyle());
+d435 1
+a435 1
+		FontStyle style = (FontStyle) getPrimaryView().getStyle(NotationPackage.eINSTANCE.getFontStyle());
+d445 1
+a445 2
+		FontStyle style = (FontStyle) getPrimaryView().getStyle(NotationPackage.eINSTANCE.getFontStyle());
+		FontData fontData;
+d447 2
+a448 4
+			fontData = new FontData(style.getFontName(), style.getFontHeight(), (style.isBold() ? SWT.BOLD : SWT.NORMAL) | (style.isItalic() ? SWT.ITALIC : SWT.NORMAL));
+		} else {
+			// initialize font to defaults
+			fontData = PreferenceConverter.getFontData((IPreferenceStore) getDiagramPreferencesHint().getPreferenceStore(), IPreferenceConstants.PREF_DEFAULT_FONT);
+a449 1
+		setFont(fontData);
+d505 7
+@
+
+
+1.1
+log
+@Updating with new templates.
+@
+text
+@d207 8
+d216 1
+a216 2
+		EObject element = resolveSemanticElement();
+		ImageDescriptor descriptor = GMFGraphDiagramEditorPlugin.getInstance().getItemImageDescriptor(element);
+a226 1
+		EObject element = resolveSemanticElement();
+d228 2
+a229 2
+		if (element != null && getParser() != null) {
+			text = getParser().getPrintString(new EObjectAdapter(element), getParserOptions().intValue());
+d252 1
+a252 2
+		EObject element = resolveSemanticElement();
+		if (element == null || getParser() == null) {
+d255 1
+a255 1
+		return getParser().getEditString(new EObjectAdapter(element), getParserOptions().intValue());
+d262 1
+a262 5
+		EObject element = resolveSemanticElement();
+		if (element != null && getEditText() != null) {
+			return true;
+		}
+		return false;
+d273 1
+a273 1
+					final EObject element = resolveSemanticElement();
+d298 1
+a298 2
+		EObject element = resolveSemanticElement();
+		if (element == null || getParser() == null) {
+d301 1
+a301 1
+		return getParser().getCompletionProcessor(new EObjectAdapter(element));
+d317 1
+a317 3
+			EObject element = resolveSemanticElement();
+			if (element != null) {
+				ParserHintAdapter hintAdapter = new ParserHintAdapter(element, parserHint) {
+d319 3
+a321 5
+					public Object getAdapter(Class adapter) {
+						if (IElementType.class.equals(adapter)) {
+							return GMFGraphElementTypes.FigureGallery_2004;
+						}
+						return super.getAdapter(adapter);
+d323 4
+a326 3
+				};
+				parser = ParserService.getInstance().getParser(hintAdapter);
+			}
+@
+

@@ -1,0 +1,330 @@
+head	1.6;
+access;
+symbols
+	v20081022-1925:1.6
+	v20081020-0700:1.6
+	ocl_qvt:1.6.0.4
+	Root_ocl_qvt:1.6
+	v20080722-1827:1.6
+	v20080718-1731:1.6
+	v20080716-1600:1.6
+	v20080716-1642:1.6
+	R2_1_maintenance:1.6.0.2
+	Root_R2_1_maintenance:1.6
+	R2_1_0:1.6
+	v20080528-1052:1.6
+	v20080516-1143:1.6
+	v20080417-1610:1.6
+	v20080322-0000:1.6
+	v20080222-1200:1.5
+	v20071130-1111:1.5
+	v20071124-0000:1.5
+	v20071108-0000:1.5
+	v20071003-0000:1.5
+	v20070921-0000:1.5
+	v20070903-0000:1.5
+	v20070809-0000:1.5
+	R2_0_maintenance:1.5.0.2
+	R2_0:1.5
+	R4_20:1.5
+	RC3_20:1.5
+	v20070608-1300:1.5
+	v20070605-1400:1.5
+	v20070601-1400:1.5
+	v20070518-1300:1.5
+	v20070420-1000:1.5
+	v20070405-1100:1.5
+	v20070403-1500:1.5
+	v20070330-1300:1.5
+	v20070208-1800:1.5
+	v20070103-0300:1.5
+	M4_20:1.5
+	M3_20:1.5;
+locks; strict;
+comment	@# @;
+
+
+1.6
+date	2008.02.22.16.03.40;	author atikhomirov;	state Exp;
+branches
+	1.6.4.1;
+next	1.5;
+commitid	3d8447bef25b4567;
+
+1.5
+date	2006.11.08.19.08.32;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.11.08.14.45.16;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.10.25.17.23.40;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.10.23.21.10.46;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.10.18.20.33.51;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.6.4.1
+date	2008.07.29.15.57.05;	author ashatalin;	state dead;
+branches;
+next	;
+commitid	337c488f3dcd4567;
+
+
+desc
+@@
+
+
+1.6
+log
+@restored behaviour to populate problems view on parsing error instead of plain parser exception logging.
+@
+text
+@/*
+ * <copyright>
+ *
+ * Copyright (c) 2005, 2008 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *     Artem Tikhomirov - LPG lexer/parser and error reporting
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.util;
+
+import java.io.IOException;
+import java.io.Reader;
+
+import org.eclipse.gmf.internal.xpand.util.ParserException.ErrorLocationInfo;
+import org.eclipse.gmf.internal.xpand.xtend.ast.ExtensionFile;
+import org.eclipse.gmf.internal.xpand.xtend.ast.XtendResource;
+import org.eclipse.gmf.internal.xpand.xtend.parser.XtendLexer;
+import org.eclipse.gmf.internal.xpand.xtend.parser.XtendParser;
+
+public class XtendResourceParser {
+
+    public XtendResource parse(final Reader source, final String name) throws IOException, ParserException {
+        ExtensionFile tpl = null;
+        XtendLexer scanner = null;
+        XtendParser parser = null;
+        final char[] buffer = new StreamConverter().toCharArray(source);
+        try {
+            scanner = new XtendLexer(buffer, name);
+            parser = new XtendParser(scanner);
+            scanner.lexer(parser);
+            tpl = parser.parser();
+			// FIXME handle errors - override Lexer#reportErrors, collect and 
+        } catch (final Exception e) {
+			ParserException.ErrorLocationInfo[] errors = extractErrors(scanner, parser);
+        	if (errors.length == 0) {
+        		throw new IOException("Unexpected exception while parsing");
+        	} else {
+        		throw new ParserException(name, errors);
+        	}
+        }
+        if (tpl != null) {
+            tpl.setFullyQualifiedName(name);
+            return tpl;
+        }
+		ParserException.ErrorLocationInfo[] errors = extractErrors(scanner, parser);
+		assert errors.length > 0 : "otherwise, no reason not to get template";
+		throw new ParserException(name, errors);
+    }
+
+    private static ErrorLocationInfo[] extractErrors(XtendLexer scanner, XtendParser parser) {
+		ErrorLocationInfo[] e1 = scanner.getErrors();
+		ErrorLocationInfo[] e2 = parser.getErrors();
+		ErrorLocationInfo[] res = new ErrorLocationInfo[e1.length + e2.length];
+		System.arraycopy(e1, 0, res, 0, e1.length);
+		System.arraycopy(e2, 0, res, e1.length, e2.length);
+		return res;
+	}
+}
+@
+
+
+1.6.4.1
+log
+@Xtend-based implementation of XPand extensions was separated into .migration plugin.
+@
+text
+@@
+
+
+1.5
+log
+@combine errors reported separately from lexer and parser
+@
+text
+@d4 1
+a4 1
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+d45 1
+a45 1
+        		throw new ParserException(errors);
+d54 1
+a54 1
+		throw new ParserException(errors);
+@
+
+
+1.4
+log
+@error handling
+@
+text
+@d21 1
+d32 1
+d36 1
+a36 1
+            XtendParser parser = new XtendParser(scanner);
+d41 1
+a41 1
+			ParserException.ErrorLocationInfo[] errors = scanner.getErrors();
+d52 1
+a52 1
+		ParserException.ErrorLocationInfo[] errors = scanner.getErrors();
+d56 9
+@
+
+
+1.3
+log
+@refactored resource manager into capable working in workspace and working with uris, added experimental extended error reporting to provide more details on parsing errors
+@
+text
+@a19 4
+import java.util.ArrayList;
+
+import lpg.lpgjavaruntime.LexStream;
+import lpg.lpgjavaruntime.ParseErrorCodes;
+a30 1
+        final ArrayList<ParserException.ErrorLocationInfo> errors = new ArrayList<ParserException.ErrorLocationInfo>();
+d33 1
+a33 8
+            scanner = new XtendLexer(buffer, name) {
+        		// FIXME move to XtendLexer.g template
+            	@@Override
+            	public void reportError(int left_loc, int right_loc) {
+                    errors.add(createError(this, left_loc, right_loc));
+            		super.reportError(left_loc, right_loc);
+            	}
+            };
+d39 2
+a40 1
+        	if (errors.isEmpty()) {
+d50 3
+a52 17
+        return null;
+    }
+
+    public static ParserException.ErrorLocationInfo createError(LexStream lexStream, int left_loc, int right_loc) {
+		// COPY OF LexStream#reportError
+        int errorCode = (right_loc >= lexStream.getStreamLength() ? ParseErrorCodes.EOF_CODE : left_loc == right_loc ? ParseErrorCodes.LEX_ERROR_CODE : ParseErrorCodes.INVALID_TOKEN_CODE); 
+        int end_loc = (left_loc == right_loc ? right_loc : right_loc - 1);
+        String tokenText = (errorCode == ParseErrorCodes.EOF_CODE ? "End-of-file " : errorCode == ParseErrorCodes.INVALID_TOKEN_CODE
+                                ? "\"" + new String(lexStream.getInputChars(), left_loc, right_loc - left_loc) + "\" "
+                                : "\"" + lexStream.getCharValue(left_loc) + "\" ");
+        // END
+        final int startLine = lexStream.getLineNumberOfCharAt(left_loc);
+        final int startColumn = lexStream.getColumnOfCharAt(left_loc);
+        final int endLine = lexStream.getLineNumberOfCharAt(end_loc);
+        final int endColumn = lexStream.getColumnOfCharAt(end_loc);
+        final String message = tokenText + ParseErrorCodes.errorMsgText[errorCode];
+        return new ParserException.ErrorLocationInfo(message, startLine, startColumn, endLine, endColumn);
+@
+
+
+1.2
+log
+@markers refactored not to parse file when there's information about line number already available
+@
+text
+@d12 1
+d19 5
+a23 1
+import java.io.UnsupportedEncodingException;
+a24 3
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.gmf.internal.xpand.Activator;
+d32 1
+a32 1
+    public XtendResource parse(final IFile file) {
+d35 2
+a36 13
+        final char[] buffer;
+        try {
+            buffer = new StreamConverter().toCharArray(file);
+        } catch (final CoreException e1) {
+            Activator.log(e1.getStatus());
+            return null;
+		} catch (UnsupportedEncodingException ex) {
+			Activator.logError(ex);
+			return null;
+		} catch (IOException ex) {
+			Activator.logError(ex);
+			return null;
+		}
+d38 8
+a45 1
+            scanner = new XtendLexer(buffer, file.getName());
+d49 1
+a49 14
+			// FIXME handle errors
+//        } catch (final MismatchedTokenException e) {
+//            final Token t = e.token;
+//            OawMarkerManager.deleteMarkers(file);
+//            OawMarkerManager.addErrorMarker(file, e.getMessage(), IMarker.SEVERITY_ERROR, start(t), end(t));
+//        } catch (final NoViableAltException e) {
+//            final Token t = e.token;
+//            if (t.getType() == ExtensionParserTokenTypes.EOF) {
+//                OawMarkerManager.addErrorMarker(file, "Unexpected end of file. (Forget a semicolon?)",
+//                        IMarker.SEVERITY_ERROR, t.getColumn() - 2, t.getColumn() - 1);
+//            } else {
+//                OawMarkerManager.deleteMarkers(file);
+//                OawMarkerManager.addErrorMarker(file, e.getMessage(), IMarker.SEVERITY_ERROR, start(t), end(t));
+//            }
+d51 5
+a55 4
+            final int start = scanner.getStreamIndex() - 1;
+            final int end = start + 1;
+            OawMarkerManager.deleteMarkers(file);
+            OawMarkerManager.addErrorMarker(file, e.getMessage(), start, end);
+d58 1
+a58 1
+            tpl.setFullyQualifiedName(Activator.getQualifiedName(file));
+d63 16
+@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@a20 1
+import org.eclipse.core.resources.IMarker;
+d69 1
+a69 1
+            OawMarkerManager.addErrorMarker(file, e.getMessage(), IMarker.SEVERITY_ERROR, start, end);
+@
+

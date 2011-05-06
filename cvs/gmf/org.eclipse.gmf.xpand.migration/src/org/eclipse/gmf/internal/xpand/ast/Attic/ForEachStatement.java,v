@@ -1,0 +1,220 @@
+head	1.1;
+access;
+symbols
+	ocl_qvt:1.1.0.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2008.07.29.15.57.58;	author ashatalin;	state dead;
+branches
+	1.1.2.1;
+next	;
+commitid	33cb488f3dd14567;
+
+1.1.2.1
+date	2008.07.29.15.57.58;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.2;
+commitid	33cb488f3dd14567;
+
+1.1.2.2
+date	2008.08.28.15.51.00;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.3;
+commitid	35c448b6c95d4567;
+
+1.1.2.3
+date	2008.09.26.18.15.49;	author ashatalin;	state Exp;
+branches;
+next	;
+commitid	2780148dd26d24567;
+
+
+desc
+@@
+
+
+1.1
+log
+@file ForEachStatement.java was initially added on branch ocl_qvt.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@Xtend-based implementation of XPand extensions was separated into .migration plugin.
+@
+text
+@a0 131
+/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.ast;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.gmf.internal.xpand.BuiltinMetaModel;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.EvaluationException;
+import org.eclipse.gmf.internal.xpand.expression.Variable;
+import org.eclipse.gmf.internal.xpand.expression.ast.Expression;
+import org.eclipse.gmf.internal.xpand.expression.ast.Identifier;
+import org.eclipse.gmf.internal.xpand.model.XpandExecutionContext;
+import org.eclipse.gmf.internal.xpand.model.XpandIterator;
+
+/**
+ * @@author Sven Efftinge
+ */
+public class ForEachStatement extends Statement {
+
+    public static final String ITERATOR_VAR_NAME = "iterator";
+
+    private final Statement[] body;
+
+    private final Expression target;
+
+    private final Expression separator;
+
+    private final Identifier variable;
+
+    private final Identifier iteratorName;
+
+    public ForEachStatement(final int start, final int end, final int line, final Identifier variable,
+            final Expression target, final Statement[] body, final Expression separator, final Identifier iterator) {
+        super(start, end, line);
+        this.variable = variable;
+        this.target = target;
+        this.body = body;
+        this.separator = separator;
+        iteratorName = iterator;
+    }
+
+    public Statement[] getBody() {
+        return body;
+    }
+
+    public Expression getSeparator() {
+        return separator;
+    }
+
+    public Expression getTarget() {
+        return target;
+    }
+
+    public Identifier getVariable() {
+        return variable;
+    }
+
+    public void analyze(XpandExecutionContext ctx, final Set<AnalysationIssue> issues) {
+    	EClassifier t = getTarget().analyze(ctx, issues);
+        if (getSeparator() != null) {
+            final EClassifier sepT = getSeparator().analyze(ctx, issues);
+            if (!BuiltinMetaModel.isAssignableFrom(EcorePackage.eINSTANCE.getEString(), sepT)) {
+                issues.add(new AnalysationIssue(AnalysationIssue.Type.INCOMPATIBLE_TYPES, "String expected!", target));
+            }
+        }
+        if (t != null) {
+            if (BuiltinMetaModel.isCollectionType(t)) {
+                if (BuiltinMetaModel.isParameterizedType(t)) {
+                    t = BuiltinMetaModel.getInnerType(t);
+                } else {
+                    t = EcorePackage.eINSTANCE.getEJavaObject();
+                }
+            } else {
+                issues.add(new AnalysationIssue(AnalysationIssue.Type.INCOMPATIBLE_TYPES, "Collection type expected!",
+                        target));
+                return;
+            }
+        }
+        ctx = ctx.cloneWithVariable(new Variable(getVariable().getValue(), t));
+        if (iteratorName != null) {
+            ctx = ctx.cloneWithVariable(new Variable(iteratorName.getValue(), BuiltinMetaModel.ITERATOR_TYPE));
+        }
+        for (Statement statement : getBody()) {
+            statement.analyze(ctx, issues);
+        }
+    }
+
+    @@Override
+    public void evaluateInternal(XpandExecutionContext ctx) {
+        final Object o = getTarget().evaluate(ctx);
+
+        if (!(o instanceof Collection)) {
+			throw new EvaluationException("Collection expected!", getTarget());
+		}
+        final Collection<?> col = (Collection<?>) o;
+        final String sep = (String) (getSeparator() != null ? getSeparator().evaluate(ctx) : null);
+        final XpandIterator iterator = new XpandIterator(col.size());
+
+        if (iteratorName != null) {
+            ctx = ctx.cloneWithVariable(new Variable(iteratorName.getValue(), iterator));
+        }
+        for (final Iterator<?> iter = col.iterator(); iter.hasNext();) {
+            final Object element = iter.next();
+            ctx = ctx.cloneWithVariable(new Variable(getVariable().getValue(), element));
+            for (int i = 0; i < getBody().length; i++) {
+                getBody()[i].evaluate(ctx);
+            }
+            if ((sep != null) && iter.hasNext()) {
+                ctx.getOutput().write(sep);
+            }
+            iterator.increment();
+        }
+    }
+}
+@
+
+
+1.1.2.2
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ First step toward .xpt migration.
+@
+text
+@d49 1
+a49 1
+    public ForEachStatement(final int start, final int end, final int line, final int startOffset, final int endOffset, final Identifier variable,
+d51 1
+a51 1
+        super(start, end, line, startOffset, endOffset);
+@
+
+
+1.1.2.3
+log
+@[243157] - Develop automatic migration tool creating QVTO/OCL constructions having Xtend as an input
+ - more gentle collection operations migration implemented
+@
+text
+@a28 1
+import org.eclipse.gmf.internal.xpand.migration.ForEachAnalyzeTrace;
+a76 1
+    	EClassifier sepT = null;
+d78 1
+a78 1
+        	sepT = getSeparator().analyze(ctx, issues);
+a82 1
+        createAnalyzeTrace(ctx, new ForEachAnalyzeTrace(t, sepT));
+@
+
+

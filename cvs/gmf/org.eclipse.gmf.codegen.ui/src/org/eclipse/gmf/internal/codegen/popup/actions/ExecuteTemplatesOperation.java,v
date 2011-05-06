@@ -1,0 +1,467 @@
+head	1.10;
+access;
+symbols
+	v20080722-1827:1.10
+	v20080716-1642:1.10
+	R2_1_maintenance:1.10.0.2
+	Root_R2_1_maintenance:1.10
+	R2_1_0:1.10
+	v20080512-1200:1.10
+	v20080417-1610:1.10
+	v20080322-0000:1.10
+	v20080222-1200:1.9
+	v20071108-0000:1.9
+	v20070809-0000:1.8
+	R2_0_maintenance:1.8.0.2
+	R2_0:1.8
+	R4_20:1.8
+	v20070621-0000:1.8
+	RC3_20:1.7
+	v20070605-1400:1.7
+	v20070601-1400:1.7
+	v20070525-1500:1.7
+	v20070520-1200:1.7
+	v20070420-1000:1.7
+	v20070405-2000:1.7
+	v20070330-1300:1.6
+	v20070228-2000:1.6
+	v20070208-1800:1.6
+	M4_20:1.5
+	v20061222-1800:1.5
+	v20061214-0000:1.5
+	M3_20:1.5
+	v20061117-0800:1.5;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.10
+date	2008.03.05.20.48.24;	author atikhomirov;	state Exp;
+branches;
+next	1.9;
+commitid	38a047cf07174567;
+
+1.9
+date	2007.10.12.15.44.51;	author atikhomirov;	state Exp;
+branches;
+next	1.8;
+commitid	5c88470f96724567;
+
+1.8
+date	2007.06.21.14.06.07;	author atikhomirov;	state Exp;
+branches;
+next	1.7;
+commitid	14b5467a85ce4567;
+
+1.7
+date	2007.04.05.20.20.42;	author atikhomirov;	state Exp;
+branches;
+next	1.6;
+commitid	2ba746155a1a4567;
+
+1.6
+date	2007.01.18.18.49.11;	author atikhomirov;	state Exp;
+branches;
+next	1.5;
+commitid	196045afc1264567;
+
+1.5
+date	2006.11.07.16.48.46;	author radvorak;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.11.06.18.32.09;	author radvorak;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2006.11.01.15.43.48;	author radvorak;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.11.01.10.04.00;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.11.01.09.59.32;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.10
+log
+@[220711] respect workspace resource models
+@
+text
+@/*
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Dmitry Stadnik (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.popup.actions;
+
+import java.lang.reflect.InvocationTargetException;
+
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.emf.common.util.Diagnostic;
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.plugin.EcorePlugin;
+import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
+import org.eclipse.gmf.codegen.gmfgen.GenDiagram;
+import org.eclipse.gmf.codegen.gmfgen.GenEditorGenerator;
+import org.eclipse.gmf.codegen.util.Generator;
+import org.eclipse.gmf.internal.bridge.transform.ValidationHelper;
+import org.eclipse.gmf.internal.codegen.CodeGenUIPlugin;
+import org.eclipse.gmf.internal.common.migrate.ModelLoadHelper;
+import org.eclipse.jface.dialogs.ErrorDialog;
+import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
+import org.eclipse.jface.dialogs.ProgressMonitorDialog;
+import org.eclipse.jface.operation.IRunnableWithProgress;
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.PlatformUI;
+
+/**
+ * Operation that processes templates to generate diagram editor.
+ * Clients should call run() method to invoke it.
+ * Configured operation should normally run without interacting
+ * with the user so it could be used as part of diagram editor
+ * build process.
+ * 
+ * @@author dstadnik
+ */
+public class ExecuteTemplatesOperation implements IRunnableWithProgress {
+
+	private static final String ASK_OK = "ask_ok"; //$NON-NLS-1$
+
+	private String name;
+
+	private Shell shell;
+
+	private URI genModelURI;
+
+	protected IStatus myRunStatus;
+
+	private GenEditorGenerator myGenModel;
+
+	public String getName() {
+		if (name == null) {
+			return "Execute Templates"; //$NON-NLS-1$
+		}
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public Shell getShell() {
+		if (shell == null) {
+			return Display.getDefault().getActiveShell();
+		}
+		return shell;
+	}
+
+	public void setShell(Shell shell) {
+		this.shell = shell;
+	}
+
+	public URI getGenModelURI() {
+		return genModelURI;
+	}
+
+	public void setGenModelURI(URI uri) {
+		genModelURI = uri;
+	}
+
+	// TODO Jobs
+	public void run() {
+		if (getGenModelURI() == null) {
+			return;
+		}
+		try {
+			Diagnostic loadStatus = loadGenModel();
+			if (!canProcessGMFGenModel(loadStatus)) {
+				return;
+			}
+
+			assert getGenModel() != null;
+			Diagnostic isGenModelValid = validateGenModel();
+			if (!ValidationHelper.isOK(isGenModelValid)) {
+				final String msg = CodeGenUIPlugin.getBundleString("generatecode.badsrc"); //$NON-NLS-1$
+				if (DiagnosticsDialog.openProceedCancel(getShell(), getName(), msg, isGenModelValid) == IDialogConstants.CANCEL_ID) {
+					return;
+				}
+			}
+
+			if (!PlatformUI.getWorkbench().saveAllEditors(true)) {
+				return;
+			}
+
+			doRunWithStatus();
+
+			if (getRunStatus().isOK()) {
+				if (!MessageDialogWithToggle.ALWAYS.equals(getPreferences().getString(ASK_OK))) {
+					String okMsg = CodeGenUIPlugin.getBundleString("generatecode.ok"); //$NON-NLS-1$
+					String neverMsg = CodeGenUIPlugin.getBundleString("generatecode.neveragain"); //$NON-NLS-1$
+					MessageDialogWithToggle.openInformation(getShell(), getName(), okMsg, neverMsg, false, getPreferences(), ASK_OK);
+				}
+			} else if (myRunStatus.matches(IStatus.ERROR)) {
+				CodeGenUIPlugin.getDefault().getLog().log(getRunStatus());
+				ErrorDialog.openError(getShell(), getName(), CodeGenUIPlugin.getBundleString("generatecode.err"), getRunStatus()); //$NON-NLS-1$
+			} else if (myRunStatus.matches(IStatus.WARNING)) {
+				ErrorDialog.openError(getShell(), getName(), CodeGenUIPlugin.getBundleString("generatecode.warn"), getRunStatus()); //$NON-NLS-1$
+			} else if (myRunStatus.matches(IStatus.INFO)) {
+				ErrorDialog.openError(getShell(), getName(), CodeGenUIPlugin.getBundleString("generatecode.info"), getRunStatus()); //$NON-NLS-1$
+			}
+		} catch (InterruptedException ex) {
+			// presumably, user canceled the operation, don't bother him with additional messages
+		} finally {
+			unloadGenModel();
+		}
+	}
+
+	/**
+	 * Checks if loaded gmfgen model can be processed further.
+	 * <p>
+	 * Note: Must be called after {@@link #loadGenModel()}.
+	 * 
+	 * @@param loadStatus
+	 *            the result status of loading the gmfgen model
+	 * @@param action
+	 *            the action in execution
+	 * @@return <code>true</code> if gmfgen model is available with OK status or in case of load problems, user decided to proceed, <code>false</code> otherwise.
+	 */
+	private boolean canProcessGMFGenModel(Diagnostic loadStatus) {
+		if (!ValidationHelper.isOK(loadStatus)) {
+			boolean disableProceed = myGenModel == null; // we cannot proceed further as there is no gmfgen, disable proceed button
+			if (IDialogConstants.CANCEL_ID == 
+				DiagnosticsDialog.openProceedCancel(getShell(), getName(), null, loadStatus, disableProceed)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * @@return
+	 */
+	private void doRunWithStatus() throws InterruptedException {
+		myRunStatus = Status.CANCEL_STATUS;
+		try {
+			new ProgressMonitorDialog(getShell()).run(true, true, this);
+		} catch (InvocationTargetException ex) {
+			Throwable targetException = ex.getTargetException();
+			if (targetException instanceof CoreException) {
+				myRunStatus = ((CoreException) targetException).getStatus();
+			} else {
+				myRunStatus = new Status(IStatus.ERROR, CodeGenUIPlugin.getPluginID(), 0, "Exception occurred while generating code", targetException);
+			}
+		}
+	}
+
+	public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
+		Generator g = createGenerator();
+		g.run(monitor);
+		myRunStatus = g.getRunStatus();
+	}
+
+	private IStatus getRunStatus() {
+		return myRunStatus;
+	}
+	
+	protected Generator createGenerator() {
+		return new Generator(getGenModel(), CodeGenUIPlugin.getDefault().getEmitters(getGenModel()));
+	}
+
+	protected final GenEditorGenerator getGenModel() {
+		return myGenModel;
+	}
+
+	private Diagnostic loadGenModel() {
+		ResourceSet srcResSet = new ResourceSetImpl();
+		srcResSet.getURIConverter().getURIMap().putAll(EcorePlugin.computePlatformURIMap());		
+		ModelLoadHelper loadHelper = new ModelLoadHelper(srcResSet, getGenModelURI());
+		Object root = loadHelper.getContentsRoot();
+		if (root instanceof GenDiagram) {
+			myGenModel = ((GenDiagram) root).getEditorGen();
+		} else if (root instanceof GenEditorGenerator) {
+			myGenModel = (GenEditorGenerator) root;
+		}
+		if (myGenModel != null && myGenModel.getDomainGenModel() != null) {
+			myGenModel.getDomainGenModel().reconcile();
+		}
+		return ValidationHelper.createResourceProblemMarkers(loadHelper.getDiagnostics());
+	}
+
+	private void unloadGenModel() {
+		if (myGenModel != null && myGenModel.eResource() != null) {
+			myGenModel.eResource().unload();
+		}
+		myGenModel = null;
+	}
+
+	private Diagnostic validateGenModel() {
+		return ValidationHelper.validate(getGenModel(), true);
+	}
+
+	private static IPreferenceStore getPreferences() {
+		return CodeGenUIPlugin.getDefault().getPreferenceStore();
+	}
+}
+@
+
+
+1.9
+log
+@[200527] The java file is not merged when it is open in the editor area - first, let user save all editors, than, use working copy for existing units
+@
+text
+@d22 1
+d200 1
+@
+
+
+1.8
+log
+@fix copyright years
+@
+text
+@d38 1
+d113 4
+@
+
+
+1.7
+log
+@allow for subclasses to provide another generator
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation
+@
+
+
+1.6
+log
+@[148836] afedorov - Provide "Create generator model..." wizard instead of existing dialog sequence
+@
+text
+@d175 1
+a175 1
+		Generator g = new Generator(getGenModel(), CodeGenUIPlugin.getDefault().getEmitters(getGenModel()));
+d183 4
+@
+
+
+1.5
+log
+@Support navigation from Resource.Diagnostic diagnostics
+@
+text
+@d27 1
+@
+
+
+1.4
+log
+@[163243] Improve problem reporting of tooling actions TransformGenModel, codegeneration ...
+- use DiagnosticsDialog for error processing
+@
+text
+@d199 1
+a199 1
+		return loadHelper.getDiagnostics();
+@
+
+
+1.3
+log
+@[162917] Improve gmf models validation involved in tooling related UI actions
+@
+text
+@d20 1
+a20 1
+import org.eclipse.emf.common.util.BasicDiagnostic;
+d97 1
+a97 1
+			IStatus loadStatus = loadGenModel();
+d103 2
+a104 4
+			IStatus isGenModelValid = validateGenModel();
+			if (!isGenModelValid.isOK()) {
+				final String[] buttons = new String[] { IDialogConstants.PROCEED_LABEL, IDialogConstants.CANCEL_LABEL };
+				final int[] buttonIDs = new int[] { IDialogConstants.PROCEED_ID, IDialogConstants.CANCEL_ID };
+d106 1
+a106 2
+				ErrorDialogEx dlg = new ErrorDialogEx(getShell(), getName(), msg, isGenModelValid, buttons, buttonIDs, 0);
+				if (dlg.open() == IDialogConstants.CANCEL_ID) {
+d145 5
+a149 12
+	private boolean canProcessGMFGenModel(IStatus loadStatus) {
+		if (!loadStatus.isOK()) {
+			String[] buttons = new String[] { IDialogConstants.PROCEED_LABEL, IDialogConstants.CANCEL_LABEL };
+			int[] buttonIDs = new int[] { IDialogConstants.PROCEED_ID, IDialogConstants.CANCEL_ID };
+			if (myGenModel == null) {
+				// we cannot proceed further as there is no gmfgen, allow only cancel
+				buttons = new String[] { buttons[1] };
+				buttonIDs = new int[] { buttonIDs[1] };
+			}
+			ErrorDialogEx dlg = new ErrorDialogEx(getShell(), getName(), CodeGenUIPlugin.getBundleString("generatecode.badsrc"), //$NON-NLS-1$ 
+					loadStatus, buttons, buttonIDs, 0);
+			if (dlg.open() == IDialogConstants.CANCEL_ID) {
+d187 1
+a187 1
+	private IStatus loadGenModel() {
+d199 1
+a199 1
+		return loadHelper.getStatus();
+d209 2
+a210 2
+	private IStatus validateGenModel() {
+		return BasicDiagnostic.toIStatus(ValidationHelper.validate(getGenModel(), true));
+@
+
+
+1.2
+log
+@add comments
+@
+text
+@a23 1
+import org.eclipse.emf.ecore.util.Diagnostician;
+d220 1
+a220 1
+		return BasicDiagnostic.toIStatus(Diagnostician.INSTANCE.validate(getGenModel()));
+@
+
+
+1.1
+log
+@use uris instead of file names in dashboard
+@
+text
+@d40 6
+@
+

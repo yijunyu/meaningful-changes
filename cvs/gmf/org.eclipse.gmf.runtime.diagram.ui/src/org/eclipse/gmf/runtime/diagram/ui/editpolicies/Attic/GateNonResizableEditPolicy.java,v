@@ -1,0 +1,236 @@
+head	1.5;
+access;
+symbols
+	v20081022-1925:1.5
+	v20080917-1925:1.5
+	v20080911-1728:1.5
+	v20080910-1520:1.5
+	v20080903-1520:1.5
+	v20080731-1520:1.5
+	v20080723-2246:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	I20051124-2000:1.4
+	M3_10:1.4
+	I20051118-1245:1.4
+	I20051111-1800:1.4
+	I20051106-0900:1.4
+	v20051030:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.5
+date	2005.11.25.19.34.25;	author cmahoney;	state dead;
+branches;
+next	1.4;
+
+1.4
+date	2005.11.02.23.30.16;	author sshaw;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.09.12.21.29.06;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.08.30.18.49.21;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.18.37;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@Bugzilla#113157 gmf_head cmahoney 051125 Removing deprecated classes
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2004 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.draw2d.geometry.PrecisionRectangle;
+import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.gef.Request;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.requests.AlignmentRequest;
+import org.eclipse.gef.requests.ChangeBoundsRequest;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+import org.eclipse.gmf.runtime.diagram.ui.commands.SetBoundsCommand;
+import org.eclipse.gmf.runtime.diagram.ui.editparts.BorderItemEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.figures.BorderItemFigure;
+import org.eclipse.gmf.runtime.diagram.ui.figures.BorderItemFigure.BorderItemLocator;
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramResourceManager;
+import org.eclipse.gmf.runtime.diagram.ui.requests.RequestConstants;
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+import org.eclipse.gmf.runtime.notation.View;
+
+/**
+ * Edit policy to restrict gate movement along border of Gated item.
+ * 
+ * @@author jbruck
+ *  * @@deprecated Renamed to {@@link org.eclipse.gmf.runtime.diagram.ui.editpolicies.BorderItemSelectionEditPolicy}
+ */
+public class GateNonResizableEditPolicy extends NonResizableEditPolicyEx {
+
+	/**
+	 * @@see org.eclipse.gef.EditPolicy#eraseSourceFeedback(org.eclipse.gef.Request)
+	 */
+	public void eraseSourceFeedback(Request request) {
+		if ( (REQ_MOVE.equals(request.getType()) && isDragAllowed())
+				|| REQ_CLONE.equals(request.getType())
+				|| REQ_ADD.equals(request.getType())
+				|| RequestConstants.REQ_DROP.equals(request.getType()) )
+			eraseChangeBoundsFeedback((ChangeBoundsRequest) request);
+	}
+
+	/**
+	 * Calls other methods as appropriate.
+	 * @@see org.eclipse.gef.EditPolicy#showSourceFeedback(org.eclipse.gef.Request)
+	 */
+	public void showSourceFeedback(Request request) {
+		if ( (REQ_MOVE.equals(request.getType()) && isDragAllowed())
+				|| REQ_ADD.equals(request.getType())
+				|| REQ_CLONE.equals(request.getType())
+				|| RequestConstants.REQ_DROP.equals(request.getType()) )
+			showChangeBoundsFeedback((ChangeBoundsRequest) request);
+	}
+
+	/**
+	 * Shows or updates feedback for a change bounds request.
+	 * @@param request the request
+	 */
+	protected void showChangeBoundsFeedback(ChangeBoundsRequest request) {
+		BorderItemEditPart gateEP = (BorderItemEditPart) getHost();
+		BorderItemLocator gateLocator = (BorderItemFigure.BorderItemLocator) gateEP.getLocator();
+		IFigure feedback = getDragSourceFeedbackFigure();
+		PrecisionRectangle rect = new PrecisionRectangle(
+				getInitialFeedbackBounds().getCopy());
+		getHostFigure().translateToAbsolute(rect);
+		rect.translate(request.getMoveDelta());
+		rect.resize(request.getSizeDelta());
+		getHostFigure().translateToRelative(rect);
+		Rectangle realLocation = gateLocator.locateOnBorder(rect.getCopy());
+		getHostFigure().translateToAbsolute(realLocation);
+		feedback.translateToRelative(realLocation);
+		feedback.setBounds(realLocation);
+	}
+
+	/**
+	 * Returns the command contribution to a change bounds request. 
+	 * @@param request the change bounds requesgt
+	 * @@return the command contribution to the request
+	 */
+	protected Command getMoveCommand(ChangeBoundsRequest request) {
+		BorderItemEditPart gateEP = (BorderItemEditPart)getHost();
+		BorderItemLocator gateLocator = (BorderItemFigure.BorderItemLocator)gateEP.getLocator();
+	
+		PrecisionRectangle rect = new PrecisionRectangle(getInitialFeedbackBounds().getCopy());
+		getHostFigure().translateToAbsolute(rect);
+		rect.translate(request.getMoveDelta());
+		rect.resize(request.getSizeDelta());
+		
+		getHostFigure().translateToRelative(rect);
+		Rectangle realLocation = gateLocator.locateOnBorder(rect.getCopy());
+		Point location = gateLocator.getRelativeToBorder(realLocation.getTopLeft());
+
+		ICommand moveCommand = 
+			new SetBoundsCommand(
+				DiagramResourceManager.getI18NString("Commands.MoveElement"),//$NON-NLS-1$
+				new EObjectAdapter((View) getHost().getModel()),
+				location);
+		return new EtoolsProxyCommand(moveCommand);
+	}
+	/** Return <tt>null</tt> to avoid handling the request. */
+	protected Command getAlignCommand(AlignmentRequest request) {
+		return null;
+	}
+}@
+
+
+1.4
+log
+@Bugzilla#113157 gmf_head cmahoney 051102 GMF Diagram Layer Public API Name Changes
+@
+text
+@@
+
+
+1.3
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d26 4
+a29 4
+import org.eclipse.gmf.runtime.diagram.ui.editparts.GateEditPart;
+import org.eclipse.gmf.runtime.diagram.ui.figures.GateFigure;
+import org.eclipse.gmf.runtime.diagram.ui.figures.GateFigure.GateLocator;
+import org.eclipse.gmf.runtime.diagram.ui.l10n.PresentationResourceManager;
+d38 1
+d70 2
+a71 2
+		GateEditPart gateEP = (GateEditPart) getHost();
+		GateLocator gateLocator = (GateFigure.GateLocator) gateEP.getLocator();
+d91 2
+a92 2
+		GateEditPart gateEP = (GateEditPart)getHost();
+		GateLocator gateLocator = (GateFigure.GateLocator)gateEP.getLocator();
+d105 1
+a105 1
+				PresentationResourceManager.getI18NString("Commands.MoveElement"),//$NON-NLS-1$
+@
+
+
+1.2
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2002, 2004.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d30 1
+a30 1
+import com.ibm.xtools.notation.View;
+@
+

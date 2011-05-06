@@ -1,0 +1,179 @@
+head	1.4;
+access;
+symbols
+	R1_0_maintenance:1.4.0.2
+	R1_0:1.4
+	I20060227-1730:1.3;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.4
+date	2006.03.01.12.46.04;	author dstadnik;	state dead;
+branches;
+next	1.3;
+
+1.3
+date	2006.02.24.21.22.14;	author dstadnik;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2006.02.24.13.51.43;	author dstadnik;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2006.02.23.20.11.23;	author dstadnik;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@#129892 Move graphdef and tooldef wizards from codegen.ui to bridge.ui plugin
+@
+text
+@/*
+ * Copyright (c) 2006 Eclipse.org
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Dmitry Stadnik - initial API and implementation
+ */
+package org.eclipse.gmf.internal.codegen.wizards;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
+import org.eclipse.gmf.internal.codegen.CodeGenUIPlugin;
+
+/**
+ * @@author dstadnik
+ */
+public class FileDomainModelSource implements DomainModelSource {
+
+	private IFile file; // file for which domain model is loaded
+
+	private IFile newFile; // new file; source should be updated
+
+	private EPackage contents;
+
+	private IStatus errorStatus;
+
+	public IFile getFile() {
+		return newFile;
+	}
+
+	public void setFile(IFile file) {
+		newFile = file;
+	}
+
+	public EPackage getContents() {
+		return contents;
+	}
+
+	public IStatus getErrorStatus() {
+		return errorStatus;
+	}
+
+	public boolean update() {
+		if (newFile == null || newFile != file) {
+			file = newFile;
+			reload();
+			return true;
+		}
+		return false;
+	}
+
+	protected void reload() {
+		if (file == null) {
+			contents = null;
+			errorStatus = null;
+		}
+		try {
+			URI uri = URI.createPlatformResourceURI(file.getFullPath().toString());
+			ResourceSet rs = new ResourceSetImpl();
+			Resource r = rs.getResource(uri, true);
+			contents = (EPackage) r.getContents().get(0);
+			errorStatus = null;
+		} catch (Exception e) {
+			contents = null;
+			String namespace = CodeGenUIPlugin.getDefault().getBundle().getSymbolicName();
+			errorStatus = new Status(IStatus.ERROR, namespace, 0, e.getMessage(), e);
+		}
+	}
+}
+@
+
+
+1.3
+log
+@#129322 Allow to select domain model element on definition page that will be used as diagram canvas element
+@
+text
+@@
+
+
+1.2
+log
+@#129323 Show details of error that prevented domain model file from being loaded
+@
+text
+@a34 2
+	private String status;
+
+a48 4
+	public String getStatus() {
+		return status;
+	}
+
+a64 1
+			status = "Domain model file is not specified; empty model will be created.";
+a71 1
+			status = "Domain model elements to process:";
+a74 1
+			status = "Error loading domain model file:";
+@
+
+
+1.1
+log
+@make definition page independent from domain model selection page
+@
+text
+@d15 2
+d22 1
+d37 1
+a37 1
+	private Exception error;
+d55 2
+a56 2
+	public Exception getError() {
+		return error;
+d72 1
+a72 1
+			error = null;
+d80 1
+a80 1
+			error = null;
+d83 3
+a85 2
+			status = "Error loading domain model file.";
+			error = e;
+@
+

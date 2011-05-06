@@ -1,0 +1,173 @@
+head	1.1;
+access;
+symbols
+	v20081022-1925:1.1
+	v20081020-0700:1.1
+	ocl_qvt:1.1.0.6
+	Root_ocl_qvt:1.1
+	v20080722-1827:1.1
+	v20080718-1731:1.1
+	v20080716-1600:1.1
+	v20080716-1642:1.1
+	R2_1_maintenance:1.1.0.4
+	Root_R2_1_maintenance:1.1
+	R2_1_0:1.1
+	v20080528-1052:1.1
+	v20080516-1143:1.1
+	v20080417-1610:1.1
+	v20080322-0000:1.1
+	v20080222-1200:1.1
+	v20071130-1111:1.1
+	v20071124-0000:1.1
+	v20071108-0000:1.1
+	v20071003-0000:1.1
+	v20070921-0000:1.1
+	v20070903-0000:1.1
+	v20070809-0000:1.1
+	R2_0_maintenance:1.1.0.2
+	R2_0:1.1
+	R4_20:1.1
+	RC3_20:1.1
+	v20070608-1300:1.1
+	v20070605-1400:1.1
+	v20070601-1400:1.1
+	v20070518-1300:1.1
+	v20070420-1000:1.1
+	v20070405-1100:1.1
+	v20070403-1500:1.1
+	v20070330-1300:1.1
+	v20070208-1800:1.1
+	v20070103-0300:1.1
+	M4_20:1.1
+	M3_20:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2006.10.18.20.33.49;	author atikhomirov;	state Exp;
+branches
+	1.1.6.1;
+next	;
+
+1.1.6.1
+date	2008.08.05.12.49.24;	author atikhomirov;	state dead;
+branches;
+next	;
+commitid	546c48984c4a4567;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.expression.ast;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.gmf.internal.xpand.BuiltinMetaModel;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.ExecutionContext;
+
+/**
+ * @@author Sven Efftinge
+ * @@author Arno Haase
+ */
+public class ListLiteral extends Expression {
+
+    private Expression[] elements;
+
+    public ListLiteral(final int start, final int end, final int line, final Expression[] contents) {
+        super(start, end, line);
+        elements = contents;
+    }
+
+    public Expression[] getElements() {
+        return elements;
+    }
+
+    @@Override
+    public Object evaluateInternal(final ExecutionContext ctx) {
+        final List<Object> col = new ArrayList<Object>();
+        final Expression[] params = getElements();
+        for (final Expression element : params) {
+            col.add(element.evaluate(ctx));
+        }
+        return col;
+    }
+
+    public EClassifier analyze(final ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+    	EClassifier commonDenominator = null;
+        for (final Expression element : elements) {
+            final EClassifier exprType = element.analyze(ctx, issues);
+            if (exprType == null) {
+				return null;
+			}
+            if (commonDenominator == null) {
+                commonDenominator = exprType;
+            } else {
+            	 if (BuiltinMetaModel.isAssignableFrom(exprType, commonDenominator)) {
+            		 commonDenominator = exprType;
+            	 } else {
+            		 if (!BuiltinMetaModel.isAssignableFrom(commonDenominator, exprType)) {
+            			 // XXX here one could try to find common superclass
+            			 // but currently a fail-fast approach seems reasonable
+            			 commonDenominator = EcorePackage.eINSTANCE.getEJavaObject();
+            		 }// else just go on with current commonDenominator
+            	 }
+            }
+        }
+        return BuiltinMetaModel.getListType(commonDenominator);
+    }
+
+    @@Override
+    public String toString() {
+        return "{" + expressionsToString() + "}";
+    }
+
+    private String expressionsToString() {
+        String r = "";
+        for (int i = 0; i < elements.length; i++) {
+            r += elements[i].toString();
+            if (i + 1 < elements.length) {
+                r += ",";
+            }
+
+        }
+        return r;
+    }
+}
+@
+
+
+1.1.6.1
+log
+@[243154] Use OCL instead of home-grown expression language
+@
+text
+@@
+

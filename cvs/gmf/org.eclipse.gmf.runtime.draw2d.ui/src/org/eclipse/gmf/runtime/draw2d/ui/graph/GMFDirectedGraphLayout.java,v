@@ -1,0 +1,108 @@
+head	1.1;
+access;
+symbols
+	v20081023-2107:1.1
+	v20081022-1925:1.1
+	v20081021-1810:1.1
+	v20081020-0700:1.1
+	v20080911-1728:1.1
+	v20080911-1506:1.1
+	v20080910-1520:1.1
+	v20080910-1510:1.1
+	v20080903-1520:1.1
+	v20080903-1510:1.1
+	v20080722-1827:1.1
+	R2_1_maintenance:1.1.0.2
+	Root_R2_1_maintenance:1.1
+	R2_1_0:1.1
+	v20080610-1132:1.1
+	v20080603-1553:1.1
+	v20080512-1200:1.1
+	v20080503-1740:1.1
+	v20080501-1739:1.1
+	v20080425-1959:1.1
+	v20080417-1610:1.1
+	v20080407-2250:1.1
+	v20080407-0930:1.1
+	v20080404-1111:1.1;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2008.04.03.16.30.10;	author aboyko;	state Exp;
+branches;
+next	;
+commitid	3e0347f506114567;
+
+
+desc
+@@
+
+
+1.1
+log
+@[225437] gmf_head aboyko 080403 Layout improvements
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2008 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+package org.eclipse.gmf.runtime.draw2d.ui.graph;
+
+import org.eclipse.draw2d.PositionConstants;
+import org.eclipse.draw2d.graph.DirectedGraph;
+import org.eclipse.draw2d.graph.DirectedGraphLayout;
+
+/**
+ * Implementation of the lLayout algorithm that:
+ * <li> Preserves the node sizes
+ * <li> Routes edges around the nodes
+ * <li> Accounts for the edge routing style
+ * <li> Lays out border nodes
+ * <li> Pads edges end points
+ * 
+ * @@author aboyko
+ *
+ */
+public class GMFDirectedGraphLayout extends DirectedGraphLayout {
+
+	/* (non-Javadoc)
+	 * @@see org.eclipse.draw2d.graph.DirectedGraphLayout#visit(org.eclipse.draw2d.graph.DirectedGraph)
+	 */
+	public void visit(DirectedGraph graph) {
+		GraphUtilities.storeNodesSizes(graph);
+		super.visit(graph);
+		GraphUtilities.recallNodesSizes(graph);
+		if (graph.getDirection() != PositionConstants.SOUTH) {
+			GraphUtilities.transpose(graph);
+		}
+		postProcessGraph(graph);
+		if (graph.getDirection() != PositionConstants.SOUTH) {
+			GraphUtilities.transpose(graph);
+		}
+	}
+	
+	/**
+	 * Performs layout work  after Draw2D DGL completes
+	 * @@param graph the directed graph
+	 */
+	public void postProcessGraph(DirectedGraph graph) {
+		GraphUtilities.invertEdges(graph);
+		new EdgeEndPointsAssignment(graph).assignEdgesEndPoints();
+		new PreRouteEdges(graph).preRouteEdges();
+		new EdgesRouter(graph).routeEdges();
+		GraphUtilities.invertEdges(graph);
+		
+		new CleanupBorderNodeEdges(graph).cleanup();
+	}
+
+}
+@

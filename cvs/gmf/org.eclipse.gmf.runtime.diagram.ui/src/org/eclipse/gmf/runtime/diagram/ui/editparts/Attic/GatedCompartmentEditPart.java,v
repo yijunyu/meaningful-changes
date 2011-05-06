@@ -1,0 +1,300 @@
+head	1.5;
+access;
+symbols
+	v20081022-1925:1.5
+	v20080917-1925:1.5
+	v20080911-1728:1.5
+	v20080910-1520:1.5
+	v20080903-1520:1.5
+	v20080731-1520:1.5
+	v20080723-2246:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	I20051124-2000:1.4
+	M3_10:1.4
+	I20051118-1245:1.4
+	I20051111-1800:1.4
+	I20051106-0900:1.4
+	v20051030:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.5
+date	2005.11.25.19.38.12;	author cmahoney;	state dead;
+branches;
+next	1.4;
+
+1.4
+date	2005.11.02.23.30.15;	author sshaw;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.09.12.21.29.05;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.08.30.18.49.21;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.18.36;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@Bugzilla#113812 gmf_head cmahoney 051125 Deprecating DiagramResourceManager
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2003 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.diagram.ui.editparts;
+
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.GatedShapeCompartmentDragDropEditPolicy;
+import org.eclipse.gmf.runtime.diagram.ui.figures.BorderItemFigure;
+import org.eclipse.gmf.runtime.diagram.ui.figures.BorderItemContainerFigure;
+import org.eclipse.gmf.runtime.diagram.ui.figures.BorderedFigure;
+import org.eclipse.gmf.runtime.diagram.ui.figures.ResizableCompartmentFigure;
+import org.eclipse.gmf.runtime.notation.View;
+
+/**
+ * Compartment that allows gates to be added.
+ * 
+ * @@author jbruck
+ * @@deprecated Deleted. Wasn't being used anymore.
+ */
+public class GatedCompartmentEditPart extends ShapeCompartmentEditPart {
+	/**
+	 * Create an instance
+	 * 
+	 * @@param view editpart model.
+	 */
+	public GatedCompartmentEditPart(View view) {
+		super(view);
+	}
+
+	/** Return the compartment's displayable title. */
+	protected String getTitleName() {
+		return null;
+	}
+
+	/**
+	 * Adds the following editpolicies: <BR>
+	 * <UL>
+	 * <LI> {@@link EditPolicyRoles#DRAG_DROP_ROLE} :: {@@link GatedShapeCompartmentDragDropEditPolicy}
+	 * </UL>
+	 */
+	protected void createDefaultEditPolicies() {
+		super.createDefaultEditPolicies();
+		installEditPolicy(EditPolicyRoles.DRAG_DROP_ROLE, new GatedShapeCompartmentDragDropEditPolicy());
+	}
+	
+	/**
+	 * Returns a {@@link BorderedFigure}that will <i>wrap </i> this editpart's
+	 * main figure.
+	 * 
+	 * @@see #createMainFigure()
+	 */
+	protected final IFigure createFigure() {
+		BorderedFigure fig = new BorderedFigure(createMainFigure());
+		return fig;
+	}
+
+	/**
+	 * Creates this editpart's main figure.
+	 * @@return the created <code>IFigure</code>
+	 */
+	protected IFigure createMainFigure() {
+		return super.createFigure();
+	}
+
+	/**
+	 * getter for the gated pane figure.
+	 * @@return <code>BorderedFigure</code>
+	 */
+	protected final BorderedFigure getGatedPaneFigure() {
+		return (BorderedFigure) getFigure();
+	}
+
+	
+	/**
+	 * gets this editpart's main figure.
+	 * @@return <code>IFigure</code>
+	 */
+	public IFigure getMainFigure() {
+		return getGatedPaneFigure().getElementPane();
+	}
+
+	/**
+	 * gets this editpart's gate pane figure.
+	 * @@return <code>IFigure</code>
+	 */
+	public IFigure getGateFigure() {
+		return getGatedPaneFigure().getBorderItemContainer();
+	}
+
+	/* (non-Javadoc)
+	 * @@see org.eclipse.gmf.runtime.diagram.ui.editparts.GraphicalEditPart#getContentPaneFor(org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart)
+	 */
+	protected IFigure getContentPaneFor(IGraphicalEditPart editPart) {
+		if ( editPart instanceof BorderItemEditPart ) {
+			return ((BorderedFigure) figure).getBorderItemContainer();
+		}
+		else {
+			return super.getContentPaneFor(editPart); // this will return the
+													  // pane of the main
+													  // figure.
+		}
+	}
+
+	/**
+	 * Adds the supplied child to the editpart's gate figure if it is 
+	 * an instanceof {@@link BorderItemEditPart} and its figure is an instanceof {@@link BorderItemFigure}.
+	 */
+	protected void addChildVisual(EditPart childEditPart, int index) {
+
+		IFigure childFigure = ((GraphicalEditPart)childEditPart).getFigure();
+		if ( childEditPart instanceof BorderItemEditPart && childFigure instanceof BorderItemFigure) {
+			BorderItemFigure gateFigure = (BorderItemFigure) childFigure;
+			BorderItemContainerFigure gatedFigure = (BorderItemContainerFigure) getContentPaneFor((IGraphicalEditPart) childEditPart);
+			IFigure boundaryFig = getMainFigure();
+			gatedFigure.addBorderItem(gateFigure, new BorderItemFigure.BorderItemLocator(gateFigure, boundaryFig));
+		}
+		else {
+			IFigure fig = getContentPaneFor((IGraphicalEditPart) childEditPart);
+			fig.add(childFigure, index);
+		}
+	}
+
+	/**
+	 * Remove the supplied child editpart's figure from this editpart's figure.
+	 */
+	protected void removeChildVisual(EditPart child) {
+		IFigure childFigure = ((GraphicalEditPart)child).getFigure();
+		if ( child instanceof BorderItemEditPart && childFigure instanceof BorderItemFigure) {
+			BorderItemFigure gateFigure = (BorderItemFigure)childFigure;
+			BorderItemContainerFigure gatedFigure = (BorderItemContainerFigure) getContentPaneFor((IGraphicalEditPart) child);
+			gatedFigure.removeBorderItem(gateFigure);
+		}
+		else {
+			IFigure fig = getContentPaneFor((IGraphicalEditPart) child);
+			fig.remove(childFigure);
+		}
+	}
+
+	/** Return the main figure. */
+	public ResizableCompartmentFigure getCompartmentFigure() {
+		return (ResizableCompartmentFigure) getMainFigure();
+	}
+}@
+
+
+1.4
+log
+@Bugzilla#113157 gmf_head cmahoney 051102 GMF Diagram Layer Public API Name Changes
+@
+text
+@@
+
+
+1.3
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d19 3
+a21 3
+import org.eclipse.gmf.runtime.diagram.ui.figures.GateFigure;
+import org.eclipse.gmf.runtime.diagram.ui.figures.GatedFigure;
+import org.eclipse.gmf.runtime.diagram.ui.figures.GatedPaneFigure;
+d29 1
+d58 1
+a58 1
+	 * Returns a {@@link GatedPaneFigure}that will <i>wrap </i> this editpart's
+d64 1
+a64 1
+		GatedPaneFigure fig = new GatedPaneFigure(createMainFigure());
+d78 1
+a78 1
+	 * @@return <code>GatedPaneFigure</code>
+d80 2
+a81 2
+	protected final GatedPaneFigure getGatedPaneFigure() {
+		return (GatedPaneFigure) getFigure();
+d98 1
+a98 1
+		return getGatedPaneFigure().getGatePane();
+d105 2
+a106 2
+		if ( editPart instanceof GateEditPart ) {
+			return ((GatedPaneFigure) figure).getGatePane();
+d117 1
+a117 1
+	 * an instanceof {@@link GateEditPart} and its figure is an instanceof {@@link GateFigure}.
+d122 3
+a124 3
+		if ( childEditPart instanceof GateEditPart && childFigure instanceof GateFigure) {
+			GateFigure gateFigure = (GateFigure) childFigure;
+			GatedFigure gatedFigure = (GatedFigure) getContentPaneFor((IGraphicalEditPart) childEditPart);
+d126 1
+a126 1
+			gatedFigure.addGate(gateFigure, new GateFigure.GateLocator(gateFigure, boundaryFig));
+d139 4
+a142 4
+		if ( child instanceof GateEditPart && childFigure instanceof GateFigure) {
+			GateFigure gateFigure = (GateFigure)childFigure;
+			GatedFigure gatedFigure = (GatedFigure) getContentPaneFor((IGraphicalEditPart) child);
+			gatedFigure.removeGate(gateFigure);
+@
+
+
+1.2
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 8
+/*
+ * +------------------------------------------------------------------------+ |
+ * Licensed Materials - Property of IBM | | (C) Copyright IBM Corp. 2002, 2003.
+ * All Rights Reserved. | | | | US Government Users Restricted Rights - Use,
+ * duplication or disclosure | | restricted by GSA ADP Schedule Contract with
+ * IBM Corp. |
+ * +------------------------------------------------------------------------+
+ */
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d20 1
+a20 1
+import com.ibm.xtools.notation.View;
+@
+

@@ -1,0 +1,602 @@
+head	1.5;
+access;
+symbols
+	v20081020-0700:1.5
+	v20080722-1827:1.5
+	R2_1_maintenance:1.5.0.6
+	Root_R2_1_maintenance:1.5
+	R2_1_0:1.5
+	v20080425-1959:1.5
+	v20080222-1200:1.5
+	v20070809-0000:1.5
+	R2_0_maintenance:1.5.0.4
+	R2_0:1.5
+	R4_20:1.5
+	RC3_20:1.5
+	v20070601-1400:1.5
+	v20070330-1300:1.5
+	M4_20:1.5
+	v20061214-0000:1.5
+	M3_20:1.5
+	v20061013-1330:1.5
+	v20061012-1100:1.5
+	v20060925-1700:1.5
+	v20060919-0800:1.5
+	M1_20:1.5
+	v20060810-1700:1.5
+	v20060713-1700:1.5
+	R1_0_maintenance:1.5.0.2
+	R1_0:1.5
+	v20060627-1200:1.5
+	v20060616-1200:1.5
+	v20060531-1730:1.5
+	I20060505-1400:1.5
+	I20060424-0500:1.5
+	I20060424-0300:1.5
+	M6_10:1.5
+	I20060407-1200:1.5
+	I20060331-1000:1.5
+	I20060324-0300:1.4
+	I20060317-1300:1.4
+	I20060317-1200:1.4
+	I20060316-1300:1.4
+	I20060309-1300:1.4
+	M5_10:1.4
+	S20060303-1600:1.4
+	I20060227-1730:1.4
+	I20060216-1945:1.4
+	I20060210-1715:1.3
+	I20060209-1815:1.3
+	I20060203-0830:1.3
+	I20060129-1145:1.3
+	I20060127-0900:1.3
+	I20060120-1530:1.3
+	I20060113-1700:1.3
+	M4_10:1.3
+	I20060107-1100:1.3
+	I20060105-1630:1.3
+	I20051230-1230:1.3
+	I20051223-1100:1.3
+	I20051217-0925:1.3
+	M3_10:1.3
+	I20051118-1245:1.3
+	I20051111-1800:1.3
+	I20051106-0900:1.2
+	v20051030:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.5
+date	2006.03.24.19.17.43;	author ldamus;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2006.02.13.19.11.13;	author ldamus;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.11.09.21.16.55;	author ahunter;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.09.12.21.24.06;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.26.55;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.5
+log
+@[127528] gmf_head ldamus 060324 Can't undo changes from advanced properties tab
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2003, 2006 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.emf.ui.properties.sections;
+
+import java.text.MessageFormat;
+
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.commands.operations.IOperationHistory;
+import org.eclipse.core.commands.operations.TriggeredOperations;
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.emf.transaction.util.TransactionUtil;
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+import org.eclipse.gmf.runtime.common.core.command.ICompositeCommand;
+import org.eclipse.gmf.runtime.common.core.util.Log;
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeTransactionalCommand;
+import org.eclipse.gmf.runtime.emf.ui.properties.commands.RestoreDefaultPropertyValueCommand;
+import org.eclipse.gmf.runtime.emf.ui.properties.commands.SetModelPropertyValueCommand;
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesDebugOptions;
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesPlugin;
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesStatusCodes;
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.l10n.EMFUIPropertiesMessages;
+import org.eclipse.ui.views.properties.IPropertySource;
+
+/**
+ * An property sheet entry for elements in the model. The changes to the model
+ * element property are done through a model command executed by the
+ * <code>CommandManager</code> so that the changes can be undone by undo
+ * interval ID.
+ * 
+ * @@author ldamus
+ * @@author nbalaba
+ */
+public class UndoableModelPropertySheetEntry extends PropertySheetEntry {
+
+    /**
+     * The operation history used by this entry to execute property change
+     * commands. <code>Null</code> if I am not the root entry. Only the root
+     * entry keeps track of the history on behalf of all of the child
+     * entries.
+     */
+    private final IOperationHistory operationHistory;
+    
+    /**
+     * My editing domain.
+     */
+    private TransactionalEditingDomain editingDomain;
+    
+    /**
+     * Intializes me with an operation history through
+     * which property change commands will be executed, undone and redone.
+     * 
+     * @@param operationHistory
+     *            my operation history
+     */
+    public UndoableModelPropertySheetEntry(IOperationHistory operationHistory) {
+        this.operationHistory = operationHistory;
+    }
+    
+    /**
+     * Sets my editing domain.
+     * 
+     * @@param editingDomain
+     *            my editing domain
+     */
+    public void setEditingDomain(TransactionalEditingDomain editingDomain) {
+        this.editingDomain = editingDomain;
+    }
+    
+    /**
+     * Gets my editing domain. The root entry stores the editing domain.
+     * 
+     * @@return my editing domain
+     */
+    public TransactionalEditingDomain getEditingDomain() {
+
+        UndoableModelPropertySheetEntry parentEntry = getParentEntry();
+
+        if (parentEntry == null || editingDomain != null) {
+            return editingDomain;
+        }
+
+        return parentEntry.getEditingDomain();
+    }
+
+    /*
+     * (non-Javadoc) Method declared on IPropertySheetEntry.
+     */
+    public void applyEditorValue() {
+    	if (editor == null)
+    	 	return;
+        
+    	 if (!editor.isValueValid()) {
+            setErrorText(editor.getErrorMessage());
+            return;
+        } else 
+            setErrorText(null);
+
+
+        // See if the value changed and if so update
+        
+        Object newValue = editor.getValue();
+        boolean changed = false;
+        if (values.length > 1) {
+            changed = true;
+        } else if (editValue == null) {
+            if (newValue != null)
+                changed = true;
+        } else if (!editValue.equals(newValue))
+            changed = true;
+
+        // Set the editor value
+        if (changed)
+            setValue(newValue);
+
+    }
+
+    /*
+     * (non-Javadoc) Method declared on IUndoablePropertySheetEntry.
+     */
+    public void resetPropertyValue() {
+
+        // The root entry does not have a default value
+        if (parent == null) {
+            return;
+        }
+
+        //Use our parent's values to reset our values.
+        String propertyName = getDescriptor().getDisplayName();
+        Object propertyId = getDescriptor().getId();
+        CompositeCommand cc = new CompositeCommand(propertyName);
+        RestoreDefaultPropertyValueCommand restoreCommand;
+        boolean executeCommand = false;
+        Object[] parentValues = getParentEntry().getValues();
+
+        for (int i = 0; i < parentValues.length; i++) {
+
+            IPropertySource source = getPropertySource(parentValues[i]);
+
+            if (source.isPropertySet(propertyId)) {
+                restoreCommand = new RestoreDefaultPropertyValueCommand(getEditingDomain(), 
+                        propertyName, parentValues[i], source, propertyId);
+                cc.compose(restoreCommand);
+                executeCommand = true;
+            }
+        }
+
+        if (executeCommand) {
+            /* status is ok, can edit the storage units */
+            try {
+                TriggeredOperations triggerOperation = 
+                    new TriggeredOperations(cc, getOperationHistory());
+                getOperationHistory().execute(triggerOperation, new NullProgressMonitor(), null);
+                
+            } catch (ExecutionException e) {
+                Trace.catching(EMFPropertiesPlugin.getDefault(),
+                    EMFPropertiesDebugOptions.EXCEPTIONS_CATCHING,
+                    UndoableModelPropertySheetEntry.class,
+                    "resetPropertyValue", e); //$NON-NLS-1$
+                Log.error(EMFPropertiesPlugin.getDefault(),
+                    EMFPropertiesStatusCodes.COMMAND_FAILURE, e
+                        .getLocalizedMessage(), e);
+            }
+            refreshValues();
+        }
+    }
+
+    /**
+     * Set the value for this entry.
+     * <p>
+     * We set the given value as the value for all our value objects. We then
+     * call our parent to update the property we represent with the given value.
+     * We then trigger a model refresh.
+     * <p>
+     * 
+     * @@param newValue
+     *            the new value
+     */
+    protected void setValue(Object newValue) {
+
+        // Set the value
+        for (int i = 0; i < values.length; i++)
+            values[i] = newValue;
+
+        // Inform our parent
+        getParentEntry().valueChanged(
+                this,
+                getCompositeCommand(MessageFormat.format(
+                		EMFUIPropertiesMessages.UndoablePropertySheetEntry_commandName,
+                        new String[] { getDescriptor().getDisplayName() })));
+        
+        // Remember the new value so that we don't apply this same value more
+        // than once.
+        editValue = newValue;
+    }
+
+    /**
+     * The value of the given child entry has changed. Therefore we must set
+     * this change into our value objects.
+     * <p>
+     * We must inform our parent so that it can update its value objects
+     * </p>
+     * <p>
+     * Subclasses may override to set the property value in some custom way.
+     * </p>
+     * 
+     * @@param child
+     *            the child entry that changed its value
+     * @@param command
+     *            the command into which to compose my property chnage command
+     */
+    protected void valueChanged(UndoableModelPropertySheetEntry child,
+            ICommand command) {
+
+        String propertyName = child.getDescriptor().getDisplayName();
+
+        Object propertyId = child.getDescriptor().getId();
+
+        for (int i = 0; i < values.length; i++)
+            command.compose(getPropertyCommand(propertyName, values[i],
+                    propertyId, child.getEditValue(i)));
+
+        // inform our parent
+        if (getParentEntry() != null) {
+            getParentEntry().valueChanged(this, command);
+        } else {
+            //I am the root entry
+            try {
+                TriggeredOperations triggerOperation = 
+                    new TriggeredOperations(command, getOperationHistory());
+                getOperationHistory().execute(triggerOperation, new NullProgressMonitor(), null);
+          
+            } catch (ExecutionException e) {
+                Trace.catching(EMFPropertiesPlugin.getDefault(),
+                    EMFPropertiesDebugOptions.EXCEPTIONS_CATCHING,
+                    UndoableModelPropertySheetEntry.class,
+                    "valueChanged", e); //$NON-NLS-1$
+                Log.error(EMFPropertiesPlugin.getDefault(),
+                    EMFPropertiesStatusCodes.COMMAND_FAILURE, e
+                        .getLocalizedMessage(), e);
+            }
+        }
+    }
+    
+    /**
+     * Extracts the editing domain from the <code>objects</code> if I am the
+     * root entry.
+     */
+    public void setValues(Object[] objects) {
+        super.setValues(objects);
+
+        if (getParentEntry() == null) {
+            // I'm the root
+            for (int i = 0; i < objects.length; i++) {
+                EObject eObject = null;
+
+                if (objects[i] instanceof EObject) {
+                    eObject = (EObject) objects[i];
+
+                } else if (objects[i] instanceof IAdaptable) {
+                    eObject = (EObject) ((IAdaptable) objects[i])
+                        .getAdapter(EObject.class);
+                }
+
+                if (eObject != null) {
+                    setEditingDomain(TransactionUtil.getEditingDomain(eObject));
+                }
+            }
+        }
+    }
+    
+    /**
+     * Gets my operation history.
+     * 
+     * @@return my operation history
+     */
+    protected final IOperationHistory getOperationHistory() {
+        return operationHistory;
+    }
+
+    /**
+     * Returns the parent. This can be another <code>PropertySheetEntry</code>
+     * or <code>null</code>.
+     */
+    protected UndoableModelPropertySheetEntry getParentEntry() {
+        return (UndoableModelPropertySheetEntry) parent;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.gmf.runtime.common.ui.internal.views.properties.UndoablePropertySheetEntry#getPropertyCommand(java.lang.String,
+     *      org.eclipse.ui.views.properties.IPropertySource, java.lang.Object,
+     *      java.lang.Object)
+     */
+    protected ICommand getPropertyCommand(String propertyName, Object object,
+            Object propertyId, Object value) {
+
+        return new SetModelPropertyValueCommand(getEditingDomain(), propertyName, object,
+                getPropertySource(object), propertyId, value);
+    }
+
+    protected ICompositeCommand getCompositeCommand(String propertyName) {
+        return new CompositeTransactionalCommand(getEditingDomain(), propertyName);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.gmf.runtime.common.ui.internal.views.properties.UndoablePropertySheetEntry#createChildEntries(int)
+     */
+    protected PropertySheetEntry[] createChildEntries(int size) {
+        return new UndoableModelPropertySheetEntry[size];
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.gmf.runtime.common.ui.internal.views.properties.UndoablePropertySheetEntry#createChildEntry()
+     */
+    protected PropertySheetEntry createChildEntry() {
+        return new UndoableModelPropertySheetEntry(getOperationHistory());
+
+    }
+
+}@
+
+
+1.4
+log
+@[112826] gmf_head ldamus 060213 Adopt Eclipse 3.1 Operation History Framework
+@
+text
+@d18 1
+d124 1
+a124 10
+        
+        /*
+        Object newValue = editor.getValue();
+        boolean changed = false;
+        if (editValue == null) {
+            if (newValue != null)
+                changed = true;
+        } else if (!editValue.equals(newValue))
+            changed = true;
+            */
+d164 3
+a166 1
+                getOperationHistory().execute(cc, new NullProgressMonitor(), null);
+d242 3
+a244 1
+                getOperationHistory().execute(command, new NullProgressMonitor(), null);
+@
+
+
+1.3
+log
+@Bugzilla Bug 109445 gmf_head etworkow 051109 New Eclipse Resources Bundles Should Be Used
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2003, 2005 IBM Corporation and others.
+d16 3
+d20 3
+a22 3
+import org.eclipse.ui.views.properties.IPropertySource;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+d25 4
+a28 1
+import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeModelCommand;
+d31 3
+d35 1
+d49 15
+a63 3
+     * Constructs a new instance with a command manager for executing property
+     * change commands. This instance must be the root entry because only the
+     * root entry keeps track of the command manager.
+d65 2
+a66 3
+     * @@param manager
+     *            the command manager with which this entry will execute
+     *            property change commands.
+d68 2
+a69 2
+    public UndoableModelPropertySheetEntry(CommandManager manager) {
+        commandManager = manager;
+d71 11
+a81 1
+
+d83 3
+a85 4
+     * The command manager used by this entry to execute property change
+     * commands. <code>Null</code> if I am not the root entry. Only the root
+     * entry keeps track of the command manager on behalf of all of the child
+     * entries.
+d87 10
+a96 1
+    private CommandManager commandManager;
+d162 1
+a162 1
+                restoreCommand = new RestoreDefaultPropertyValueCommand(
+d171 12
+a182 1
+            getCommandManager().execute(cc);
+d210 4
+a213 1
+
+d228 2
+d232 1
+a232 1
+            CompositeCommand command) {
+d247 12
+a258 1
+            command.execute(new NullProgressMonitor());
+d261 7
+d269 20
+d290 1
+a290 1
+     * Gets the command manager used to execute property change commands.
+d292 1
+a292 1
+     * @@return <code>CommandManager</code> used to execute property change commands.
+d294 2
+a295 2
+    protected CommandManager getCommandManager() {
+        return commandManager;
+d316 1
+a316 1
+        return new SetModelPropertyValueCommand(propertyName, object,
+d320 2
+a321 7
+    /*
+     * (non-Javadoc)
+     * 
+     * @@see org.eclipse.gmf.runtime.common.ui.internal.views.properties.UndoablePropertySheetEntry#getCompositeCommand(java.lang.String)
+     */
+    protected CompositeCommand getCompositeCommand(String propertyName) {
+        return new CompositeModelCommand(propertyName);
+d339 1
+a339 1
+        return new UndoableModelPropertySheetEntry(getCommandManager());
+@
+
+
+1.2
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@d25 1
+a25 1
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.l10n.EMFPropertiesResourceManager;
+a38 6
+     * Label for the command that sets the property.
+     */
+    public static final String UNDO_PROPERTY_LABEL = EMFPropertiesResourceManager
+            .getInstance().getString("UndoablePropertySheetEntry.commandName"); //$NON-NLS-1$
+
+    /**
+d157 2
+a158 1
+                getCompositeCommand(MessageFormat.format(UNDO_PROPERTY_LABEL,
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2003, 2005.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+

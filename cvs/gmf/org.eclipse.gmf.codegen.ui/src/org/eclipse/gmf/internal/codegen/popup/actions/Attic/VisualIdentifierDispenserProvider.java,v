@@ -1,0 +1,105 @@
+head	1.2;
+access;
+symbols
+	M4_20:1.1
+	v20061222-1800:1.1
+	v20061214-0000:1.1
+	M3_20:1.1
+	v20061117-0800:1.1
+	v20061013-1330:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.2
+date	2007.01.18.18.49.11;	author atikhomirov;	state dead;
+branches;
+next	1.1;
+commitid	196045afc1264567;
+
+1.1
+date	2006.09.06.18.22.33;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@[148836] afedorov - Provide "Create generator model..." wizard instead of existing dialog sequence
+@
+text
+@package org.eclipse.gmf.internal.codegen.popup.actions;
+
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.gmf.internal.bridge.NaiveIdentifierDispenser;
+import org.eclipse.gmf.internal.bridge.StatefulVisualIdentifierDispencer;
+import org.eclipse.gmf.internal.bridge.VisualIdentifierDispenser;
+import org.eclipse.gmf.internal.codegen.CodeGenUIPlugin;
+import org.osgi.framework.Bundle;
+
+/**
+ * holds additional logic to pre/post process dispensers
+ */
+class VisualIdentifierDispenserProvider {
+	private VisualIdentifierDispenser dispenser;
+	private final URI myStateBaseURI;
+
+	VisualIdentifierDispenserProvider(URI stateBaseURI) {
+		myStateBaseURI = stateBaseURI;
+	}
+
+	private VisualIdentifierDispenser initialize() {
+		Bundle tracePluginBundle = Platform.getBundle("org.eclipse.gmf.bridge.trace");
+		if (tracePluginBundle != null) {
+			try {
+				Class despenserClass = tracePluginBundle.loadClass("org.eclipse.gmf.internal.bridge.trace.MergingIdentifierDispenser");
+				return (VisualIdentifierDispenser) despenserClass.newInstance();
+			} catch (ClassNotFoundException e) {
+				CodeGenUIPlugin.getDefault().getLog().log(CodeGenUIPlugin.createError("MergingIdentifierDispenser was not found in org.eclipse.gmf.bridge.trace bundle", e));
+			} catch (InstantiationException e) {
+				CodeGenUIPlugin.getDefault().getLog().log(CodeGenUIPlugin.createError("MergingIdentifierDispenser was not instantiated", e));
+			} catch (IllegalAccessException e) {
+				CodeGenUIPlugin.getDefault().getLog().log(CodeGenUIPlugin.createError("IllegalAccessException while instantiating MergingIdentifierDispenser", e));
+			} catch (ClassCastException ex) {
+				CodeGenUIPlugin.getDefault().getLog().log(CodeGenUIPlugin.createError("MergingIdentifierDispenser was not instantiated", ex));
+			}
+		}
+		return new NaiveIdentifierDispenser();
+	}
+
+	public VisualIdentifierDispenser get() {
+		assert dispenser != null;
+		return dispenser;
+	}
+
+	public void acquire() {
+		assert dispenser == null;
+		dispenser = initialize();
+		if (dispenser instanceof StatefulVisualIdentifierDispencer) {
+			StatefulVisualIdentifierDispencer statefulDispencer = (StatefulVisualIdentifierDispencer) dispenser;
+			statefulDispencer.loadState(myStateBaseURI);
+		}
+	}
+
+	public void release() {
+		if (dispenser instanceof StatefulVisualIdentifierDispencer) {
+			((StatefulVisualIdentifierDispencer) dispenser).saveState();
+		}
+		dispenser = null;
+	}
+}@
+
+
+1.1
+log
+@refactor Create GenModel action, added support for automated .genmodel creation and alternative to launch EMF wizard to do the same
+@
+text
+@@
+

@@ -1,0 +1,338 @@
+head	1.5;
+access;
+symbols
+	v20080924-1925:1.5
+	v20080722-1827:1.5
+	v20080716-1642:1.5
+	R2_1_maintenance:1.5.0.4
+	Root_R2_1_maintenance:1.5
+	R2_1_0:1.5
+	v20080417-1610:1.5
+	v20080322-0000:1.5
+	v20080222-1200:1.5
+	v20080215-1500:1.5
+	v20080207-0207:1.5
+	v20071124-0000:1.5
+	v20071108-0000:1.5
+	v20070903-0000:1.5
+	v20070809-0000:1.5
+	R2_0_maintenance:1.5.0.2
+	R2_0:1.5
+	R4_20:1.5
+	v20070621-0000:1.5
+	RC3_20:1.5
+	v20070608-1300:1.5
+	v20070605-1400:1.5
+	v20070601-1400:1.4
+	v20070520-1200:1.4
+	v20070518-1300:1.4
+	v20070420-1000:1.4
+	v20070413-1300:1.4
+	v20070405-2000:1.3
+	v20070330-1300:1.2
+	v20070322-1100:1.2
+	v20060316-0600:1.2
+	v20070301-1200:1.2
+	v20070228-2000:1.1
+	v20070208-1800:1.1;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.5
+date	2007.06.05.12.27.23;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+commitid	4eae466556ab4567;
+
+1.4
+date	2007.04.12.14.40.18;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	5f58461e44d04567;
+
+1.3
+date	2007.04.05.20.18.12;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	6368461559844567;
+
+1.2
+date	2007.03.01.14.21.41;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	633945e6e1754567;
+
+1.1
+date	2007.01.18.18.49.14;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	197b45afc1284567;
+
+
+desc
+@@
+
+
+1.5
+log
+@do not force users to use enhanced featuers of runtime if there's no lite alternative
+@
+text
+@/**
+ * Copyright (c) 2006, 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Fedorov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.bridge.transform;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.emf.common.CommonPlugin;
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.gmf.internal.bridge.ui.Plugin;
+import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.IMessageProvider;
+import org.eclipse.jface.wizard.WizardPage;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.ExpandBar;
+import org.eclipse.swt.widgets.ExpandItem;
+import org.eclipse.swt.widgets.Group;
+import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Widget;
+
+/*
+ * XXX: duplicates functionality of org.eclipse.gmf.internal.graphdef.codegen.ui.FigureGeneratorOptionsDialog
+ */
+class ViewmapProducerWizardPage extends WizardPage {
+	
+    private Button generateRCPButton;
+    private Button useMapModeButton;
+    private Button useRuntimeFiguresButton;
+	private Text templatesPathControl;
+
+	protected ViewmapProducerWizardPage(String pageName) {
+		super(pageName);
+		setTitle(Messages.TransformToGenModelWizard_title_options);
+		setDescription(Messages.TransformToGenModelWizard_descr_options);
+	}
+	
+	public void createControl(Composite parent) {
+		initializeDialogUnits(parent);
+
+		Composite composite = new Composite(parent, SWT.NONE);
+		composite.setLayout(new GridLayout());
+		createControls(composite);
+		initControls();
+		validatePage();
+
+		setControl(composite);
+		Dialog.applyDialogFont(composite);
+	}
+
+	private void createControls(Composite result) {
+        useMapModeButton = new Button(result, SWT.CHECK);
+        useMapModeButton.setText(Messages.ViewmapProducerWizardPage_btn_mapmode);
+        useMapModeButton.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING | GridData.VERTICAL_ALIGN_CENTER));
+        useRuntimeFiguresButton = new Button(result, SWT.CHECK);
+        useRuntimeFiguresButton.setText(Messages.ViewmapProducerWizardPage_btn_runtime);
+        useRuntimeFiguresButton.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING | GridData.VERTICAL_ALIGN_CENTER));
+        generateRCPButton = new Button(result, SWT.CHECK);
+        generateRCPButton.setText(Messages.ViewmapProducerWizardPage_btn_rcp);
+        generateRCPButton.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING | GridData.VERTICAL_ALIGN_CENTER));
+        SelectionListener selectionListener = new SelectionListener() {
+        	public void widgetDefaultSelected(SelectionEvent e) {
+        		handleSelection(e.widget);
+        	}
+        	public void widgetSelected(SelectionEvent e) {
+        		handleSelection(e.widget);
+        	}
+		};
+        useMapModeButton.addSelectionListener(selectionListener);
+        useRuntimeFiguresButton.addSelectionListener(selectionListener);
+        generateRCPButton.addSelectionListener(selectionListener);
+        createTemplatePathControl(result);
+        Composite glue = new Composite(result, SWT.NONE);
+        glue.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+	}
+
+	private void createTemplatePathControl(Composite result) {
+		Group parent = new Group(result, SWT.SHADOW_ETCHED_IN);
+		parent.setText("Provisional");
+		parent.setLayout(new FillLayout());
+		parent.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+		ExpandBar c = new ExpandBar(parent, SWT.NONE);
+		c.setBackground(parent.getBackground());
+        templatesPathControl = new Text(c, SWT.SINGLE | SWT.BORDER);
+		templatesPathControl.addModifyListener(new ModifyListener() {
+			@@SuppressWarnings("synthetic-access")
+			public void modifyText(ModifyEvent e) {
+				validatePage();
+			}
+		});
+        ExpandItem item = new ExpandItem(c, SWT.NONE, 0);
+        item.setText("GMFGraph dynamic templates");
+		item.setHeight(templatesPathControl.computeSize(SWT.DEFAULT, SWT.DEFAULT).y);
+		item.setControl(templatesPathControl);
+		if (getOperation().getOptions().getFigureTemplatesPath() != null) {
+			// reveal the value to avoid confusion.
+			// FIXME extract expand bar with template path as separate control and
+			// move expand logic there (based on setInitialValue event
+			item.setExpanded(true);
+		}
+			
+	}
+
+	void handleSelection(Widget w) {
+		if (generateRCPButton.equals(w)){
+			getOperation().getOptions().setGenerateRCP(generateRCPButton.getSelection());
+		} else if (useMapModeButton.equals(w)) {
+			getOperation().getOptions().setUseMapMode(useMapModeButton.getSelection());
+		} else if (useRuntimeFiguresButton.equals(w)) {
+			getOperation().getOptions().setUseRuntimeFigures(useRuntimeFiguresButton.getSelection());
+		}
+		validatePage();
+	}
+	
+	private void validatePage() {
+		IStatus checkOptions = checkOptions();
+		if (checkOptions.isOK()) {
+			setMessage(null);
+			setPageComplete(true);
+		} else {
+    		setMessage(checkOptions.getMessage(), IMessageProvider.INFORMATION);
+			setPageComplete(checkOptions.getSeverity() < IStatus.WARNING);
+		}
+	}
+	
+	private IStatus checkOptions() {
+		boolean hasLite = TransformOptions.checkLiteOptionPresent();
+		if (hasLite) {
+			if (!useRuntimeFiguresButton.getSelection() && useMapModeButton.getSelection()) {
+				return Plugin.createInfo(Messages.ViewmapProducerWizardPage_i_not_recommended);
+			}
+		}
+		if (templatesPathControl.getText().trim().length() > 0) {
+			try {
+				URL res = new URL(guessAndResolvePathURL(templatesPathControl.getText().trim()));
+				// safe to set option value now as they get flushed into storage only on Wizard.performFinish
+				getOperation().getOptions().setFigureTemplatesPath(res);
+			} catch (MalformedURLException ex) {
+				return Plugin.createWarning(ex.getMessage());
+			}
+		} else {
+			if (getOperation().getOptions().getFigureTemplatesPath() != null) {
+				getOperation().getOptions().setFigureTemplatesPath(null);
+			}
+		}
+		return Status.OK_STATUS;
+	}
+
+	private void initControls() {
+		TransformOptions options = getOperation().getOptions();
+		generateRCPButton.setSelection(options.getGenerateRCP());
+		useRuntimeFiguresButton.setSelection(options.getUseRuntimeFigures());
+		useMapModeButton.setSelection(options.getUseMapMode());
+		if (null != options.getFigureTemplatesPath()) {
+			templatesPathControl.setText(options.getFigureTemplatesPath().toString());
+		}
+	}
+
+	private TransformToGenModelOperation getOperation() {
+		TransformToGenModelWizard wizard = (TransformToGenModelWizard) getWizard();
+		return wizard.getTransformOperation();
+	}
+
+	private static String guessAndResolvePathURL(String path) {
+		assert path != null;
+		URI templatesURI = path.indexOf(':') == -1 ? URI.createPlatformResourceURI(path, true) : URI.createURI(path);
+		return CommonPlugin.resolve(templatesURI).toString();
+	}
+}
+@
+
+
+1.4
+log
+@[181896] afedorov - Allow transformation wizard to complete if there are errors in the resulting gmfgen model
+refactored not to define extra strings for page names, titles and descriptions moved to owning pages.
+@
+text
+@d2 1
+a2 1
+ * Copyright (c) 2006 Borland Software Corporation
+d171 1
+a171 10
+		boolean hasLite = TransformOptions.checkLiteOptionPresent();
+		boolean useRuntimeFigures = options.getUseRuntimeFigures();
+		if (hasLite) {
+			useRuntimeFiguresButton.setEnabled(true);
+			useRuntimeFiguresButton.setSelection(useRuntimeFigures);
+		} else {
+			useRuntimeFiguresButton.setEnabled(false);
+			useRuntimeFiguresButton.setSelection(true);
+			options.setUseRuntimeFigures(true);
+		}
+@
+
+
+1.3
+log
+@clear syntetic access warning
+@
+text
+@d42 1
+a42 4
+ * XXX: duplicates functionality of 
+ * org.eclipse.gmf.internal.codegen.popup.actions.TransformToGenModelOptionsDialog 
+ * and
+ * org.eclipse.gmf.internal.graphdef.codegen.ui.FigureGeneratorOptionsDialog
+d53 2
+@
+
+
+1.2
+log
+@[171782] and [170686] make use of dynamic templates for figures possible
+@
+text
+@d106 1
+@
+
+
+1.1
+log
+@[148836] afedorov - Provide "Create generator model..." wizard instead of existing dialog sequence
+@
+text
+@d14 3
+d19 2
+d26 2
+d30 1
+d35 4
+d52 1
+d92 29
+d152 13
+d182 3
+d191 6
+@
+

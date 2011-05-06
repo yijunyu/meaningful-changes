@@ -1,0 +1,272 @@
+head	1.6;
+access;
+symbols
+	v20081022-1925:1.6
+	v20080917-1925:1.6
+	v20080911-1728:1.6
+	v20080910-1520:1.6
+	v20080903-1520:1.6
+	v20080731-1520:1.6
+	v20080723-2246:1.6
+	R1_0_maintenance:1.6.0.2
+	R1_0:1.6
+	I20051124-2000:1.5
+	M3_10:1.5
+	I20051118-1245:1.5
+	I20051111-1800:1.5
+	I20051106-0900:1.5
+	v20051030:1.3;
+locks; strict;
+comment	@# @;
+
+
+1.6
+date	2005.11.25.19.34.26;	author cmahoney;	state dead;
+branches;
+next	1.5;
+
+1.5
+date	2005.11.04.22.13.15;	author sshaw;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2005.11.02.23.30.16;	author sshaw;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.09.12.21.29.06;	author sshaw;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.08.30.18.49.22;	author sshaw;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.08.30.03.18.37;	author sshaw;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@Bugzilla#113157 gmf_head cmahoney 051125 Removing deprecated classes
+@
+text
+@/******************************************************************************
+ * Copyright (c) 2002, 2003, 2005 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    IBM Corporation - initial API and implementation 
+ ****************************************************************************/
+
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import org.eclipse.draw2d.Connection;
+import org.eclipse.draw2d.FigureCanvas;
+import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.draw2d.geometry.PointList;
+import org.eclipse.gef.Request;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.requests.BendpointRequest;
+import org.eclipse.gef.ui.parts.ScrollingGraphicalViewer;
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+import org.eclipse.gmf.runtime.diagram.ui.internal.commands.SetConnectionBendpointsCommand;
+import org.eclipse.gmf.runtime.diagram.ui.requests.RequestConstants;
+import org.eclipse.gmf.runtime.diagram.ui.requests.SetAllBendpointRequest;
+import org.eclipse.gmf.runtime.diagram.ui.util.SelectInDiagramHelper;
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+import org.eclipse.gmf.runtime.gef.ui.internal.editpolicies.LineMode;
+import org.eclipse.gmf.runtime.notation.Edge;
+
+/**
+ * This EditPolicy defines the behavior of Bendpoints on a Connection.
+ *  * @@deprecated Renamed to {@@link org.eclipse.gmf.runtime.diagram.ui.editpolicies.ConnectionBendpointEditPolicy
+ */
+/*
+ * @@canBeSeenBy %partners
+ */
+public class ConnectorBendpointEditPolicy
+	extends org.eclipse.gmf.runtime.gef.ui.internal.editpolicies.ConnectionBendpointEditPolicy { 
+	
+	/**
+	 * @@param lineSegMode
+	 */
+	protected ConnectorBendpointEditPolicy(LineMode lineSegMode) {
+		super(lineSegMode);
+	}
+
+	/**
+	 * 
+	 */
+	public ConnectorBendpointEditPolicy() {
+		super(LineMode.OBLIQUE);
+	}
+
+	/**
+	 * Returns the appropriate Command for the request type given.  Handles
+	 * creating, moving and deleting bendpoints.  The actual creation of the
+	 * command is taken care of by subclasses implementing the appropriate
+	 * methods.
+	 *
+	 * @@see #getCreateBendpointCommand(BendpointRequest)
+	 * @@see #getMoveBendpointCommand(BendpointRequest)
+	 * @@see #getDeleteBendpointCommand(BendpointRequest)
+	 */
+	public Command getCommand(Request request) {
+		if (RequestConstants.REQ_SET_ALL_BENDPOINT.equals(request.getType()))
+			return getSetBendpointCommand((SetAllBendpointRequest)request);
+			
+		return super.getCommand(request);
+	}
+
+	/**
+	 * Method getBendpointsChangedCommand.
+	 * This method will return a SetBendpointsCommand with the points retrieved from
+	 * the user feedback in the figure.
+	 * @@param request BendpointRequest from the user gesture for moving / creating a bendpoint
+	 * @@return Command SetBendpointsCommand that contains the point changes for the connector.
+	 */
+	protected Command getBendpointsChangedCommand(BendpointRequest request) {
+		if ((getHost().getViewer() instanceof ScrollingGraphicalViewer)&&
+				(getHost().getViewer().getControl() instanceof FigureCanvas)){
+			SelectInDiagramHelper.exposeLocation((FigureCanvas)getHost().getViewer().getControl(),request.getLocation().getCopy());
+		}
+		Connection connection = getConnection();
+		Edge connectorView = (Edge) request.getSource().getModel();
+		
+		return getBendpointsChangedCommand(connection, connectorView);
+	}
+
+	/**
+	 * Method getBendpointsChangedCommand
+	 * Different signature method that allows a command to constructed for changing the bendpoints
+	 * without requiring the original Request.
+	 * 
+	 * @@param connection Connection to generate the bendpoints changed command from
+	 * @@param connectorView IConnectorView notation element that the command will operate on.
+	 * @@return Command SetBendpointsCommand that contains the point changes for the connector.
+	 */
+	protected Command getBendpointsChangedCommand(Connection connection, Edge connectorView) {
+		Point ptRef1 = connection.getSourceAnchor().getReferencePoint();
+		getConnection().translateToRelative(ptRef1);
+
+		Point ptRef2 = connection.getTargetAnchor().getReferencePoint();
+		getConnection().translateToRelative(ptRef2);
+
+		SetConnectionBendpointsCommand sbbCommand = new SetConnectionBendpointsCommand();
+		sbbCommand.setEdgeAdapter(new EObjectAdapter(connectorView));
+		sbbCommand.setNewPointList(connection.getPoints(), ptRef1, ptRef2);
+
+		return new EtoolsProxyCommand(sbbCommand);
+	}
+
+	/**
+	 * Method getSetBendpointCommand.
+	 * This method returns a command that executes the REQ_SET_ALL_BENDPOINT request
+	 * @@param request SetAllBendpointRequest that stores the points to be set by the command.
+	 * @@return Command to be executed.
+	 */
+	protected Command getSetBendpointCommand(SetAllBendpointRequest request) {
+		Connection connection = getConnection();
+		PointList newPoints = request.getPoints();
+
+		SetConnectionBendpointsCommand sbbCommand = new SetConnectionBendpointsCommand();
+		sbbCommand.setEdgeAdapter(new EObjectAdapter((Edge)getHost().getModel()));
+		
+		if (request.getSourceReference() != null && request.getTargetReference() != null) {
+			sbbCommand.setNewPointList(
+				newPoints, request.getSourceReference(), request.getTargetReference());
+		}
+		else {
+			sbbCommand.setNewPointList(
+				newPoints, connection.getSourceAnchor(), connection.getTargetAnchor());
+		}
+		
+		return new EtoolsProxyCommand(sbbCommand);
+	}
+}
+@
+
+
+1.5
+log
+@Bugzilla#113157 gmf_head cmahoney 051104 Updating tutorial guides and some comments with name changes
+@
+text
+@@
+
+
+1.4
+log
+@Bugzilla#113157 gmf_head cmahoney 051102 GMF Diagram Layer Public API Name Changes
+@
+text
+@d39 1
+a39 1
+	extends org.eclipse.gmf.runtime.gef.ui.internal.editpolicies.ConnectorBendpointEditPolicy { 
+@
+
+
+1.3
+log
+@Bugzilla 108765 gmf_head tmacdoug 050912 - Update copyrights of GMF and EMFT plugins content to Eclipse copyright (EPL)
+@
+text
+@a21 1
+
+d23 1
+a23 1
+import org.eclipse.gmf.runtime.diagram.ui.internal.commands.SetConnectorBendpointsCommand;
+d33 1
+d106 2
+a107 2
+		SetConnectorBendpointsCommand sbbCommand = new SetConnectorBendpointsCommand();
+		sbbCommand.setConnectorAdapter(new EObjectAdapter(connectorView));
+d123 2
+a124 2
+		SetConnectorBendpointsCommand sbbCommand = new SetConnectorBendpointsCommand();
+		sbbCommand.setConnectorAdapter(new EObjectAdapter((Edge)getHost().getModel()));
+@
+
+
+1.2
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d1 11
+a11 9
+/*
+ *+------------------------------------------------------------------------+
+ *| Licensed Materials - Property of IBM                                   |
+ *| (C) Copyright IBM Corp. 2002, 2003, 2005.  All Rights Reserved.              |
+ *|                                                                        |
+ *| US Government Users Restricted Rights - Use, duplication or disclosure |
+ *| restricted by GSA ADP Schedule Contract with IBM Corp.                 |
+ *+------------------------------------------------------------------------+
+ */
+@
+
+
+1.1
+log
+@Refactoring of the IBM gmf runtime contribution to the org.eclipse.gmf.runtime namespace.
+@
+text
+@d28 1
+a28 1
+import com.ibm.xtools.notation.Edge;
+@
+

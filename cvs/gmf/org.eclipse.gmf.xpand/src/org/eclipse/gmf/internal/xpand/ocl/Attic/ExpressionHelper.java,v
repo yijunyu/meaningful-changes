@@ -1,0 +1,289 @@
+head	1.1;
+access;
+symbols
+	v20081022-1925:1.1
+	ocl_qvt:1.1.0.2;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2008.08.05.12.49.24;	author atikhomirov;	state dead;
+branches
+	1.1.2.1;
+next	;
+commitid	546c48984c4a4567;
+
+1.1.2.1
+date	2008.08.05.12.49.24;	author atikhomirov;	state Exp;
+branches;
+next	1.1.2.2;
+commitid	546c48984c4a4567;
+
+1.1.2.2
+date	2008.08.06.14.05.35;	author atikhomirov;	state Exp;
+branches;
+next	1.1.2.3;
+commitid	35b4899afa74567;
+
+1.1.2.3
+date	2008.08.07.23.23.37;	author atikhomirov;	state Exp;
+branches;
+next	1.1.2.4;
+commitid	55a7489b83f64567;
+
+1.1.2.4
+date	2008.08.08.16.33.25;	author atikhomirov;	state Exp;
+branches;
+next	1.1.2.5;
+commitid	a21489c75534567;
+
+1.1.2.5
+date	2008.08.10.15.10.44;	author atikhomirov;	state Exp;
+branches;
+next	1.1.2.6;
+commitid	2d13489f04f14567;
+
+1.1.2.6
+date	2008.08.19.17.25.21;	author atikhomirov;	state Exp;
+branches;
+next	1.1.2.7;
+commitid	380048ab02014567;
+
+1.1.2.7
+date	2008.10.24.17.50.52;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	cb8049020afb4567;
+
+
+desc
+@@
+
+
+1.1
+log
+@file ExpressionHelper.java was initially added on branch ocl_qvt.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@[243154] Use OCL instead of home-grown expression language
+@
+text
+@a0 67
+/*
+ * Copyright (c) 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.xpand.ocl;
+
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.Analyzable;
+import org.eclipse.gmf.internal.xpand.expression.Evaluatable;
+import org.eclipse.gmf.internal.xpand.expression.EvaluationException;
+import org.eclipse.gmf.internal.xpand.expression.ExecutionContext;
+import org.eclipse.gmf.internal.xpand.expression.Variable;
+import org.eclipse.ocl.cst.OCLExpressionCS;
+import org.eclipse.ocl.ecore.EcoreEnvironment;
+import org.eclipse.ocl.ecore.OCL;
+import org.eclipse.ocl.ecore.OCLExpression;
+
+public class ExpressionHelper implements Analyzable, Evaluatable {
+
+	private final OCLExpressionCS expressionCS;
+
+	public ExpressionHelper(OCLExpressionCS exprCS) {
+		assert exprCS != null;
+		this.expressionCS = exprCS;
+	}
+	public OCLExpressionCS getCST() {
+		return expressionCS;
+	}
+
+	public EClassifier analyze(ExecutionContext ctx, Set<AnalysationIssue> issues) {
+		EcoreEnvironment env = ctx.getOCLEnvironment();
+		Variable v = ctx.getVariable(ExecutionContext.IMPLICIT_VARIABLE);
+		if (v != null) {
+			env = (EcoreEnvironment) env.getFactory().createClassifierContext(env, (EClassifier) v.getValue());
+		}
+		OCLExpression expression = new EmbeddedOCLAnalyzer(env).analyzeExpression(expressionCS);
+		return expression.getType();
+	}
+
+	public Object evaluate(ExecutionContext ctx) {
+		EcoreEnvironment env = ctx.getOCLEnvironment();
+		// FIXME move context handling with this->self inside ExecutionContextImpl? Or, it's better to have explicit,
+		// separate environment for each execution?
+		Variable self = ctx.getVariable(ExecutionContext.IMPLICIT_VARIABLE);  
+		if (self != null) {
+			env = (EcoreEnvironment) env.getFactory().createInstanceContext(env, self.getValue());
+		}
+		OCLExpression expression = new EmbeddedOCLAnalyzer(env).analyzeExpression(expressionCS);
+		OCL ocl = OCL.newInstance();
+		Object val = ocl.evaluate(self == null ? null : self.getValue(), expression);
+		if (ocl.isInvalid(val)) {
+			// TODO serialize CST to show actual string that's wrong
+			throw new EvaluationException("Can't evaluate expression: retured value is OclInvalid", null);
+		}
+		return val;
+	}
+}
+@
+
+
+1.1.2.2
+log
+@[243154] Use OCL instead of home-grown expression language. Refactored to eliminate context specific to expressions (moving towards using OCL environment for that), split modifiable (context-specific) and static execution data.
+@
+text
+@d17 6
+a22 4
+import org.eclipse.gmf.internal.xpand.model.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.model.EvaluationException;
+import org.eclipse.gmf.internal.xpand.model.ExecutionContext;
+import org.eclipse.gmf.internal.xpand.model.Variable;
+d28 1
+a28 1
+public class ExpressionHelper {
+@
+
+
+1.1.2.3
+log
+@[243154] Use OCL instead of home-grown expression language - fixing and running tests.
+@
+text
+@a22 1
+import org.eclipse.ocl.ecore.EcoreEvaluationEnvironment;
+a57 1
+		ctx.populate((EcoreEvaluationEnvironment) ocl.getEvaluationEnvironment());
+@
+
+
+1.1.2.4
+log
+@[243154] Use OCL instead of home-grown expression language - populate ocl environment with variable types (hence, need to tell var value from var type)
+@
+text
+@d41 4
+d54 3
+@
+
+
+1.1.2.5
+log
+@[243154] Use OCL instead of home-grown expression language - most (what's feasible) of the extension invocation fixed. A lot of hacks and questions, though.
+@
+text
+@a20 6
+import org.eclipse.m2m.internal.qvt.oml.ast.env.QvtOperationalEnv;
+import org.eclipse.m2m.internal.qvt.oml.ast.env.QvtOperationalEnvFactory;
+import org.eclipse.m2m.internal.qvt.oml.ast.env.QvtOperationalEvaluationEnv;
+import org.eclipse.m2m.internal.qvt.oml.evaluator.QvtOperationalEvaluationVisitorImpl;
+import org.eclipse.m2m.internal.qvt.oml.library.Context;
+import org.eclipse.ocl.Environment;
+d23 3
+a25 1
+import org.eclipse.ocl.expressions.OCLExpression;
+d41 1
+a41 1
+		OCLExpression<EClassifier> expression = new EmbeddedQVTAnalyzer(env).analyzeExpression(expressionCS);
+a46 18
+		//
+		Context context = new Context();
+		QvtOperationalEnvFactory envFactory = QvtOperationalEnvFactory.INSTANCE;
+		QvtOperationalEvaluationEnv evaluationEnv = envFactory.createEvaluationEnvironment(context, null);
+		ctx.populate(evaluationEnv);
+		OCLExpression<EClassifier> expression = new EmbeddedQVTAnalyzer(env).analyzeExpression(expressionCS);
+		//System.out.println("ExpressionHelper.evaluate():" + expression);
+		/* 
+		 * XXX From TestExternHelperCall - perhaps, need to collect all imports, though seems to work for me without that
+		HashSet<Module> importedModules = new HashSet<Module>();
+		importedModules.add(module);
+		QvtOperationalParserUtil.collectAllImports(module, importedModules);
+		
+		XXX ask Radek - what's the difference between plain QvtOperationalEnv(null) and subclass he creates 
+						in there, which mangles with umlReflection (though seems to leave it the same)
+		visitor = new QvtOperationalEvaluationVisitorImpl.createNonTransformationExecutionContextVisitor((QvtOperationalEnv) env, evaluationEnv, Collections.<Module>emptySet());
+		 */
+		QvtOperationalEvaluationVisitorImpl visitor = new QvtOperationalEvaluationVisitorImpl((QvtOperationalEnv) env, evaluationEnv);
+d50 1
+a50 9
+		if (self != null) {
+			evaluationEnv.add(Environment.SELF_VARIABLE_NAME, self.getValue());
+			evaluationEnv.setOperationSelf(self.getValue());
+		}
+		Object val = visitor.visitExpression(expression);
+		if (env.getOCLStandardLibrary().getOclInvalid() == val) {
+			throw new EvaluationException("Can't evaluate expression: retured value is OclInvalid", null);
+		}
+/*
+a57 1
+*/
+@
+
+
+1.1.2.6
+log
+@[243154] Use OCL instead of home-grown expression language - moving towards no explicit use of 'this' keyword
+@
+text
+@d71 1
+a71 1
+		Variable self = ctx.getImplicitVariable();  
+@
+
+
+1.1.2.7
+log
+@[243154] Use OCL instead of home-grown expression language
+@
+text
+@a13 2
+import java.util.Collections;
+import java.util.Map;
+a15 1
+import org.eclipse.emf.ecore.EClass;
+a16 6
+import org.eclipse.emf.ecore.EEnumLiteral;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EOperation;
+import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.EParameter;
+import org.eclipse.emf.ecore.EStructuralFeature;
+d20 7
+a26 1
+import org.eclipse.ocl.EvaluationVisitor;
+a27 2
+import org.eclipse.ocl.ecore.CallOperationAction;
+import org.eclipse.ocl.ecore.Constraint;
+a28 2
+import org.eclipse.ocl.ecore.EcoreEvaluationEnvironment;
+import org.eclipse.ocl.ecore.SendSignalAction;
+d45 1
+a45 1
+		OCLExpression<EClassifier> expression = new EmbeddedOCLAnalyzer(env).analyzeExpression(expressionCS);
+d52 24
+a75 4
+		OCLExpression<EClassifier> expression = new EmbeddedOCLAnalyzer(env).analyzeExpression(expressionCS);
+		EcoreEvaluationEnvironment evaluationEnv = ctx.createEvaluationEnvironment();
+		Map<? extends EClass, ? extends Set<? extends EObject>> extentMap = Collections.emptyMap();
+		EvaluationVisitor<EPackage, EClassifier, EOperation, EStructuralFeature, EEnumLiteral, EParameter, EObject, CallOperationAction, SendSignalAction, Constraint, EClass, EObject> visitor = env.getFactory().createEvaluationVisitor(env, evaluationEnv, extentMap);
+d80 9
+@
+
+

@@ -1,0 +1,277 @@
+head	1.5;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.5
+date	2008.10.24.12.50.31;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+commitid	149924901c4974567;
+
+1.4
+date	2008.10.22.20.02.33;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+commitid	2f52548ff86d94567;
+
+1.3
+date	2008.10.22.17.25.32;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+commitid	2544748ff620b4567;
+
+1.2
+date	2008.10.21.20.10.17;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+commitid	ccde48fe37284567;
+
+1.1
+date	2008.10.21.18.38.57;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	77b548fe21c04567;
+
+
+desc
+@@
+
+
+1.5
+log
+@[251588] Ant integration for GMF-Xpand
+@
+text
+@/*
+ * Copyright (c) 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.xpand.ant;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.StringTokenizer;
+
+import org.apache.tools.ant.BuildException;
+import org.apache.tools.ant.Task;
+import org.eclipse.core.runtime.IProgressMonitor;
+
+/**
+ * <p>... xmlns:xpt=<em>&quot;eclipse.org/gmf/2008/xpand&quot;</em>...
+ * <p>
+ * &lt;xpt:template name=&quot;a::b::Main&quot;/&gt;
+ *
+ * @@author artem
+ */
+public class InvokeTemplateTask extends Task {
+
+	private String myTemplateName;
+	private Object myTemplateTarget;
+	private String[] myTemplateRoots;
+	private String myOutFile;
+	private XpandFacade myFacade;
+
+	public void setName(String name) {
+		myTemplateName = name;
+	}
+
+	public void setBareInput(String input) {
+		myTemplateTarget = input;
+	}
+
+	public void setInputURI(String uri) {
+		myTemplateTarget = uri;
+	}
+
+	public void setOutFile(String uri) {
+		myOutFile = uri;
+	}
+
+	public void setTemplateRoot(String root) {
+		ArrayList<String> roots = new ArrayList<String>();
+		for (StringTokenizer st = new StringTokenizer(root, ";, "); st.hasMoreTokens(); ) {
+			roots.add(st.nextToken().trim());
+		}
+		myTemplateRoots = roots.toArray(new String[roots.size()]);
+	}
+
+	@@Override
+	public void execute() throws BuildException {
+		IProgressMonitor pm = new ProgressSupport(this);
+		pm.beginTask(getTaskName(), 3);
+		validate();
+		pm.worked(1);
+		//
+		doExecute();
+		//
+		pm.done();
+	}
+
+	protected void doExecute() throws BuildException {
+		XpandFacade xf = createExecFacade();
+		String result = xf.xpand(myTemplateName, getTemplateTarget(), getTemplateArguments());
+		if (myOutFile == null) {
+			System.err.println("ITT:" + result);
+		} else {
+			try {
+				File f = getProject().resolveFile(myOutFile);
+				FileOutputStream os = new FileOutputStream(f);
+				os.write(result.getBytes());
+				os.close();
+			} catch (IOException ex) {
+				throw new BuildException("Can't write to " + myOutFile, ex, getLocation());
+			}
+		}
+	}
+	
+	protected void validate() throws BuildException {
+		if (myTemplateName == null) {
+			throw new BuildException("Template name is missing", getLocation());
+		}
+		if (myTemplateTarget == null) {
+			throw new BuildException("Target object is missing", getLocation());
+		}
+		if (myFacade == null && (myTemplateRoots == null || myTemplateRoots.length == 0)) {
+			throw new BuildException("No template root specified", getLocation());
+		}
+	}
+
+	protected Object getTemplateTarget() {
+		return myTemplateTarget;
+	}
+
+	protected Object[] getTemplateArguments() {
+		return null;
+	}
+
+	protected void setFacade(XpandFacade xf) {
+		myFacade = xf;
+	}
+
+	protected XpandFacade createExecFacade() throws BuildException {
+		try {
+			if (myTemplateRoots != null && myTemplateRoots.length > 0) {
+				XpandFacade xf;
+				if (myFacade != null) {
+					xf = new XpandFacade(myFacade);
+				} else {
+					xf = new XpandFacade();
+				}
+				for (String r : myTemplateRoots) {
+					xf.addLocation(r);
+				}
+				return xf;
+			} else {
+				return myFacade == null ? new XpandFacade() : myFacade;
+			}
+		} catch (MalformedURLException ex) {
+			throw new BuildException(ex, getLocation());
+		}
+	}
+}
+@
+
+
+1.4
+log
+@[251588] Ant integration for GMF-Xpand
+@
+text
+@d38 1
+d71 1
+a71 2
+		XpandFacade xf = createFacade();
+		execute(xf);
+d75 3
+a77 2
+	
+	protected void execute(XpandFacade xf) throws BuildException {
+d92 1
+a92 1
+
+d100 1
+a100 1
+		if (myTemplateRoots == null || myTemplateRoots.length == 0) {
+d113 5
+a117 1
+	protected XpandFacade createFacade() throws BuildException {
+d119 13
+a131 3
+			XpandFacade xf = new XpandFacade();
+			for (String r : myTemplateRoots) {
+				xf.addLocation(r);
+a132 1
+			return xf;
+@
+
+
+1.3
+log
+@[251588] Ant integration for GMF-Xpand
+@
+text
+@d14 7
+d36 2
+a37 1
+	private String myTemplateRoot;
+d47 6
+a52 2
+	public void setBareInput(int i) {
+		myTemplateTarget = i;
+d54 1
+d56 5
+a60 1
+		myTemplateRoot = root;
+d78 12
+a89 1
+		System.err.println("ITT:" + result);
+d99 3
+d112 1
+a112 1
+	protected XpandFacade createFacade() {
+d115 3
+a117 1
+			xf.addLocation(myTemplateRoot);
+d119 2
+a120 3
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			// FIXME
+a121 2
+		assert false;
+		return null;
+@
+
+
+1.2
+log
+@[251588] Ant integration for GMF-Xpand
+@
+text
+@d14 1
+d16 1
+d27 66
+@
+
+
+1.1
+log
+@[251588] Ant integration for GMF-Xpand
+@
+text
+@d16 7
+@
+

@@ -1,0 +1,414 @@
+head	1.1;
+access;
+symbols
+	v20081022-1925:1.1
+	ocl_qvt:1.1.0.2;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.1
+date	2008.07.24.16.21.35;	author ashatalin;	state dead;
+branches
+	1.1.2.1;
+next	;
+commitid	7c4a4888ac0d4567;
+
+1.1.2.1
+date	2008.07.24.16.21.35;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.2;
+commitid	7c4a4888ac0d4567;
+
+1.1.2.2
+date	2008.07.30.11.31.31;	author ashatalin;	state Exp;
+branches;
+next	1.1.2.3;
+commitid	e56489051124567;
+
+1.1.2.3
+date	2008.08.06.14.05.34;	author atikhomirov;	state Exp;
+branches;
+next	1.1.2.4;
+commitid	35b4899afa74567;
+
+1.1.2.4
+date	2008.08.10.15.10.44;	author atikhomirov;	state Exp;
+branches;
+next	;
+commitid	2d13489f04f14567;
+
+
+desc
+@@
+
+
+1.1
+log
+@file QvtExtension.java was initially added on branch ocl_qvt.
+@
+text
+@@
+
+
+1.1.2.1
+log
+@Initial commit of extend->qvt migration in xpand.
+@
+text
+@a0 192
+/**
+ * Copyright (c) 2008 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.internal.xpand.xtend.ast;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EParameter;
+import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.gmf.internal.xpand.BuiltinMetaModel;
+import org.eclipse.gmf.internal.xpand.expression.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.expression.ExecutionContext;
+import org.eclipse.gmf.internal.xpand.expression.Variable;
+import org.eclipse.m2m.internal.qvt.oml.ast.env.QvtOperationalEnv;
+import org.eclipse.m2m.internal.qvt.oml.ast.env.QvtOperationalEnvFactory;
+import org.eclipse.m2m.internal.qvt.oml.ast.env.QvtOperationalEvaluationEnv;
+import org.eclipse.m2m.internal.qvt.oml.evaluator.QvtOperationalEvaluationVisitorImpl;
+import org.eclipse.m2m.internal.qvt.oml.evaluator.QvtOperationalEvaluationVisitorImpl.OperationCallResult;
+import org.eclipse.m2m.internal.qvt.oml.expressions.ImperativeOperation;
+import org.eclipse.m2m.internal.qvt.oml.library.Context;
+import org.eclipse.ocl.ecore.BagType;
+import org.eclipse.ocl.ecore.CollectionType;
+import org.eclipse.ocl.ecore.OrderedSetType;
+import org.eclipse.ocl.ecore.PrimitiveType;
+import org.eclipse.ocl.ecore.SequenceType;
+import org.eclipse.ocl.ecore.SetType;
+import org.eclipse.ocl.ecore.util.EcoreSwitch;
+import org.eclipse.ocl.types.OCLStandardLibrary;
+
+public class QvtExtension implements GenericExtension {
+
+	private static final QvtOperationalEnv qvtEnvironment = QvtOperationalEnvFactory.INSTANCE.createEnvironment(null);
+	
+	private static final EcoreSwitch<EClassifier> ecoreSwitch = new EcoreSwitch<EClassifier>() {
+		
+		@@Override
+		public EClassifier casePrimitiveType(PrimitiveType object) {
+			OCLStandardLibrary<EClassifier> standardLibrary = qvtEnvironment.getOCLStandardLibrary();
+			if (standardLibrary.getString() == object) {
+				return EcorePackage.eINSTANCE.getEString();
+			}
+			if (standardLibrary.getBoolean() == object) {
+				return EcorePackage.eINSTANCE.getEBoolean();
+			}
+			if (standardLibrary.getInteger() == object) {
+				return EcorePackage.eINSTANCE.getEInt();
+			}
+			return null;
+		}
+		
+		@@Override
+		public EClassifier caseCollectionType(CollectionType object) {
+			return BuiltinMetaModel.getCollectionType(getXpandElementType(object));
+		}
+		
+		@@Override
+		public EClassifier caseBagType(BagType object) {
+			return BuiltinMetaModel.getCollectionType(getXpandElementType(object));
+		}
+		
+		@@Override
+		public EClassifier caseSetType(SetType object) {
+			return BuiltinMetaModel.getSetType(getXpandElementType(object));
+		}
+		
+		@@Override
+		public EClassifier caseSequenceType(SequenceType object) {
+			return BuiltinMetaModel.getListType(getXpandElementType(object));
+		}
+		
+		@@Override
+		public EClassifier caseOrderedSetType(OrderedSetType object) {
+			return BuiltinMetaModel.getSetType(getXpandElementType(object));
+		}
+		
+		private EClassifier getXpandElementType(CollectionType collectionType) {
+			EClassifier elementType = this.doSwitch(collectionType.getElementType());
+			return elementType == null ? collectionType.getElementType() : elementType;
+		}
+	};
+
+	private QvtResource qvtResource;
+
+	private ImperativeOperation operation;
+
+	private List<String> parameterNames;
+
+	private List<EClassifier> parameterTypes;
+
+	private String fileName;
+
+	public QvtExtension(ImperativeOperation operation, QvtFile qvtFile, String fileName) {
+		qvtResource = qvtFile;
+		this.operation = operation;
+		this.fileName = fileName;
+	}
+
+	public void setQvtResource(QvtResource resource) {
+		qvtResource = resource;
+	}
+
+	public QvtResource getQvtResource() {
+		return qvtResource;
+	}
+
+	public Object evaluate(Object[] parameters, ExecutionContext ctx) {
+		Context context = new Context();
+		QvtOperationalEvaluationEnv evaluationEnv = QvtOperationalEnvFactory.INSTANCE.createEvaluationEnvironment(context, null);
+		// evaluationEnv.setOperationSelf("Hahaha");
+		// evaluationEnv.getOperationArgs().addAll();
+
+		// EvaluationVisitor<EPackage, EClassifier, EOperation,
+		// EStructuralFeature, EEnumLiteral, EParameter, EObject,
+		// CallOperationAction, SendSignalAction, Constraint, EClass, EObject>
+		// evaluator = factory.createEvaluationVisitor(rootEnv, evaluationEnv,
+		// null);
+		QvtOperationalEvaluationVisitorImpl evaluator = new QvtOperationalEvaluationVisitorImpl(qvtEnvironment, evaluationEnv);
+
+		// assert library.getEntry() == null;
+		// library.setEntry(library.getEOperations().get(0));
+		Variable selfVariable = ctx.getVariable(ExecutionContext.IMPLICIT_VARIABLE);
+		// TODO: remove first parameter if necessary..
+		List<Object> parametersVariable = Arrays.asList(parameters);
+		// TODO: (?) surround with try-catch block to catch *RuntimeExceptions from QVT execution.
+		// TODO: check if parametersVariable are passed correctly (values used)
+		OperationCallResult result = evaluator.executeImperativeOperation(operation, selfVariable.getValue(), parametersVariable, false);
+		return result == null ? null : result.myResult;
+	}
+
+	public String getName() {
+		return operation.getName();
+	}
+
+	public List<EClassifier> getParameterTypes() {
+		if (parameterTypes == null) {
+			parameterTypes = new ArrayList<EClassifier>();
+			// TODO: we should be able to distinguish between static and
+			// context-specific queries
+			if (operation.getContext() != null) {
+				parameterTypes.add(getXpandType(operation.getContext().getEType()));
+			}
+			for (EParameter parameter : operation.getEParameters()) {
+				parameterTypes.add(getXpandType(parameter.getEType()));
+			}
+			parameterTypes = Collections.unmodifiableList(parameterTypes);
+		}
+		return parameterTypes;
+	}
+
+	public List<String> getParameterNames() {
+		if (parameterNames == null) {
+			parameterNames = new ArrayList<String>();
+			for (EParameter parameter : operation.getEParameters()) {
+				parameterNames.add(parameter.getName());
+			}
+			parameterNames = Collections.unmodifiableList(parameterNames);
+		}
+		return parameterNames;
+	}
+
+	public EClassifier getReturnType(EClassifier[] parameters, ExecutionContext ctx, Set<AnalysationIssue> issues) {
+		// TODO: deduce return type here? (need another visitor?)
+		return getXpandType(operation.getEType());
+	}
+
+	private EClassifier getXpandType(EClassifier type) {
+		EClassifier result = ecoreSwitch.doSwitch(type);
+		return result == null ? type : result;
+	}
+
+	public void init(ExecutionContext ctx) {
+		// TODO nothing to do here? Call QVT to preparse AST?..
+	}
+
+	public String getFileName() {
+		return fileName;
+	}
+
+}
+@
+
+
+1.1.2.2
+log
+@New version of QVT API for query execution used.
+@
+text
+@a13 1
+import java.lang.reflect.InvocationTargetException;
+d15 1
+d26 1
+d29 5
+a33 2
+import org.eclipse.m2m.internal.qvt.oml.expressions.Helper;
+import org.eclipse.m2m.qvt.oml.runtime.util.HelperOperationCall;
+d46 1
+a46 1
+
+d48 1
+a48 1
+
+d63 1
+a63 1
+
+d68 1
+a68 1
+
+d73 1
+a73 1
+
+d78 1
+a78 1
+
+d83 1
+a83 1
+
+d88 1
+a88 1
+
+d97 2
+d105 1
+a105 4
+	private HelperOperationCall helperCall;
+
+	public QvtExtension(HelperOperationCall helperOperationCall, QvtFile qvtFile, String fileName) {
+		this.helperCall = helperOperationCall;
+d107 1
+d120 21
+a140 43
+		try {
+			if (helperCall.isContextual()) {
+				// TODO: this is a proper way to get context variable (self) for
+				// now
+				// getting this variable from the parameters array in accordance
+				// with OperationCall.evaluateInternal() implementation
+				// Variable selfVariable =
+				// ctx.getVariable(ExecutionContext.IMPLICIT_VARIABLE);
+				assert parameters.length > 0;
+				Object self = parameters[0];
+				Object[] actualParameters = new Object[parameters.length - 1];
+				System.arraycopy(parameters, 1, actualParameters, 0, parameters.length - 1);
+				return helperCall.invoke(self, actualParameters);
+			} else {
+				return helperCall.invoke(parameters);
+			}
+		} catch (IllegalArgumentException e) {
+			throw new RuntimeException("Illigal arguments in QVT helper (" + getSignature(helperCall.getOperation()) + ") call: " + e.getMessage());
+		} catch (InvocationTargetException e) {
+			throw new RuntimeException("Invocation target exception in QVT helper (" + getSignature(helperCall.getOperation()) + ") call: " + e.getMessage());
+		}
+	}
+
+	private String getSignature(Helper operation) {
+		StringBuilder sb = new StringBuilder();
+		if (operation.getContext() != null) {
+			sb.append(operation.getContext().getEType().getName());
+			sb.append("::");
+		}
+		sb.append(operation.getName());
+		sb.append("(");
+		for (EParameter parameter : operation.getEParameters()) {
+			if (sb.lastIndexOf("(") != sb.length() - 1) {
+				sb.append(",");
+			}
+			sb.append(parameter.getName());
+			sb.append(":");
+			sb.append(parameter.getEType().getName());
+		}
+		sb.append(")");
+		sb.append(":");
+		sb.append(operation.getEType().getName());
+		return sb.toString();
+d144 1
+a144 1
+		return getHelper().getName();
+d152 2
+a153 2
+			if (getHelper().getContext() != null) {
+				parameterTypes.add(getXpandType(getHelper().getContext().getEType()));
+d155 1
+a155 1
+			for (EParameter parameter : getHelper().getEParameters()) {
+d166 1
+a166 1
+			for (EParameter parameter : getHelper().getEParameters()) {
+d176 1
+a176 1
+		return getXpandType(getHelper().getEType());
+a191 4
+	private Helper getHelper() {
+		return helperCall.getOperation();
+	}
+
+@
+
+
+1.1.2.3
+log
+@[243154] Use OCL instead of home-grown expression language. Refactored to eliminate context specific to expressions (moving towards using OCL environment for that), split modifiable (context-specific) and static execution data.
+@
+text
+@d24 2
+a25 2
+import org.eclipse.gmf.internal.xpand.model.AnalysationIssue;
+import org.eclipse.gmf.internal.xpand.model.ExecutionContext;
+@
+
+
+1.1.2.4
+log
+@[243154] Use OCL instead of home-grown expression language - most (what's feasible) of the extension invocation fixed. A lot of hacks and questions, though.
+@
+text
+@a20 1
+import org.eclipse.emf.ecore.EOperation;
+d22 2
+d26 2
+d30 8
+d41 50
+d171 1
+a171 1
+				parameterTypes.add(getHelper().getContext().getEType());
+d174 1
+a174 1
+				parameterTypes.add(parameter.getEType());
+a191 1
+	// FIXME what's this method for? can't find a use...
+d194 6
+a199 1
+		return getHelper().getEType();
+a213 7
+	public EClassifier getContext() {
+		return helperCall.getContextType();
+	}
+
+	public EOperation getOperation() {
+		return helperCall.getOperation();
+	}
+@
+
+

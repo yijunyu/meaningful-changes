@@ -1,0 +1,262 @@
+head	1.2;
+access;
+symbols
+	v20081022-1925:1.2
+	v20081020-0700:1.2
+	ocl_qvt:1.2.0.6
+	Root_ocl_qvt:1.2
+	v20080722-1827:1.2
+	v20080718-1731:1.2
+	v20080716-1600:1.2
+	v20080716-1642:1.2
+	R2_1_maintenance:1.2.0.4
+	Root_R2_1_maintenance:1.2
+	R2_1_0:1.2
+	v20080528-1052:1.2
+	v20080516-1143:1.2
+	v20080417-1610:1.2
+	v20080322-0000:1.2
+	v20080222-1200:1.2
+	v20071130-1111:1.2
+	v20071124-0000:1.2
+	v20071108-0000:1.2
+	v20071003-0000:1.2
+	v20070921-0000:1.2
+	v20070903-0000:1.2
+	v20070809-0000:1.2
+	R2_0_maintenance:1.2.0.2
+	R2_0:1.2
+	R4_20:1.2
+	RC3_20:1.2
+	v20070608-1300:1.2
+	v20070605-1400:1.2
+	v20070601-1400:1.2
+	v20070518-1300:1.2
+	v20070420-1000:1.2
+	v20070405-1100:1.2
+	v20070403-1500:1.2
+	v20070330-1300:1.2
+	v20070208-1800:1.2
+	v20070103-0300:1.2
+	M4_20:1.2
+	M3_20:1.2;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2006.10.24.18.31.37;	author atikhomirov;	state Exp;
+branches
+	1.2.6.1;
+next	1.1;
+
+1.1
+date	2006.10.18.20.33.51;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+1.2.6.1
+date	2008.08.05.12.49.24;	author atikhomirov;	state dead;
+branches;
+next	;
+commitid	546c48984c4a4567;
+
+
+desc
+@@
+
+
+1.2
+log
+@no way to initialize factory without file name (though not sure it's needed at all)
+@
+text
+@/*
+ * <copyright>
+ *
+ * Copyright (c) 2005-2006 Sven Efftinge and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Sven Efftinge - Initial API and implementation
+ *
+ * </copyright>
+ */
+package org.eclipse.gmf.internal.xpand.expression.parser;
+
+import java.util.List;
+
+import org.eclipse.gmf.internal.xpand.expression.ast.BooleanLiteral;
+import org.eclipse.gmf.internal.xpand.expression.ast.BooleanOperation;
+import org.eclipse.gmf.internal.xpand.expression.ast.Case;
+import org.eclipse.gmf.internal.xpand.expression.ast.Cast;
+import org.eclipse.gmf.internal.xpand.expression.ast.ChainExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.CollectionExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.ConstructorCallExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.DeclaredParameter;
+import org.eclipse.gmf.internal.xpand.expression.ast.Expression;
+import org.eclipse.gmf.internal.xpand.expression.ast.FeatureCall;
+import org.eclipse.gmf.internal.xpand.expression.ast.Identifier;
+import org.eclipse.gmf.internal.xpand.expression.ast.IfExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.IntegerLiteral;
+import org.eclipse.gmf.internal.xpand.expression.ast.LetExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.ListLiteral;
+import org.eclipse.gmf.internal.xpand.expression.ast.NullLiteral;
+import org.eclipse.gmf.internal.xpand.expression.ast.OperationCall;
+import org.eclipse.gmf.internal.xpand.expression.ast.RealLiteral;
+import org.eclipse.gmf.internal.xpand.expression.ast.StringLiteral;
+import org.eclipse.gmf.internal.xpand.expression.ast.SwitchExpression;
+import org.eclipse.gmf.internal.xpand.expression.ast.SyntaxElement;
+import org.eclipse.gmf.internal.xpand.expression.ast.TypeSelectExpression;
+
+import lpg.lpgjavaruntime.IToken;
+
+/**
+ * @@author Sven Efftinge
+ * @@author Arno Haase
+ */
+public class ExpressionFactory {
+
+	private String fileName;
+
+	public ExpressionFactory(final String string) {
+		fileName = string;
+	}
+
+	protected static int end(final IToken c) {
+		return c.getEndColumn();
+	}
+
+	protected static int start(final IToken c) {
+		return c.getColumn() - 1;
+	}
+
+	protected static int line(final IToken c) {
+		return c.getLine();
+	}
+
+	public StringLiteral createStringLiteral(final IToken t) {
+		return handle(new StringLiteral(start(t), end(t), line(t), t.toString()));
+	}
+
+	public IntegerLiteral createIntegerLiteral(final IToken t) {
+		return handle(new IntegerLiteral(start(t), end(t), line(t), t.toString()));
+	}
+
+	public BooleanLiteral createBooleanLiteral(final IToken t) {
+		return handle(new BooleanLiteral(start(t), end(t), line(t), t.toString()));
+	}
+
+	public NullLiteral createNullLiteral(final IToken t) {
+		return handle(new NullLiteral(start(t), end(t), line(t)));
+	}
+
+	public ListLiteral createListLiteral(final IToken start, final IToken end, final List<Expression> paramExpr) {
+		return handle(new ListLiteral(start(start), end(end), line(start), paramExpr.toArray(new Expression[paramExpr.size()])));
+	}
+
+	public FeatureCall createFeatureCall(final Identifier name, final Expression target) {
+		return handle(new FeatureCall(name.getStart(), name.getEnd(), name.getLine(), name, target));
+	}
+
+	public Identifier createIdentifier(IToken name) {
+		return new Identifier(start(name), end(name), line(name), name.toString());
+	}
+
+	public OperationCall createOperationCall(final IToken endToken, final IToken name, final Expression target, final List<Expression> parameterExpressions) {
+		final int start = start(name);
+		final int line = line(name);
+		final int end = end(endToken);
+		final Expression[] params = parameterExpressions.toArray(new Expression[parameterExpressions.size()]);
+		return handle(new OperationCall(start, end, line, createIdentifier(name), target, params));
+	}
+
+	// XXX
+	public OperationCall createOperationCall(final int start, final int end, final int line, final IToken name, final Expression target, final List<Expression> parameterExpressions) {
+		final Expression[] params = parameterExpressions.toArray(new Expression[parameterExpressions.size()]);
+		return handle(new OperationCall(start, end, line, createIdentifier(name), target, params));
+	}
+
+	public IfExpression createIf(final Expression cond, final Expression then, final Expression elseExpr) {
+		final int start = cond.getStart();
+		final int line = cond.getLine();
+		final int end = elseExpr.getEnd();
+		return handle(new IfExpression(start, end, line, cond, then, elseExpr));
+	}
+
+	public CollectionExpression createCollectionExpression(final IToken opName, final IToken endToken, final IToken elementName, final Expression closure, final Expression target) {
+		return handle(new CollectionExpression(end(endToken), createIdentifier(opName), elementName == null ? null : elementName.toString(), closure, target));
+	}
+
+	public DeclaredParameter createDeclaredParameter(final Identifier type, final Identifier name) {
+		return handle(new DeclaredParameter(type.getStart(), name.getEnd(), type.getLine(), type, name));
+	}
+
+	public Expression createCast(final IToken start, final Identifier t, final Expression e) {
+		return handle(new Cast(start(start), e.getEnd(), line(start), t, e));
+	}
+
+	protected <T extends SyntaxElement> T handle(final T expr) {
+		expr.setFileName(fileName);
+		return expr;
+	}
+
+	public Case createCase(final IToken start, final Expression cond, final Expression then) {
+		return handle(new Case(start(start), then.getEnd(), line(start), cond, then));
+	}
+
+	public SwitchExpression createSwitchExpression(final IToken start, final IToken end, final Expression switchExpr, final List<Case> cases, final Expression defaultExpr) {
+		return handle(new SwitchExpression(start(start), end(end), line(start), switchExpr, cases, defaultExpr));
+	}
+
+	public ChainExpression createChainExpression(final Expression head, final Expression next) {
+		return handle(new ChainExpression(head.getStart(), next.getEnd(), head.getLine(), head, next));
+	}
+
+	public RealLiteral createRealLiteral(final IToken token) {
+		return handle(new RealLiteral(start(token), end(token), line(token), token.toString()));
+	}
+
+	public FeatureCall createTypeSelectExpression(final IToken id, final IToken c1, final Identifier ident, final Expression e) {
+		return handle(new TypeSelectExpression(end(c1), createIdentifier(id), ident, e));
+	}
+
+	public BooleanOperation createBooleanOperation(final int start, final int end, final int line, final IToken name, final Expression e, final Expression r) {
+		return handle(new BooleanOperation(start, end, line, name.toString(), e, r));
+	}
+
+	public LetExpression createLetExpression(final IToken start, final IToken v, final Expression varExpr, final Expression target) {
+		return handle(new LetExpression(start(start), target.getEnd(), line(start), createIdentifier(v), varExpr, target));
+	}
+
+	public Expression createConstructorCall(final IToken s, final Identifier type) {
+		return handle(new ConstructorCallExpression(start(s), type.getEnd(), line(s), type));
+	}
+}
+@
+
+
+1.2.6.1
+log
+@[243154] Use OCL instead of home-grown expression language
+@
+text
+@@
+
+
+1.1
+log
+@Initial contribution of the reworked XPand template engine from eclipse.org/gmt/oaw to be used until M2T deliveries are available.
+The contribution (including LPG 1.1 runtime) was approved by Eclipse Legal at the very end of September, 2006.
+@
+text
+@a55 4
+	public ExpressionFactory() {
+		fileName = "nofile";
+	}
+
+@
+

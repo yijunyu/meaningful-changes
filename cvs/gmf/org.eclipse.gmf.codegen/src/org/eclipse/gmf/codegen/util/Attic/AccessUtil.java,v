@@ -1,0 +1,539 @@
+head	1.16;
+access;
+symbols
+	v20081022-1925:1.16
+	v20081015-1925:1.16
+	v20081008-1925:1.16
+	v20081001-1925:1.16
+	v20080924-1925:1.16
+	v20080917-1925:1.16
+	v20080911-1728:1.16
+	v20080910-1520:1.16
+	v20080903-1520:1.16
+	v20080827-1520:1.16
+	v20080813-1520:1.16
+	v20080806-1520:1.16
+	R1_0_maintenance:1.16.0.2
+	R1_0:1.16
+	I20060113-1700:1.15
+	M4_10:1.15
+	I20060107-1100:1.15
+	I20060105-1630:1.15
+	I20051230-1230:1.15
+	I20051223-1100:1.15
+	I20051217-0925:1.14
+	I20051208-2000:1.13
+	I20051201-1800:1.13
+	I20051124-2000:1.13
+	M3_10:1.13
+	I20051118-1245:1.13
+	I20051111-1800:1.12
+	I20051106-0900:1.9
+	v20051030:1.8;
+locks; strict;
+comment	@# @;
+expand	@k@;
+
+
+1.16
+date	2006.01.19.00.10.43;	author ashatalin;	state dead;
+branches;
+next	1.15;
+
+1.15
+date	2005.12.20.18.00.01;	author ashatalin;	state Exp;
+branches;
+next	1.14;
+
+1.14
+date	2005.12.13.17.11.22;	author ashatalin;	state Exp;
+branches;
+next	1.13;
+
+1.13
+date	2005.11.16.13.30.02;	author dstadnik;	state Exp;
+branches;
+next	1.12;
+
+1.12
+date	2005.11.11.13.47.42;	author dstadnik;	state Exp;
+branches;
+next	1.11;
+
+1.11
+date	2005.11.11.09.17.26;	author dstadnik;	state Exp;
+branches;
+next	1.10;
+
+1.10
+date	2005.11.10.18.32.55;	author dstadnik;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2005.11.02.17.53.03;	author atikhomirov;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2005.10.27.16.12.20;	author atikhomirov;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2005.10.26.18.43.48;	author atikhomirov;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2005.10.21.13.31.56;	author atikhomirov;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2005.10.18.11.09.13;	author atikhomirov;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2005.10.14.12.17.18;	author atikhomirov;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2005.10.10.12.57.39;	author atikhomirov;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2005.10.04.15.40.37;	author atikhomirov;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2005.09.29.09.49.40;	author atikhomirov;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.16
+log
+@#124413
+Allowing infinite hierarchy of GenChildNodes
+@
+text
+@/*
+ * Copyright (c) 2005 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Dmitri Stadnik (Borland) - initial API and implementation
+ */
+package org.eclipse.gmf.codegen.util;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+
+import org.eclipse.gmf.codegen.gmfgen.GenChildContainer;
+import org.eclipse.gmf.codegen.gmfgen.GenChildNode;
+import org.eclipse.gmf.codegen.gmfgen.GenCompartment;
+import org.eclipse.gmf.codegen.gmfgen.GenDiagram;
+import org.eclipse.gmf.codegen.gmfgen.GenNode;
+
+/**
+ * Utility methods for templates.
+ * 
+ * @@author dstadnik
+ */
+public class AccessUtil {
+
+	private AccessUtil() {}
+	
+	// model access
+	
+	public static List getAllChildNodes(GenNode node) {
+		List result = new LinkedList();
+		result.addAll(node.getChildNodes());
+		for (Iterator it = node.getCompartments().iterator(); it.hasNext();) {
+			GenCompartment nextCompartment = (GenCompartment) it.next();
+			result.addAll(nextCompartment.getChildNodes());
+		}
+		return result;
+	}
+	
+	public static Collection getAllContainers(GenDiagram diagram) {
+		Collection result = new LinkedList();
+		for (Iterator nodes = diagram.getNodes().iterator(); nodes.hasNext();) {
+			GenNode nextNode = (GenNode) nodes.next();
+			fillContainers(result, nextNode);
+		}
+		return result;
+	}
+	
+	private static void fillContainers(Collection result, GenChildContainer container) {
+		result.add(container);
+		for (Iterator childNodes = container.getChildNodes().iterator(); childNodes.hasNext();) {
+			GenChildNode childNode = (GenChildNode) childNodes.next();
+			fillContainers(result, childNode);
+		}
+		if (container instanceof GenNode) {
+			GenNode genNode = (GenNode) container;
+			for (Iterator compartments = genNode.getCompartments().iterator(); compartments.hasNext();) {
+				GenCompartment compartment = (GenCompartment) compartments.next();
+				fillContainers(result, compartment);
+			}
+		}
+	}
+}
+@
+
+
+1.15
+log
+@#121581
+Fields for the compartments are named unique.
+@
+text
+@@
+
+
+1.14
+log
+@#120553
+- Adding accessors for the palette entries factory methods into genmodel
+- Refreshing unit-tests
+- Fixing some old problems found by this refreshment.
+@
+text
+@a22 1
+import org.eclipse.gmf.codegen.gmfgen.GenLabel;
+a32 33
+
+	private static String asJavaConstantName(String s) {
+		s = s.toUpperCase();
+		StringBuffer b = new StringBuffer();
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (i == 0) {
+				if (!Character.isJavaIdentifierStart(c)) {
+					c = '_';
+				}
+			} else {
+				if (!Character.isJavaIdentifierPart(c)) {
+					c = '_';
+				}
+			}
+			b.append(c);
+		}
+		return b.toString();
+	}
+
+	// naming patterns
+
+	public static String getCompartmentId(GenCompartment compartment) {
+		return asJavaConstantName(compartment.getTitle());
+	}
+
+	public static String getLabelId(GenLabel label) {
+		return label.getMetaFeature().getUpperName() + "_LABEL"; //$NON-NLS-1$
+	}
+
+	public static String getLabelTextId(GenLabel label) {
+		return label.getMetaFeature().getUpperName() + "_TEXT"; //$NON-NLS-1$
+	}
+@
+
+
+1.13
+log
+@#116399 Expose user-defined features of domain elements in property sheet
+@
+text
+@a18 1
+import org.eclipse.gmf.codegen.gmfgen.EntryBase;
+a59 4
+	public static String getPaletteEntryId(EntryBase entry) {
+		return asJavaConstantName(entry.getTitleKey());
+	}
+
+d67 1
+a67 1
+
+@
+
+
+1.12
+log
+@#115972 generate single class with semantic hints
+@
+text
+@a21 1
+import org.eclipse.gmf.codegen.gmfgen.GenCommonBase;
+@
+
+
+1.11
+log
+@#115970 prepend base package; remove stale methods
+@
+text
+@a73 4
+	public static String getSemanticHintsClassName(GenCommonBase genElement) {
+		return genElement.getClassNamePrefix() + genElement.getClassNameSuffux() + "SemanticHints"; //$NON-NLS-1$
+	}
+
+@
+
+
+1.10
+log
+@#115622 use genDiagram.eAllContents() to iterate over diagram contents instead of using custom iterator
+@
+text
+@a73 4
+	public static String getNodeLabelEditPartClassName(GenNode genNode) {
+		return "Label" + genNode.getEditPartClassName(); //$NON-NLS-1$
+	}
+
+@
+
+
+1.9
+log
+@[ashatalin] #114750 annotate diagram runtime model elements with visual id to tell one from another during EP decision making
+@
+text
+@a116 81
+
+	/**
+	 * Returns iterator that traverse gen entities hierarchy
+	 * starting from the specified root entity.
+	 */
+	public static Iterator getGenEntities(GenCommonBase genEntity) {
+		return new GenIterator(genEntity);
+	}
+
+	private static class GenIterator implements Iterator {
+
+		private GenCommonBase entity;
+		private int feature; // internal id of the current structural feature
+		private Iterator featureIterator; // running iterator for the feature
+		private Object nextValue;
+
+		public GenIterator(GenCommonBase entity) {
+			this.entity = entity;
+			nextValue = entity;
+		}
+
+		public boolean hasNext() {
+			return nextValue != null;
+		}
+
+		public Object next() {
+			if (nextValue == null) {
+				return null;
+			}
+			Object value;
+			if (nextValue instanceof GenIterator) {
+				GenIterator nextIterator = (GenIterator) nextValue;
+				value = nextIterator.next();
+				if (!nextIterator.hasNext()) {
+					nextValue = advance();
+				}
+			} else {
+				value = nextValue;
+				nextValue = advance();
+			}
+			if (nextValue instanceof GenNode) {
+				nextValue = new GenIterator((GenNode) nextValue);
+			}
+			return value;
+		}
+
+		public void remove() {}
+
+		protected Object advance() {
+			if (featureIterator == null) {
+				assert feature == 0;
+				featureIterator = createFeatureIterator(++feature);
+			}
+			while (!featureIterator.hasNext()) {
+				featureIterator = createFeatureIterator(++feature);
+				if (featureIterator == null) {
+					// no more features to traverse
+					return null;
+				}
+			}
+			return featureIterator.next();
+		}
+
+		protected Iterator createFeatureIterator(int feature) {
+			Iterator i = null;
+			if (entity instanceof GenDiagram) {
+				GenDiagram genDiagram = (GenDiagram) entity;
+				if (feature == 1) {
+					i = genDiagram.getNodes().iterator();
+				} else if (feature == 2) {
+					i = genDiagram.getLinks().iterator();
+				}
+			} else if (entity instanceof GenNode) {
+				GenNode genNode = (GenNode) entity;
+				if (feature == 1) {
+					i = getAllChildNodes(genNode).iterator();
+				}
+			}
+			return i;
+		}
+	}
+@
+
+
+1.8
+log
+@[ashatalin] #113892 flexible compartment hierarchy
+@
+text
+@d14 1
+d20 2
+d93 24
+@
+
+
+1.7
+log
+@[rdvorak] #113856 refactor features left in GenBaseElement to TypeModelFacet
+@
+text
+@d15 2
+a18 1
+import org.eclipse.gmf.codegen.gmfgen.GenChildContainer;
+d20 1
+d55 2
+a56 2
+	public static String getCompartmentId(GenChildContainer compartment) {
+		return asJavaConstantName(compartment.getTitleKey());
+d80 10
+d165 1
+a165 1
+					i = genNode.getChildNodes().iterator();
+@
+
+
+1.6
+log
+@[dstadnik] #112195 multiple labels for the node, facets introduced, genmodel cleaned and refactored
+@
+text
+@a16 1
+import org.eclipse.gmf.codegen.gmfgen.GenBaseElement;
+d73 1
+a73 1
+	public static String getSemanticHintsClassName(GenBaseElement genElement) {
+@
+
+
+1.5
+log
+@[dstadnik] #112174 and #112185 - constants for compartments and labels
+@
+text
+@d21 1
+a22 1
+import org.eclipse.gmf.codegen.gmfgen.LinkLabel;
+d62 2
+a63 3
+	public static String getLinkLabelViewFactoryClassName(LinkLabel label) {
+		String name = label.getLink().getNotationViewFactoryClassName();
+		return label.getDomainMetaFeature().getCapName() + name;
+d66 2
+a67 6
+	public static String getLinkLabelId(LinkLabel label) {
+		return label.getDomainMetaFeature().getUpperName() + "_LABEL"; //$NON-NLS-1$
+	}
+
+	public static String getLinkLabelTextId(LinkLabel label) {
+		return label.getDomainMetaFeature().getUpperName() + "_TEXT"; //$NON-NLS-1$
+a73 4
+	public static String getNameSemanticHint(GenBaseElement genElement) {
+		return genElement.getDomainNameFeature().getName();
+	}
+
+@
+
+
+1.4
+log
+@[dstadnik] #112176 support references w/o domain class
+@
+text
+@d18 1
+d33 19
+d54 4
+d59 1
+a59 2
+		String id = entry.getTitleKey();
+		return id.replace(' ', '_');
+d67 2
+a68 2
+	public static String getLinkLabelViewName(LinkLabel label) {
+		return "label" + label.getDomainMetaFeature().getCapName(); //$NON-NLS-1$
+d71 2
+a72 2
+	public static String getLinkLabelTextViewName(LinkLabel label) {
+		return "text" + label.getDomainMetaFeature().getCapName(); //$NON-NLS-1$
+@
+
+
+1.3
+log
+@[dstadnik]
+#111780 Link labels with read-only flag and relative positioning
+@
+text
+@a19 1
+import org.eclipse.gmf.codegen.gmfgen.GenLinkWithClass;
+d61 1
+a61 7
+		String domainClassName;
+		if (genElement instanceof GenLinkWithClass) {
+			domainClassName = ((GenLinkWithClass) genElement).getDomainMetaClass().getName();
+		} else {
+			domainClassName = ((GenNode) genElement).getDomainMetaClass().getName();
+		}
+		return domainClassName + "SemanticHints"; //$NON-NLS-1$
+@
+
+
+1.2
+log
+@[dstadnik]
+#111455 Generate consistent names for notation view factories
+#111461 Do not use 'final' keyword in method parameters
+#111460 Generate dedicated edit part for the node label
+#111457 Use model labels in palette factory
+@
+text
+@d22 1
+d40 13
+@
+
+
+1.1
+log
+@[dstadnik] Use Notation Model as runtime model
+@
+text
+@d16 1
+d34 9
+@
+
