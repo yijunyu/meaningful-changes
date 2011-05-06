@@ -293,23 +293,13 @@ function normalise_preferred_replace_method_body_block1
  
 end function
 
-function normalise_ignore_by2_modifier_annotation1 E1  [modifier] N1  [annotation]
-    replace  [annotation *]
-        Seq  [annotation *] 
-    by
-        Seq 
-end function
-
 function normalise_ignore_by3_modifier_annotation1 E1  [modifier]
     replace  [modifier *]
         Seq  [modifier *] 
-    construct N1  [annotation *]
-        _  [ ^  E1 ] 
-    construct N2  [annotation *]
-        _  [normalise_ignore_by2_modifier_annotation1  E1  each  N1]
- 
+    deconstruct E1
+        X1  [repeat annotation] 
     construct E2  [modifier]
-        E1  [ $  N1  N2 ] 
+
     by
         Seq  [ . E2 ] 
 end function
@@ -366,23 +356,13 @@ rule normalise_list_enum_body_class_body_declaration
         N2  N1  Rest 
 end rule
 
-function normalise_ignore_by2_package_declaration_import_declaration1 E1  [package_declaration] N1  [import_declaration]
-    replace  [import_declaration *]
-        Seq  [import_declaration *] 
-    by
-        Seq 
-end function
-
 function normalise_ignore_by3_package_declaration_import_declaration1 E1  [package_declaration]
     replace  [package_declaration *]
         Seq  [package_declaration *] 
-    construct N1  [import_declaration *]
-        _  [ ^  E1 ] 
-    construct N2  [import_declaration *]
-        _  [normalise_ignore_by2_package_declaration_import_declaration1  E1  each  N1]
- 
+    deconstruct E1
+        X2  [opt package_header]  X3  [repeat import_declaration]  X4  [repeat type_declaration] 
     construct E2  [package_declaration]
-        E1  [ $  N1  N2 ] 
+        X2  X4 
     by
         Seq  [ . E2 ] 
 end function
