@@ -1,5 +1,5 @@
 function count_bytes(){
-for fmt in v v.diff v.clone; do
+for fmt in v v.diff v.clone v.ldiff; do
   count0=$(cat *.$fmt | wc) 
   count1=$(cat *.$fmt | grep "^[0-9]" | wc) 
   count2=$(cat *.$fmt | grep -v "^[0-9]" | wc) 
