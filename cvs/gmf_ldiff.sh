@@ -11,6 +11,6 @@ for f in `cat java.txt`; do
    echo -n .
    x=0
  fi
- rlog -q $f | awk -f ../diff.awk
+ rlog -q $f | awk -f ../ldiff.awk
 done
 cd -

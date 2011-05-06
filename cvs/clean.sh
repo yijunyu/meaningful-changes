@@ -1,5 +1,5 @@
 #rm -f *.java
-#rm -f *.diff 
+rm -f *.diff 
 rm -f *.normal
 rm -f *.normal_error
 rm -f *.ldiff 
