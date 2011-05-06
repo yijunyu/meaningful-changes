@@ -283,7 +283,7 @@ function typeSpec_ignore_LoT TID [typeid] T [typeSpec] LoT [literalOrType*]
         'construct 'List1 '[ TID '* '] '_ '[ '^ 'P1 '] 
         'construct 'List2 '[ TID '* ']
             '_ '[ ruleID3 'each 'List1 ']
-        'construct 'P2 '[ 'program '] 'P1 '[ '$ 'each 'List1 'List2 ']
+        'construct 'P2 '[ 'program '] 'P1 '[ '$ 'List1 'List2 ']
        'by 'P2
     'end 'function
  import Rules [statement*]

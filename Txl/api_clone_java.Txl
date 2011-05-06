@@ -313,8 +313,7 @@ function normalise_ignore_by4_modifier_annotation1
         _  [normalise_ignore_by3_modifier_annotation1  each  List1]
  
     construct P2  [program]
-        P1  [$  each  List1  List2]
- 
+        P1  [ $  List1  List2 ] 
     by
         P2 
 end function
@@ -376,8 +375,7 @@ function normalise_ignore_by4_package_declaration_import_declaration1
         _  [normalise_ignore_by3_package_declaration_import_declaration1  each  List1]
  
     construct P2  [program]
-        P1  [$  each  List1  List2]
- 
+        P1  [ $  List1  List2 ] 
     by
         P2 
 end function
