@@ -247,7 +247,8 @@ end function
 %
 function typeSpec_ignore DS [redefineStatement] T [typeSpec]
  replace [statement*] S [statement*] 
- deconstruct DS 'redefine TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'redefine TID [typeid] 
+	LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
  by S [typeSpec_ignore_LoT TID T LoT] 
       [typeSpec_ignore_BLoT TID T each BLoT]
 end function
@@ -299,14 +300,17 @@ function typeSpec_ignore_BLoT TID [typeid] T [typeSpec] BLoT [barLiteralsAndType
 end function
 
 %
-% Use the whenField 'ignored 'when F where F is a user-defined function. In the
-% transformed rule, it will be used by the 'where E1 '[ F E2 '] clause to
+% Use the whenField ['ignored 'when F] where F is a user-defined function. In
+% the transformed rule, it will be used by the 'where E1 '[ F E2 '] clause to
 % select the elements that matches to be ignored, where E1 is the scope of the
 % ignored non-terminal and E2 is the ignored non-terminal
 %
+
 function typeSpec_ignore_when DS [redefineStatement] T [typeSpec]
- replace [statement*] S [statement*] 
- deconstruct DS 'redefine TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
+ import Rules [statement*]
+ import IgnoreRuleIDs [id*]
+ replace [statement*] _ [statement*] 
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  deconstruct Ig 'ignored W [whenField]
  deconstruct W 'when F [id]
