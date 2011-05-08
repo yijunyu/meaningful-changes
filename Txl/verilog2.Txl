@@ -72,11 +72,9 @@ function normalise_ignore_by3_module_statement1 E1  [module]
     replace  [module *]
         Seq  [module *] 
     deconstruct E1
-        X1  [module_declaration]  ';  X2  [NL]
-        X3  [repeat statement]  X4  [NL]
-        'endmodule  X5  [NL] 
+        X1  [module_declaration]  ';  X2  [repeat statement]  'endmodule 
     construct E2  [module]
-        X1  ';  X2  X4  'endmodule  X5 
+        X1  ';  'endmodule 
     by
         Seq  [ . E2 ] 
 end function

@@ -1,5 +1,4 @@
 include "txl.grm"
-%
 % Yijun Yu: adapted from grm.txl by inserting the following pragma after 'list
 % or 'repeat: 'ordered ['by '[ name '] ]
 %
@@ -261,7 +260,7 @@ function typeSpec_ignore_LoT TID [typeid] T [typeSpec] LoT [literalOrType*]
  construct StrID [id] _ [quote TID]
  export Expression [literalOrExpression*] _
  construct TT [type] '[ T ']
- construct Pat [literalOrVariable*] _ [pattern_repacement TT each LoT]
+ construct Pat [literalOrVariable*] _ [pattern_replacement TT each LoT]
  % import Expression
  construct Pattern [pattern] Pat
  construct Replacement [replacement] Expression
@@ -300,20 +299,31 @@ function typeSpec_ignore_BLoT TID [typeid] T [typeSpec] BLoT [barLiteralsAndType
 end function
 
 %
-% Use the byField 'ignored 'when F where F is a user-defined function. In the
+% Use the whenField 'ignored 'when F where F is a user-defined function. In the
 % transformed rule, it will be used by the 'where E1 '[ F E2 '] clause to
 % select the elements that matches to be ignored, where E1 is the scope of the
 % ignored non-terminal and E2 is the ignored non-terminal
 %
-function typeSpec_ignore_whenField_R DS [redefineStatement] T [typeSpec]
- import Rules [statement*]
- import IgnoreRuleIDs [id*]
- replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+function typeSpec_ignore_when DS [redefineStatement] T [typeSpec]
+ replace [statement*] S [statement*] 
+ deconstruct DS 'redefine TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  deconstruct Ig 'ignored W [whenField]
  deconstruct W 'when F [id]
+ by S [typeSpec_ignore_when_LoT F TID T LoT] 
+      [typeSpec_ignore_when_BLoT F TID T each BLoT]
+end function
+% LoT 
+function typeSpec_ignore_when_LoT F [id] TID [typeid] T [typeSpec] LoT [literalOrType*] 
+ replace [statement*] S [statement*] 
+ where LoT [contains T]
  construct StrID [id] _ [quote TID]
+ export Expression [literalOrExpression*] _
+ construct TT [type] '[ T ']
+ construct Pat [literalOrVariable*] _ [pattern_replacement_N12 TT each LoT]
+ construct Pattern [pattern] Pat
+ construct Replacement [replacement] Expression
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  deconstruct I TypeID [id] 
  construct ID1 [id] 'normalise_ignore_by1
  construct ruleID1 [id] ID1 [_ F] [_ StrID] [_ TypeID] [!]
@@ -337,11 +347,11 @@ function typeSpec_ignore_whenField_R DS [redefineStatement] T [typeSpec]
     'end 'function
     'function ruleID3 'E1 '[ TID ']
     	'replace '[ TID '* '] 'Seq '[ TID '* ']
-        'construct 'N1 '[ I '* '] '_ '[ '^ 'E1 ']
+        'deconstruct 'E1 Pattern
 	'construct 'N2 '[ I '*' ] 
 		'_ '[ ruleID1 'E1 'each 'N1 ']
 		   '[ ruleID2 'E1 'each 'N1 ']
-        'construct 'E2  '[ TID '] 'E1  '[ '$ 'N1 'N2 '] 
+        'construct 'E2  '[ TID '] Expression
      	'by 'Seq '[ '. 'E2 '] 
     'end 'function
     'function ruleID4
@@ -352,9 +362,19 @@ function typeSpec_ignore_whenField_R DS [redefineStatement] T [typeSpec]
         'construct 'P2 '[ 'program '] 'P1 '[ '$ 'each 'List1 'List2 ']
        'by 'P2
     'end 'function
+ import Rules [statement*]
  export Rules Rules [. S1] 
+ import IgnoreRuleIDs [id*]
  export IgnoreRuleIDs IgnoreRuleIDs [. ruleID4]
- by S1 
+ by S [. S1]
+end function
+%
+% BLoT
+%
+function typeSpec_ignore_when_BLoT F [id] TID [typeid] T [typeSpec] BLoT [barLiteralsAndTypes] 
+ replace [statement*] S [statement*] 
+ deconstruct BLoT '| LoT [literalOrType*]
+ by S [typeSpec_ignore_when_LoT F TID T LoT]
 end function
 
 %
@@ -406,7 +426,7 @@ function DS_replace DS [redefineStatement]
  construct S2 [statement*] _ [typeSpec_repeat_byField DS each T]
  construct S3 [statement*] _ [typeSpec_list_byField DS each T]
  construct S4 [statement*] _ [typeSpec_list DS each T]
- construct S5 [statement*] _ [typeSpec_ignore_whenField_R DS each T]
+ construct S5 [statement*] _ [typeSpec_ignore_when DS each T]
  construct S6 [statement*] _ [typeSpec_ignore DS each T]
  construct S7 [statement*] _ [typeSpec_preferred_withField DS each T]
  construct S [statement*] S0 [. S1] [. S2] [. S3] [. S4] [. S5] [. S6] [. S7]
@@ -435,7 +455,7 @@ end function
 % keep the literalOrType in Pattern if it is a literal, or the same as the typeid I
 % keep the literalOrType in Expression if it is a literal, or not the same as the typeid I
 %
-function pattern_repacement T [type] LoT [literalOrType]
+function pattern_replacement T [type] LoT [literalOrType]
  replace [literalOrVariable*] Pattern [literalOrVariable*]
  by Pattern [pattern_replacement_ignore_per_literal T LoT] 
 	    [pattern_replacement_ignore_per_literal1 T LoT] 
@@ -467,6 +487,8 @@ function pattern_replacement_ignore_per_literal2 T [type] LoT [literalOrType]
  replace [literalOrVariable*] Pattern [literalOrVariable*]
  deconstruct not LoT T
  deconstruct LoT T1 [type]
+ construct S [stringlit] _ [quote T1]
+ where not S [grep 'NL]
  construct X [id] 'X 
  construct V [varid] X [!]
  construct Var [literalOrVariable] V T1 
@@ -474,6 +496,30 @@ function pattern_replacement_ignore_per_literal2 T [type] LoT [literalOrType]
  construct E [literalOrExpression] V
  export Expression Expression [. E]
  by Pattern [. Var]
+end function
+
+%
+% Pattern use N1, Expression use N2 for the variable name
+%
+function pattern_replacement_N12 T [type] LoT [literalOrType]
+ replace [literalOrVariable*] Pattern [literalOrVariable*]
+ by Pattern [pattern_replacement_ignore_per_literal T LoT] 
+	    [pattern_replacement_ignore_per_literal1_N12 T LoT] 
+	    [pattern_replacement_ignore_per_literal2 T LoT] 
+end function
+% case: type = T
+function pattern_replacement_ignore_per_literal1_N12 T [type] LoT [literalOrType]
+ replace [literalOrVariable*] Pattern [literalOrVariable*]
+ deconstruct LoT T
+ construct N1 [id] 'N1 
+ construct N2 [id] 'N2 
+ construct V1 [varid] N1 
+ construct V2 [varid] N2 
+ construct Var1 [literalOrVariable] V1 T 
+ import Expression [literalOrExpression*]
+ construct E [literalOrExpression] V2
+ export Expression Expression [. E]
+ by Pattern [. Var1]
 end function
 
 function literal_to_expr ID [literal]

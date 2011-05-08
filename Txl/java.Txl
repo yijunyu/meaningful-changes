@@ -567,14 +567,14 @@ end function
 function normalise_ignore_by3_Private_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body]
     replace  [class_or_interface_body *]
         Seq  [class_or_interface_body *] 
-    construct N1  [class_body_declaration *]
-        _  [ ^  E1 ] 
+    deconstruct E1
+        '{ N1  [repeat class_body_declaration]  '}  X1  [opt  ';] 
     construct N2  [class_body_declaration *]
         _  [normalise_ignore_by1_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
                   normalise_ignore_by2_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]
  
     construct E2  [class_or_interface_body]
-        E1  [ $  N1  N2 ] 
+        '{ N2  '}  X1 
     by
         Seq  [ . E2 ] 
 end function
