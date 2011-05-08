@@ -1,5 +1,4 @@
 #!/bin/bash
-#echo $*
 checker=$1
 revision=$2
 rcs_file=$3
@@ -14,5 +13,5 @@ if [ ! -e "$next_file" ]; then
 	mv $file $next_file
 fi
 if [ ! "$revision" == "2" ]; then
-	/usr/bin/time -f %E ../$checker.sh $java_file $next_file 2>> $checker.time
+	/usr/bin/time -f %E ../../../scripts/raw_cvs/$checker.sh $java_file $next_file 2>> $checker.time
 fi

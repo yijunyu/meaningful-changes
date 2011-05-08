@@ -8,7 +8,7 @@ END {
   k = asort(n)
   for (f in n) {
     if ( f < k) {
-    	print "../../measure/clone.sh " m[n[f]] " " m[n[f+1]] " > " m[n[f+1]] ".clone"
+    	print "../../scripts/ldiff.pl -w -o diff " m[n[f]] " " m[n[f+1]] " > " m[n[f+1]] ".ldiff"
     }
   }
 }
