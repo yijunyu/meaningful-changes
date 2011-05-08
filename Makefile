@@ -3,10 +3,10 @@ bin=bin.$(shell uname -s -m | sed 's/ /_/')
 txl=$(bin)/txl
 txlc=$(bin)/txlc
 #==== T A R G E T S ====
-norm=$(wildcard norm/*.norm)
-extensions+=$(norm:norm/%.norm=%)
+norm=$(wildcard source/norm/*.norm)
+extensions+=$(norm:source/norm/%.norm=%)
 languages+=$(wildcard Txl/*.Txl)
-generated_language=$(norm:norm/%.norm=Txl/%.Txl)
+generated_language=$(norm:source/norm/%.norm=Txl/%.Txl)
 extensions+=$(languages:Txl/%.Txl=%)
 program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
@@ -21,7 +21,6 @@ package=/home/share/sead/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
 .PHONEY: all clean install
 all: $(target)
-#	echo $(target)
 	@if [ -f error.log ]; then cat error.log; fi
 
 define example
@@ -42,17 +41,8 @@ result/v/%.v: $(bin)/vc source/v/%.v
 
 result/verilog2/%.v: $(bin)/verilog2c source/v/%.v
 	@mkdir -p result/verilog2
-	sed "s/'/?/g" source/v/$*.v > result/v/$*.v.tmp
-	$(bin)/verilog2c result/v/$*.v.tmp -o $@
-	rm -f result/v/$*.v.tmp
-	if [ -e test/v/$*.v ]; then diff $@ test/v/$*.v; fi
-
-result/verilog/%.v: $(bin)/verilogc source/v/%.v
-	@mkdir -p result/verilog
-	sed "s/'/?/g" source/v/$*.v > result/v/$*.v.tmp
-	$(bin)/verilogc result/v/$*.v.tmp -o $@
-	rm -f result/v/$*.v.tmp
-	if [ -e test/v/$*.v ]; then diff $@ test/v/$*.v; fi
+	$(bin)/verilog2c result/v/$*.v -o $@
+	if [ -e test/verilog2/$*.v ]; then diff $@ test/verilog2/$*.v; fi
 
 $(bin)/%c: Txl/%.Txl
 	$(txlc) Txl/$*.Txl 
@@ -63,7 +53,7 @@ $(bin)/%cc: Txl/%.Txl
 	mv $*.x $@
 
 # normalise 
-Txl/%.Txl: $(bin)/normc norm/%.norm
+Txl/%.Txl: $(bin)/normc source/norm/%.norm
 	/usr/bin/time $^ -o t.t
 	sed -e 's/\/\*//' t.t | sed -e 's/*\//\/* *\//g' > $@
 	rm -f t.t
@@ -75,9 +65,9 @@ $(package): README.html $(program) $(norm) $(source) $(target) cvs
 	tar cfz $@ $^
 	tar xfz $@ -C $(dir $(package))
 
-norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm
+source/norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm
 	touch -f $@
-norm/problem.norm : Txl/problem.grm
+source/norm/problem.norm : Txl/problem.grm
 	touch -f $@
 
 clean:

@@ -47,151 +47,201 @@ redefine program
         [source]  [opt source] 
 end define
 
+keys
+    ... <<<  >>> 
+end keys
+
+compounds
+    ... <<<  >>> 
+end compounds
+
+define Change
+        <<<  [NL]
+        |  >>>  [NL]
+ 
+end define
+
 redefine statement
         ...
-    |    [empty] 
+    |    [attr Change] 
 end define
 
 function find_replace_statement
     replace  [program]
         P  [ program ] 
+    import Program_Diff [program]
+
     construct S  [statement *]
-        _  [ find_clones_statement  P ] 
-    by
+        _  [ find_clones_statement  P  Program_Diff ] 
+    construct P3  [program]
         P  [mark_clones_statement  each  S]
  
+    by
+        P3 
 end function
 
-rule mark_clones_statement S  [statement]
-    import CloneNumber [number]
-
-    export CloneNumber
-        CloneNumber  [ +  1 ] 
-    replace  [statement]
-        S 
-    by
-
-end rule
-
-function find_clones_statement P  [program]
+function find_clones_statement P  [program] P2  [program]
+    replace  [statement *]
+        _  [ statement  * ] 
     construct S  [statement *]
         _  [ ^  P ] 
-    replace  [statement *]
-
     by
-        _  [add_if_clones_statement  S  each  S]
+        _  [add_if_clones_statement1  P2  each  S]
  
 end function
 
-function add_if_clones_statement SS  [statement *] Stmt  [statement]
-    deconstruct * SS
+function add_if_clones_statement1 P2  [program] Stmt  [statement]
+    construct S2  [statement *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
         Stmt  Rest  [ statement  * ] 
-    deconstruct * [statement] Rest
-        Stmt 
     replace  [statement *]
         StructuredClones  [ statement  * ] 
-    deconstruct not * [statement] StructuredClones
-        Stmt 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
     by
         StructuredClones  [ . Stmt ] 
 end function
 
+function mark_clones_statement S  [statement]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct S1  [statement]
+        <<< 
+    construct S2  [statement]
+        >>> 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    by
+        P  [ $  S  S1 ] 
+end function
+
 redefine case_statement_alternative
         ...
-    |    [empty] 
+    |    [attr Change] 
 end define
 
 function find_replace_case_statement_alternative
     replace  [program]
         P  [ program ] 
+    import Program_Diff [program]
+
     construct S  [case_statement_alternative *]
-        _  [ find_clones_case_statement_alternative  P ] 
-    by
+        _  [ find_clones_case_statement_alternative  P  Program_Diff ] 
+    construct P3  [program]
         P  [mark_clones_case_statement_alternative  each  S]
  
+    by
+        P3 
 end function
 
-rule mark_clones_case_statement_alternative S  [case_statement_alternative]
-    import CloneNumber [number]
-
-    export CloneNumber
-        CloneNumber  [ +  1 ] 
-    replace  [case_statement_alternative]
-        S 
-    by
-
-end rule
-
-function find_clones_case_statement_alternative P  [program]
+function find_clones_case_statement_alternative P  [program] P2  [program]
+    replace  [case_statement_alternative *]
+        _  [ case_statement_alternative  * ] 
     construct S  [case_statement_alternative *]
         _  [ ^  P ] 
-    replace  [case_statement_alternative *]
-
     by
-        _  [add_if_clones_case_statement_alternative  S  each  S]
+        _  [add_if_clones_case_statement_alternative1  P2  each  S]
  
 end function
 
-function add_if_clones_case_statement_alternative SS  [case_statement_alternative *] Stmt  [case_statement_alternative]
-    deconstruct * SS
+function add_if_clones_case_statement_alternative1 P2  [program] Stmt  [case_statement_alternative]
+    construct S2  [case_statement_alternative *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
         Stmt  Rest  [ case_statement_alternative  * ] 
-    deconstruct * [case_statement_alternative] Rest
-        Stmt 
     replace  [case_statement_alternative *]
         StructuredClones  [ case_statement_alternative  * ] 
-    deconstruct not * [case_statement_alternative] StructuredClones
-        Stmt 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
     by
         StructuredClones  [ . Stmt ] 
 end function
 
+function mark_clones_case_statement_alternative S  [case_statement_alternative]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct S1  [case_statement_alternative]
+        <<< 
+    construct S2  [case_statement_alternative]
+        >>> 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    by
+        P  [ $  S  S1 ] 
+end function
+
 redefine module
         ...
-    |    [empty] 
+    |    [attr Change] 
 end define
 
 function find_replace_module
     replace  [program]
         P  [ program ] 
+    import Program_Diff [program]
+
     construct S  [module *]
-        _  [ find_clones_module  P ] 
-    by
+        _  [ find_clones_module  P  Program_Diff ] 
+    construct P3  [program]
         P  [mark_clones_module  each  S]
+ 
+    by
+        P3 
+end function
+
+function find_clones_module P  [program] P2  [program]
+    replace  [module *]
+        _  [ module  * ] 
+    construct S  [module *]
+        _  [ ^  P ] 
+    by
+        _  [add_if_clones_module1  P2  each  S]
  
 end function
 
-rule mark_clones_module S  [module]
+function add_if_clones_module1 P2  [program] Stmt  [module]
+    construct S2  [module *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
+        Stmt  Rest  [ module  * ] 
+    replace  [module *]
+        StructuredClones  [ module  * ] 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
+    by
+        StructuredClones  [ . Stmt ] 
+end function
+
+function mark_clones_module S  [module]
     import CloneNumber [number]
+
+    import Program_Diff [program]
 
     export CloneNumber
         CloneNumber  [ +  1 ] 
-    replace  [module]
-        S 
+    construct S1  [module]
+        <<< 
+    construct S2  [module]
+        >>> 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
     by
-
-end rule
-
-function find_clones_module P  [program]
-    construct S  [module *]
-        _  [ ^  P ] 
-    replace  [module *]
-
-    by
-        _  [add_if_clones_module  S  each  S]
- 
-end function
-
-function add_if_clones_module SS  [module *] Stmt  [module]
-    deconstruct * SS
-        Stmt  Rest  [ module  * ] 
-    deconstruct * [module] Rest
-        Stmt 
-    replace  [module *]
-        StructuredClones  [ module  * ] 
-    deconstruct not * [module] StructuredClones
-        Stmt 
-    by
-        StructuredClones  [ . Stmt ] 
+        P  [ $  S  S1 ] 
 end function
 
 rule normalise_list_module_statement
@@ -233,14 +283,85 @@ rule normalise_list_module_declaration_part_module_declaration
         N2 ,  N1 ,  Rest 
 end rule
 
-function main
+function program_normalise
+    replace  [program]
+        Prg  [ program ] 
+    by
+        Prg  [ normalise_list_module_statement ]  [ normalise_list_case_statement_alternative_choice ]  [ 
+          normalise_list_module_declaration_part_module_declaration ] 
+end function
+
+function program_remove_clone
     replace  [program]
         Prg  [ program ] 
     export CloneNumber [number]
         0 
+    import TXLargs [repeat stringlit]
+
+    deconstruct * TXLargs
+        "-diff"  Filename  [ stringlit ] 
+    construct P2  [program]
+        _  [ read  Filename ]  [ program_normalise ] 
+    export Program_Diff [program]
+        P2 
     by
-        Prg  [ normalise_list_module_statement ]  [ normalise_list_case_statement_alternative_choice ]  [ 
-          normalise_list_module_declaration_part_module_declaration ]  [ find_replace_statement ]  [ 
-          find_replace_case_statement_alternative ]  [ find_replace_module ] 
+        Prg  [ find_replace_statement ]  [ find_replace_case_statement_alternative ]  [ find_replace_module ] 
+end function
+
+redefine program
+        ...
+    |    [empty]  |  [attr number] 
+end define
+
+function print_diff_1
+    replace  [program]
+        Prg  [ program ] 
+    construct P2  [program]
+        Prg  [ write  "t.t" ]  [ read  "t.t" ] 
+    construct S_Diff  [stringlit]
+        _  [ quote  P2 ] 
+    where not
+        S_Diff  [=  ""]
+    by
+        Prg 
+end function
+
+function print_diff_2
+    replace  [program]
+        Prg  [ program ] 
+    construct P2  [program]
+        Prg  [ write  "t.t" ]  [ read  "t.t" ] 
+    construct S_Diff  [stringlit]
+        _  [ quote  P2 ] 
+    where
+        S_Diff  [=  ""]
+    by
+        _ 
+end function
+
+function print_diff
+    replace  [program]
+        P_diff  [ program ] 
+    import CloneNumber [number]
+
+    where
+        CloneNumber  [>  0]
+    import Program_Diff [program]
+
+    construct P_Clone  [program]
+        CloneNumber 
+    construct P_Left  [program]
+        P_diff  [ print_diff_1 ]  [ print_diff_2 ]  [ printattr ] 
+    construct P_Right  [program]
+        Program_Diff  [ print_diff_1 ]  [ print_diff_2 ]  [ printattr ] 
+    by
+        P_Clone 
+end function
+
+function main
+    replace  [program]
+        Prg  [ program ] 
+    by
+        Prg  [ program_normalise ]  [ program_remove_clone ]  [ print_diff ] 
 end function
 

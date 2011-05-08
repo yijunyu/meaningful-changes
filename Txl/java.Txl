@@ -8,10 +8,6 @@ redefine constructor_body
         [repeat block] 
 end define
 
-redefine program
-        [package_declaration *] 
-end define
-
 redefine type_declaration
         [class_declaration]  [NL] [NL] 
     |    [interface_declaration]  [NL] [NL] 
@@ -111,298 +107,384 @@ function Private A  [class_body_declaration]
     where not
         M  [contains  each  PublicModifiers] end function
 
+keys
+    ... <<<  >>> 
+end keys
+
+compounds
+    ... <<<  >>> 
+end compounds
+
+define Change
+        <<<  [NL]
+        |  >>>  [NL]
+ 
+end define
+
 redefine class_declaration
         ...
-    |    [empty] 
+    |    [attr Change] 
 end define
 
 function find_replace_class_declaration
     replace  [program]
         P  [ program ] 
+    import Program_Diff [program]
+
     construct S  [class_declaration *]
-        _  [ find_clones_class_declaration  P ] 
-    by
+        _  [ find_clones_class_declaration  P  Program_Diff ] 
+    construct P3  [program]
         P  [mark_clones_class_declaration  each  S]
  
+    by
+        P3 
 end function
 
-rule mark_clones_class_declaration S  [class_declaration]
-    import CloneNumber [number]
-
-    export CloneNumber
-        CloneNumber  [ +  1 ] 
-    replace  [class_declaration]
-        S 
-    by
-
-end rule
-
-function find_clones_class_declaration P  [program]
+function find_clones_class_declaration P  [program] P2  [program]
+    replace  [class_declaration *]
+        _  [ class_declaration  * ] 
     construct S  [class_declaration *]
         _  [ ^  P ] 
-    replace  [class_declaration *]
-
     by
-        _  [add_if_clones_class_declaration  S  each  S]
+        _  [add_if_clones_class_declaration1  P2  each  S]
  
 end function
 
-function add_if_clones_class_declaration SS  [class_declaration *] Stmt  [class_declaration]
-    deconstruct * SS
+function add_if_clones_class_declaration1 P2  [program] Stmt  [class_declaration]
+    construct S2  [class_declaration *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
         Stmt  Rest  [ class_declaration  * ] 
-    deconstruct * [class_declaration] Rest
-        Stmt 
     replace  [class_declaration *]
         StructuredClones  [ class_declaration  * ] 
-    deconstruct not * [class_declaration] StructuredClones
-        Stmt 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
     by
         StructuredClones  [ . Stmt ] 
 end function
 
+function mark_clones_class_declaration S  [class_declaration]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct S1  [class_declaration]
+        <<< 
+    construct S2  [class_declaration]
+        >>> 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    by
+        P  [ $  S  S1 ] 
+end function
+
 redefine interface_declaration
         ...
-    |    [empty] 
+    |    [attr Change] 
 end define
 
 function find_replace_interface_declaration
     replace  [program]
         P  [ program ] 
+    import Program_Diff [program]
+
     construct S  [interface_declaration *]
-        _  [ find_clones_interface_declaration  P ] 
-    by
+        _  [ find_clones_interface_declaration  P  Program_Diff ] 
+    construct P3  [program]
         P  [mark_clones_interface_declaration  each  S]
  
+    by
+        P3 
 end function
 
-rule mark_clones_interface_declaration S  [interface_declaration]
-    import CloneNumber [number]
-
-    export CloneNumber
-        CloneNumber  [ +  1 ] 
-    replace  [interface_declaration]
-        S 
-    by
-
-end rule
-
-function find_clones_interface_declaration P  [program]
+function find_clones_interface_declaration P  [program] P2  [program]
+    replace  [interface_declaration *]
+        _  [ interface_declaration  * ] 
     construct S  [interface_declaration *]
         _  [ ^  P ] 
-    replace  [interface_declaration *]
-
     by
-        _  [add_if_clones_interface_declaration  S  each  S]
+        _  [add_if_clones_interface_declaration1  P2  each  S]
  
 end function
 
-function add_if_clones_interface_declaration SS  [interface_declaration *] Stmt  [interface_declaration]
-    deconstruct * SS
+function add_if_clones_interface_declaration1 P2  [program] Stmt  [interface_declaration]
+    construct S2  [interface_declaration *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
         Stmt  Rest  [ interface_declaration  * ] 
-    deconstruct * [interface_declaration] Rest
-        Stmt 
     replace  [interface_declaration *]
         StructuredClones  [ interface_declaration  * ] 
-    deconstruct not * [interface_declaration] StructuredClones
-        Stmt 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
     by
         StructuredClones  [ . Stmt ] 
 end function
 
+function mark_clones_interface_declaration S  [interface_declaration]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct S1  [interface_declaration]
+        <<< 
+    construct S2  [interface_declaration]
+        >>> 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    by
+        P  [ $  S  S1 ] 
+end function
+
 redefine enum_declaration
         ...
-    |    [empty] 
+    |    [attr Change] 
 end define
 
 function find_replace_enum_declaration
     replace  [program]
         P  [ program ] 
+    import Program_Diff [program]
+
     construct S  [enum_declaration *]
-        _  [ find_clones_enum_declaration  P ] 
-    by
+        _  [ find_clones_enum_declaration  P  Program_Diff ] 
+    construct P3  [program]
         P  [mark_clones_enum_declaration  each  S]
  
+    by
+        P3 
 end function
 
-rule mark_clones_enum_declaration S  [enum_declaration]
-    import CloneNumber [number]
-
-    export CloneNumber
-        CloneNumber  [ +  1 ] 
-    replace  [enum_declaration]
-        S 
-    by
-
-end rule
-
-function find_clones_enum_declaration P  [program]
+function find_clones_enum_declaration P  [program] P2  [program]
+    replace  [enum_declaration *]
+        _  [ enum_declaration  * ] 
     construct S  [enum_declaration *]
         _  [ ^  P ] 
-    replace  [enum_declaration *]
-
     by
-        _  [add_if_clones_enum_declaration  S  each  S]
+        _  [add_if_clones_enum_declaration1  P2  each  S]
  
 end function
 
-function add_if_clones_enum_declaration SS  [enum_declaration *] Stmt  [enum_declaration]
-    deconstruct * SS
+function add_if_clones_enum_declaration1 P2  [program] Stmt  [enum_declaration]
+    construct S2  [enum_declaration *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
         Stmt  Rest  [ enum_declaration  * ] 
-    deconstruct * [enum_declaration] Rest
-        Stmt 
     replace  [enum_declaration *]
         StructuredClones  [ enum_declaration  * ] 
-    deconstruct not * [enum_declaration] StructuredClones
-        Stmt 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
     by
         StructuredClones  [ . Stmt ] 
 end function
 
+function mark_clones_enum_declaration S  [enum_declaration]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct S1  [enum_declaration]
+        <<< 
+    construct S2  [enum_declaration]
+        >>> 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    by
+        P  [ $  S  S1 ] 
+end function
+
 redefine class_body_declaration
         ...
-    |    [empty] 
+    |    [attr Change] 
 end define
 
 function find_replace_class_body_declaration
     replace  [program]
         P  [ program ] 
+    import Program_Diff [program]
+
     construct S  [class_body_declaration *]
-        _  [ find_clones_class_body_declaration  P ] 
-    by
+        _  [ find_clones_class_body_declaration  P  Program_Diff ] 
+    construct P3  [program]
         P  [mark_clones_class_body_declaration  each  S]
  
+    by
+        P3 
 end function
 
-rule mark_clones_class_body_declaration S  [class_body_declaration]
-    import CloneNumber [number]
-
-    export CloneNumber
-        CloneNumber  [ +  1 ] 
-    replace  [class_body_declaration]
-        S 
-    by
-
-end rule
-
-function find_clones_class_body_declaration P  [program]
+function find_clones_class_body_declaration P  [program] P2  [program]
+    replace  [class_body_declaration *]
+        _  [ class_body_declaration  * ] 
     construct S  [class_body_declaration *]
         _  [ ^  P ] 
-    replace  [class_body_declaration *]
-
     by
-        _  [add_if_clones_class_body_declaration  S  each  S]
+        _  [add_if_clones_class_body_declaration1  P2  each  S]
  
 end function
 
-function add_if_clones_class_body_declaration SS  [class_body_declaration *] Stmt  [class_body_declaration]
-    deconstruct * SS
+function add_if_clones_class_body_declaration1 P2  [program] Stmt  [class_body_declaration]
+    construct S2  [class_body_declaration *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
         Stmt  Rest  [ class_body_declaration  * ] 
-    deconstruct * [class_body_declaration] Rest
-        Stmt 
     replace  [class_body_declaration *]
         StructuredClones  [ class_body_declaration  * ] 
-    deconstruct not * [class_body_declaration] StructuredClones
-        Stmt 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
     by
         StructuredClones  [ . Stmt ] 
 end function
 
+function mark_clones_class_body_declaration S  [class_body_declaration]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct S1  [class_body_declaration]
+        <<< 
+    construct S2  [class_body_declaration]
+        >>> 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    by
+        P  [ $  S  S1 ] 
+end function
+
 redefine package_header
         ...
-    |    [empty] 
+    |    [attr Change] 
 end define
 
 function find_replace_package_header
     replace  [program]
         P  [ program ] 
+    import Program_Diff [program]
+
     construct S  [package_header *]
-        _  [ find_clones_package_header  P ] 
-    by
+        _  [ find_clones_package_header  P  Program_Diff ] 
+    construct P3  [program]
         P  [mark_clones_package_header  each  S]
  
+    by
+        P3 
 end function
 
-rule mark_clones_package_header S  [package_header]
-    import CloneNumber [number]
-
-    export CloneNumber
-        CloneNumber  [ +  1 ] 
-    replace  [package_header]
-        S 
-    by
-
-end rule
-
-function find_clones_package_header P  [program]
+function find_clones_package_header P  [program] P2  [program]
+    replace  [package_header *]
+        _  [ package_header  * ] 
     construct S  [package_header *]
         _  [ ^  P ] 
-    replace  [package_header *]
-
     by
-        _  [add_if_clones_package_header  S  each  S]
+        _  [add_if_clones_package_header1  P2  each  S]
  
 end function
 
-function add_if_clones_package_header SS  [package_header *] Stmt  [package_header]
-    deconstruct * SS
+function add_if_clones_package_header1 P2  [program] Stmt  [package_header]
+    construct S2  [package_header *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
         Stmt  Rest  [ package_header  * ] 
-    deconstruct * [package_header] Rest
-        Stmt 
     replace  [package_header *]
         StructuredClones  [ package_header  * ] 
-    deconstruct not * [package_header] StructuredClones
-        Stmt 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
     by
         StructuredClones  [ . Stmt ] 
 end function
 
+function mark_clones_package_header S  [package_header]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct S1  [package_header]
+        <<< 
+    construct S2  [package_header]
+        >>> 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    by
+        P  [ $  S  S1 ] 
+end function
+
 redefine import_declaration
         ...
-    |    [empty] 
+    |    [attr Change] 
 end define
 
 function find_replace_import_declaration
     replace  [program]
         P  [ program ] 
+    import Program_Diff [program]
+
     construct S  [import_declaration *]
-        _  [ find_clones_import_declaration  P ] 
-    by
+        _  [ find_clones_import_declaration  P  Program_Diff ] 
+    construct P3  [program]
         P  [mark_clones_import_declaration  each  S]
+ 
+    by
+        P3 
+end function
+
+function find_clones_import_declaration P  [program] P2  [program]
+    replace  [import_declaration *]
+        _  [ import_declaration  * ] 
+    construct S  [import_declaration *]
+        _  [ ^  P ] 
+    by
+        _  [add_if_clones_import_declaration1  P2  each  S]
  
 end function
 
-rule mark_clones_import_declaration S  [import_declaration]
+function add_if_clones_import_declaration1 P2  [program] Stmt  [import_declaration]
+    construct S2  [import_declaration *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
+        Stmt  Rest  [ import_declaration  * ] 
+    replace  [import_declaration *]
+        StructuredClones  [ import_declaration  * ] 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
+    by
+        StructuredClones  [ . Stmt ] 
+end function
+
+function mark_clones_import_declaration S  [import_declaration]
     import CloneNumber [number]
+
+    import Program_Diff [program]
 
     export CloneNumber
         CloneNumber  [ +  1 ] 
-    replace  [import_declaration]
-        S 
+    construct S1  [import_declaration]
+        <<< 
+    construct S2  [import_declaration]
+        >>> 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
     by
-
-end rule
-
-function find_clones_import_declaration P  [program]
-    construct S  [import_declaration *]
-        _  [ ^  P ] 
-    replace  [import_declaration *]
-
-    by
-        _  [add_if_clones_import_declaration  S  each  S]
- 
-end function
-
-function add_if_clones_import_declaration SS  [import_declaration *] Stmt  [import_declaration]
-    deconstruct * SS
-        Stmt  Rest  [ import_declaration  * ] 
-    deconstruct * [import_declaration] Rest
-        Stmt 
-    replace  [import_declaration *]
-        StructuredClones  [ import_declaration  * ] 
-    deconstruct not * [import_declaration] StructuredClones
-        Stmt 
-    by
-        StructuredClones  [ . Stmt ] 
+        P  [ $  S  S1 ] 
 end function
 
 function normalise_preferred_tokens_method_body_block1 B  [method_body]
@@ -699,11 +781,9 @@ rule normalise_list_catch_clause_modifier
         N2  N1  Rest 
 end rule
 
-function main
+function program_normalise
     replace  [program]
         Prg  [ program ] 
-    export CloneNumber [number]
-        0 
     by
         Prg  [ normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 
           normalise_preferred_replace_method_body_block1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
@@ -714,8 +794,81 @@ function main
           normalise_list_variable_declaration_modifier ]  [ normalise_list_variable_declarators_variable_declarator ]  [ 
           normalise_list_method_declaration_modifier ]  [ normalise_list_throws_qualified_name ]  [ 
           normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
-          normalise_list_single_annotation_value_expression_or_nested_annotation ]  [ normalise_list_catch_clause_modifier ]  [ 
-          find_replace_class_declaration ]  [ find_replace_interface_declaration ]  [ find_replace_enum_declaration ]  [ 
+          normalise_list_single_annotation_value_expression_or_nested_annotation ]  [ normalise_list_catch_clause_modifier ] 
+end function
+
+function program_remove_clone
+    replace  [program]
+        Prg  [ program ] 
+    export CloneNumber [number]
+        0 
+    import TXLargs [repeat stringlit]
+
+    deconstruct * TXLargs
+        "-diff"  Filename  [ stringlit ] 
+    construct P2  [program]
+        _  [ read  Filename ]  [ program_normalise ] 
+    export Program_Diff [program]
+        P2 
+    by
+        Prg  [ find_replace_class_declaration ]  [ find_replace_interface_declaration ]  [ find_replace_enum_declaration ]  [ 
           find_replace_class_body_declaration ]  [ find_replace_package_header ]  [ find_replace_import_declaration ] 
+end function
+
+redefine program
+        ...
+    |    [empty]  |  [attr number] 
+end define
+
+function print_diff_1
+    replace  [program]
+        Prg  [ program ] 
+    construct P2  [program]
+        Prg  [ write  "t.t" ]  [ read  "t.t" ] 
+    construct S_Diff  [stringlit]
+        _  [ quote  P2 ] 
+    where not
+        S_Diff  [=  ""]
+    by
+        Prg 
+end function
+
+function print_diff_2
+    replace  [program]
+        Prg  [ program ] 
+    construct P2  [program]
+        Prg  [ write  "t.t" ]  [ read  "t.t" ] 
+    construct S_Diff  [stringlit]
+        _  [ quote  P2 ] 
+    where
+        S_Diff  [=  ""]
+    by
+        _ 
+end function
+
+function print_diff
+    replace  [program]
+        P_diff  [ program ] 
+    import CloneNumber [number]
+
+    where
+        CloneNumber  [>  0]
+    import Program_Diff [program]
+
+    construct P_Clone  [program]
+        CloneNumber 
+    construct P_Left  [program]
+        P_diff  [ print_diff_1 ]  [ print_diff_2 ]  [ printattr ] 
+    construct P_Right  [program]
+        Program_Diff  [ print_diff_1 ]  [ print_diff_2 ]  [ printattr ] 
+    by
+        P_Clone 
+end function
+
+function main
+    replace  [program]
+        Prg  [ program ] 
+    by
+        Prg  [ program_normalise ]  [ program_remove_clone ]  [ print_diff ] 
 end function
 

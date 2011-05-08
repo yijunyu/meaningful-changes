@@ -1,47 +1,30 @@
 include "java.grm"
 
+% Yijun Yu, April, 2011
+% The rules are redefined to include annotations
+
 redefine method_body
-        [repeat block preferred with '; ] 
+        [repeat block preferred with ';] 
     |  [opt annotation_default] ';             % T.D. Oct 2007
 end define
 
-redefine modifier
-        'abstract
-    |   'final
-    |   'public
-    |   'protected
-    |   'private
-    |   'static
-    |   'transient
-    |   'volatile
-    |   'native
-    |   'synchronized
-    |   'strictfp		% Added strictfp XG July 23, 2002
-    |   [repeat annotation ignored]		% T.D. Oct 2007
-end define
-
 redefine constructor_body
-    [repeat block preferred with '{ '} ]
-end define
-
-redefine program
-    [package_declaration*]
+    [repeat block preferred with '{ '}]
 end define
 
 redefine type_declaration
-        [class_declaration]      [NL][NL]
-    |   [interface_declaration]  [NL][NL]
-    |   [enum_declaration]	    [NL] % T.D. Oct 2007
+        [class_declaration kept]      [NL][NL]
+    |   [interface_declaration kept ordered]  [NL][NL]
+    |   [enum_declaration kept]	    [NL] % T.D. Oct 2007
 end define
 
 redefine enum_body
     '{                                    [IN]
        [list enum_element] [opt ',]
-       [repeat class_body_declaration ordered]    [EX]
+       [repeat class_body_declaration kept ordered]    [EX]
     '} [opt ';]                           [NL][NL]
 end define
 
-% remove some extra spaces
 redefine import_declaration
 	'import [opt 'static] [imported_name] '; [NL]
     | 	'; [NL] 	% JRC Apr 08
@@ -49,8 +32,8 @@ end define
 
 redefine package_declaration
     [opt package_header kept]
-    [repeat import_declaration ignored] 
-    [repeat type_declaration kept]
+    [repeat import_declaration kept ordered] 
+    [repeat type_declaration]
 end define
 
 redefine class_header
@@ -117,6 +100,10 @@ redefine single_annotation_value
       [expression]					% must be constant
     | [nested_annotation]
     | { [list expression_or_nested_annotation ordered] }	% array of annotation values
+end define
+
+redefine catch_clause
+     'catch '( [repeat modifier ordered] [type_specifier] [variable_name] ') [block]  % July 15
 end define
 
 function contains Object [any] 

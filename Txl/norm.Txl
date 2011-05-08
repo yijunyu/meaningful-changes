@@ -61,7 +61,7 @@ end function
 %
 rule typeSpec_removeClones
  replace * [typeSpec] T [typeSpec] 
- deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] 'kept O [opt orderedBy] Ig [opt ignoredWhen]
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [kept] O [opt orderedBy] Ig [opt ignoredWhen]
  construct T1 [typeSpec] M I R O Ig
  construct update_id_T1 [typeSpec] T1 [update_id I]
  by T1 
@@ -87,33 +87,39 @@ function update_id I [typeid]
  construct find_replace_I [id] find_replace [_ TypeID]
  construct mark_clones_I [id] mark_clones [_ TypeID]
  construct find_clones_I [id] find_clones [_ TypeID]
- construct add_if_clones_I [id] add_if_clones [_ TypeID]
+ construct add_if_clones_1 [id] add_if_clones [_ TypeID] [!]
+ construct add_if_clones_2 [id] add_if_clones [_ TypeID] [!]
  construct S1 [statement*]
      'redefine TypeID 
-         '... 
-      '| '[ 'empty '] 
+         '... ' | '[ 'attr 'Change ']
      'end 'define
      'function find_replace_I 
 	    'replace '[ 'program '] 'P '[ 'program ']
-	    'construct 'S '[ TypeID '* '] '_ '[ find_clones_I 'P ']
-	    'by 'P '[ mark_clones_I 'each 'S ']
+	    'import 'Program_Diff '['program']
+	    'construct 'S '[ TypeID '* '] '_ '[ find_clones_I 'P 'Program_Diff ']
+	    'construct 'P3 '[ 'program '] 'P '[ mark_clones_I 'each 'S ']
+	    'by 'P3
      'end 'function
-     'rule mark_clones_I 'S '[ TypeID ']
-	    'import 'CloneNumber '['number']
-	    'export 'CloneNumber 'CloneNumber '['+ '1']
-	    'replace '[ TypeID '] 'S 'by
-     'end 'rule
-     'function find_clones_I 'P '[ 'program '] 
+     'function find_clones_I 'P '[ 'program '] 'P2 '[ 'program ']
+	    'replace '[ TypeID '* '] _ '[ TypeID '* ']
 	    'construct 'S '[ TypeID '* '] '_ '[ '^ 'P ']
-	    'replace '[ TypeID '* '] 'by '_ 
-	    '[ add_if_clones_I 'S 'each 'S '] 
+	    'by '_ '[ add_if_clones_1 'P2 'each 'S ']
      'end 'function
-     'function add_if_clones_I 'SS '[ TypeID '* '] 'Stmt '[ TypeID ']
-	    'deconstruct '* 'SS 'Stmt 'Rest '[ TypeID '* ']
-	    'deconstruct '* '[ TypeID '] 'Rest 'Stmt
+     'function add_if_clones_1 'P2 '[ 'program '] 'Stmt '[ TypeID ']
+	    'construct 'S2 '[ TypeID '* '] '_ '[ '^ 'P2 ']
+	    'deconstruct '* 'S2 'Stmt 'Rest '[ TypeID '* ']
 	    'replace '[ TypeID '* '] 'StructuredClones '[ TypeID '* ']
-	    'deconstruct 'not '* '[ TypeID '] 'StructuredClones 'Stmt
-	    'by 'StructuredClones '[ '. 'Stmt ']
+	    'deconstruct 'not '* 'StructuredClones 'C '['attr 'Change '] % 'Stmt
+	    'by 'StructuredClones '[ '. 'Stmt '] 
+     'end 'function
+     'function mark_clones_I 'S '[ TypeID ']
+	    'import 'CloneNumber '['number']
+	    'import 'Program_Diff '['program']
+	    'export 'CloneNumber 'CloneNumber '['+ '1']
+	    'construct 'S1 '[ TypeID '] '<<< % 'S1
+	    'construct 'S2 '[ TypeID '] '>>> % 'S1
+	    'export 'Program_Diff 'Program_Diff  '[ '$ 'S 'S2 ']
+	    'replace '[ 'program '] 'P '[ 'program '] 'by 'P '[ '$ 'S 'S1 ']
      'end 'function
  export Rules Rules [. S1] 
  export KeepRuleIDs KeepRuleIDs [. find_replace_I] 
@@ -142,10 +148,6 @@ function typeSpec_repeat DS [redefineStatement] T [typeSpec]
     'rule ruleID
 	'replace '[ 'repeat I '] 
 	   'N1 '[ I '] 'N2 '[ I '] 'Rest '[ 'repeat I '] 
-%	   'construct 't1 '[ I '] 'N1 '[ 'write "t.1" '] 
-%           'construct 'T1 '[ 'stringlit '] '_ '[ 'fgets "t.1" ']
-%	   'construct 't2 '[ I '] 'N2 '[ 'write "t.2" '] 
-%           'construct 'T2 '[ 'stringlit '] '_ '[ 'fgets "t.2" ']
            'construct 'T1 '[ 'stringlit '] '_ '[ 'quote 'N1 ']
            'construct 'T2 '[ 'stringlit '] '_ '[ 'quote 'N2 ']
 	'where 'T1 '[ '> 'T2 ']
@@ -203,10 +205,6 @@ function typeSpec_list DS [redefineStatement] T [typeSpec]
     'rule ruleID
 	'replace '[ 'list I '] 
 	   'N1 '[ I '] ', 'N2 '[ I '] ', 'Rest '[ 'list I '] 
-%	   'construct 't1 '[ I '] 'N1 '[ 'write "t.1" '] 
-%           'construct 'T1 '[ 'stringlit '] '_ '[ 'fgets "t.1" ']
-%	   'construct 't2 '[ I '] 'N2 '[ 'write "t.2" '] 
-%           'construct 'T2 '[ 'stringlit '] '_ '[ 'fgets "t.2" ']
            'construct 'T1 '[ 'stringlit '] '_ '[ 'quote 'N1 ']
            'construct 'T2 '[ 'stringlit '] '_ '[ 'quote 'N2 ']
 	'where 'T1 '[ '> 'T2 ']
@@ -262,7 +260,6 @@ function typeSpec_ignore_LoT TID [typeid] T [typeSpec] LoT [literalOrType*]
  export Expression [literalOrExpression*] _
  construct TT [type] '[ T ']
  construct Pat [literalOrVariable*] _ [pattern_replacement TT each LoT]
- % import Expression
  construct Pattern [pattern] Pat
  construct Replacement [replacement] Expression
  deconstruct I TypeID [id] 
@@ -309,8 +306,8 @@ end function
 function typeSpec_ignore_when DS [redefineStatement] T [typeSpec]
  import Rules [statement*]
  import IgnoreRuleIDs [id*]
- replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ replace [statement*] S [statement*] 
+ deconstruct DS 'redefine TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  deconstruct Ig 'ignored W [whenField]
  deconstruct W 'when F [id]
@@ -578,6 +575,18 @@ function main
  export TypeIDs [id*] _
  construct P0 [program] P [typeSpec_removeClones]
  import Rules
+ construct Statements_ChangeRule [statement*]
+	'keys
+	% '<<< is removed from left, '>>> is added to right
+		'... '<<< '>>>
+	'end 'keys
+	'compounds
+		'... '<<< '>>>
+	'end 'compounds
+	'define Change
+		'<<< '[ 'NL '] '| '>>> '[ 'NL ']
+	'end 'define
+ export Rules _ [. Statements_ChangeRule] [. Rules]
  import KeepRuleIDs
  import TypeIDs
  construct DS [redefineStatement*] _ [^ P0]
@@ -586,19 +595,79 @@ function main
  import OrderRuleIDs
  import IgnoreRuleIDs
  import PreferRuleIDs
- construct PL2 [literalOrExpression*] _ [id_to_type each IgnoreRuleIDs] [id_to_type each PreferRuleIDs] [id_to_type each OrderRuleIDs] [id_to_type each KeepRuleIDs]
- construct L [literalOrExpression*] _ [. PL] [. PL2]
- construct R [replacement] L
- construct RULE [statement]
- 	'function 'main 'replace '[ 'program '] 'Prg '[ 'program '] 
-    	'export 'CloneNumber '['number'] '0
-	'by R
+ construct lOfE_NormaliseRuleIDs [literalOrExpression*]
+	_ [id_to_type each IgnoreRuleIDs]
+	  [id_to_type each PreferRuleIDs]
+	  [id_to_type each OrderRuleIDs]
+ construct lOfE_KeepRuleIDs [literalOrExpression*] _ [id_to_type each KeepRuleIDs]
+ construct lOfE_Normalise [literalOrExpression*] _ [. PL] [. lOfE_NormaliseRuleIDs ]
+ construct lOfE_RemoveClone [literalOrExpression*] _ [. PL] [. lOfE_KeepRuleIDs ]
+ construct R_Normalise [replacement] lOfE_Normalise
+ construct R_RemoveClone [replacement] lOfE_RemoveClone
+ construct statements_Rule [statement*]
+ 	'function 'program_normalise 'replace '[ 'program '] 'Prg '[ 'program '] 
+	  'by R_Normalise
+	'end 'function
+ 	'function 'program_remove_clone 'replace '[ 'program '] 'Prg '[ 'program '] 
+    	  'export 'CloneNumber '['number'] '0
+	  'import 'TXLargs '[ 'repeat 'stringlit ']
+	  'deconstruct '* 'TXLargs
+		"-diff" 'Filename '[ 'stringlit ']
+	  'construct 'P2 '[ 'program '] _ '[ 'read 'Filename '] '[ 'program_normalise ']
+	  'export 'Program_Diff '['program'] 'P2
+	  'by R_RemoveClone
+	'end 'function
+	'redefine 'program '... '| '[ 'empty '] '| '[ 'attr 'number '] 'end 'define
+	'function 'print_diff_1
+		'replace '[ 'program '] 'Prg '[ 'program ']
+		'construct 'P2 '['program'] 'Prg '[ 'write "t.t" '] '[ 'read "t.t" ']
+		'construct 'S_Diff '['stringlit'] '_ '['quote 'P2 ']
+		'where 'not 'S_Diff '['= "" ']
+		'by 'Prg
+	'end 'function
+	'function 'print_diff_2
+		'replace '[ 'program '] 'Prg '[ 'program ']
+		'construct 'P2 '['program'] 'Prg '[ 'write "t.t" '] '[ 'read "t.t" ']
+		'construct 'S_Diff '['stringlit'] '_ '['quote 'P2 ']
+		'where 'S_Diff '['= "" ']
+		'by '_
+	'end 'function
+	'function 'print_diff
+		'replace '[ 'program '] 'P_diff '[ 'program ']
+		'import 'CloneNumber '[ 'number ']
+		'where 'CloneNumber '[ '> '0 ']
+		'import 'Program_Diff '[ 'program ']
+		'% output the differences
+		'construct 'P_Clone '[ 'program '] 'CloneNumber
+		'construct 'P_Left '['program'] 'P_diff '[print_diff_1'] '[print_diff_2'] '['printattr']
+		'construct 'P_Right '['program'] 'Program_Diff '[print_diff_1'] '[print_diff_2'] '['printattr']
+		'by 'P_Clone
+	'end 'function
+	'function 'main 'replace '[ 'program '] 'Prg '[ 'program '] 
+	  'by 'Prg '[ 'program_normalise ']
+		   '[ 'program_remove_clone ']
+		   '[ 'print_diff ']
 	'end 'function
  deconstruct P0 S0 [statement*]
  import Rules
- construct P1 [program] S0 [. Rules] [. RULE ]
+ construct P1 [program] S0 [. Rules] [. statements_Rule ]
  by  P1 [typeSpec_eliminateKeptAnnotations] 
 	[typeSpec_eliminateOrderedAnnotations]
 	[typeSpec_eliminateIgnoredAnnotations]
 	[typeSpec_eliminatePreferredAnnotations]
 end function
+
+% Yijun Yu: TXL program is hard to read, some conventions I try to adopt: 
+%%%% Variable names:
+%   Type_VariableName, or more commonly 
+%   T<number>? where T is the abbreviation of the Type name (often the
+%	first letter) and the <number> is to differentiate the variables
+%	function/rule names   type_FunctionName
+%   d_VariableNameAbove -- for debug purposes:
+%	construct d_VariableNameAbove [Type] VariableNameAbove [print]
+%%%% Function names, except for `main' whose type is always [program]:
+%   function type_FunctionName ...
+%     replace [type] FunctionName [type]
+%     by _
+%   end function
+
