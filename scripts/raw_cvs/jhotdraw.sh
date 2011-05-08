@@ -12,4 +12,5 @@ for f in `cat java.txt`; do
  fi
  rlog -q $f | awk -f ../../../scripts/raw_cvs/diff.awk
 done
+../../../scripts/raw_cvs/count.sh > ../../../result/jhotdraw.txt
 cd -
