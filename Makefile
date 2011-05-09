@@ -70,5 +70,4 @@ source/norm/problem.norm : Txl/problem.grm
 
 clean:
 	rm -rf ${target} $(generated_language)
-	rm -rf result
 	git clean -X -f
