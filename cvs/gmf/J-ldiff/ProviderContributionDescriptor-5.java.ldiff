@@ -1,0 +1,92 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2006 IBM Corporation and others.
+19a26,26
+> import org.eclipse.gmf.runtime.common.ui.util.IPartSelector;
+20,20c27,27
+< import org.eclipse.jface.action.IMenuManager;
+---
+> import org.eclipse.jface.action.IMenuManager;
+21,21c28,28
+< import org.eclipse.jface.text.IMarkSelection;
+---
+> import org.eclipse.jface.text.IMarkSelection;
+22,22c29,29
+< import org.eclipse.jface.text.ITextSelection;
+---
+> import org.eclipse.jface.text.ITextSelection;
+23,23c30,30
+< import org.eclipse.jface.viewers.ISelection;
+---
+> import org.eclipse.jface.viewers.ISelection;
+24a32,33
+> import org.eclipse.ui.IWorkbenchPart;
+> import org.eclipse.ui.IWorkbenchPartSite;
+24,24c31,31
+< import org.eclipse.jface.viewers.IStructuredSelection;
+---
+> import org.eclipse.jface.viewers.IStructuredSelection;
+25,25d31
+< 
+523,523c525,525
+< 		extends AbstractContributionItemDescriptor {
+---
+> 		extends AbstractContributionItemDescriptor implements IPartSelector {
+531a534,537
+> 		/** the contribution item's part ID, if specified */
+> 		private String targetId;
+> 		/** the contribution item's part class name or interface name, if specified */
+> 		private String targetClassName;
+553a560,567
+> 
+> 			// extract the part ID or class name from the parent element
+> 			Object parent = configElement.getParent();
+> 			if (parent instanceof IConfigurationElement) {
+> 				IConfigurationElement parentElement = ((IConfigurationElement) parent);
+> 				targetId = parentElement.getAttribute(ID);
+> 				targetClassName = parentElement.getAttribute(CLASS);
+> 			}
+590a605,630
+> 		
+> 		/**
+> 		 * Determines whether or not this contribution is applicable to the
+> 		 * given workbench <code>part</code>.
+> 		 * 
+> 		 * @param part
+> 		 *            the workbench part to be tested
+> 		 * @return <code>true</code> if applicable, <code>false</code> if
+> 		 *         not
+> 		 */
+> 		public boolean selects(IWorkbenchPart part) {
+> 
+> 			IWorkbenchPartSite site = part.getSite();
+> 			if (site != null) {
+> 				String partId = site.getId();
+> 				if (targetId != null && partId != null) {
+> 					return targetId.equals(partId);
+> 				}
+> 			}
+> 
+> 			Class partClass = part.getClass();
+> 			if (targetClassName != null && partClass != null) {
+> 				return isAssignableTo(partClass, targetClassName);
+> 			}
+> 			return false;
+> 		}
+597,597c637,637
+< 		extends AbstractContributionItemDescriptor {
+---
+> 		extends AbstractContributionItemDescriptor implements IPartSelector {
+637a678,688
+> 		
+> 		/**
+> 		 * Always returns <code>false</code>.
+> 		 * <P>
+> 		 * Popup contributions are always re-contributed when the menu is about
+> 		 * to be shown, so there is no need for them to listen for selection
+> 		 * change on the workbench part.
+> 		 */
+> 		public boolean selects(IWorkbenchPart part) {
+> 			return false;
+> 		}

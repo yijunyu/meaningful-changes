@@ -1,0 +1,144 @@
+package org.eclipse.gmf.runtime.diagram.ui.internal.figures;
+
+import org.eclipse.draw2d.Connection;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.PrecisionRectangle;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.LineSeg;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.PointListUtilities;
+
+public class LabelHelper {
+
+    static public Point offsetFromRelativeCoordinate (IFigure label, Rectangle bounds, Point ref) {
+        return offsetFromRelativeCoordinate (label, bounds, getParentPointList (label), ref);
+    }
+
+    static private Point offsetFromRelativeCoordinate (IFigure label, Rectangle bounds, PointList points, Point ref) {
+        PrecisionRectangle rect = new PrecisionRectangle (bounds);
+        rect.translate (rect.width / 2, rect.height / 2);
+        Point normalPoint = normalizeRelativePointToPointOnLine (points, ref, new Point (rect.x - ref.x, rect.y - ref.y));
+        return normalPoint;
+    }
+
+    static public Point relativeCoordinateFromOffset (IFigure label, Point ref, Point offset) {
+        return relativeCoordinateFromOffset (label, getParentPointList (label), ref, offset);
+    }
+
+    static private Point relativeCoordinateFromOffset (IFigure label, PointList points, Point ref, Point offset) {
+        Point location = calculatePointRelativeToPointOnLine (points, ref, offset);
+        location.translate (- 1 * label.getBounds ().width / 2, - 1 * label.getBounds ().height / 2);
+        return location;
+    }
+
+    static private PointList getParentPointList (IFigure label) {
+        IFigure parent = label.getParent ();
+        if (parent instanceof Connection) {
+            return ((Connection) parent).getPoints ();
+        } else {
+            PointList ptList = new PointList ();
+            ptList.addPoint (parent.getBounds ().getLocation ());
+            return ptList;
+        }
+    }
+
+    protected static Point calculatePointRelativeToPointOnLine (PointList ptLst, Point ptOnLine, Point offset) {
+        if (ptLst.size () == 1) {
+            return ptLst.getFirstPoint ().getTranslated (offset);
+        } else if (ptLst.size () >= 2) {
+            int index = PointListUtilities.findNearestLineSegIndexOfPoint (ptLst, ptOnLine);
+            LineSeg segment = (LineSeg) PointListUtilities.getLineSegments (ptLst).get (index - 1);
+            Point relativeOffset = null;
+            if (segment != null) {
+                if (segment.isHorizontal ()) {
+                    if (segment.getOrigin ().x > segment.getTerminus ().x) {
+                        relativeOffset = ptOnLine.getTranslated (offset.getNegated ());
+                        return relativeOffset;
+                    } else {
+                        relativeOffset = ptOnLine.getTranslated (offset);
+                        return relativeOffset;
+                    }
+                } else if (segment.isVertical ()) {
+                    if (segment.getOrigin ().y > segment.getTerminus ().y) {
+                        relativeOffset = ptOnLine.getTranslated (offset.getCopy ().scale (- 1, 1).transpose ());
+                        return relativeOffset;
+                    } else {
+                        relativeOffset = ptOnLine.getTranslated (offset.getCopy ().scale (1, - 1).transpose ());
+                        return relativeOffset;
+                    }
+                } else {
+                    double slope = segment.slope ();
+                    double theta = Math.atan (slope);
+                    Point normalizedOffset = new Point (offset);
+                    Point calculatedOffset = new Point ();
+                    if (segment.getOrigin ().x > segment.getTerminus ().x) {
+                        normalizedOffset = offset.getCopy ().scale (- 1, - 1);
+                    }
+                    calculatedOffset = new Point (normalizedOffset.x * Math.cos (theta) - normalizedOffset.y * Math.sin (theta), normalizedOffset.x * Math.sin (theta) + normalizedOffset.y * Math.cos (theta));
+                    relativeOffset = ptOnLine.getTranslated (calculatedOffset);
+                    return relativeOffset;
+                }
+
+            }
+        }
+
+        return null;
+    }
+
+    private static Point normalizeRelativePointToPointOnLine (PointList ptLst, Point ptOnLine, Point offset) {
+        if (ptLst.size () == 1) {
+            return offset;
+        } else if (ptLst.size () >= 2) {
+            int index = PointListUtilities.findNearestLineSegIndexOfPoint (ptLst, ptOnLine);
+            LineSeg segment = (LineSeg) PointListUtilities.getLineSegments (ptLst).get (index - 1);
+            Point normalOffset = null;
+            if (segment != null) {
+                if (segment.isHorizontal ()) {
+                    if (segment.getOrigin ().x > segment.getTerminus ().x) {
+                        normalOffset = offset.getNegated ();
+                        return normalOffset;
+                    } else {
+                        normalOffset = offset;
+                        return normalOffset;
+                    }
+                } else if (segment.isVertical ()) {
+                    if (segment.getOrigin ().y < segment.getTerminus ().y) {
+                        normalOffset = offset.scale (- 1, 1).transpose ();
+                        return normalOffset;
+                    } else {
+                        normalOffset = offset.scale (1, - 1).transpose ();
+                        return normalOffset;
+                    }
+                } else {
+                    Point p = ptOnLine.getTranslated (offset);
+                    normalOffset = getOrthogonalDistances (segment, ptOnLine, p);
+                    return normalOffset;
+                }
+
+            }
+        }
+
+        return null;
+    }
+
+    private static Point getOrthogonalDistances (LineSeg lineSeg, Point ptOnLine, Point refPoint) {
+        LineSeg parallelSeg = lineSeg.getParallelLineSegThroughPoint (refPoint);
+        Point p1 = parallelSeg.perpIntersect (ptOnLine.x, ptOnLine.y);
+        double dx = p1.getDistance (refPoint) * ((p1.x > refPoint.x) ? - 1 : 1);
+        double dy = p1.getDistance (ptOnLine) * ((p1.y < ptOnLine.y) ? - 1 : 1);
+        Point orth = new Point (dx, dy);
+        if (lineSeg.getOrigin ().x > lineSeg.getTerminus ().x) orth = orth.scale (- 1, - 1);
+
+        return orth;
+    }
+
+}
+

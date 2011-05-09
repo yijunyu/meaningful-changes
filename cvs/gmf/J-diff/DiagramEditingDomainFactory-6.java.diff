@@ -1,0 +1,89 @@
+14a15
+> import java.util.Collections;
+19a21
+> import org.eclipse.emf.common.command.AbstractCommand;
+20a23
+> import org.eclipse.emf.common.command.CompoundCommand;
+29a33
+> import org.eclipse.emf.transaction.TransactionChangeDescription;
+37c41
+< import org.eclipse.emf.transaction.util.CompositeChangeDescription;
+---
+> import org.eclipse.emf.transaction.util.TriggerCommand;
+128a133,155
+> 		public void precommit(InternalTransaction tx) throws RollbackException {
+> 			super.precommit(tx);
+> 			
+> 			if ((tx.getParent() == null) && (deb != null)) {
+> 				// ensure that when the top-level transaction commits, it
+> 				//    has a self-chaining composite command as a trigger to
+> 				//    insert the DiagramEventBroker's post-commit changes into,
+> 				//    so that the transaction's change description and any other
+> 				//    AbstractEMFOperation will get the changes automatically
+> 				Command existingTriggers = tx.getTriggers();
+> 				if (existingTriggers instanceof CompoundCommand) {
+> 					// nothing to do:  already a self-chaining command
+> 				} else if (existingTriggers != null) {
+> 					// force it to be a compound by appending a no-op
+> 					tx.addTriggers(NOOP_TRIGGER);
+> 				} else {
+> 					// no triggers, yet?  have to add *two* no-ops
+> 					tx.addTriggers(NOOP_TRIGGER);
+> 					tx.addTriggers(NOOP_TRIGGER);
+> 				}
+> 			}
+> 		}
+> 		
+143,144c170,177
+< 						//  descriptions to the originatingTransaction.
+< 						((CompositeChangeDescription)originatingTransaction.getChangeDescription()).add(tx.getChangeDescription());
+---
+> 						//  descriptions to the originatingTransaction.  Do this
+> 						//  as a "late trigger command" because the trigger
+> 						//  mechanism is already understood by some of the
+> 						//  operations that need to undo/redo these changes
+> 						originatingTransaction.addTriggers(new TriggerCommand(
+> 								Collections.singletonList(
+> 										new DiagramEventBrokerCommand(
+> 												tx.getChangeDescription()))));
+189a223,262
+> 	private static class DiagramEventBrokerCommand extends AbstractCommand {
+> 		private final TransactionChangeDescription change;
+> 		
+> 		DiagramEventBrokerCommand(TransactionChangeDescription change) {
+> 			this.change = change;
+> 		}
+> 		
+> 		protected boolean prepare() {
+> 			return true;
+> 		}
+> 		
+> 		public final void execute() {
+> 			// never executed
+> 		}
+> 
+> 		public boolean canUndo() {
+> 			return (change != null) && change.canApply();
+> 		}
+> 		
+> 		public final void undo() {
+> 			if (change != null) {
+> 				change.applyAndReverse();
+> 			}
+> 		}
+> 		
+> 		public final void redo() {
+> 			if (change != null) {
+> 				change.applyAndReverse();
+> 			}
+> 		}
+> 	}
+> 	
+> 	static final TriggerCommand NOOP_TRIGGER = new TriggerCommand(
+> 			Collections.singletonList(new AbstractCommand() {
+> 				protected boolean prepare() { return true; }
+> 				public void execute() {}
+> 				public boolean canUndo() { return true;	}
+> 				public void undo() {}
+> 				public void redo() {}}));
+> 	

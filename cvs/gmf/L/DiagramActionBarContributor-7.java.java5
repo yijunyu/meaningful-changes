@@ -1,0 +1,91 @@
+package org.eclipse.gmf.runtime.diagram.ui.parts;
+
+import org.eclipse.gef.ui.actions.ActionBarContributor;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.contributionitem.ContributionItemService;
+
+import org.eclipse.gmf.runtime.common.ui.util.IWorkbenchPartDescriptor;
+
+import org.eclipse.gmf.runtime.common.ui.util.WorkbenchPartDescriptor;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.util.DiagramMEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.ui.IActionBars;
+
+import org.eclipse.ui.PlatformUI;
+
+import org.eclipse.ui.activities.ActivityManagerEvent;
+
+import org.eclipse.ui.activities.IActivityManagerListener;
+
+public abstract class DiagramActionBarContributor extends ActionBarContributor {
+    class ActivityManagerListener implements IActivityManagerListener {
+
+        public void activityManagerChanged (ActivityManagerEvent activityManagerEvent) {
+            if (activityManagerEvent.haveEnabledActivityIdsChanged ()) {
+                updateActionBars ();
+            }
+        }
+
+    }
+
+    private ActivityManagerListener activityManagerListener;
+    private IWorkbenchPartDescriptor descriptor;
+
+    public void init (final IActionBars bars) {
+        super.init (bars);
+        descriptor = new WorkbenchPartDescriptor (getEditorId (), getEditorClass (), getPage ());
+        try {
+            DiagramMEditingDomainGetter.getMEditingDomain (getPage ().getActiveEditor ()).runAsRead (new MRunnable () {
+
+                public Object run () {
+                    ContributionItemService.getInstance ().contributeToActionBars (bars, descriptor);
+                    return null;
+                }
+
+            }
+
+            );
+        } catch (Exception e) {
+            Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "init()", e);
+        }
+        bars.updateActionBars ();
+        activityManagerListener = new ActivityManagerListener ();
+        PlatformUI.getWorkbench ().getActivitySupport ().getActivityManager ().addActivityManagerListener (activityManagerListener);
+    }
+
+    public void dispose () {
+        ContributionItemService.getInstance ().disposeContributions (descriptor);
+        descriptor = null;
+        if (activityManagerListener != null) {
+            PlatformUI.getWorkbench ().getActivitySupport ().getActivityManager ().removeActivityManagerListener (activityManagerListener);
+        }
+        activityManagerListener = null;
+        super.dispose ();
+    }
+
+    protected void buildActions () {
+    }
+
+    protected void declareGlobalActionKeys () {
+    }
+
+    protected abstract String getEditorId ();
+
+    protected abstract Class getEditorClass ();
+
+    private void updateActionBars () {
+        ContributionItemService.getInstance ().updateActionBars (getActionBars (), descriptor);
+        getActionBars ().updateActionBars ();
+    }
+
+}
+

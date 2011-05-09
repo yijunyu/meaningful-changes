@@ -1,0 +1,108 @@
+17,17d16
+< import org.eclipse.emf.codegen.util.CodeGenUtil;
+19,23d17
+< import org.eclipse.gmf.codegen.gmfgen.GenCompartment;
+< import org.eclipse.gmf.codegen.gmfgen.GenLabel;
+< import org.eclipse.gmf.codegen.gmfgen.GenLink;
+< import org.eclipse.gmf.codegen.gmfgen.GenNode;
+< import org.eclipse.gmf.common.IncrementalNamesDispenser;
+26,26d19
+< import org.eclipse.gmf.mappings.CompartmentMapping;
+29,29d21
+< import org.eclipse.gmf.mappings.MappingEntry;
+41,48d32
+< 	private final NamesDispenser namesDispenser;
+< 	
+< 	private final String suffix;
+< 
+< 	public ClassNamingStrategy(String suffix) {
+< 		this(suffix, null, new IncrementalNamesDispenser());
+< 	}
+< 
+49,49c33,33
+< 	public ClassNamingStrategy(String suffix, NamingStrategy chained, NamesDispenser namesDispenser) {
+---
+> 	public ClassNamingStrategy(String suffix, NamesDispenser namesDispenser, NamingStrategy chainedNamingStrategy, NamingStrategy prefixNamingStrategy) {
+49a34,34
+> 		super(suffix, namesDispenser, chainedNamingStrategy, prefixNamingStrategy);
+50,54d33
+< 		super(chained);
+< 		assert suffix != null;
+< 		this.suffix = suffix;
+< 		assert namesDispenser != null;
+< 		this.namesDispenser = namesDispenser;
+77,86d56
+< 	public String getAsPrefix(NodeMapping mapping) {
+< 		if (mapping.getDomainMetaElement() != null) {
+< 			String name = mapping.getDomainMetaElement().getName();
+< 			if (!isEmpty(name)) {
+< 				return getValidClassName(name);
+< 			}
+< 		}
+< 		return GenNode.CLASS_NAME_PREFIX;
+< 	}
+< 
+105,134d74
+< 	public String getAsPrefix(LinkMapping mapping) {
+< 		if (mapping.getDomainMetaElement() != null) {
+< 			String name = mapping.getDomainMetaElement().getName();
+< 			if (!isEmpty(name)) {
+< 				return getValidClassName(name);
+< 			}
+< 		}
+< 		if (mapping.getLinkMetaFeature() != null) {
+< 			String name = mapping.getLinkMetaFeature().getName();
+< 			if (!isEmpty(name)) {
+< 				name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+< 				name = mapping.getLinkMetaFeature().getEContainingClass().getName() + name;
+< 				return getValidClassName(name);
+< 			}
+< 		}
+< 		return GenLink.CLASS_NAME_PREFIX;
+< 	}
+< 
+< 	public String get(CompartmentMapping mapping) {
+< 		// TODO : move to design naming strategy and allow to pass node name as prefix
+< 		if (mapping.getCompartment() != null) {
+< 			String name = mapping.getCompartment().getName();
+< 			if (!isEmpty(name)) {
+< 				name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+< 				return createClassName(getAsPrefix(mapping.getParentNode()) + name);
+< 			}
+< 		}
+< 		return createClassName(getAsPrefix(mapping.getParentNode()) + GenCompartment.CLASS_NAME_PREFIX);
+< 	}
+< 
+136,136d75
+< 		// TODO : allow to use host/label name parts from chained strategy
+145a85,85
+> 		if (sb.length() > 0) {
+146,154d84
+< 		String hostName;
+< 		MappingEntry parentMapping = mapping.getMapEntry();
+< 		if (parentMapping instanceof NodeMapping) {
+< 			hostName = getAsPrefix((NodeMapping) parentMapping);
+< 		} else if (parentMapping instanceof LinkMapping) {
+< 			hostName = getAsPrefix((LinkMapping) parentMapping);
+< 		} else {
+< 			throw new IllegalArgumentException(String.valueOf(mapping));
+< 		}
+155,155c86,86
+< 		return createClassName(hostName + (sb.length() > 0 ? sb.toString() : GenLabel.CLASS_NAME_PREFIX));
+---
+> 			return createClassName(getLabelHostPrefix(mapping) + sb.toString());
+156a88,88
+> 		return super.get(mapping);
+157,168d87
+< 
+< 	protected String createClassName(String name) {
+< 		assert !isEmpty(name);
+< 		name = CodeGenUtil.validJavaIdentifier(name);
+< 		name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+< 		return namesDispenser.get(name, suffix);
+< 	}
+< 
+< 	protected static String getValidClassName(String s) {
+< 		assert !isEmpty(s);
+< 		s = CodeGenUtil.validJavaIdentifier(s);
+< 		return Character.toUpperCase(s.charAt(0)) + s.substring(1);

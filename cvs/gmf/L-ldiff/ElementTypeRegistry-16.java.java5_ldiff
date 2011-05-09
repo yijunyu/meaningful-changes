@@ -1,0 +1,60 @@
+5,6d4
+< import java.util.Arrays;
+< 
+354a353,357
+>             IElementType [] superTypes = metamodelType.getAllSuperTypes ();
+>             for (int i = superTypes.length - 1;
+>             i >= 0; i --) {
+>                 result.add (superTypes [i]);
+>             }
+355,357d352
+<             List superTypes = Arrays.asList (metamodelType.getAllSuperTypes ());
+<             Collections.reverse (superTypes);
+<             result.addAll (superTypes);
+369a370,415
+>     public ISpecializationType [] getSpecializationsOf (String id) {
+>         IElementTypeDescriptor descriptor = getTypeDescriptor (id);
+>         if (descriptor == null) {
+>             return new ISpecializationType [] {};
+>         }
+>         IClientContext clientContext = ClientContextManager.getInstance ().getBinding (descriptor);
+>         return specializationTypeRegistry.getAllSpecializationTypes (descriptor, clientContext);
+>     }
+> 
+>     public IMetamodelType [] getMetamodelTypes (IClientContext clientContext) {
+>         List result = new ArrayList ();
+>         for (Iterator i = metamodelTypeDescriptorsById.values ().iterator ();
+>         i.hasNext ();) {
+>             MetamodelTypeDescriptor descriptor = (MetamodelTypeDescriptor) i.next ();
+>             if (clientContext.includes (descriptor)) {
+>                 result.add (descriptor.getElementType ());
+>             }
+>         }
+>         return (IMetamodelType []) result.toArray (new IMetamodelType [result.size ()]);
+>     }
+> 
+>     public ISpecializationType [] getSpecializationTypes (IClientContext clientContext) {
+>         List result = new ArrayList ();
+>         Collection specializations = specializationTypeRegistry.getSpecializationTypeDescriptors (clientContext);
+>         for (Iterator i = specializations.iterator ();
+>         i.hasNext ();) {
+>             result.add (((SpecializationTypeDescriptor) i.next ()).getElementType ());
+>         }
+>         return (ISpecializationType []) result.toArray (new ISpecializationType [result.size ()]);
+>     }
+> 
+>     public IElementType [] getElementTypes (IClientContext clientContext) {
+>         IMetamodelType [] metamodelTypes = getMetamodelTypes (clientContext);
+>         ISpecializationType [] specializationTypes = getSpecializationTypes (clientContext);
+>         IElementType [] result = new IElementType [metamodelTypes.length + specializationTypes.length];
+>         for (int i = 0;
+>         i < metamodelTypes.length; i ++) {
+>             result [i] = metamodelTypes [i];
+>         }
+>         for (int i = 0;
+>         i < specializationTypes.length; i ++) {
+>             result [i + metamodelTypes.length] = specializationTypes [i];
+>         }
+>         return result;
+>     }
+> 

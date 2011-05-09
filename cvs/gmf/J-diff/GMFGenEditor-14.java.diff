@@ -1,0 +1,40 @@
+849c849
+< 		// I assume that the input is a file object.
+---
+> 		// Assumes that the input is a file object.
+852c852,854
+< 
+---
+> 		URI resourceURI = URI.createPlatformResourceURI(modelFile.getFile().getFullPath().toString());;
+> 		Exception exception = null;
+> 		Resource resource = null;
+856,858c858,860
+< 			// [vano] reconcile genModel for domain
+< 			Resource res = editingDomain.loadResource(URI.createPlatformResourceURI(modelFile.getFile().getFullPath().toString()).toString());
+< 			Object o = res.getContents().get(0);
+---
+> 			resource = editingDomain.getResourceSet().getResource(resourceURI, true);
+> 			// [vano] reconcile genModel for domain --start
+> 			Object o = resource.getContents().get(0);
+860,862c862
+< 			if (o instanceof GenDiagram) {
+< 				toReload = ((GenDiagram) o).getEditorGen().getDomainGenModel();
+< 			} else if (o instanceof GenEditorGenerator) {
+---
+> 			if (o instanceof GenEditorGenerator) {
+867a868
+> 			// reconcile -end
+869,870c870,877
+< 		catch (Exception exception) {
+< 			EditorPlugin.INSTANCE.log(exception);
+---
+> 		catch (Exception e) {
+> 			exception = e;
+> 			resource = editingDomain.getResourceSet().getResource(resourceURI, false);			
+> 		}
+> 
+> 		Diagnostic diagnostic = analyzeResourceProblems(resource, exception);
+> 		if (diagnostic.getSeverity() != Diagnostic.OK) {
+> 			resourceToDiagnosticMap.put(resource,  analyzeResourceProblems(resource, exception));
+871a879
+> 		editingDomain.getResourceSet().eAdapters().add(problemIndicationAdapter);		

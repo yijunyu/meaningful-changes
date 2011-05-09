@@ -1,0 +1,151 @@
+16a17
+> import java.io.IOException;
+18a20
+> import java.util.Collections;
+24a27
+> import org.eclipse.emf.common.util.URI;
+25a29,31
+> import org.eclipse.emf.ecore.resource.ResourceSet;
+> import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+27d32
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+30,31d34
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+< import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+34,36c37
+< import org.eclipse.gmf.runtime.diagram.ui.resources.editor.internal.ui.parts.FileResourceEditorInput;
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+< import org.eclipse.gmf.runtime.emf.core.util.ResourceUtil;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.resources.editor.internal.EditorStatusCodes;
+41,44d41
+< import org.eclipse.ui.IEditorPart;
+< import org.eclipse.ui.IWorkbenchPage;
+< import org.eclipse.ui.IWorkbenchWindow;
+< import org.eclipse.ui.PlatformUI;
+57,133d53
+< 	 * @param diagramFileCreator 
+< 	 * @param containerPath Directory path where the file will be stored
+< 	 * @param fileName Name of the file to be created
+< 	 * @param initialContents InputStream of the initial contents of the file if desired
+< 	 * @param diagramId the id of the editor extension to use
+< 	 * @param kind diagram kind, check {@link ViewType} for predefined values
+< 	 * @param dWindow the workbench window containing the active page
+< 	 * @param progressMonitor A progress monitor for tracking the progress of the action's execution
+< 	 * @param openEditor boolean indicating if the editor containing the diagram should be opened
+< 	 * @param saveDiagram boolean indicating if the diagram is to be saved
+< 	 * @param preferencesHint
+< 	 *            The preference hint that is to be used to find the appropriate
+< 	 *            preference store from which to retrieve diagram preference
+< 	 *            values. The preference hint is mapped to a preference store in
+< 	 *            the preference registry <@link DiagramPreferencesRegistry>.
+< 	 * @return
+< 	 */
+< 	public static final IFile createAndOpenDiagram(
+< 			DiagramFileCreator diagramFileCreator,
+< 			IPath containerPath, String fileName, String diagramId,
+< 			InputStream initialContents,
+< 			String kind, IWorkbenchWindow dWindow,
+< 			IProgressMonitor progressMonitor, boolean openEditor,
+< 			boolean saveDiagram, PreferencesHint preferencesHint) {
+< 		IFile newFile = EditorUtil.createNewDiagramFile(diagramFileCreator,
+< 			containerPath, fileName, initialContents, kind, dWindow.getShell(),
+< 			progressMonitor, preferencesHint);
+< 
+< 		if (newFile != null && openEditor) {
+< 			//Since the file resource was created fine, open it for editing
+< 			// iff requested by the user
+< 			EditorUtil.openDiagram(newFile, dWindow, saveDiagram,
+< 				progressMonitor, diagramId);
+< 			
+< 		}
+< 
+< 		return newFile;
+< 	}
+< 	
+< 	/**
+< 	 * @param file IFile to be opened
+< 	 * @param dWindow the workbench window containing the active page
+< 	 * @param saveDiagram boolean indicating if the diagram is to be saved
+< 	 * @param progressMonitor A progress monitor for tracking the progress of the action's execution
+< 	 * @param diagramId the id of the editor extension to use
+< 	 * @return editpart representing opened diagram
+< 	 */
+< 	public static final DiagramEditPart openDiagram(IFile file,
+< 			IWorkbenchWindow dWindow, boolean saveDiagram,
+< 			IProgressMonitor progressMonitor, String diagramId) {
+< 		IEditorPart editorPart = null;
+< 		try {
+< 			//TODO which MEditingDomain to use?
+< 			IWorkbenchPage page = dWindow.getActivePage();
+< 			if (page != null) {
+< 				
+< 				editorPart = PlatformUI.getWorkbench().getActiveWorkbenchWindow()
+< 				.getActivePage().openEditor(new FileResourceEditorInput(file),
+< 					diagramId);
+< 
+< 				if (saveDiagram)
+< 					editorPart.doSave(progressMonitor);
+< 			}
+< 			file.refreshLocal(IResource.DEPTH_ZERO, null);
+< 			return ((IDiagramWorkbenchPart) editorPart).getDiagramEditPart();
+< 		} catch (Exception e) {
+< 			Trace.catching(EditorPlugin.getInstance(),
+< 				EditorDebugOptions.EXCEPTIONS_CATCHING,
+< 				EditorUtil.class, "openDiagram", e); //$NON-NLS-1$
+< 		}
+< 
+< 		return null;
+< 	}	
+< 
+< 
+< 
+< 	/**
+136c56,57
+< 	 * path; does nothing if the container resources already exist.
+---
+> 	 * path; does nothing if the container resources already exist. Creates a
+> 	 * new editing domain for this diagram.
+150a72
+> 	 * 
+164c86,87
+< 			Shell shell, final IProgressMonitor progressMonitor, final PreferencesHint preferencesHint) {
+---
+> 			Shell shell, final IProgressMonitor progressMonitor,
+> 			final PreferencesHint preferencesHint) {
+178a102
+> 
+186c110,112
+< 				notationModel = ResourceUtil.create(completeFileName, null);//TODO which MEditingDomain to use?
+---
+>                 ResourceSet resourceSet = new ResourceSetImpl();
+>                 notationModel = resourceSet.createResource(URI
+>                     .createFileURI(completeFileName)); 
+199,203c125
+< 			final Resource notationModel_ = notationModel;
+< 			MEditingDomainGetter.getMEditingDomain(notationModel_).runAsUnchecked(new MRunnable() {
+< 				public Object run() {
+< 					View view = ViewService
+< 						.createDiagram(kind, preferencesHint);
+---
+>             View view = ViewService.createDiagram(kind, preferencesHint);
+206c128
+< 						notationModel_.getContents().add(view.getDiagram());
+---
+>                 notationModel.getContents().add(view.getDiagram());
+209d130
+< 					return null;
+211c132,139
+< 			});
+---
+> 		try {
+>             notationModel.save(Collections.EMPTY_MAP);
+>         } catch (IOException e) {
+>             Trace.catching(EditorPlugin.getInstance(),
+>                 EditorDebugOptions.EXCEPTIONS_CATCHING, EditorUtil.class,
+>                 "createNewDiagramFile", e); //$NON-NLS-1$
+>             Log.error(EditorPlugin.getInstance(),
+>                 EditorStatusCodes.RESOURCE_FAILURE, e.getLocalizedMessage());
+213d140
+< 

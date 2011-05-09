@@ -1,0 +1,287 @@
+1,1c1,1
+< package org.eclipse.gmf.runtime.diagram.ui.printing.render.util;
+---
+> package org.eclipse.gmf.runtime.common.ui.printing;
+4a5,5
+> import java.util.Locale;
+4a15,20
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+> import org.eclipse.gmf.runtime.common.ui.printing.internal.CommonPrintingDebugOptions;
+> 
+> import org.eclipse.gmf.runtime.common.ui.printing.internal.CommonPrintingStatusCodes;
+> 
+5,5c21,21
+< import org.eclipse.gmf.runtime.common.ui.printing.IPrintHelper;
+---
+> import org.eclipse.gmf.runtime.common.ui.printing.internal.PrintingPlugin;
+7,7c11,11
+< import org.eclipse.gmf.runtime.diagram.ui.printing.render.dialogs.JPSPrintDialog;
+---
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+9,9c13,13
+< import org.eclipse.gmf.runtime.diagram.ui.printing.render.model.PrintOptions;
+---
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+11,11d10
+< import org.eclipse.jface.dialogs.IDialogConstants;
+13,13c7,7
+< import org.eclipse.swt.printing.PrinterData;
+---
+> import org.eclipse.swt.printing.PrinterData;
+15,15c9,9
+< import org.eclipse.ui.PlatformUI;
+---
+> import org.eclipse.ui.PlatformUI;
+17a24,27
+>     private static final String DLL_NAME = "DiagramPrint";
+>     private static final String SEPARATOR = StringStatics.UNDER_SCORE;
+>     private static final String SUPPORTED [] = {"en", "de", "es", "fr", "it", "ja", "ko", "pt_BR", "zh_CN", "zh_TW"};
+>     private static final String DEFAULT_LOCALE = SUPPORTED [0];
+18,19d23
+<     private final PrintOptions options = new PrintOptions ();
+<     List < String > diagramList;
+20a29,41
+>     static {
+>         boolean success = false;
+>         String language = Locale.getDefault ().getLanguage ().toLowerCase ();
+>         String country = Locale.getDefault ().getCountry ().toUpperCase ();
+>         if (language != null) {
+>             String localizedVersion = (country != null) ? language + SEPARATOR + country : language;
+>             for (int i = 0;
+>             i < SUPPORTED.length; i ++) {
+>                 if (localizedVersion.equals (SUPPORTED [i])) {
+>                     success = true;
+>                 } else if (language.equals (SUPPORTED [i])) {
+>                     localizedVersion = language;
+>                     success = true;
+21,21c140,140
+<     public PrintHelper () {
+---
+>     public PrintHelper () {
+22,22d140
+<         initPrintOptions ();
+24a44,53
+>                 if (success) {
+>                     success = false;
+>                     try {
+>                         System.loadLibrary (DLL_NAME + SEPARATOR + localizedVersion);
+>                         success = true;
+>                         break;
+>                     } catch (UnsatisfiedLinkError ule) {
+>                         Trace.catching (PrintingPlugin.getDefault (), CommonPrintingDebugOptions.EXCEPTIONS_CATCHING, PrintHelper.class, "Link", ule);
+>                         Log.error (PrintingPlugin.getDefault (), CommonPrintingStatusCodes.RESOURCE_FAILURE, "Failed to load DiagramPrint dll for " + localizedVersion);
+>                         Trace.throwing (PrintingPlugin.getDefault (), CommonPrintingDebugOptions.EXCEPTIONS_THROWING, PrintHelper.class, "Link", ule);
+25,48d43
+<     private void initPrintOptions () {
+<         options.setPercentScaling (true);
+<         options.setScaleFactor (100);
+<         options.setFitToPagesWidth (1);
+<         options.setFitToPagesHeight (1);
+<         options.setAllPages (true);
+<         options.setRangeFrom (1);
+<         options.setRangeTo (1);
+<         options.setCopies (1);
+<         options.setCollate (false);
+<         options.setQualityHigh (true);
+<         options.setSideOneSided (true);
+<         options.setChromaticityColor (true);
+<         options.setDiagramCurrent (true);
+<     }
+< 
+<     @SuppressWarnings("unchecked")
+<     public PrinterData openPrintDlg (List availableDiagramList) {
+<         PrinterData result = null;
+<         this.diagramList = availableDiagramList;
+<         JPSPrintDialog dlg = new JPSPrintDialog (PlatformUI.getWorkbench ().getActiveWorkbenchWindow (), options, this.diagramList);
+<         if (dlg.open () == IDialogConstants.OK_ID) {
+<             if (options.getDestination () != null) {
+<                 result = options.getDestination ().getPrinterData ();
+50,51d54
+<         } else {
+<             initPrintOptions ();
+53,53c144,144
+<         return result;
+---
+>         return getScaleFitToM ();
+55,55d178
+< 
+56,56c179,179
+<     public boolean getDlgCollate () {
+---
+>     public boolean getDlgCollate () {
+57,57c180,180
+<         return options.isCollate ();
+---
+>         return getCollate ();
+58a58,65
+>         if (! success) {
+>             try {
+>                 System.loadLibrary (DLL_NAME + SEPARATOR + DEFAULT_LOCALE);
+>             } catch (UnsatisfiedLinkError ule) {
+>                 Trace.catching (PrintingPlugin.getDefault (), CommonPrintingDebugOptions.EXCEPTIONS_CATCHING, PrintHelper.class, "Link", ule);
+>                 Log.error (PrintingPlugin.getDefault (), CommonPrintingStatusCodes.RESOURCE_FAILURE, "Failed to load DiagramPrint_en.dll for language " + ((language == null) ? "null" : language) + " and country " + ((country == null) ? "null" : country), ule);
+>                 Trace.throwing (PrintingPlugin.getDefault (), CommonPrintingDebugOptions.EXCEPTIONS_THROWING, PrintHelper.class, "Link", ule);
+>                 throw ule;
+58a183,185
+>     public int getDlgPagesFrom () {
+>         return getPagesFrom ();
+>     }
+59,59c186,186
+< 
+---
+> 
+59a187,190
+>     public int getDlgPagesTo () {
+>         return getPagesTo ();
+>     }
+> 
+60,60c191,191
+<     public int getDlgNumberOfCopies () {
+---
+>     public int getDlgNumberOfCopies () {
+61,61c192,192
+<         return options.getCopies ();
+---
+>         return getNumberOfCopies ();
+63,65d66
+< 
+<     public int getDlgPagesFrom () {
+<         return options.getRangeFrom ();
+67,69d67
+< 
+<     public int getDlgPagesTo () {
+<         return options.getRangeTo ();
+71a174,174
+> 
+71a70,137
+>     public static native void initScaleFitTo (int m, int n);
+> 
+>     public static native void initScalePercent (int percent);
+> 
+>     public static native void resetDialog ();
+> 
+>     public static native void addDiagramString (String string);
+> 
+>     public static native void setHwndOwner (String windowClass, String title);
+> 
+>     public static native int getScaleFitToM ();
+> 
+>     public static native int getScaleFitToN ();
+> 
+>     public static native int getScalePercent ();
+> 
+>     public static native boolean isDiagramSelected (int index);
+> 
+>     public static native boolean getDiagramPrintRangeAll ();
+> 
+>     public static native boolean getDiagramPrintRangeCurrent ();
+> 
+>     public static native boolean getDiagramPrintRangeSelection ();
+> 
+>     public static native boolean getPrintRangeAll ();
+> 
+>     public static native boolean getPrintRangePages ();
+> 
+>     public static native boolean getCollate ();
+> 
+>     public static native int getPagesFrom ();
+> 
+>     public static native int getPagesTo ();
+> 
+>     public static native int getNumberOfCopies ();
+> 
+>     public static native boolean open (PrinterData pd);
+> 
+>     public PrinterData openPrintDlg (List diagramList) {
+>         String title = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ().getShell ().getText ();
+>         assert null != title : "title cannot be null";
+>         setHwndOwner ("SWT_Window0", title);
+>         resetDialog ();
+>         initScaleFitTo (1, 1);
+>         initScalePercent (100);
+>         if (diagramList != null) {
+>             for (int c = 0;
+>             c < diagramList.size (); c ++) {
+>                 assert (diagramList.get (c) instanceof String);
+>                 addDiagramString ((String) diagramList.get (c));
+>             }
+>         }
+>         PrinterData printerData = new PrinterData (StringStatics.BLANK, StringStatics.BLANK);
+>         if (open (printerData)) {
+>             if (getPrintRangePages ()) {
+>                 printerData.scope = PrinterData.PAGE_RANGE;
+>                 printerData.startPage = getPagesFrom ();
+>                 printerData.endPage = getPagesTo ();
+>             } else {
+>                 printerData.scope = PrinterData.ALL_PAGES;
+>             }
+>             printerData.printToFile = false;
+>             printerData.copyCount = getNumberOfCopies ();
+>             printerData.collate = getCollate ();
+>         } else {
+>             return null;
+>         }
+>         return printerData;
+72,72c175,175
+<     public boolean getDlgPrintRangeAll () {
+---
+>     public boolean getDlgPrintRangePages () {
+73,73c176,176
+<         return options.isAllPages ();
+---
+>         return getPrintRangePages ();
+76,76c171,171
+<     public boolean getDlgPrintRangePages () {
+---
+>     public boolean getDlgPrintRangeAll () {
+77,77c172,172
+<         return ! getDlgPrintRangeAll ();
+---
+>         return getPrintRangeAll ();
+81,81d143
+<         return options.getFitToPagesWidth ();
+85,85d147
+<         return options.getFitToPagesHeight ();
+88a152,152
+>         return getScalePercent ();
+89,89d151
+<         return options.isPercentScaling () ? options.getScaleFactor () : - 1;
+92,92d154
+<     public void setDlgOrientation (boolean landscape) {
+95,95d158
+<     public void setDlgPaperSize (int index, double width, double length) {
+98a164,164
+>         return getDiagramPrintRangeCurrent ();
+99,99d163
+<         return options.isDiagramCurrent ();
+102a168,168
+>         return getDiagramPrintRangeSelection ();
+103,103d167
+<         return options.isDiagramSelection ();
+106,106c155,155
+<     public boolean isDlgDiagramSelected (int index) {
+---
+>     public boolean isDlgDiagramSelected (int index) {
+107,107c156,156
+<         String diagramToPrint = diagramList.get (index);
+---
+>         return isDiagramSelected (index);
+108,109d156
+<         if (options.getDiagramsToPrint () != null) {
+<             return options.getDiagramsToPrint ().contains (diagramToPrint);
+111,111c148,148
+<         return false;
+---
+>         return getScaleFitToN ();
+114,114c159,159
+<     public boolean getDlgDiagramPrintRangeAll () {
+---
+>     public boolean getDlgDiagramPrintRangeAll () {
+115,115c160,160
+<         return false;
+---
+>         return getDiagramPrintRangeAll ();
+118,119d182
+<     public PrintOptions getPrintOptions () {
+<         return options;

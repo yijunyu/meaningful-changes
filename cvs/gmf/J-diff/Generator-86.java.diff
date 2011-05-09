@@ -1,0 +1,126 @@
+17d16
+< import java.util.Collection;
+20a20
+> import java.util.LinkedList;
+34a35,36
+> import org.eclipse.emf.ecore.EClass;
+> import org.eclipse.emf.ecore.EObject;
+35a38
+> import org.eclipse.gmf.codegen.gmfgen.GMFGenPackage;
+96c99
+< 		initializeEditorProject(myDiagram.getEditorGen().getPlugin().getID(), createReferencedProjectsList());
+---
+> 		initializeEditorProject(myEditorGen.getPlugin().getID(), createReferencedProjectsList());
+189a193
+> 		// plug-in
+895,900c899,906
+< 		Counter c = new Counter(myDiagram);
+< 		c.setAdditionalOperations(8); // init, palette, editor, plugin.xml, etc
+< 		c.setOperationsPerNode(2);
+< 		c.setOperationsPerListContainerNode(1);
+< 		c.setOperationsPerLink(2);
+< 		setupProgressMonitor(Messages.start, c.getTotal());
+---
+> 		Counter c = new Counter();
+> 		c.registerValue(GMFGenPackage.eINSTANCE.getGenNode(), 8);
+> 		c.registerValue(GMFGenPackage.eINSTANCE.getGenChildLabelNode(), 4);
+> 		c.registerValue(GMFGenPackage.eINSTANCE.getGenLink(), 6);
+> 		c.registerValue(GMFGenPackage.eINSTANCE.getGenCompartment(), 4);
+> 		c.registerValue(GMFGenPackage.eINSTANCE.getGenDiagram(), 50);
+> 		c.registerValue(GMFGenPackage.eINSTANCE.getGenPlugin(), 6);
+> 		setupProgressMonitor(Messages.start, c.getTotal(myEditorGen));
+909,949c915,947
+< 		private final GenDiagram myDiagram;
+< 		private int myOpsPerNode = 1;
+< 		private int myOpsPerLink = 1;
+< 		private int myOpsPerListContainerNode = 1;
+< 		private int myAdditionalOps = 0;
+< 		private int myOpsPerCompartment = 1;
+< 
+< 		Counter(GenDiagram diagram) {
+< 			myDiagram = diagram;
+< 		}
+< 
+< 		public void setOperationsPerNode(int opsPerNode) {
+< 			 myOpsPerNode = opsPerNode;
+< 		}
+< 		public void setOperationsPerLink(int opsPerLink) {
+< 			myOpsPerLink = opsPerLink;
+< 		}
+< 		public void setOperationsPerListContainerNode(int opsPerChild) {
+< 			myOpsPerListContainerNode = opsPerChild;
+< 		}
+< 		public void setOperationsPerCompartment(int opsPerCompartment) {
+< 			myOpsPerCompartment = opsPerCompartment;
+< 		}
+< 		public void setAdditionalOperations(int additionalOps) {
+< 			myAdditionalOps = additionalOps;
+< 		}
+< 		public int getTotal() {
+< 			int rv = myAdditionalOps;
+< 			rv += myDiagram.getTopLevelNodes().size() * myOpsPerNode;
+< 			rv += getChildNodesCount(myDiagram.getChildNodes());
+< 			rv += myDiagram.getCompartments().size() * myOpsPerCompartment;
+< 			rv += myDiagram.getLinks().size() * myOpsPerLink;
+< 			return rv;  
+< 		}
+< 
+< 		private int getChildNodesCount(Collection nodes) {
+< 			int counter = 0;
+< 			for (Iterator it = nodes.iterator(); it.hasNext();) {
+< 				GenChildNode nextNode = (GenChildNode) it.next();
+< 				if (nextNode instanceof GenChildLabelNode) {
+< 					counter += myOpsPerNode;
+---
+> 		private final HashMap/*<EClass, Integer>*/ myCounters = new HashMap();
+> 		private final HashMap/*<EClass, Integer>*/ myCache = new HashMap();
+> 		private final Integer CACHE_MISS = new Integer(0);
+> 
+> 		public Counter() {
+> 		}
+> 
+> 		public void registerValue(EClass eClass, int count) {
+> 			myCounters.put(eClass, new Integer(count));
+> 		}
+> 
+> 		public int getTotal(EObject from) {
+> 			int total = process(from);
+> 			for (Iterator it = from.eAllContents(); it.hasNext();) {
+> 				total += process((EObject) it.next());
+> 			}
+> 			return total;
+> 		}
+> 
+> 		protected int process(EObject next) {
+> 			final EClass nextKey = next.eClass();
+> 			Integer cachedValue = checkCached(nextKey);
+> 			if (cachedValue != null) {
+> 				return cachedValue.intValue(); 
+> 			}
+> 			LinkedList/*<EClass>*/ checkQueue = new LinkedList();
+> 			checkQueue.add(nextKey);
+> 			do {
+> 				Object key = checkQueue.removeFirst();
+> 				if (myCounters.containsKey(key)) {
+> 					final Integer value = (Integer) myCounters.get(key);
+> 					cache(nextKey, value);
+> 					return value.intValue();
+951c949,950
+< 					counter += myOpsPerListContainerNode;
+---
+> 					// add immeditate superclasses to check first
+> 					checkQueue.addAll(((EClass) key).getESuperTypes());
+952a952,954
+> 			} while (!checkQueue.isEmpty());
+> 			cache(nextKey, CACHE_MISS);
+> 			return 0;
+954c956,962
+< 			return counter;
+---
+> 
+> 		private Integer checkCached(EClass nextKey) {
+> 			return (Integer) myCache.get(nextKey);
+> 		}
+> 
+> 		private void cache(EClass nextKey, Integer value) {
+> 			myCache.put(nextKey, value);

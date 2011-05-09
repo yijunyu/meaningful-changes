@@ -1,0 +1,110 @@
+package org.eclipse.gmf.runtime.diagram.ui.util;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.Assert;
+
+import org.eclipse.draw2d.FigureCanvas;
+
+import org.eclipse.draw2d.RangeModel;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gmf.runtime.common.ui.services.editor.EditorService;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramEditor;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramGraphicalViewer;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.ui.PlatformUI;
+
+public class SelectInDiagramHelper {
+
+    private SelectInDiagramHelper () {
+    }
+
+    public static DiagramEditor activateDiagram (Diagram diagram) {
+        List editors = EditorService.getInstance ().getRegisteredEditorParts ();
+        Iterator it = editors.iterator ();
+        while (it.hasNext ()) {
+            Object obj = it.next ();
+            if (obj instanceof DiagramEditor) {
+                DiagramEditor diagramEditor = ((DiagramEditor) obj);
+                if (diagramEditor.getDiagram ().equals (diagram)) {
+                    PlatformUI.getWorkbench ().getActiveWorkbenchWindow ().getActivePage ().activate (diagramEditor);
+                    return diagramEditor;
+                }
+            }
+        }
+        return null;
+    }
+
+    public static void selectElement (View view) {
+        IEditorPart editorPart = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ().getActivePage ().getActiveEditor ();
+        Assert.isTrue (editorPart instanceof DiagramEditor);
+        DiagramEditor diagramEditor = (DiagramEditor) editorPart;
+        Assert.isTrue (diagramEditor.getDiagram ().equals (view.getDiagram ()));
+        IDiagramGraphicalViewer viewer = diagramEditor.getDiagramGraphicalViewer ();
+        Assert.isNotNull (viewer);
+        Object obj = viewer.getEditPartRegistry ().get (view);
+        if (obj instanceof EditPart) {
+            viewer.select ((EditPart) obj);
+        } else {
+            Assert.isTrue (false);
+        }
+    }
+
+    public static void exposeLocation (FigureCanvas canvas, Point location) {
+        location = location.getCopy ();
+        int padding = 50;
+        if (location.x >= 0) {
+            location.x += padding;
+        } else {
+            location.x -= padding;
+        }
+        if (location.y >= 0) {
+            location.y += padding;
+        } else {
+            location.y -= padding;
+        }
+        int viewPortXLocation = canvas.getBounds ().x;
+        int viewPortXExtent = canvas.getBounds ().x + canvas.getBounds ().width;
+        int viewPortYLocation = canvas.getBounds ().y;
+        int viewPortYExtent = canvas.getBounds ().y + canvas.getBounds ().height;
+        int deltaX = 0;
+        int deltaY = 0;
+        if (location.x < viewPortXLocation) {
+            deltaX = location.x - viewPortXLocation;
+        } else if (location.x > viewPortXExtent) {
+            deltaX = location.x - viewPortXExtent;
+        }
+
+        if (location.y < viewPortYLocation) {
+            deltaY = location.y - viewPortYLocation;
+        } else if (location.y > viewPortYExtent) {
+            deltaY = location.y - viewPortYExtent;
+        }
+
+        RangeModel hRange = canvas.getViewport ().getHorizontalRangeModel ();
+        RangeModel vRange = canvas.getViewport ().getVerticalRangeModel ();
+        if ((deltaX != 0) || (deltaY != 0)) {
+            canvas.getViewport ().setIgnoreScroll (true);
+            int x = hRange.getValue () + deltaX;
+            int y = vRange.getValue () + deltaY;
+            canvas.scrollSmoothTo (x, y);
+            canvas.getViewport ().setIgnoreScroll (false);
+        }
+    }
+
+}
+

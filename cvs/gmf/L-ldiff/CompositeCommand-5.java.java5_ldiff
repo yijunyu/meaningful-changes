@@ -1,0 +1,649 @@
+7,8d6
+< import java.util.Collections;
+< 
+12a11,24
+> import java.util.ListIterator;
+> 
+> import org.eclipse.core.commands.ExecutionException;
+> 
+> import org.eclipse.core.commands.operations.ICompositeOperation;
+> 
+> import org.eclipse.core.commands.operations.IUndoContext;
+> 
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> 
+> import org.eclipse.core.resources.IFile;
+> 
+> import org.eclipse.core.runtime.IAdaptable;
+> 
+24a37,38
+> import org.eclipse.gmf.runtime.common.core.internal.CommonCoreDebugOptions;
+> 
+30a45,51
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+> public class CompositeCommand extends AbstractCommand implements ICompositeCommand {
+>     private final List children;
+>     private boolean executed;
+31,35d44
+< public class CompositeCommand implements ICommand {
+<     protected static final String EMPTY_STRING = "";
+<     private final List commands = new ArrayList ();
+<     private final String label;
+<     private boolean canceled = false;
+38,38d53
+<         super ();
+39,39c54,54
+<         this.label = label;
+---
+>         this (label, null);
+41a57,62
+>     public CompositeCommand (String label, List children) {
+>         super (label, null);
+>         if (children != null) {
+>             this.children = new ArrayList (children);
+>         } else {
+>             this.children = new ArrayList ();
+42,49d56
+<     public CompositeCommand (String label, List commands) {
+<         super ();
+<         this.label = label;
+<         assert null != commands : "null commands";
+<         for (Iterator i = commands.iterator ();
+<         i.hasNext ();) {
+<             ICommand command = (ICommand) i.next ();
+<             compose (command);
+53,54d65
+<     public final List getCommands () {
+<         return commands;
+56a183,183
+>                 if (result != null) {
+56a70,72
+>     protected List getChildren () {
+>         return children;
+>     }
+57,58d182
+<     public final String getLabel () {
+<         if (label == null) if (getCommands ().isEmpty ()) return null;
+59a74,76
+>     public int size () {
+>         return getChildren ().size ();
+>     }
+60,60d73
+<         if (label != null) return label;
+61a78,119
+>     public void add (IUndoableOperation operation) {
+>         assertNotExecuted ();
+>         if (! getChildren ().contains (operation)) {
+>             getChildren ().add (operation);
+>             didAdd (operation);
+>         }
+>     }
+> 
+>     private void didAdd (IUndoableOperation operation) {
+>         IUndoContext [] childContexts = operation.getContexts ();
+>         for (int i = 0;
+>         i < childContexts.length; i ++) {
+>             if (! hasContext (childContexts [i])) {
+>                 addContext (childContexts [i]);
+>             }
+>         }
+>     }
+> 
+>     public void remove (IUndoableOperation operation) {
+>         assertNotExecuted ();
+>         if (getChildren ().remove (operation)) {
+>             didRemove (operation);
+>         }
+>     }
+> 
+>     private void didRemove (IUndoableOperation operation) {
+>         IUndoContext [] childContexts = operation.getContexts ();
+>         for (int i = 0;
+>         i < childContexts.length; i ++) {
+>             if (! anyChildHasContext (childContexts [i])) {
+>                 removeContext (childContexts [i]);
+>             }
+>         }
+>     }
+> 
+>     private boolean anyChildHasContext (IUndoContext ctx) {
+>         boolean result = false;
+>         for (Iterator iter = iterator ();
+>         ! result && iter.hasNext ();) {
+>             result = ((IUndoableOperation) iter.next ()).hasContext (ctx);
+>         }
+>         return result;
+62,62d77
+<         return ((ICommand) getCommands ().get (0)).getLabel ();
+64a122,126
+>     public boolean canExecute () {
+>         boolean result = super.canExecute ();
+>         for (Iterator iter = iterator ();
+>         result && iter.hasNext ();) {
+>             result = ((IUndoableOperation) iter.next ()).canExecute ();
+65,67d121
+<     public CommandResult getCommandResult () {
+<         if (isCanceled ()) {
+<             return newCancelledCommandResult ();
+68a412,412
+>     public List getAffectedFiles () {
+68a128,175
+>         return result;
+>     }
+> 
+>     public boolean canRedo () {
+>         boolean result = super.canRedo ();
+>         for (Iterator iter = iterator ();
+>         result && iter.hasNext ();) {
+>             result = ((IUndoableOperation) iter.next ()).canRedo ();
+>         }
+>         return result;
+>     }
+> 
+>     public boolean canUndo () {
+>         boolean result = super.canUndo ();
+>         for (Iterator iter = iterator ();
+>         result && iter.hasNext ();) {
+>             result = ((IUndoableOperation) iter.next ()).canUndo ();
+>         }
+>         return result;
+>     }
+> 
+>     public void dispose () {
+>         for (Iterator iter = iterator ();
+>         iter.hasNext ();) {
+>             IUndoableOperation nextOperation = (IUndoableOperation) iter.next ();
+>             nextOperation.dispose ();
+>         }
+>     }
+> 
+>     public final ICommand compose (IUndoableOperation operation) {
+>         if (operation != null) {
+>             add (operation);
+>         }
+>         return this;
+>     }
+> 
+>     public ICommand reduce () {
+>         switch (size ()) {
+>             case 1 :
+>                 IUndoableOperation child = (IUndoableOperation) iterator ().next ();
+>                 if (child instanceof ICommand) {
+>                     return ((ICommand) child).reduce ();
+>                 }
+>         }
+>         return this;
+>     }
+> 
+>     protected List getReturnValues () {
+69a414,414
+>         for (Iterator i = iterator ();
+69,69c413,413
+<         List statuses = new ArrayList ();
+---
+>         List result = new ArrayList ();
+71,76d176
+<         int severity = IStatus.OK;
+<         String plugin = CommonCorePlugin.getPluginId ();
+<         int code = CommonCoreStatusCodes.OK;
+<         String message = EMPTY_STRING;
+<         Throwable exception = null;
+<         for (Iterator i = getCommands ().iterator ();
+77a179,180
+>             IUndoableOperation operation = (IUndoableOperation) i.next ();
+>             if (operation instanceof ICommand) {
+78,78c181,181
+<             ICommand command = (ICommand) i.next ();
+---
+>                 ICommand command = (ICommand) operation;
+80,91d182
+<             if (result == null) {
+<                 break;
+<             }
+<             IStatus status = result.getStatus ();
+<             statuses.add (result.getStatus ());
+<             if (severity < status.getSeverity ()) {
+<                 severity = status.getSeverity ();
+<                 plugin = status.getPlugin ();
+<                 code = status.getCode ();
+<                 message = status.getMessage ();
+<                 exception = status.getException ();
+<             }
+105,105d196
+<         return new CommandResult (new MultiStatus (plugin, code, (IStatus []) statuses.toArray (new IStatus [] {}), message, exception), returnValues);
+107,114d197
+< 
+<     public final Collection getAffectedObjects () {
+<         List affectedObjects = new ArrayList ();
+<         for (Iterator i = getCommands ().iterator ();
+<         i.hasNext ();) {
+<             Collection coll = ((ICommand) i.next ()).getAffectedObjects ();
+<             if (coll != null) {
+<                 affectedObjects.addAll (coll);
+115a199,199
+>         return returnValues;
+116,117d198
+<         }
+<         return affectedObjects;
+119a202,230
+>     protected CommandResult doExecuteWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException {
+>         List result = new ArrayList (size ());
+>         if (progressMonitor == null) {
+>             progressMonitor = new NullProgressMonitor ();
+>         }
+>         progressMonitor.beginTask (getLabel (), size ());
+>         try {
+>             for (ListIterator iter = listIterator ();
+>             iter.hasNext ();) {
+>                 IUndoableOperation next = (IUndoableOperation) iter.next ();
+>                 try {
+>                     IStatus status = next.execute (new SubProgressMonitor (progressMonitor, 1), info);
+>                     result.add (status);
+>                     int severity = status.getSeverity ();
+>                     if (severity == IStatus.CANCEL || severity == IStatus.ERROR) {
+>                         Trace.trace (CommonCorePlugin.getDefault (), "Composite operation execution recovery: child command status is CANCEL or ERROR.");
+>                         iter.previous ();
+>                         unwindFailedExecute (iter, info);
+>                         break;
+>                     } else if (progressMonitor.isCanceled ()) {
+>                         Trace.trace (CommonCorePlugin.getDefault (), "Composite operation redo recovery: child command monitor is cancelled.");
+>                         CommandResult cancelResult = CommandResult.newCancelledCommandResult ();
+>                         result.add (cancelResult.getStatus ());
+>                         unwindFailedExecute (iter, info);
+>                         break;
+>                     } else {
+>                         progressMonitor.worked (1);
+>                         executed = true;
+>                     }
+120,123d201
+<     public boolean involvesReadOnlyNonWorkSpaceFiles () {
+<         for (Iterator i = getCommands ().iterator ();
+<         i.hasNext ();) {
+<             if (((ICommand) i.next ()).involvesReadOnlyNonWorkSpaceFiles ()) return true;
+124a232,237
+>                 } catch (ExecutionException e) {
+>                     iter.previous ();
+>                     unwindFailedExecute (iter, info);
+>                     Trace.throwing (CommonCorePlugin.getDefault (), CommonCoreDebugOptions.EXCEPTIONS_THROWING, CompositeCommand.class, "execute", e);
+>                     throw e;
+>                 }
+125a239,242
+>         } finally {
+>             progressMonitor.done ();
+>         }
+>         return new CommandResult (aggregateStatuses (result), getReturnValues ());
+126,126d238
+<         return false;
+128a245,259
+>     private void unwindFailedExecute (ListIterator iter, IAdaptable info) {
+>         while (iter.hasPrevious ()) {
+>             IUndoableOperation prev = (IUndoableOperation) iter.previous ();
+>             if (! prev.canUndo ()) {
+>                 Log.error (CommonCorePlugin.getDefault (), CommonCoreStatusCodes.EXECUTE_RECOVERY_FAILED, CommonCoreMessages.bind (CommonCoreMessages.executeRecoveryFailed, CommonCoreMessages.cannotUndoExecuted));
+>                 break;
+>             }
+>             try {
+>                 prev.undo (new NullProgressMonitor (), info);
+>             } catch (ExecutionException inner) {
+>                 Log.error (CommonCorePlugin.getDefault (), CommonCoreStatusCodes.EXECUTE_RECOVERY_FAILED, CommonCoreMessages.bind (CommonCoreMessages.executeRecoveryFailed, inner.getLocalizedMessage ()));
+>                 break;
+>             }
+>         }
+>     }
+129,130d244
+<     public final ICommand compose (ICommand command) {
+<         if (command != null) getCommands ().add (command);
+131a261,288
+>     protected CommandResult doRedoWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException {
+>         final List result = new ArrayList (size ());
+>         if (progressMonitor == null) {
+>             progressMonitor = new NullProgressMonitor ();
+>         }
+>         progressMonitor.beginTask (getLabel (), size ());
+>         try {
+>             for (ListIterator iter = listIterator ();
+>             iter.hasNext ();) {
+>                 IUndoableOperation next = (IUndoableOperation) iter.next ();
+>                 try {
+>                     IStatus status = next.redo (new SubProgressMonitor (progressMonitor, 1), info);
+>                     result.add (status);
+>                     int severity = status.getSeverity ();
+>                     if (severity == IStatus.CANCEL || severity == IStatus.ERROR) {
+>                         Trace.trace (CommonCorePlugin.getDefault (), "Composite operation redo recovery: child command status is CANCEL or ERROR.");
+>                         iter.previous ();
+>                         unwindFailedRedo (iter, info);
+>                         break;
+>                     } else if (progressMonitor.isCanceled ()) {
+>                         Trace.trace (CommonCorePlugin.getDefault (), "Composite operation redo recovery: child command monitor is cancelled.");
+>                         CommandResult cancelResult = CommandResult.newCancelledCommandResult ();
+>                         result.add (cancelResult.getStatus ());
+>                         unwindFailedRedo (iter, info);
+>                         break;
+>                     } else {
+>                         progressMonitor.worked (1);
+>                         executed = true;
+132,132d260
+<         return this;
+134a291,302
+>                 } catch (ExecutionException e) {
+>                     iter.previous ();
+>                     unwindFailedRedo (iter, info);
+>                     Trace.throwing (CommonCorePlugin.getDefault (), CommonCoreDebugOptions.EXCEPTIONS_THROWING, CompositeCommand.class, "redo", e);
+>                     throw e;
+>                 }
+>             }
+>         } finally {
+>             progressMonitor.done ();
+>         }
+>         return new CommandResult (aggregateStatuses (result), getReturnValues ());
+>     }
+135,136d290
+<     public final boolean isExecutable () {
+<         if (getCommands ().isEmpty ()) return false;
+137a304,315
+>     private void unwindFailedRedo (ListIterator iter, IAdaptable info) {
+>         while (iter.hasPrevious ()) {
+>             IUndoableOperation prev = (IUndoableOperation) iter.previous ();
+>             if (! prev.canUndo ()) {
+>                 Log.error (CommonCorePlugin.getDefault (), CommonCoreStatusCodes.REDO_RECOVERY_FAILED, CommonCoreMessages.bind (CommonCoreMessages.redoRecoveryFailed, CommonCoreMessages.cannotUndo));
+>                 break;
+>             }
+>             try {
+>                 prev.undo (new NullProgressMonitor (), info);
+>             } catch (ExecutionException inner) {
+>                 Log.error (CommonCorePlugin.getDefault (), CommonCoreStatusCodes.REDO_RECOVERY_FAILED, CommonCoreMessages.bind (CommonCoreMessages.redoRecoveryFailed, inner.getLocalizedMessage ()));
+>                 break;
+138,138c177,177
+<         for (Iterator i = getCommands ().iterator ();
+---
+>         for (Iterator i = iterator ();
+139,141d177
+<         i.hasNext ();) {
+<             if (! ((ICommand) i.next ()).isExecutable ()) {
+<                 return false;
+144,144d317
+<         return true;
+146a320,348
+>     protected CommandResult doUndoWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException {
+>         final List result = new ArrayList (size ());
+>         if (progressMonitor == null) {
+>             progressMonitor = new NullProgressMonitor ();
+>         }
+>         progressMonitor.beginTask (getLabel (), size ());
+>         try {
+>             for (ListIterator iter = listIterator (size ());
+>             iter.hasPrevious ();) {
+>                 IUndoableOperation prev = (IUndoableOperation) iter.previous ();
+>                 try {
+>                     IStatus status = prev.undo (new SubProgressMonitor (progressMonitor, 1), info);
+>                     result.add (status);
+>                     int severity = status.getSeverity ();
+>                     if (severity == IStatus.CANCEL || severity == IStatus.ERROR) {
+>                         Trace.trace (CommonCorePlugin.getDefault (), "Composite operation undo recovery: child command status is CANCEL or ERROR.");
+>                         iter.next ();
+>                         unwindFailedUndo (iter, info);
+>                         break;
+>                     } else if (progressMonitor.isCanceled ()) {
+>                         Trace.trace (CommonCorePlugin.getDefault (), "Composite operation undo recovery: child command monitor is cancelled.");
+>                         CommandResult cancelResult = CommandResult.newCancelledCommandResult ();
+>                         result.add (cancelResult.getStatus ());
+>                         unwindFailedUndo (iter, info);
+>                         break;
+>                     } else {
+>                         progressMonitor.worked (1);
+>                         executed = true;
+>                     }
+147,148d319
+<     public final boolean isRedoable () {
+<         if (getCommands ().isEmpty ()) return false;
+149a350,354
+>                 } catch (ExecutionException e) {
+>                     iter.next ();
+>                     unwindFailedUndo (iter, info);
+>                     Trace.throwing (CommonCorePlugin.getDefault (), CommonCoreDebugOptions.EXCEPTIONS_THROWING, CompositeCommand.class, "undo", e);
+>                     throw e;
+150,153d349
+<         for (Iterator i = getCommands ().iterator ();
+<         i.hasNext ();) {
+<             if (! ((ICommand) i.next ()).isRedoable ()) {
+<                 return false;
+155a357,360
+>         } finally {
+>             progressMonitor.done ();
+>         }
+>         return new CommandResult (aggregateStatuses (result), getReturnValues ());
+156,156d356
+<         return true;
+158a363,377
+>     private void unwindFailedUndo (ListIterator iter, IAdaptable info) {
+>         while (iter.hasNext ()) {
+>             IUndoableOperation next = (IUndoableOperation) iter.next ();
+>             if (! next.canRedo ()) {
+>                 Log.error (CommonCorePlugin.getDefault (), CommonCoreStatusCodes.UNDO_RECOVERY_FAILED, CommonCoreMessages.bind (CommonCoreMessages.undoRecoveryFailed, CommonCoreMessages.cannotRedo));
+>                 break;
+>             }
+>             try {
+>                 next.redo (new NullProgressMonitor (), info);
+>             } catch (ExecutionException inner) {
+>                 Log.error (CommonCorePlugin.getDefault (), CommonCoreStatusCodes.UNDO_RECOVERY_FAILED, CommonCoreMessages.bind (CommonCoreMessages.undoRecoveryFailed, inner.getLocalizedMessage ()));
+>                 break;
+>             }
+>         }
+>     }
+159,160d362
+<     public final boolean isUndoable () {
+<         if (getCommands ().isEmpty ()) return false;
+161a379,391
+>     protected IStatus aggregateStatuses (List statuses) {
+>         final IStatus result;
+>         if (statuses.isEmpty ()) {
+>             result = Status.OK_STATUS;
+>         } else if (statuses.size () == 1) {
+>             result = ((IStatus) statuses.get (0));
+>         } else {
+>             IStatus [] statusArray = (IStatus []) statuses.toArray (new IStatus [statuses.size ()]);
+>             IStatus worst = statusArray [0];
+>             for (int i = 1;
+>             i < statusArray.length; i ++) {
+>                 if (statusArray [i].getSeverity () > worst.getSeverity ()) {
+>                     worst = statusArray [i];
+162,165d378
+<         for (Iterator i = getCommands ().iterator ();
+<         i.hasNext ();) {
+<             if (! ((ICommand) i.next ()).isUndoable ()) {
+<                 return false;
+167a394,394
+>             result = new MultiStatus (worst.getPlugin (), worst.getCode (), statusArray, worst.getMessage (), null);
+168,168d393
+<         return true;
+170a397,397
+>         return result;
+171,171c66,66
+<     public final boolean isEmpty () {
+---
+>     public final boolean isEmpty () {
+172,172c67,67
+<         return getCommands ().size () == 0;
+---
+>         return size () < 1;
+174a400,408
+>     protected final boolean isExecuted () {
+>         return executed;
+>     }
+> 
+>     protected final void assertNotExecuted () {
+>         if (isExecuted ()) {
+>             IllegalStateException exc = new IllegalStateException ("Operation already executed");
+>             Trace.throwing (CommonCorePlugin.getDefault (), CommonCoreDebugOptions.EXCEPTIONS_THROWING, CompositeCommand.class, "assertNotExecuted", exc);
+>             throw exc;
+175,182d399
+<     public ICommand unwrap () {
+<         switch (commands.size ()) {
+<             case 0 :
+<                 return UnexecutableCommand.INSTANCE;
+<             case 1 :
+<                 return (ICommand) commands.get (0);
+<             default :
+<                 return this;
+186,195d411
+<     public void execute (IProgressMonitor progressMonitor) {
+<         if (! getValidator ().okToEdit (this)) {
+<             setCanceled (true);
+<         } else {
+<             IProgressMonitor monitor = (progressMonitor == null) ? new NullProgressMonitor () : progressMonitor;
+<             setCanceled (false);
+<             List executedCommands = new ArrayList (getCommands ().size ());
+<             int totalWork = getCommands ().size ();
+<             monitor.beginTask (getLabel (), totalWork);
+<             for (Iterator i = getCommands ().iterator ();
+196a416,422
+>             IUndoableOperation nextOperation = (IUndoableOperation) i.next ();
+>             if (nextOperation instanceof ICommand) {
+>                 List nextAffected = ((ICommand) nextOperation).getAffectedFiles ();
+>                 if (nextAffected != null) {
+>                     result.addAll (nextAffected);
+>                 }
+>             }
+197,204d415
+<                 SubProgressMonitor subprogressMonitor = new SubProgressMonitor (monitor, 1, SubProgressMonitor.SUPPRESS_SUBTASK_LABEL);
+<                 ICommand nextCommand = (ICommand) i.next ();
+<                 nextCommand.execute (subprogressMonitor);
+<                 CommandResult result = nextCommand.getCommandResult ();
+<                 if (result != null) {
+<                     if (result.getStatus ().getSeverity () == IStatus.ERROR) {
+<                         undoCancelledCommands (executedCommands);
+<                         return;
+205a424,424
+>         return result;
+206a426,428
+> 
+>     public Iterator iterator () {
+>         return new ChildIterator ();
+207,212d425
+<                 monitor.worked (1);
+<                 if (monitor.isCanceled ()) {
+<                     undoCancelledCommands (executedCommands);
+<                     monitor.done ();
+<                     setCanceled (true);
+<                     return;
+213a430,432
+> 
+>     public ListIterator listIterator () {
+>         return new ChildListIterator (0);
+214,214d429
+<                 executedCommands.add (nextCommand);
+215a434,436
+> 
+>     public ListIterator listIterator (int index) {
+>         return new ChildListIterator (index);
+216,216d433
+<             monitor.done ();
+217a438,444
+> 
+>     private class ChildIterator implements Iterator {
+>         protected Object last;
+>         protected final ListIterator iter;
+> 
+>         ChildIterator () {
+>             this (0);
+219a447,448
+>         ChildIterator (int index) {
+>             iter = getChildren ().listIterator (index);
+220,226d446
+<     protected void undoCancelledCommands (List executedCommands) {
+<         Collections.reverse (executedCommands);
+<         for (Iterator i = executedCommands.iterator ();
+<         i.hasNext ();) {
+<             ICommand nextCommand = (ICommand) i.next ();
+<             if (nextCommand.isUndoable ()) {
+<                 nextCommand.undo ();
+227a450,455
+> 
+>         public void remove () {
+>             assertNotExecuted ();
+>             iter.remove ();
+>             didRemove ((IUndoableOperation) last);
+>             last = null;
+228a457,460
+> 
+>         public Object next () {
+>             last = iter.next ();
+>             return last;
+230a463,464
+>         public boolean hasNext () {
+>             return iter.hasNext ();
+231,234d462
+<     public void redo () {
+<         if (! getValidator ().okToEdit (this)) {
+<             setCanceled (true);
+<             return;
+235a466,466
+> 
+236,239d465
+<         Collections.reverse (getCommands ());
+<         for (Iterator i = getCommands ().iterator ();
+<         i.hasNext ();) {
+<             ((ICommand) i.next ()).redo ();
+240a468,472
+> 
+>     private class ChildListIterator extends ChildIterator implements ListIterator {
+> 
+>         ChildListIterator (int index) {
+>             super (index);
+242a475,479
+>         public void add (Object o) {
+>             assertNotExecuted ();
+>             if (! getChildren ().contains (o)) {
+>                 iter.add (o);
+>                 didAdd ((IUndoableOperation) o);
+243,246d474
+<     public void undo () {
+<         if (! getValidator ().okToEdit (this)) {
+<             setCanceled (true);
+<             return;
+247a481,489
+>         }
+> 
+>         public void set (Object o) {
+>             assertNotExecuted ();
+>             if (! getChildren ().contains (o)) {
+>                 didRemove ((IUndoableOperation) last);
+>                 iter.set (o);
+>                 last = o;
+>                 didAdd ((IUndoableOperation) o);
+248,251d480
+<         Collections.reverse (getCommands ());
+<         for (Iterator i = getCommands ().iterator ();
+<         i.hasNext ();) {
+<             ((ICommand) i.next ()).undo ();
+254a493,494
+>         public int previousIndex () {
+>             return iter.previousIndex ();
+255,256d492
+<     protected String getPluginId () {
+<         return CommonCorePlugin.getPluginId ();
+258a497,498
+>         public int nextIndex () {
+>             return iter.nextIndex ();
+259,260d496
+<     protected CommandResult newCancelledCommandResult () {
+<         return new CommandResult (new Status (IStatus.ERROR, getPluginId (), CommonCoreStatusCodes.CANCELLED, CommonCoreMessages.AbstractCommand__INFO__cancelOperation, null), null);
+262a501,503
+>         public Object previous () {
+>             last = iter.previous ();
+>             return last;
+263,264d500
+<     protected void setCanceled (boolean canceled) {
+<         this.canceled = canceled;
+266a506,507
+>         public boolean hasPrevious () {
+>             return iter.hasPrevious ();
+267,268d505
+<     protected boolean isCanceled () {
+<         return canceled;
+271,272d509
+<     public CMValidator getValidator () {
+<         return new CMValidator ();

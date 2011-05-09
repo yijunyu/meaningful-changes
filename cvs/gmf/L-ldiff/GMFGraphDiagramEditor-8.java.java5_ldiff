@@ -1,0 +1,319 @@
+3,3d2
+< import org.eclipse.draw2d.DelegatingLayout;
+5,5d4
+< import org.eclipse.draw2d.FreeformLayer;
+7,7d6
+< import org.eclipse.draw2d.LayeredPane;
+8a9,9
+> import java.util.ArrayList;
+9,9c3,3
+< import org.eclipse.gef.LayerConstants;
+---
+> import org.eclipse.gef.palette.PaletteRoot;
+10a11,11
+> import java.util.Collection;
+10a21,54
+> import org.eclipse.core.resources.IMarker;
+> 
+> import org.eclipse.core.resources.IWorkspaceRoot;
+> 
+> import org.eclipse.core.resources.ResourcesPlugin;
+> 
+> import org.eclipse.core.runtime.CoreException;
+> 
+> import org.eclipse.core.runtime.IPath;
+> 
+> import org.eclipse.core.runtime.IProgressMonitor;
+> 
+> import org.eclipse.core.runtime.IStatus;
+> 
+> import org.eclipse.core.runtime.NullProgressMonitor;
+> 
+> import org.eclipse.emf.common.ui.URIEditorInput;
+> 
+> import org.eclipse.emf.common.util.URI;
+> 
+> import org.eclipse.emf.ecore.EObject;
+> 
+> import org.eclipse.emf.ecore.resource.Resource;
+> 
+> import org.eclipse.emf.edit.ui.dnd.LocalTransfer;
+> 
+> import org.eclipse.gef.EditPartViewer;
+> 
+> import org.eclipse.gmf.graphdef.editor.navigator.GMFGraphNavigatorItem;
+> 
+> import org.eclipse.gmf.runtime.common.ui.services.marker.MarkerNavigationService;
+> 
+> import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+> 
+11a56,61
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDiagramDocument;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDocument;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDocumentProvider;
+11,11c55,55
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramRootEditPart;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramDropTargetListener;
+12a13,13
+> import java.util.HashSet;
+13,13c5,5
+< import org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.editor.FileDiagramEditor;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.resources.editor.parts.DiagramDocumentEditor;
+14a65,86
+> import org.eclipse.gmf.runtime.notation.View;
+> 
+> import org.eclipse.jface.dialogs.ErrorDialog;
+> 
+> import org.eclipse.jface.dialogs.IMessageProvider;
+> 
+> import org.eclipse.jface.dialogs.MessageDialog;
+> 
+> import org.eclipse.jface.util.LocalSelectionTransfer;
+> 
+> import org.eclipse.jface.viewers.IStructuredSelection;
+> 
+> import org.eclipse.jface.window.Window;
+> 
+> import org.eclipse.osgi.util.NLS;
+> 
+> import org.eclipse.swt.dnd.Transfer;
+> 
+> import org.eclipse.swt.dnd.TransferData;
+> 
+> import org.eclipse.swt.widgets.Shell;
+> 
+14a15,15
+> import java.util.Iterator;
+15,15c87,87
+< import org.eclipse.ui.IEditorInput;
+---
+> import org.eclipse.ui.IEditorInput;
+15a88,103
+> 
+> import org.eclipse.ui.IEditorMatchingStrategy;
+> 
+> import org.eclipse.ui.IEditorReference;
+> 
+> import org.eclipse.ui.IFileEditorInput;
+> 
+> import org.eclipse.ui.PlatformUI;
+> 
+> import org.eclipse.ui.dialogs.SaveAsDialog;
+> 
+> import org.eclipse.ui.ide.IGotoMarker;
+> 
+> import org.eclipse.ui.part.FileEditorInput;
+> 
+> public class GMFGraphDiagramEditor extends DiagramDocumentEditor implements IGotoMarker {
+16a17,17
+> import java.util.List;
+17,18d6
+< import org.eclipse.ui.ide.IGotoMarker;
+< 
+19,19c7,7
+< import org.eclipse.emf.transaction.TransactionalEditingDomain;
+---
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+23,23d20
+< import org.eclipse.gmf.graphdef.editor.edit.parts.GMFGraphEditPartFactory;
+27,27d64
+< public class GMFGraphDiagramEditor extends FileDiagramEditor implements IGotoMarker {
+33a110,117
+>     protected PaletteRoot createPaletteRoot (PaletteRoot existingPaletteRoot) {
+>         PaletteRoot root = super.createPaletteRoot (existingPaletteRoot);
+>         new GMFGraphPaletteFactory ().fillPalette (root);
+>         return root;
+>     }
+> 
+>     protected PreferencesHint getPreferencesHint () {
+>         return GMFGraphDiagramEditorPlugin.DIAGRAM_PREFERENCES_HINT;
+34,35d109
+<     protected String getEditingDomainID () {
+<         return "org.eclipse.gmf.graphdef.editor.EditingDomain";
+37a120,136
+>     public String getContributorId () {
+>         return GMFGraphDiagramEditorPlugin.ID;
+>     }
+> 
+>     protected IDocumentProvider getDocumentProvider (IEditorInput input) {
+>         if (input instanceof URIEditorInput) {
+>             return new URIDiagramDocumentProvider ();
+>         }
+>         return super.getDocumentProvider (input);
+>     }
+> 
+>     public TransactionalEditingDomain getEditingDomain () {
+>         IDocument document = getEditorInput () != null ? getDocumentProvider ().getDocument (getEditorInput ()) : null;
+>         if (document instanceof IDiagramDocument) {
+>             return ((IDiagramDocument) document).getEditingDomain ();
+>         }
+>         return super.getEditingDomain ();
+38,41d119
+<     protected TransactionalEditingDomain createEditingDomain () {
+<         TransactionalEditingDomain domain = super.createEditingDomain ();
+<         domain.setID (getEditingDomainID ());
+<         return domain;
+44a140,143
+>         if (input instanceof IFileEditorInput) {
+>             setDocumentProvider (GMFGraphDiagramEditorPlugin.getInstance ().getDocumentProvider ());
+>         } else if (input instanceof URIEditorInput) {
+>             setDocumentProvider (new URIDiagramDocumentProvider ());
+45,46d139
+<         if (input.getAdapter (IFile.class) != null) {
+<             setDocumentProvider (new GMFGraphDocumentProvider ());
+49a147,222
+> 
+>     }
+> 
+>     public void gotoMarker (IMarker marker) {
+>         MarkerNavigationService.getInstance ().gotoMarker (this, marker);
+>     }
+> 
+>     public boolean isSaveAsAllowed () {
+>         return true;
+>     }
+> 
+>     public void doSaveAs () {
+>         performSaveAs (new NullProgressMonitor ());
+>     }
+> 
+>     protected void performSaveAs (IProgressMonitor progressMonitor) {
+>         Shell shell = getSite ().getShell ();
+>         IEditorInput input = getEditorInput ();
+>         SaveAsDialog dialog = new SaveAsDialog (shell);
+>         IFile original = input instanceof IFileEditorInput ? ((IFileEditorInput) input).getFile () : null;
+>         if (original != null) {
+>             dialog.setOriginalFile (original);
+>         }
+>         dialog.create ();
+>         IDocumentProvider provider = getDocumentProvider ();
+>         if (provider == null) {
+>             return;
+>         }
+>         if (provider.isDeleted (input) && original != null) {
+>             String message = NLS.bind ("The original file ''{0}'' has been deleted.", original.getName ());
+>             dialog.setErrorMessage (null);
+>             dialog.setMessage (message, IMessageProvider.WARNING);
+>         }
+>         if (dialog.open () == Window.CANCEL) {
+>             if (progressMonitor != null) {
+>                 progressMonitor.setCanceled (true);
+>             }
+>             return;
+>         }
+>         IPath filePath = dialog.getResult ();
+>         if (filePath == null) {
+>             if (progressMonitor != null) {
+>                 progressMonitor.setCanceled (true);
+>             }
+>             return;
+>         }
+>         IWorkspaceRoot workspaceRoot = ResourcesPlugin.getWorkspace ().getRoot ();
+>         IFile file = workspaceRoot.getFile (filePath);
+>         final IEditorInput newInput = new FileEditorInput (file);
+>         IEditorMatchingStrategy matchingStrategy = getEditorDescriptor ().getEditorMatchingStrategy ();
+>         IEditorReference [] editorRefs = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ().getActivePage ().getEditorReferences ();
+>         for (int i = 0;
+>         i < editorRefs.length; i ++) {
+>             if (matchingStrategy.matches (editorRefs [i], newInput)) {
+>                 MessageDialog.openWarning (shell, "Problem During Save As...", "Save could not be completed. Target file is already open in another editor.");
+>                 return;
+>             }
+>         }
+>         boolean success = false;
+>         try {
+>             provider.aboutToChange (newInput);
+>             getDocumentProvider (newInput).saveDocument (progressMonitor, newInput, getDocumentProvider ().getDocument (getEditorInput ()), true);
+>             success = true;
+>         } catch (CoreException x) {
+>             IStatus status = x.getStatus ();
+>             if (status == null || status.getSeverity () != IStatus.CANCEL) {
+>                 ErrorDialog.openError (shell, "Save Problems", "Could not save file.", x.getStatus ());
+>             }
+>         } finally {
+>             provider.changed (newInput);
+>             if (success) {
+>                 setInput (newInput);
+>             }
+>         }
+>         if (progressMonitor != null) {
+>             progressMonitor.setCanceled (! success);
+50a224,284
+>     }
+> 
+>     protected void initializeGraphicalViewer () {
+>         super.initializeGraphicalViewer ();
+>         getDiagramGraphicalViewer ().addDropTargetListener (new DropTargetListener (getDiagramGraphicalViewer (), LocalSelectionTransfer.getTransfer ()) {
+> 
+>             protected Object getJavaObject (TransferData data) {
+>                 return LocalSelectionTransfer.getTransfer ().nativeToJava (data);
+>             }
+> 
+>         }
+> 
+>         );
+>         getDiagramGraphicalViewer ().addDropTargetListener (new DropTargetListener (getDiagramGraphicalViewer (), LocalTransfer.getInstance ()) {
+> 
+>             protected Object getJavaObject (TransferData data) {
+>                 return LocalTransfer.getInstance ().nativeToJava (data);
+>             }
+> 
+>         }
+> 
+>         );
+>     }
+> 
+>     private abstract class DropTargetListener extends DiagramDropTargetListener {
+> 
+>         public DropTargetListener (EditPartViewer viewer, Transfer xfer) {
+>             super (viewer, xfer);
+>         }
+> 
+>         protected List getObjectsBeingDropped () {
+>             TransferData data = getCurrentEvent ().currentDataType;
+>             Collection uris = new HashSet ();
+>             Object transferedObject = getJavaObject (data);
+>             if (transferedObject instanceof IStructuredSelection) {
+>                 IStructuredSelection selection = (IStructuredSelection) transferedObject;
+>                 for (Iterator it = selection.iterator ();
+>                 it.hasNext ();) {
+>                     Object nextSelectedObject = it.next ();
+>                     if (nextSelectedObject instanceof GMFGraphNavigatorItem) {
+>                         View view = ((GMFGraphNavigatorItem) nextSelectedObject).getView ();
+>                         nextSelectedObject = view.getElement ();
+>                     }
+>                     if (nextSelectedObject instanceof EObject) {
+>                         EObject modelElement = (EObject) nextSelectedObject;
+>                         Resource modelElementResource = modelElement.eResource ();
+>                         uris.add (modelElementResource.getURI ().appendFragment (modelElementResource.getURIFragment (modelElement)));
+>                     }
+>                 }
+>             }
+>             List result = new ArrayList ();
+>             for (Iterator it = uris.iterator ();
+>             it.hasNext ();) {
+>                 URI nextURI = (URI) it.next ();
+>                 EObject modelObject = getEditingDomain ().getResourceSet ().getEObject (nextURI, true);
+>                 result.add (modelObject);
+>             }
+>             return result;
+>         }
+> 
+>         protected abstract Object getJavaObject (TransferData data);
+52,62d285
+<     protected void configureGraphicalViewer () {
+<         super.configureGraphicalViewer ();
+<         DiagramRootEditPart root = (DiagramRootEditPart) getDiagramGraphicalViewer ().getRootEditPart ();
+<         LayeredPane printableLayers = (LayeredPane) root.getLayer (LayerConstants.PRINTABLE_LAYERS);
+<         FreeformLayer extLabelsLayer = new FreeformLayer ();
+<         extLabelsLayer.setLayoutManager (new DelegatingLayout ());
+<         printableLayers.addLayerAfter (extLabelsLayer, GMFGraphEditPartFactory.EXTERNAL_NODE_LABELS_LAYER, LayerConstants.PRIMARY_LAYER);
+<         LayeredPane scalableLayers = (LayeredPane) root.getLayer (LayerConstants.SCALABLE_LAYERS);
+<         FreeformLayer scaledFeedbackLayer = new FreeformLayer ();
+<         scaledFeedbackLayer.setEnabled (false);
+<         scalableLayers.addLayerAfter (scaledFeedbackLayer, LayerConstants.SCALED_FEEDBACK_LAYER, DiagramRootEditPart.DECORATION_UNPRINTABLE_LAYER);

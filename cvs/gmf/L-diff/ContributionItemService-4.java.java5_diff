@@ -1,0 +1,90 @@
+7,20d6
+< import org.eclipse.jface.action.IContributionItem;
+< 
+< import org.eclipse.jface.action.IContributionManager;
+< 
+< import org.eclipse.jface.action.IMenuManager;
+< 
+< import org.eclipse.jface.viewers.ISelection;
+< 
+< import org.eclipse.ui.IActionBars;
+< 
+< import org.eclipse.ui.IWorkbenchPart;
+< 
+< import org.osgi.framework.Bundle;
+< 
+40a27,30
+> import org.eclipse.gmf.runtime.common.ui.services.action.internal.contributionitem.UpdateActionBarsOperation;
+> 
+> import org.eclipse.gmf.runtime.common.ui.services.util.ActivityFilterProviderDescriptor;
+> 
+44a35,46
+> import org.eclipse.jface.action.IMenuManager;
+> 
+> import org.eclipse.jface.viewers.ISelection;
+> 
+> import org.eclipse.ui.IActionBars;
+> 
+> import org.eclipse.ui.IPluginContribution;
+> 
+> import org.eclipse.ui.IWorkbenchPart;
+> 
+> import org.osgi.framework.Bundle;
+> 
+46c48
+<     protected static class ProviderDescriptor extends Service.ProviderDescriptor {
+---
+>     protected static class ProviderDescriptor extends ActivityFilterProviderDescriptor {
+61,64c63,76
+<             if (checkPluginLoaded && ! isPluginLoaded ()) return false;
+< 
+<             if (! contributionDescriptor.hasContributions ()) return super.provides (operation);
+< 
+---
+>             if (! super.provides (operation)) {
+>                 return false;
+>             }
+>             if (checkPluginLoaded && ! isPluginLoaded ()) {
+>                 return false;
+>             }
+>             if (! contributionDescriptor.hasContributions ()) {
+>                 if (getPolicy () != null) {
+>                     return getPolicy ().provides (operation);
+>                 }
+>                 if (getProvider () != null) {
+>                     return getProvider ().provides (operation);
+>                 }
+>             }
+86a99,113
+>                 if (provider instanceof AbstractContributionItemProvider) {
+>                     ((AbstractContributionItemProvider) provider).setPluginContribution (new IPluginContribution () {
+> 
+>                         public String getLocalId () {
+>                             return getElement ().getDeclaringExtension ().getSimpleIdentifier ();
+>                         }
+> 
+>                         public String getPluginId () {
+>                             return getElement ().getNamespace ();
+>                         }
+> 
+>                     }
+> 
+>                     );
+>                 }
+128a156,159
+>     public void updateActionBars (IActionBars actionBars, IWorkbenchPartDescriptor workbenchPartDescriptor) {
+>         execute (new UpdateActionBarsOperation (actionBars, workbenchPartDescriptor));
+>     }
+> 
+137,147d167
+<     public void removeDisabledContributions (IContributionManager manager) {
+<         IContributionItem [] contributions = manager.getItems ();
+<         for (int i = 0;
+<         i < contributions.length; i ++) {
+<             if (contributions [i] instanceof IContributionManager) removeDisabledContributions ((IContributionManager) contributions [i]);
+< 
+<             if (! contributions [i].isEnabled ()) manager.remove (contributions [i]);
+< 
+<         }
+<     }
+< 

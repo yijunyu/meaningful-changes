@@ -1,0 +1,101 @@
+2,2c2,2
+<  * Copyright (c) 2004 IBM Corporation and others.
+---
+>  * Copyright (c) 2004, 2006 IBM Corporation and others.
+14a15,15
+> import org.eclipse.swt.widgets.Display;
+18a20,20
+> import org.eclipse.ui.PlatformUI;
+26a29,29
+> 
+32,32c35,35
+< 	 * Outputs an error message to the part's status line
+---
+>      * Outputs an error message to the part's status line. Does nothing if the
+32a36,38
+>      * status line manager cannot be determined from the <code>part</code>.
+>      * <P>
+>      * Can be invoked from a non-UI thread.
+33a40,42
+>      * @param part
+>      *            the part
+>      * @param errorMessage
+34,34d39
+< 	 * @param part the part
+35,35c43,43
+< 	 * @param errorMessage the error message
+---
+>      *            the error message
+36a66,74
+>                 }
+>             });
+>         }
+>     }
+> 
+>     private static IStatusLineManager getStatusLineManager(IWorkbenchPart part) {
+> 
+>         IStatusLineManager result = null;
+> 
+36a45,55
+>     public static void outputErrorMessage(IWorkbenchPart part,
+>             final String errorMessage) {
+> 
+>         final IStatusLineManager statusLineManager = getStatusLineManager(part);
+> 
+>         if (statusLineManager == null) {
+>             // can't find the status line manager
+>             return;
+>         }
+> 
+>         final Display workbenchDisplay = PlatformUI.getWorkbench().getDisplay();
+37,37d65
+< 	public static void outputErrorMessage(IWorkbenchPart part, String errorMessage) {
+38,38c75,75
+< 		if (part instanceof IViewPart) {
+---
+>         if (part instanceof IViewPart) {
+39a77,78
+>             result = viewPart.getViewSite().getActionBars()
+>                 .getStatusLineManager();
+39,39c76,76
+< 			IViewPart viewPart = (IViewPart) part;
+---
+>             IViewPart viewPart = (IViewPart) part;
+40a57,62
+>         if (workbenchDisplay.getThread() == Thread.currentThread()) {
+>             // we're already on the UI thread
+>             statusLineManager.setErrorMessage(errorMessage);
+>         } else {
+>             // we're not on the UI thread
+>             workbenchDisplay.asyncExec(new Runnable() {
+41,42d56
+< 			IStatusLineManager statusLineManager =
+< 				viewPart.getViewSite().getActionBars().getStatusLineManager();
+43a64,64
+>                 public void run() {
+48a83,84
+>             IEditorActionBarContributor contributor = editorPart
+>                 .getEditorSite().getActionBarContributor();
+49,50d85
+< 			IEditorActionBarContributor contributor =
+< 				editorPart.getEditorSite().getActionBarContributor();
+51,51c86,86
+< 			if (contributor instanceof EditorActionBarContributor) {
+---
+>             if (contributor instanceof EditorActionBarContributor) {
+52,52d86
+< 				IStatusLineManager statusLineManager =
+53,53c87,87
+< 					((EditorActionBarContributor) contributor)
+---
+>                 result = ((EditorActionBarContributor) contributor)
+54,54d87
+< 						.getActionBars()
+55,55c88,88
+< 						.getStatusLineManager();
+---
+>                     .getActionBars().getStatusLineManager();
+57,57d85
+< 				statusLineManager.setMessage(errorMessage);
+59a91,91
+>         return result;

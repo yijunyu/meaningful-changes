@@ -1,0 +1,123 @@
+32a33,36
+> import org.eclipse.emf.transaction.DemultiplexingListener;
+> 
+> import org.eclipse.emf.transaction.NotificationFilter;
+> 
+51,52d54
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+< 
+67,78d68
+< import org.eclipse.gmf.runtime.emf.core.edit.DemuxingMListener;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MFilter;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MUndoInterval;
+< 
+< import org.eclipse.gmf.runtime.emf.core.exceptions.MSLActionAbandonedException;
+< 
+97c87
+< public abstract class AbstractModelerPropertySection extends AbstractPropertySection implements IDemuxedMListener {
+---
+> public abstract class AbstractModelerPropertySection extends AbstractPropertySection {
+99c89,97
+<     protected DemuxingMListener eventListener = new DemuxingMListener (this);
+---
+>     protected DemultiplexingListener eventListener = new DemultiplexingListener (getFilter ()) {
+> 
+>         protected void handleNotification (TransactionalEditingDomain domain, Notification notification) {
+>             update (notification, (EObject) notification.getNotifier ());
+>         }
+> 
+>     }
+> 
+>     ;
+106a105
+>     private TransactionalEditingDomain editingDomain = null;
+176,185c175,178
+<         executeAsReadAction (new MRunnable () {
+< 
+<             public Object run () {
+<                 code.run ();
+<                 return null;
+<             }
+< 
+<         }
+< 
+<         );
+---
+>         try {
+>             getEditingDomain ().runExclusive (code);
+>         } catch (InterruptedException e) {
+>             Trace.catching (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass (), "executeAsReadAction", e);
+187,189d179
+< 
+<     protected Object executeAsReadAction (MRunnable code) {
+<         return MEditingDomainGetter.getMEditingDomain (getEObjectList ()).runAsRead (code);
+217c207,209
+<         eventListener.stopListening ();
+---
+>         if (editingDomain != null) {
+>             editingDomain.removeResourceSetListener (getEventListener ());
+>         }
+222c214,217
+<         eventListener.startListening ();
+---
+>         editingDomain = getEditingDomain ();
+>         if (editingDomain != null) {
+>             editingDomain.addResourceSetListener (getEventListener ());
+>         }
+242,267c237,238
+<     public MFilter getFilter () {
+<         return MFilter.ELEMENT_MODIFIED_FILTER;
+<     }
+< 
+<     public void handleResourceLoadedEvent (Notification notification, Resource resource) {
+<     }
+< 
+<     public void handleResourceUnloadedEvent (Notification notification, Resource resource, EObject modelRoot) {
+<     }
+< 
+<     public void handleResourceDirtiedEvent (Notification notification, Resource resource) {
+<     }
+< 
+<     public void handleResourceSavedEvent (Notification notification, Resource resource) {
+<     }
+< 
+<     public void handleResourceImportedEvent (Notification notification, Resource resource) {
+<     }
+< 
+<     public void handleResourceExportedEvent (Notification notification, Resource resource) {
+<     }
+< 
+<     public void handleElementCreatedEvent (Notification notification, EObject owner, EObject newElement) {
+<     }
+< 
+<     public void handleElementDeletedEvent (Notification notification, EObject owner, EObject oldElement) {
+---
+>     public NotificationFilter getFilter () {
+>         return NotificationFilter.createEventTypeFilter (Notification.SET).and (NotificationFilter.createNotifierTypeFilter (EObject.class));
+301,311d271
+<     protected void handleException (MSLActionAbandonedException exception) {
+<         Trace.catching (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass (), exception.getMessage (), exception);
+<         Log.warning (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesStatusCodes.IGNORED_EXCEPTION_WARNING, exception.getMessage (), exception);
+<     }
+< 
+<     public void handleUndoIntervalClosedEvent (Notification notification, MUndoInterval undoInterval) {
+<     }
+< 
+<     public void handleUndoIntervalsFlushedEvent (Notification notification, MUndoInterval undoInterval) {
+<     }
+< 
+320c280
+<     protected DemuxingMListener getEventListener () {
+---
+>     protected DemultiplexingListener getEventListener () {
+349a310,311
+>         } else if (! getEObjectList ().isEmpty ()) {
+>             return TransactionUtil.getEditingDomain (getEObjectList ().get (0));
+350a313
+> 

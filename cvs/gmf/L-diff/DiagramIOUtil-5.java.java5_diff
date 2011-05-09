@@ -1,0 +1,101 @@
+3c3,5
+< import java.io.InputStream;
+---
+> import java.io.IOException;
+> 
+> import java.util.HashMap;
+6a9,10
+> import java.util.Map;
+> 
+20a25,26
+> import org.eclipse.emf.common.util.URI;
+> 
+25,26d30
+< import org.eclipse.emf.ecore.xmi.ClassNotFoundException;
+< 
+32a37,38
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+47,48d52
+< import org.eclipse.gmf.runtime.emf.core.edit.MEditingDomain;
+< 
+51,52d54
+< import org.eclipse.gmf.runtime.emf.core.exceptions.MSLRuntimeException;
+< 
+75c77
+<         public Resource load (MEditingDomain domain, int loadOptions, IProgressMonitor monitor) throws CoreException;
+---
+>         public Resource load (TransactionalEditingDomain domain, int loadOptions, IProgressMonitor monitor) throws CoreException;
+87c89
+<         public Resource load (MEditingDomain domain, int loadOptions, IProgressMonitor monitor) throws CoreException {
+---
+>         public Resource load (TransactionalEditingDomain domain, int loadOptions, IProgressMonitor monitor) throws CoreException {
+89,90c91,92
+<             String fileName = fFile.getLocation ().toOSString ();
+<             Resource resource = domain.loadResource (fileName);
+---
+>             URI uri = URI.createPlatformResourceURI (fFile.getFullPath ().toString (), true);
+>             Resource resource = domain.getResourceSet ().getResource (uri, true);
+104,105c106
+<         public Resource load (MEditingDomain domain, int loadOptions, IProgressMonitor monitor) throws CoreException {
+<             InputStream contents = fStorage.getContents ();
+---
+>         public Resource load (TransactionalEditingDomain editingDomain, int loadOptions, IProgressMonitor monitor) throws CoreException {
+107,111c108
+<             Resource resource = domain.findResource (storagePath, loadOptions);
+<             if (resource == null) {
+<                 resource = domain.createResource (storagePath);
+<             }
+<             domain.loadResource (resource, loadOptions, contents);
+---
+>             Resource resource = editingDomain.getResourceSet ().getResource (URI.createPlatformResourceURI (storagePath, true), true);
+117c114
+<     static public Diagram load (final MEditingDomain domain, final IFile file, boolean bTryCompatible, IProgressMonitor monitor) throws CoreException {
+---
+>     static public Diagram load (final TransactionalEditingDomain domain, final IFile file, boolean bTryCompatible, IProgressMonitor monitor) throws CoreException {
+122c119
+<     static public Diagram load (final MEditingDomain domain, final IStorage storage, boolean bTryCompatible, IProgressMonitor monitor) throws CoreException {
+---
+>     static public Diagram load (final TransactionalEditingDomain domain, final IStorage storage, boolean bTryCompatible, IProgressMonitor monitor) throws CoreException {
+132c129
+<     static private Diagram load (final MEditingDomain domain, final ILoader loader, boolean bTryCompatible, IProgressMonitor monitor) throws CoreException {
+---
+>     static private Diagram load (final TransactionalEditingDomain domain, final ILoader loader, boolean bTryCompatible, IProgressMonitor monitor) throws CoreException {
+137c134
+<             } catch (MSLRuntimeException e) {
+---
+>             } catch (Exception e) {
+185c182,183
+<     static public void save (MEditingDomain domain, IFile file, Diagram diagram, boolean bOverwrite, boolean bKeepUnrecognizedData, IProgressMonitor progressMonitor) throws CoreException {
+---
+>     static public void save (TransactionalEditingDomain domain, IFile file, Diagram diagram, boolean bKeepUnrecognizedData, IProgressMonitor progressMonitor) throws CoreException {
+>         Map options = new HashMap ();
+187,188d184
+<         if (bOverwrite) nOptions = MResourceOption.OVERWRITE_READONLY;
+< 
+191c187
+<         save (domain, file, diagram, progressMonitor, nOptions);
+---
+>         save (domain, file, diagram, progressMonitor, options);
+194c190
+<     static public void save (MEditingDomain domain, IFile file, Diagram diagram, IProgressMonitor progressMonitor, int nOptions) throws CoreException {
+---
+>     static public void save (TransactionalEditingDomain domain, IFile file, Diagram diagram, IProgressMonitor progressMonitor, Map options) throws CoreException {
+196,197c192,198
+<         String fileName = file.getLocation ().toOSString ();
+<         domain.saveResourceAs (notationModel, fileName, nOptions);
+---
+>         String fileName = file.getFullPath ().toOSString ();
+>         notationModel.setURI (URI.createPlatformResourceURI (fileName, true));
+>         try {
+>             notationModel.save (options);
+>         } catch (IOException e) {
+>             throw new CoreException (new Status (IStatus.ERROR, EditorPlugin.getPluginId (), EditorStatusCodes.RESOURCE_FAILURE, e.getLocalizedMessage (), null));
+>         }
+236,238c237,238
+<     public static void unload (MEditingDomain domain, Diagram diagram) {
+<         Resource resource = diagram.eResource ();
+<         domain.unloadResource (resource);
+---
+>     public static void unload (TransactionalEditingDomain domain, Diagram diagram) {
+>         diagram.eResource ().unload ();

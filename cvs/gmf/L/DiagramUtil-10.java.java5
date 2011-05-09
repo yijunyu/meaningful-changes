@@ -1,0 +1,131 @@
+package org.eclipse.gmf.runtime.diagram.ui;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gmf.runtime.common.ui.services.editor.EditorService;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.services.view.ViewService;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewType;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramEditorInput;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.services.layout.ILayoutNode;
+
+import org.eclipse.gmf.runtime.diagram.ui.services.layout.LayoutService;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectUtil;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.gmf.runtime.notation.Edge;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.ui.IWorkbenchWindow;
+
+import org.eclipse.ui.PlatformUI;
+
+public class DiagramUtil {
+
+    public static Diagram createDiagram (EObject context, String kind, PreferencesHint preferencesHint) {
+        IAdaptable viewModel = (context != null) ? new EObjectAdapter (context) : null;
+        String viewType = (kind != null) ? kind : "";
+        return ViewService.getInstance ().createDiagram (viewModel, viewType, preferencesHint);
+    }
+
+    public static Node createNode (View container, EObject eObject, String type, PreferencesHint preferencesHint) {
+        Assert.isNotNull (container, "The container is null");
+        IAdaptable viewModel = (eObject != null) ? new EObjectAdapter (eObject) : null;
+        String viewType = (type != null) ? type : "";
+        View view = ViewService.getInstance ().createNode (viewModel, container, viewType, ViewUtil.APPEND, preferencesHint);
+        return (view != null) ? (Node) view : null;
+    }
+
+    public static Edge createEdge (Diagram diagram, EObject eObject, String type, PreferencesHint preferencesHint) {
+        Assert.isNotNull (diagram, "The diagram is null");
+        IAdaptable viewModel = (eObject != null) ? new EObjectAdapter (eObject) : null;
+        String viewType = (type != null) ? type : "";
+        View view = ViewService.getInstance ().createEdge (viewModel, diagram, viewType, ViewUtil.APPEND, preferencesHint);
+        return (view != null) ? (Edge) view : null;
+    }
+
+    public static Edge createEdge (View source, View target, EObject eObject, String type, PreferencesHint preferencesHint) {
+        Assert.isNotNull (source, "The source is null");
+        Assert.isNotNull (target, "The target is null");
+        Assert.isNotNull (source.getDiagram (), "The source is detached");
+        Assert.isNotNull (target.getDiagram (), "The target is detached");
+        Edge edge = createEdge (source.getDiagram (), eObject, type, preferencesHint);
+        if (edge != null) {
+            edge.setSource (source);
+            edge.setTarget (target);
+        }
+        return edge;
+    }
+
+    public static void destroyView (View view) {
+        EObjectUtil.destroy (view);
+    }
+
+    public static void openDiagramEditor (Diagram diagram) {
+        EditorService.getInstance ().openEditor (new DiagramEditorInput (diagram));
+    }
+
+    public static ILayoutNode getLayoutNode (Node node) {
+        return LayoutService.getInstance ().getLayoutNode (node);
+    }
+
+    public static List getLayoutNodes (DiagramEditPart diagramEP, List nodes) {
+        return LayoutService.getInstance ().getLayoutNodes (diagramEP, nodes);
+    }
+
+    public static void layout (View view, String hint) {
+        LayoutService.getInstance ().layout (view, hint);
+    }
+
+    public static void layoutNodes (List nodes, String hint) {
+        LayoutService.getInstance ().layoutNodes (nodes, true, hint);
+    }
+
+    public static IDiagramWorkbenchPart getOpenedDiagramEditor (Diagram diagram, IWorkbenchWindow window) {
+        if (null == diagram) throw new NullPointerException ("Argument 'diagram' is null");
+
+        if (window == null) window = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ();
+
+        List editors = EditorService.getInstance ().getRegisteredEditorParts ();
+        for (Iterator j = editors.iterator ();
+        j.hasNext ();) {
+            IEditorPart editor = (IEditorPart) j.next ();
+            if (editor.getEditorSite ().getWorkbenchWindow () == window) {
+                IDiagramWorkbenchPart de = (IDiagramWorkbenchPart) editor;
+                if (de.getDiagram () == diagram) return de;
+
+            }
+        }
+        return null;
+    }
+
+}
+

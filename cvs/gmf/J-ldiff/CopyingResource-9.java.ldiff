@@ -1,0 +1,387 @@
+2,2c2,2
+<  * Copyright (c) 2004, 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2004, 2006 IBM Corporation and others.
+38,38d37
+< import org.eclipse.gmf.runtime.emf.core.resources.GMFResource;
+51,51c50,50
+< 	private CopyingResourceSet mslCopyingResourceSet;
+---
+> 	private CopyingResourceSet copyingResourceSet;
+53,53c52,52
+< 	public CopyingResource(XMLResource mslResource, URI uri,
+---
+> 	public CopyingResource(XMLResource resource, URI uri,
+54,54c53,53
+< 			CopyingResourceSet mslCopyingResourceSet) {
+---
+> 			CopyingResourceSet copyingResourceSet) {
+55,55c54,54
+< 		this(mslResource, uri, mslCopyingResourceSet, true);
+---
+> 		this(resource, uri, copyingResourceSet, true);
+57a57,57
+> 	public CopyingResource(XMLResource resource, URI uri,
+58,58d56
+< 	public CopyingResource(XMLResource mslResource, URI uri,
+59,59c58,58
+< 			CopyingResourceSet mslCopyingResourceSet, boolean regenerateIds) {
+---
+> 			CopyingResourceSet copyingResourceSet, boolean regenerateIds) {
+60a60,61
+> 		this.xmlResource = resource;
+> 		this.copyingResourceSet = copyingResourceSet;
+61,62d59
+< 		this.xmlResource = mslResource;
+< 		this.mslCopyingResourceSet = mslCopyingResourceSet;
+63,63c62,62
+< 		setEncoding(mslResource.getEncoding());
+---
+> 		setEncoding(resource.getEncoding());
+66,66c65,65
+< 		getDefaultSaveOptions().putAll(mslResource.getDefaultSaveOptions());
+---
+> 		getDefaultSaveOptions().putAll(resource.getDefaultSaveOptions());
+67,67c66,66
+< 		mslCopyingResourceSet.getResources().add(this);
+---
+> 		copyingResourceSet.getResources().add(this);
+68,68c67,67
+< 		mslCopyingResourceSet.getResourcesMap().put(mslResource, this);
+---
+> 		copyingResourceSet.getResourcesMap().put(resource, this);
+82,82c81,81
+< 		Iterator it = xmlResource.getAllContents();
+---
+> 		Iterator it = getXMLResource().getAllContents();
+91,91c90,90
+< 				"Can't call load on MSLCopyingResource resource"));//$NON-NLS-1$
+---
+> 				"Can't call load on CopyingResource resource"));//$NON-NLS-1$
+95a249,270
+> 	
+> 	/**
+> 	 * Gets the XML resource that contains the model content to be copied.
+> 	 * 
+> 	 * @return the XML resource
+> 	 */
+> 	protected XMLResource getXMLResource() {
+> 		return xmlResource;
+> 	}
+> 	
+> 	/**
+> 	 * Helper implementation for the CopyingResource.
+> 	 */
+> 	protected class CopyingHelper extends XMIHelperImpl {
+> 		
+> 		public CopyingHelper() {
+> 			super();
+> 		}
+> 		  
+> 		public CopyingHelper(XMLResource resource) {
+> 		    super(resource);
+> 		}
+95a95,95
+> 		return new CopyingHelper(this);
+96,96d248
+< 		return new XMIHelperImpl(this) {
+97a272,275
+> 		/**
+> 		 * @see org.eclipse.emf.ecore.xmi.XMLHelper#deresolve(org.eclipse.emf.common.util.URI)
+> 		 */
+> 		public URI deresolve(URI anUri) {
+97,97c271,271
+< 
+---
+> 
+98,101d271
+< 			/**
+< 			 * @see org.eclipse.emf.ecore.xmi.XMLHelper#deresolve(org.eclipse.emf.common.util.URI)
+< 			 */
+< 			public URI deresolve(URI anUri) {
+102a277,285
+> 			// if this both target and container are within a platform resource and
+> 			// projects
+> 			// or plugins are different then do not deresolve.
+> 			if (((EMFCoreConstants.PLATFORM_SCHEME.equals(anUri.scheme())) && (EMFCoreConstants.PLATFORM_SCHEME
+> 				.equals(resourceURI.scheme())))
+> 				&& ((anUri.segmentCount() > 2) && (resourceURI.segmentCount() > 2))
+> 				&& ((!anUri.segments()[0].equals(resourceURI.segments()[0])) || (!anUri
+> 					.segments()[1].equals(resourceURI.segments()[1]))))
+> 				return anUri;
+102,102c276,276
+< 
+---
+> 
+103,111d276
+< 				// if this both target and container are within a platform resource and
+< 				// projects
+< 				// or plugins are different then do not deresolve.
+< 				if (((EMFCoreConstants.PLATFORM_SCHEME.equals(anUri.scheme())) && (EMFCoreConstants.PLATFORM_SCHEME
+< 					.equals(resourceURI.scheme())))
+< 					&& ((anUri.segmentCount() > 2) && (resourceURI.segmentCount() > 2))
+< 					&& ((!anUri.segments()[0].equals(resourceURI.segments()[0])) || (!anUri
+< 						.segments()[1].equals(resourceURI.segments()[1]))))
+< 					return anUri;
+112a287,288
+> 			return super.deresolve(anUri);
+> 		}
+112,112c286,286
+< 
+---
+> 
+113,114d286
+< 				return super.deresolve(anUri);
+< 			}
+115a290,302
+> 		/*
+> 		 * (non-Javadoc)
+> 		 * 
+> 		 * @see org.eclipse.emf.ecore.xmi.impl.XMLHelperImpl#getHREF(org.eclipse.emf.ecore.EObject)
+> 		 */
+> 		public String getHREF(EObject obj) {
+> 			EObject eObj = obj;
+> 			
+> 			if (obj.eIsProxy()) {
+> 				eObj = EcoreUtil.resolve(obj, getXMLResource());
+> 				if (eObj == obj) {
+> 					// use super.getHREF() if we can't resolve the proxy
+> 					eObj = null;
+115,115c289,289
+< 
+---
+> 
+116,128d289
+< 			/*
+< 			 * (non-Javadoc)
+< 			 * 
+< 			 * @see org.eclipse.emf.ecore.xmi.impl.XMLHelperImpl#getHREF(org.eclipse.emf.ecore.EObject)
+< 			 */
+< 			public String getHREF(EObject obj) {
+< 				EObject eObj = obj;
+< 				
+< 				if (obj.eIsProxy()) {
+< 					eObj = EcoreUtil.resolve(obj, xmlResource);
+< 					if (eObj == null) {
+< 						eObj = null;
+< 					}
+129,129c303,303
+< 				}
+---
+> 				}
+130,136d303
+< 				
+< 				if ((eObj != null) && (eObj.eResource() != null)) {
+< 					URI objectURI = getHREF(eObj.eResource(), eObj);
+< 					objectURI = deresolve(objectURI);
+< 					return objectURI.toString();
+< 				}
+< 				return super.getHREF(obj);
+137,137c304,304
+< 			}
+---
+> 			}
+137a305,316
+> 			
+> 			if (eObj != null) {
+> 				Resource resource = eObj.eResource();
+> 				if (resource != null) {
+> 					URI objectURI = getHREF(resource, eObj);
+> 					objectURI = deresolve(objectURI);
+> 					return objectURI.toString();
+> 				}
+> 			}
+> 			
+> 			return super.getHREF(obj);
+> 		}
+138a318,323
+> 		protected URI getHREF(Resource otherResource, EObject obj) {
+> 			if (!(otherResource instanceof CopyingResource)) {
+> 				CopyingResource copyingResource = (CopyingResource) getResourcesMap()
+> 					.get(otherResource);
+> 				if (copyingResource != null) {
+> 					otherResource = copyingResource;
+138,138c317,317
+< 
+---
+> 
+139,145d317
+< 			protected URI getHREF(Resource otherResource, EObject obj) {
+< 				if ((otherResource instanceof CopyingResource) == false) {
+< 					CopyingResource copyingResource = (CopyingResource) getResourcesMap()
+< 						.get(otherResource);
+< 					if (copyingResource != null) {
+< 						otherResource = copyingResource;
+< 					}
+146,146c324,324
+< 				}
+---
+> 				}
+147,159d324
+< 				if (otherResource instanceof GMFResource) {
+< 					String qName = EMFCoreUtil.getQualifiedName(obj, true);
+< 					if (qName.length() > 0) {
+< 						StringBuffer buffer = new StringBuffer(otherResource
+< 							.getURIFragment(obj));
+< 						buffer.append(EMFCoreConstants.FRAGMENT_SEPARATOR);
+< 						buffer.append(Util.encodeQualifiedName(qName));
+< 						return otherResource.getURI().appendFragment(
+< 							buffer.toString());
+< 					}
+< 				}
+< 				
+< 				return super.getHREF(otherResource, obj);
+160a326,338
+> 
+> 			String qName = EMFCoreUtil.getQualifiedName(obj, true);
+> 			if (qName.length() > 0) {
+> 				StringBuffer buffer = new StringBuffer(otherResource
+> 					.getURIFragment(obj));
+> 				buffer.append(EMFCoreConstants.FRAGMENT_SEPARATOR);
+> 				buffer.append(Util.encodeQualifiedName(qName));
+> 				buffer.append(EMFCoreConstants.FRAGMENT_SEPARATOR);
+> 				return otherResource.getURI().appendFragment(
+> 					buffer.toString());
+> 			}
+> 			
+> 			return super.getHREF(otherResource, obj);
+160,160c325,325
+< 			}
+---
+> 			}
+161,161c339,339
+< 		};
+---
+> 		}
+161a340,396
+> 	};
+> 	
+> 	/**
+> 	 * Save implementation for the CopyingResource.
+> 	 */
+> 	public class CopyingSave extends XMISaveImpl {
+> 		
+> 		public CopyingSave(XMLHelper helper) {
+> 			super(helper);
+> 		}
+> 		
+> 		public CopyingSave(Map options, XMLHelper helper, String encoding) {
+> 			super(options, helper, encoding);
+> 		}
+> 
+> 		public CopyingSave(Map options, XMLHelper helper, String encoding,
+> 				String xmlVersion) {
+> 			super(options, helper, encoding, xmlVersion);
+> 		}
+> 
+> 		/**
+> 		 * @see org.eclipse.emf.ecore.xmi.impl.XMLSaveImpl#sameDocMany(org.eclipse.emf.ecore.EObject,
+> 		 *      org.eclipse.emf.ecore.EStructuralFeature)
+> 		 */
+> 		protected int sameDocMany(EObject o, EStructuralFeature f) {
+> 			InternalEList values = (InternalEList) helper.getValue(o, f);
+> 			if (values.isEmpty()) {
+> 				return SKIP;
+> 			}
+> 
+> 			for (Iterator i = values.basicIterator(); i.hasNext();) {
+> 				EObject value = (EObject) i.next();
+> 				if (value.eIsProxy() || (isInResource(value) == false)) {
+> 					return CROSS_DOC;
+> 				}
+> 			}
+> 
+> 			return SAME_DOC;
+> 		}
+> 
+> 		/**
+> 		 * @see org.eclipse.emf.ecore.xmi.impl.XMLSaveImpl#sameDocSingle(org.eclipse.emf.ecore.EObject,
+> 		 *      org.eclipse.emf.ecore.EStructuralFeature)
+> 		 */
+> 		protected int sameDocSingle(EObject o, EStructuralFeature f) {
+> 			EObject value = (EObject) helper.getValue(o, f);
+> 			if (value == null) {
+> 				return SKIP;
+> 			} else if (value.eIsProxy()) {
+> 				return CROSS_DOC;
+> 			} else {
+> 				return (isInResource(value)) ? SAME_DOC
+> 					: CROSS_DOC;
+> 			}
+> 		}
+> 
+> 	};
+193,193c127,127
+< 				"Can't call load on MSLCopyingResource resource"));//$NON-NLS-1$
+---
+> 				"Can't call load on CopyingResource resource"));//$NON-NLS-1$
+196a131,131
+> 		return new CopyingSave(createXMLHelper());
+197,235d130
+< 		return new XMISaveImpl(createXMLHelper()) {
+< 
+< 			/**
+< 			 * @see org.eclipse.emf.ecore.xmi.impl.XMLSaveImpl#sameDocMany(org.eclipse.emf.ecore.EObject,
+< 			 *      org.eclipse.emf.ecore.EStructuralFeature)
+< 			 */
+< 			protected int sameDocMany(EObject o, EStructuralFeature f) {
+< 				InternalEList values = (InternalEList) helper.getValue(o, f);
+< 				if (values.isEmpty()) {
+< 					return SKIP;
+< 				}
+< 
+< 				for (Iterator i = values.basicIterator(); i.hasNext();) {
+< 					EObject value = (EObject) i.next();
+< 					if (value.eIsProxy() || (isInResource(value) == false)) {
+< 						return CROSS_DOC;
+< 					}
+< 				}
+< 
+< 				return SAME_DOC;
+< 			}
+< 
+< 			/**
+< 			 * @see org.eclipse.emf.ecore.xmi.impl.XMLSaveImpl#sameDocSingle(org.eclipse.emf.ecore.EObject,
+< 			 *      org.eclipse.emf.ecore.EStructuralFeature)
+< 			 */
+< 			protected int sameDocSingle(EObject o, EStructuralFeature f) {
+< 				EObject value = (EObject) helper.getValue(o, f);
+< 				if (value == null) {
+< 					return SKIP;
+< 				} else if (value.eIsProxy()) {
+< 					return CROSS_DOC;
+< 				} else {
+< 					return (isInResource(value)) ? SAME_DOC
+< 						: CROSS_DOC;
+< 				}
+< 			}
+< 
+< 		};
+243,243c139,139
+< 			if (((InternalEObject) eObject).eDirectResource() == xmlResource) {
+---
+> 			if (((InternalEObject) eObject).eDirectResource() == getXMLResource()) {
+254,254c150,150
+< 		return xmlResource.getContents();
+---
+> 		return getXMLResource().getContents();
+276,276c172,172
+< 		EObject eObj = xmlResource.getEObject(id);
+---
+> 		EObject eObj = getXMLResource().getEObject(id);
+284,284c180,180
+< 	 * @return Returns the mslCopyingResourceSet.
+---
+> 	 * @return Returns the CopyingResourceSet.
+287,287c183,183
+< 		return mslCopyingResourceSet;
+---
+> 		return copyingResourceSet;
+323,323c219,219
+< 		return xmlResource.getEObjectToExtensionMap();
+---
+> 		return getXMLResource().getEObjectToExtensionMap();
+340,340c236,236
+< 		for (Iterator iter = xmlResource.getAllContents(); iter.hasNext(); ) {
+---
+> 		for (Iterator iter = getXMLResource().getAllContents(); iter.hasNext(); ) {

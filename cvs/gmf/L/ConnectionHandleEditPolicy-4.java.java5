@@ -1,0 +1,168 @@
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.draw2d.FigureListener;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.gef.LayerConstants;
+
+import org.eclipse.gef.Tool;
+
+import org.eclipse.gef.tools.SelectionTool;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.handles.ConnectionHandle;
+
+import org.eclipse.gmf.runtime.diagram.ui.handles.ConnectionHandleLocator;
+
+import org.eclipse.gmf.runtime.diagram.ui.handles.ConnectionHandle.HandleDirection;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.preferences.IPreferenceConstants;
+
+import org.eclipse.gmf.runtime.emf.ui.services.modelingassistant.ModelingAssistantService;
+
+public class ConnectionHandleEditPolicy extends DiagramAssistantEditPolicy {
+    private class OwnerMovedListener implements FigureListener {
+
+        public void figureMoved (IFigure source) {
+            hideDiagramAssistant ();
+        }
+
+    }
+
+    private OwnerMovedListener ownerMovedListener = new OwnerMovedListener ();
+    private List handles = null;
+
+    protected boolean isDiagramAssistant (Object object) {
+        return object instanceof ConnectionHandle;
+    }
+
+    protected List getHandleFigures () {
+        List list = new ArrayList (2);
+        String tooltip;
+        tooltip = buildTooltip (HandleDirection.INCOMING);
+        if (tooltip != null) {
+            list.add (new ConnectionHandle ((IGraphicalEditPart) getHost (), HandleDirection.INCOMING, tooltip));
+        }
+        tooltip = buildTooltip (HandleDirection.OUTGOING);
+        if (tooltip != null) {
+            list.add (new ConnectionHandle ((IGraphicalEditPart) getHost (), HandleDirection.OUTGOING, tooltip));
+        }
+        return list;
+    }
+
+    protected String buildTooltip (HandleDirection direction) {
+        ModelingAssistantService service = ModelingAssistantService.getInstance ();
+        boolean supportsCreation = (direction == HandleDirection.OUTGOING) ? ! service.getRelTypesOnSource (getHost ()).isEmpty () : ! service.getRelTypesOnTarget (getHost ()).isEmpty ();
+        boolean supportsSRE = (direction == HandleDirection.OUTGOING) ? ! service.getRelTypesForSREOnSource (getHost ()).isEmpty () : ! service.getRelTypesForSREOnTarget (getHost ()).isEmpty ();
+        if (supportsSRE) {
+            if (supportsCreation) {
+                return DiagramUIMessages.ConnectionHandle_ToolTip_ShowRelatedElementsAndCreateRelationship;
+            } else {
+                return DiagramUIMessages.ConnectionHandle_ToolTip_ShowRelatedElementsOnly;
+            }
+        } else if (supportsCreation) {
+            return DiagramUIMessages.ConnectionHandle_ToolTip_CreateRelationshipOnly;
+        }
+
+        return null;
+    }
+
+    public void activate () {
+        super.activate ();
+        ((IGraphicalEditPart) getHost ()).getFigure ().addFigureListener (ownerMovedListener);
+    }
+
+    public void deactivate () {
+        ((IGraphicalEditPart) getHost ()).getFigure ().removeFigureListener (ownerMovedListener);
+        super.deactivate ();
+    }
+
+    protected void showDiagramAssistant (Point referencePoint) {
+        if (referencePoint == null) {
+            referencePoint = getHostFigure ().getBounds ().getRight ();
+        }
+        handles = getHandleFigures ();
+        if (handles == null) {
+            return;
+        }
+        ConnectionHandleLocator locator = getConnectionHandleLocator (referencePoint);
+        IFigure layer = getLayer (LayerConstants.HANDLE_LAYER);
+        for (Iterator iter = handles.iterator ();
+        iter.hasNext ();) {
+            ConnectionHandle handle = (ConnectionHandle) iter.next ();
+            handle.setLocator (locator);
+            locator.addHandle (handle);
+            handle.addMouseMotionListener (this);
+            layer.add (handle);
+            getHost ().getViewer ().getVisualPartMap ().put (handle, getHost ());
+        }
+        if (! shouldAvoidHidingDiagramAssistant ()) {
+            hideDiagramAssistantAfterDelay (getDisappearanceDelay ());
+        }
+    }
+
+    String getPreferenceName () {
+        return IPreferenceConstants.PREF_SHOW_CONNECTION_HANDLES;
+    }
+
+    protected void hideDiagramAssistant () {
+        if (handles == null) {
+            return;
+        }
+        IFigure layer = getLayer (LayerConstants.HANDLE_LAYER);
+        for (Iterator iter = handles.iterator ();
+        iter.hasNext ();) {
+            IFigure handle = (IFigure) iter.next ();
+            handle.removeMouseMotionListener (this);
+            layer.remove (handle);
+            getHost ().getViewer ().getVisualPartMap ().remove (handle);
+        }
+        handles = null;
+    }
+
+    private boolean isSelectionToolActive () {
+        if (getHost ().getParent () != null) {
+            Tool theTool = getHost ().getViewer ().getEditDomain ().getActiveTool ();
+            if ((theTool != null) && theTool instanceof SelectionTool) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected boolean shouldShowDiagramAssistant () {
+        if (! super.shouldShowDiagramAssistant ()) {
+            return false;
+        }
+        if (handles != null || ! isSelectionToolActive ()) {
+            return false;
+        }
+        return true;
+    }
+
+    protected ConnectionHandleLocator getConnectionHandleLocator (Point referencePoint) {
+        return new ConnectionHandleLocator (getHostFigure (), referencePoint);
+    }
+
+    protected boolean isDiagramAssistantShowing () {
+        return handles != null;
+    }
+
+    protected String getDiagramAssistantID () {
+        return ConnectionHandleEditPolicy.class.getName ();
+    }
+
+}
+

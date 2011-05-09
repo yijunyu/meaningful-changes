@@ -1,0 +1,432 @@
+2c2
+<  * Copyright (c) 2006 Borland Software Corporation and others.
+---
+>  *  Copyright (c) 2006, 2007 Borland Software Corporation and others.
+16d15
+< 
+22d20
+< 
+28c26,27
+< 
+---
+> import org.eclipse.draw2d.geometry.Dimension;
+> import org.eclipse.draw2d.geometry.Point;
+30d28
+< 
+32d29
+< 
+34d30
+< 
+36d31
+< 
+39d33
+< 
+41d34
+< 
+43d35
+< import org.eclipse.gmf.gmfgraph.Dimension;
+47d38
+< import org.eclipse.gmf.gmfgraph.Point;
+52d42
+< 
+54d43
+< import org.eclipse.gmf.graphdef.editor.edit.policies.RoundedRectangleGraphicalNodeEditPolicy;
+56d44
+< 
+58d45
+< 
+60d46
+< 
+62d47
+< 
+68d52
+< 
+71d54
+< 
+96c79
+< 	private RoundedRectangleFigure myFigure;
+---
+> 	protected IFigure primaryShape;
+98d80
+< 	// TODO: use myFigure?
+102c84,86
+< 	protected Figure myNodeFigure;
+---
+> 	public RoundedRectangleEditPart(View view) {
+> 		super(view);
+> 	}
+107c91,99
+< 	protected IFigure primaryShape;
+---
+> 	protected void createDefaultEditPolicies() {
+> 		installEditPolicy(EditPolicyRoles.CREATION_ROLE, new CreationEditPolicy());
+> 
+> 		super.createDefaultEditPolicies();
+> 		installEditPolicy(EditPolicyRoles.SEMANTIC_ROLE, new RoundedRectangleItemSemanticEditPolicy());
+> 		installEditPolicy(EditPolicyRoles.DRAG_DROP_ROLE, new DragDropEditPolicy());
+> 		installEditPolicy(EditPolicyRoles.CANONICAL_ROLE, new RoundedRectangleCanonicalEditPolicy());
+> 		installEditPolicy(EditPolicy.LAYOUT_ROLE, createLayoutEditPolicy());
+> 	}
+112,113c104,172
+< 	public RoundedRectangleEditPart(View view) {
+< 		super(view);
+---
+> 	protected LayoutEditPolicy createLayoutEditPolicy() {
+> 		XYLayoutEditPolicy lep = new XYLayoutEditPolicy() {
+> 
+> 			protected EditPolicy createChildEditPolicy(EditPart child) {
+> 				EditPolicy result = super.createChildEditPolicy(child);
+> 				if (result == null) {
+> 					return new ResizableShapeEditPolicy();
+> 				}
+> 				return result;
+> 			}
+> 
+> 			protected Point getLayoutOrigin() {
+> 				return ((GraphicalEditPart) getHost()).getContentPane().getClientArea().getLocation();
+> 			}
+> 
+> 			protected Rectangle getCurrentConstraintFor(org.eclipse.gef.GraphicalEditPart child) {
+> 				Rectangle result = super.getCurrentConstraintFor(child);
+> 				if (result == null) {
+> 					IFigure fig = child.getFigure();
+> 					result = fig.getBounds().getCopy();
+> 				}
+> 				return result;
+> 			}
+> 
+> 		};
+> 		return lep;
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	protected IFigure createNodeShape() {
+> 		RoundedRectangleFigure figure = new RoundedRectangleFigure();
+> 		figure.setUseLocalCoordinates(true);
+> 		myFigure = figure;
+> 		RoundedRectangle modelElement = (RoundedRectangle) ((View) getModel()).getElement();
+> 		if (modelElement != null) {
+> 			{
+> 				layoutDataChanged(modelElement.getLayoutData());
+> 			}
+> 			{
+> 				layoutChanged(modelElement.getLayout());
+> 			}
+> 			{
+> 				myFigure.setOutline(modelElement.isOutline());
+> 			}
+> 			{
+> 				myFigure.setFill(modelElement.isFill());
+> 			}
+> 			{
+> 				myFigure.setLineWidth(modelElement.getLineWidth());
+> 			}
+> 			{
+> 				myFigure.setLineStyle(getLineStyle(modelElement.getLineKind()));
+> 			}
+> 			{
+> 				myFigure.setFillXOR(modelElement.isXorFill());
+> 			}
+> 			{
+> 				myFigure.setOutlineXOR(modelElement.isXorOutline());
+> 			}
+> 			{
+> 				myFigure.setCornerDimensions(new Dimension(getMapMode().DPtoLP(modelElement.getCornerWidth()), getMapMode().DPtoLP(modelElement.getCornerHeight())));
+> 			}
+> 			{
+> 				myFigure.setCornerDimensions(new Dimension(getMapMode().DPtoLP(modelElement.getCornerWidth()), getMapMode().DPtoLP(modelElement.getCornerHeight())));
+> 			}
+> 		}
+> 		return primaryShape = figure;
+118a178,253
+> 	public RoundedRectangleFigure getPrimaryShape() {
+> 		return (RoundedRectangleFigure) primaryShape;
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	protected NodeFigure createNodePlate() {
+> 		DefaultSizeNodeFigure result = new DefaultSizeNodeFigure(getMapMode().DPtoLP(0), getMapMode().DPtoLP(0));
+> 		myNodeFigure = result;
+> 		return result;
+> 	}
+> 
+> 	/**
+> 	 * Creates figure for this edit part.
+> 	 * 
+> 	 * Body of this method does not depend on settings in generation model
+> 	 * so you may safely remove <i>generated</i> tag and modify it.
+> 	 * 
+> 	 * @generated
+> 	 */
+> 	protected NodeFigure createNodeFigure() {
+> 		NodeFigure figure = createNodePlate();
+> 		figure.setLayoutManager(new StackLayout());
+> 		IFigure shape = createNodeShape();
+> 		figure.add(shape);
+> 		contentPane = setupContentPane(shape);
+> 		return figure;
+> 	}
+> 
+> 	/**
+> 	 * Default implementation treats passed figure as content pane.
+> 	 * Respects layout one may have set for generated figure.
+> 	 * @param nodeShape instance of generated figure class
+> 	 * @generated
+> 	 */
+> 	protected IFigure setupContentPane(IFigure nodeShape) {
+> 		if (nodeShape.getLayoutManager() == null) {
+> 			nodeShape.setLayoutManager(new FreeformLayout() {
+> 
+> 				public Object getConstraint(IFigure figure) {
+> 					Object result = constraints.get(figure);
+> 					if (result == null) {
+> 						result = new Rectangle(0, 0, -1, -1);
+> 					}
+> 					return result;
+> 				}
+> 			});
+> 		}
+> 		return nodeShape; // use nodeShape itself as contentPane
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	public IFigure getContentPane() {
+> 		if (contentPane != null) {
+> 			return contentPane;
+> 		}
+> 		return super.getContentPane();
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	private RoundedRectangleFigure myFigure;
+> 
+> 	// TODO: use myFigure?
+> 	/**
+> 	 * @generated
+> 	 */
+> 	protected Figure myNodeFigure;
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+216c351
+< 				myFigure.setCornerDimensions(new org.eclipse.draw2d.geometry.Dimension(getMapMode().DPtoLP(modelElement.getCornerWidth()), getMapMode().DPtoLP(modelElement.getCornerHeight())));
+---
+> 				myFigure.setCornerDimensions(new Dimension(getMapMode().DPtoLP(modelElement.getCornerWidth()), getMapMode().DPtoLP(modelElement.getCornerHeight())));
+223c358
+< 				myFigure.setCornerDimensions(new org.eclipse.draw2d.geometry.Dimension(getMapMode().DPtoLP(modelElement.getCornerWidth()), getMapMode().DPtoLP(modelElement.getCornerHeight())));
+---
+> 				myFigure.setCornerDimensions(new Dimension(getMapMode().DPtoLP(modelElement.getCornerWidth()), getMapMode().DPtoLP(modelElement.getCornerHeight())));
+270c405
+< 							Dimension dim = modelElement.getPreferredSize();
+---
+> 							org.eclipse.gmf.gmfgraph.Dimension dim = modelElement.getPreferredSize();
+275c410
+< 							Point location = modelElement.getLocation();
+---
+> 							org.eclipse.gmf.gmfgraph.Point location = modelElement.getLocation();
+295c430
+< 							myNodeFigure.setLocation(new org.eclipse.draw2d.geometry.Point(bounds.getX(), bounds.getY()));
+---
+> 							myNodeFigure.setLocation(new Point(bounds.getX(), bounds.getY()));
+309c444
+< 								Point topLeft;
+---
+> 								org.eclipse.gmf.gmfgraph.Point topLeft;
+321c456
+< 								Dimension size;
+---
+> 								org.eclipse.gmf.gmfgraph.Dimension size;
+470,583c605,606
+< 	protected void createDefaultEditPolicies() {
+< 		installEditPolicy(EditPolicyRoles.CREATION_ROLE, new CreationEditPolicy());
+< 		super.createDefaultEditPolicies();
+< 		installEditPolicy(EditPolicyRoles.SEMANTIC_ROLE, new RoundedRectangleItemSemanticEditPolicy());
+< 		installEditPolicy(EditPolicy.GRAPHICAL_NODE_ROLE, new RoundedRectangleGraphicalNodeEditPolicy());
+< 		installEditPolicy(EditPolicyRoles.DRAG_DROP_ROLE, new DragDropEditPolicy());
+< 		installEditPolicy(EditPolicyRoles.CANONICAL_ROLE, new RoundedRectangleCanonicalEditPolicy());
+< 		installEditPolicy(EditPolicy.LAYOUT_ROLE, createLayoutEditPolicy());
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected LayoutEditPolicy createLayoutEditPolicy() {
+< 		XYLayoutEditPolicy lep = new XYLayoutEditPolicy() {
+< 
+< 			protected EditPolicy createChildEditPolicy(EditPart child) {
+< 				EditPolicy result = super.createChildEditPolicy(child);
+< 				if (result == null) {
+< 					return new ResizableShapeEditPolicy();
+< 				}
+< 				return result;
+< 			}
+< 
+< 			protected org.eclipse.draw2d.geometry.Point getLayoutOrigin() {
+< 				return ((GraphicalEditPart) getHost()).getContentPane().getClientArea().getLocation();
+< 			}
+< 
+< 			protected Rectangle getCurrentConstraintFor(org.eclipse.gef.GraphicalEditPart child) {
+< 				Rectangle result = super.getCurrentConstraintFor(child);
+< 				if (result == null) {
+< 					IFigure fig = child.getFigure();
+< 					result = fig.getBounds().getCopy();
+< 				}
+< 				return result;
+< 			}
+< 
+< 		};
+< 		return lep;
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected IFigure createNodeShape() {
+< 		RoundedRectangleFigure figure = new RoundedRectangleFigure();
+< 		figure.setUseLocalCoordinates(true);
+< 		myFigure = figure;
+< 		RoundedRectangle modelElement = (RoundedRectangle) ((View) getModel()).getElement();
+< 		if (modelElement != null) {
+< 			{
+< 				layoutDataChanged(modelElement.getLayoutData());
+< 			}
+< 			{
+< 				layoutChanged(modelElement.getLayout());
+< 			}
+< 			{
+< 				myFigure.setOutline(modelElement.isOutline());
+< 			}
+< 			{
+< 				myFigure.setFill(modelElement.isFill());
+< 			}
+< 			{
+< 				myFigure.setLineWidth(modelElement.getLineWidth());
+< 			}
+< 			{
+< 				myFigure.setLineStyle(getLineStyle(modelElement.getLineKind()));
+< 			}
+< 			{
+< 				myFigure.setFillXOR(modelElement.isXorFill());
+< 			}
+< 			{
+< 				myFigure.setOutlineXOR(modelElement.isXorOutline());
+< 			}
+< 			{
+< 				myFigure.setCornerDimensions(new org.eclipse.draw2d.geometry.Dimension(getMapMode().DPtoLP(modelElement.getCornerWidth()), getMapMode().DPtoLP(modelElement.getCornerHeight())));
+< 			}
+< 			{
+< 				myFigure.setCornerDimensions(new org.eclipse.draw2d.geometry.Dimension(getMapMode().DPtoLP(modelElement.getCornerWidth()), getMapMode().DPtoLP(modelElement.getCornerHeight())));
+< 			}
+< 		}
+< 		return primaryShape = figure;
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	public RoundedRectangleFigure getPrimaryShape() {
+< 		return (RoundedRectangleFigure) primaryShape;
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected NodeFigure createNodePlate() {
+< 		return new DefaultSizeNodeFigure(getMapMode().DPtoLP(0), getMapMode().DPtoLP(0));
+< 	}
+< 
+< 	/**
+< 	 * Creates figure for this edit part.
+< 	 * 
+< 	 * Body of this method does not depend on settings in generation model
+< 	 * so you may safely remove <i>generated</i> tag and modify it.
+< 	 * 
+< 	 * @generated
+< 	 */
+< 	protected NodeFigure createNodeFigure() {
+< 		NodeFigure figure = createNodePlate();
+< 		myNodeFigure = figure;
+< 		figure.setLayoutManager(new StackLayout());
+< 		IFigure shape = createNodeShape();
+< 		figure.add(shape);
+< 		contentPane = setupContentPane(shape);
+< 		return figure;
+---
+> 	protected LayoutManager getFigureLayoutManager() {
+> 		return myFigure.getLayoutManager();
+587,589d609
+< 	 * Default implementation treats passed figure as content pane.
+< 	 * Respects layout one may have set for generated figure.
+< 	 * @param nodeShape instance of generated figure class
+592,605c612,613
+< 	protected IFigure setupContentPane(IFigure nodeShape) {
+< 		if (nodeShape.getLayoutManager() == null) {
+< 			nodeShape.setLayoutManager(new FreeformLayout() {
+< 
+< 				public Object getConstraint(IFigure figure) {
+< 					Object result = constraints.get(figure);
+< 					if (result == null) {
+< 						result = new Rectangle(0, 0, -1, -1);
+< 					}
+< 					return result;
+< 				}
+< 			});
+< 		}
+< 		return nodeShape; // use nodeShape itself as contentPane
+---
+> 	protected void setFigureLayoutManager(LayoutManager layoutManager) {
+> 		myFigure.setLayoutManager(layoutManager);
+611,613c619,625
+< 	public IFigure getContentPane() {
+< 		if (contentPane != null) {
+< 			return contentPane;
+---
+> 	protected void refreshBounds() {
+> 		if (((View) getParent().getModel()).getElement() instanceof FigureMarker) {
+> 			int width = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Width())).intValue();
+> 			int height = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Height())).intValue();
+> 			myNodeFigure.setPreferredSize(new Dimension(width, height));
+> 		} else {
+> 			super.refreshBounds();
+615d626
+< 		return super.getContentPane();
+632c643
+< 			this.setCornerDimensions(new org.eclipse.draw2d.geometry.Dimension(getMapMode().DPtoLP(8), getMapMode().DPtoLP(8)));
+---
+> 			this.setCornerDimensions(new Dimension(getMapMode().DPtoLP(8), getMapMode().DPtoLP(8)));
+664,689d674
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected LayoutManager getFigureLayoutManager() {
+< 		return myFigure.getLayoutManager();
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected void setFigureLayoutManager(LayoutManager layoutManager) {
+< 		myFigure.setLayoutManager(layoutManager);
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected void refreshBounds() {
+< 		if (((View) getParent().getModel()).getElement() instanceof FigureMarker) {
+< 			int width = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Width())).intValue();
+< 			int height = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Height())).intValue();
+< 			myNodeFigure.setPreferredSize(new org.eclipse.draw2d.geometry.Dimension(width, height));
+< 		} else {
+< 			super.refreshBounds();
+< 		}
+< 	}

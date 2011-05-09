@@ -1,0 +1,96 @@
+34a35,36
+> import org.eclipse.gmf.internal.xpand.Activator;
+> 
+59,59d60
+<         if (file == null) {
+61a65,69
+>         Reader r = new StreamConverter ().toContentsReader (file);
+>         loadXtendResources (new Reader [] {r}, fullyQualifiedName);
+>         try {
+>             return loadXtendThroughCache (fullyQualifiedName);
+>         } catch (FileNotFoundException ex) {
+61a61,61
+>         String fullyQualifiedName;
+62,62c62,62
+<         String fullyQualifiedName = toFullyQualifiedName (file);
+---
+>         if (file == null || (fullyQualifiedName = toFullyQualifiedName (file)) == null) {
+63,63d62
+<         if (fullyQualifiedName == null) {
+66,66d71
+<         return super.loadXtendResource (fullyQualifiedName);
+70,70d74
+<         if (file == null) {
+72a75,75
+>         String fullyQualifiedName;
+72a79,84
+>         Reader r = new StreamConverter ().toContentsReader (file);
+>         loadXpandResources (new Reader [] {r}, fullyQualifiedName);
+>         fullyQualifiedName = getNonAspectsTemplateName (fullyQualifiedName);
+>         try {
+>             return loadXpandThroughCache (fullyQualifiedName);
+>         } catch (FileNotFoundException ex) {
+73,73c76,76
+<         String fullyQualifiedName = toFullyQualifiedName (file);
+---
+>         if (file == null || (fullyQualifiedName = toFullyQualifiedName (file)) == null) {
+74,74d76
+<         if (fullyQualifiedName == null) {
+76a87,91
+>     }
+> 
+>     @Override
+>     protected void handleParserException (ParserException ex) {
+>         Activator.logWarn (ex.getClass ().getSimpleName () + ":" + ex.getResourceName ());
+77,78d86
+<         fullyQualifiedName = getNonAspectsTemplateName (fullyQualifiedName);
+<         return super.loadXpandResource (fullyQualifiedName);
+89,109d101
+<     protected Reader resolve (String fqn, String ext) throws IOException {
+<         IPath fp = new Path (fqn.replaceAll (SyntaxConstants.NS_DELIM, "/")).addFileExtension (ext);
+<         IResource r = null;
+<         for (IPath p : getResolutions (fp)) {
+<             r = contextProject.findMember (p);
+<             if (r != null) {
+<                 break;
+<             }
+<         }
+<         if (false == r instanceof IFile) {
+<             throw new FileNotFoundException (fp.toString ());
+<         }
+<         try {
+<             return new StreamConverter ().toContentsReader ((IFile) r);
+<         } catch (CoreException ex) {
+<             IOException wrap = new IOException (ex.getStatus ().getMessage ());
+<             wrap.initCause (ex);
+<             throw wrap;
+<         }
+<     }
+< 
+163,163d154
+<         IPath [] configured = getConfiguredRoots ();
+164,164c155,155
+<         IPath [] rv = new IPath [configured.length];
+---
+>         IPath [] rv = new IPath [myConfiguredRoots.length];
+165a157,157
+>         i < myConfiguredRoots.length; i ++) {
+166,166d156
+<         i < configured.length; i ++) {
+167,167c158,158
+<             rv [i] = configured [i].append (p);
+---
+>             rv [i] = myConfiguredRoots [i].append (p);
+172,175d162
+<     private IPath [] getConfiguredRoots () {
+<         return myConfiguredRoots;
+<     }
+< 
+177,177c164,164
+<         for (IPath nextRoot : getConfiguredRoots ()) {
+---
+>         for (IPath nextRoot : myConfiguredRoots) {
+191,191c178,178
+<     private String toFullyQualifiedName (IPath filePath) {
+---
+>     private static String toFullyQualifiedName (IPath filePath) {

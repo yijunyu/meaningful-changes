@@ -1,0 +1,94 @@
+15a16,16
+> import java.util.Collection;
+29a31,33
+> import org.eclipse.emf.common.notify.Notification;
+> import org.eclipse.emf.common.notify.Notifier;
+> import org.eclipse.emf.common.notify.impl.AdapterImpl;
+30a35,35
+> import org.eclipse.emf.ecore.resource.ResourceSet;
+39a45,45
+> import org.eclipse.gef.commands.Command;
+381a388,424
+> 		DefaultEditDomain domain = new DefaultEditDomain(this);
+> 		domain.setCommandStack(new CommandStack(){
+> 			@Override
+> 			public void execute(Command command) {
+> 				super.execute(command);
+> 				if (isSaved()) {
+> 					markSaveLocation();
+> 				}
+> 			}
+> 			@Override
+> 			public void undo() {
+> 				super.undo();
+> 				if (isSaved()) {
+> 					markSaveLocation();
+> 				}
+> 			}
+> 			@Override
+> 			public void redo() {
+> 				super.redo();
+> 				if (isSaved()) {
+> 					markSaveLocation();
+> 				}
+> 			}
+> 			private boolean isSaved() {
+> 				for(Iterator it = getEditingDomain().getResourceSet().getResources().iterator(); it.hasNext(); ) {
+> 					Resource next = (Resource) it.next();
+> 					if (!next.isLoaded()) {
+> 						continue;
+> 					}
+> 					if (!next.isTrackingModification() || next.isModified()) {
+> 						return false;
+> 					}
+> 				}
+> 				return true;
+> 			}
+> 		});
+> 		setEditDomain(domain);
+382,382c431,431
+< 		setInput(input);
+---
+> 		setInput(input);
+383,383d431
+< 		setEditDomain(new DefaultEditDomain(this));
+401,401c534,534
+< 
+---
+> 
+523a566,566
+> 			editingDomain.getResourceSet().eAdapters().add(new ForceTrackingModificationAdapter());
+538a582,614
+> 
+> 	private static class ForceTrackingModificationAdapter extends AdapterImpl {
+> 		@Override
+> 		public void setTarget(Notifier newTarget) {
+> 			super.setTarget(newTarget);
+> 			if (newTarget instanceof ResourceSet) {
+> 				ResourceSet resourceSet = (ResourceSet) newTarget;
+> 				for(Iterator it = resourceSet.getResources().iterator(); it.hasNext(); ) {
+> 					((Resource) it.next()).setTrackingModification(true);
+> 				}
+> 			}
+> 		}
+> 		@Override
+> 		public void notifyChanged(Notification msg) {
+> 			if (msg.getNotifier() == getTarget() && msg.getFeatureID(ResourceSet.class) == ResourceSet.RESOURCE_SET__RESOURCES) {
+> 				switch (msg.getEventType()) {
+> 				case Notification.ADD:
+> 				{
+> 					Resource resource = (Resource) msg.getNewValue();
+> 					resource.setTrackingModification(true);
+> 				}
+> 				break;
+> 				case Notification.ADD_MANY:
+> 				{
+> 					Collection resources = (Collection) msg.getNewValue();
+> 					for(Iterator it = resources.iterator(); it.hasNext(); ) {
+> 						((Resource) it.next()).setTrackingModification(true);
+> 					}
+> 				}
+> 				}
+> 			}
+> 		}
+> 	}

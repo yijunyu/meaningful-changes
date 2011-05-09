@@ -1,0 +1,357 @@
+package org.eclipse.gmf.runtime.emf.core.util;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.HashSet;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.emf.common.util.URI;
+
+import org.eclipse.emf.ecore.EAnnotation;
+
+import org.eclipse.emf.ecore.EAttribute;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.ENamedElement;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.emf.ecore.InternalEObject;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.ecore.util.EcoreUtil;
+
+import org.eclipse.emf.ecore.xmi.XMLResource;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.emf.core.internal.plugin.EMFCoreDebugOptions;
+
+import org.eclipse.gmf.runtime.emf.core.internal.plugin.EMFCorePlugin;
+
+import org.eclipse.gmf.runtime.emf.core.internal.util.EMFCoreConstants;
+
+import org.eclipse.gmf.runtime.emf.core.internal.util.Util;
+
+import org.eclipse.gmf.runtime.emf.core.resources.IExtendedResourceFactory;
+
+import org.eclipse.gmf.runtime.emf.core.resources.IResourceHelper;
+
+public class EMFCoreUtil {
+
+    public static EObject create (EObject container, EReference reference, EClass eClass) {
+        EObject result = null;
+        IResourceHelper helper = Util.getHelper (container.eResource ());
+        if (helper != null) {
+            result = helper.create (eClass);
+        } else {
+            result = eClass.getEPackage ().getEFactoryInstance ().create (eClass);
+        }
+        if (reference.isMany ()) {
+            ((Collection) container.eGet (reference)).add (result);
+        } else {
+            container.eSet (reference, result);
+        }
+        return result;
+    }
+
+    public static EObject getContainer (EObject eObject, EClass eClass) {
+        for (EObject parent = eObject;
+        parent != null; parent = parent.eContainer ()) if (eClass.isInstance (parent)) return parent;
+
+        return null;
+    }
+
+    public static EObject getLeastCommonContainer (Collection objects, EClass desiredContainerType) {
+        EObject commonContainer = null;
+        List prevContainers = new ArrayList ();
+        Iterator i = objects.iterator ();
+        while (i.hasNext ()) {
+            EObject element = (EObject) i.next ();
+            List containers = new ArrayList ();
+            boolean found = false;
+            EObject container = element;
+            while (container != null) {
+                EClass containerClass = container.eClass ();
+                if ((desiredContainerType == containerClass) || (desiredContainerType.isSuperTypeOf (containerClass))) {
+                    containers.add (container);
+                    if (! found) {
+                        if ((prevContainers.isEmpty ()) || (commonContainer == null)) {
+                            commonContainer = container;
+                            found = true;
+                        } else if ((prevContainers.contains (container)) && (EcoreUtil.isAncestor (container, commonContainer))) {
+                            commonContainer = container;
+                            found = true;
+                        }
+
+                    }
+                }
+                container = container.eContainer ();
+            }
+            if (! found) return null;
+
+            prevContainers = containers;
+        }
+        return commonContainer;
+    }
+
+    public static Collection getReferencers (EObject eObject, EReference [] features) {
+        CrossReferenceAdapter crossReferenceAdapter = CrossReferenceAdapter.getExistingCrossReferenceAdapter (eObject);
+        if (crossReferenceAdapter == null) {
+            TransactionalEditingDomain domain = TransactionUtil.getEditingDomain (eObject);
+            if (domain != null) {
+                crossReferenceAdapter = CrossReferenceAdapter.getCrossReferenceAdapter (domain.getResourceSet ());
+            }
+            if (crossReferenceAdapter == null) {
+                return Collections.EMPTY_LIST;
+            }
+        }
+        if ((features != null) && (features.length != 0)) {
+            Collection referencers = new ArrayList ();
+            for (int i = 0, count = features.length;
+            i < count; i ++) {
+                EReference feature = features [i];
+                Iterator j = crossReferenceAdapter.getInverseReferencers (eObject, feature, null).iterator ();
+                while (j.hasNext ()) {
+                    EObject referencer = (EObject) j.next ();
+                    referencers.add (referencer);
+                }
+            }
+            return referencers;
+        } else return crossReferenceAdapter.getInverseReferencers (eObject, null, null);
+
+    }
+
+    public static Collection getImports (Resource resource) {
+        TransactionalEditingDomain domain = TransactionUtil.getEditingDomain (resource);
+        if (domain != null) {
+            return CrossReferenceAdapter.getCrossReferenceAdapter (domain.getResourceSet ()).getImports (resource);
+        }
+        return Collections.EMPTY_SET;
+    }
+
+    public static Collection getExports (Resource resource) {
+        TransactionalEditingDomain domain = TransactionUtil.getEditingDomain (resource);
+        if (domain != null) {
+            return CrossReferenceAdapter.getCrossReferenceAdapter (domain.getResourceSet ()).getExports (resource);
+        }
+        return Collections.EMPTY_SET;
+    }
+
+    public static Collection getTransitiveImports (Resource resource) {
+        Collection result = new HashSet ();
+        Collection unload = new HashSet ();
+        getTransitiveImports (resource, result, unload);
+        for (Iterator i = unload.iterator ();
+        i.hasNext ();) {
+            ((Resource) i.next ()).unload ();
+        }
+        return result;
+    }
+
+    private static void getTransitiveImports (Resource resource, Collection imports, Collection unload) {
+        if (! resource.isLoaded ()) {
+            try {
+                resource.load (Collections.EMPTY_MAP);
+            } catch (Exception e) {
+            }
+            unload.add (resource);
+        }
+        Collection directImports = getImports (resource);
+        for (Iterator i = directImports.iterator ();
+        i.hasNext ();) {
+            Resource directImport = (Resource) i.next ();
+            if (! imports.contains (directImport)) {
+                imports.add (directImport);
+                getTransitiveImports (directImport, imports, unload);
+            }
+        }
+    }
+
+    public static Collection getTransitiveExports (Resource resource) {
+        Collection result = new HashSet ();
+        Collection unload = new HashSet ();
+        getTransitiveExports (resource, result, unload);
+        for (Iterator i = unload.iterator ();
+        i.hasNext ();) {
+            ((Resource) i.next ()).unload ();
+        }
+        return result;
+    }
+
+    private static void getTransitiveExports (Resource resource, Collection exports, Collection unload) {
+        if (! resource.isLoaded ()) {
+            try {
+                resource.load (Collections.EMPTY_MAP);
+            } catch (Exception e) {
+            }
+            unload.add (resource);
+        }
+        Collection directExports = getExports (resource);
+        for (Iterator i = directExports.iterator ();
+        i.hasNext ();) {
+            Resource directExport = (Resource) i.next ();
+            if (! exports.contains (directExport)) {
+                exports.add (directExport);
+                getTransitiveExports (directExport, exports, unload);
+            }
+        }
+    }
+
+    public static String getName (EObject eObject) {
+        if (eObject.eIsProxy ()) return getProxyName (eObject);
+
+        EAttribute nameAttribute = PackageUtil.getNameAttribute (eObject.eClass ());
+        if (nameAttribute != null) {
+            String name = (String) eObject.eGet (nameAttribute);
+            if (name != null) return name;
+
+        }
+        return EMFCoreConstants.EMPTY_STRING;
+    }
+
+    private static String getProxyName (EObject proxy) {
+        URI uri = EcoreUtil.getURI (proxy);
+        Resource.Factory factory = Resource.Factory.Registry.INSTANCE.getFactory (uri);
+        String result = null;
+        if (factory instanceof IExtendedResourceFactory) {
+            result = ((IExtendedResourceFactory) factory).getProxyName (proxy);
+        }
+        if (result == null) {
+            result = EMFCoreConstants.EMPTY_STRING;
+        }
+        return result;
+    }
+
+    public static void setName (EObject eObject, String name) {
+        EAttribute nameAttribute = PackageUtil.getNameAttribute (eObject.eClass ());
+        if (nameAttribute != null) {
+            eObject.eSet (nameAttribute, name);
+        } else {
+            RuntimeException e = new IllegalArgumentException ("object has no name attribute");
+            Trace.throwing (EMFCorePlugin.getDefault (), EMFCoreDebugOptions.EXCEPTIONS_THROWING, EMFCoreUtil.class, "setName", e);
+            throw e;
+        }
+    }
+
+    public static String getQualifiedName (EObject eObject, boolean formatted) {
+        if (eObject.eIsProxy ()) return getProxyQualifiedName (eObject);
+
+        if (! formatted) {
+            EAttribute qNameAttribute = PackageUtil.getQualifiedNameAttribute (eObject.eClass ());
+            if (qNameAttribute != null) {
+                String qualifiedName = (String) eObject.eGet (qNameAttribute);
+                if (qualifiedName != null) return qualifiedName;
+                else return EMFCoreConstants.EMPTY_STRING;
+
+            }
+        }
+        String prefix = EMFCoreConstants.EMPTY_STRING;
+        EObject eContainer = eObject.eContainer ();
+        while ((eContainer != null) && (eContainer instanceof EAnnotation)) eContainer = eContainer.eContainer ();
+
+        if (eContainer != null) prefix = getQualifiedName (eContainer, formatted);
+
+        String name = getName (eObject);
+        if ((formatted) && (name.equals (EMFCoreConstants.EMPTY_STRING))) name = EMFCoreConstants.META_CLASS_BEGIN + PackageUtil.getLocalizedName (eObject.eClass ()) + EMFCoreConstants.META_CLASS_END;
+
+        return (prefix.length () == 0) ? name : (prefix + ((name.equals (EMFCoreConstants.EMPTY_STRING)) ? EMFCoreConstants.EMPTY_STRING : (EMFCoreConstants.QUALIFIED_NAME_SEPARATOR + name)));
+    }
+
+    private static String getProxyQualifiedName (EObject proxy) {
+        URI uri = EcoreUtil.getURI (proxy);
+        Resource.Factory factory = Resource.Factory.Registry.INSTANCE.getFactory (uri);
+        String result = null;
+        if (factory instanceof IExtendedResourceFactory) {
+            result = ((IExtendedResourceFactory) factory).getProxyQualifiedName (proxy);
+        }
+        if (result == null) {
+            result = EMFCoreConstants.EMPTY_STRING;
+        }
+        return result;
+    }
+
+    public static String getProxyID (EObject proxy) {
+        if (proxy == null) {
+            return EMFCoreConstants.EMPTY_STRING;
+        }
+        if (! proxy.eIsProxy ()) {
+            XMLResource res = (XMLResource) proxy.eResource ();
+            if (res == null) {
+                return EMFCoreConstants.EMPTY_STRING;
+            } else {
+                return res.getID (proxy);
+            }
+        }
+        URI uri = EcoreUtil.getURI (proxy);
+        Resource.Factory factory = Resource.Factory.Registry.INSTANCE.getFactory (uri);
+        String result = null;
+        if (factory instanceof IExtendedResourceFactory) {
+            result = ((IExtendedResourceFactory) factory).getProxyID (proxy);
+        }
+        if (result == null) {
+            result = Util.getProxyID (proxy);
+        }
+        return result;
+    }
+
+    public static EClass getProxyClass (EObject proxy) {
+        if (proxy == null) {
+            return null;
+        }
+        if (! proxy.eIsProxy ()) {
+            return proxy.eClass ();
+        }
+        URI uri = EcoreUtil.getURI (proxy);
+        Resource.Factory factory = Resource.Factory.Registry.INSTANCE.getFactory (uri);
+        String id = null;
+        if (factory instanceof IExtendedResourceFactory) {
+            id = ((IExtendedResourceFactory) factory).getProxyClassID (proxy);
+        }
+        if (id == null) {
+            id = PackageUtil.getID (proxy.eClass ());
+        }
+        if (id != null) {
+            ENamedElement element = PackageUtil.getElement (id);
+            if ((element != null) && (element instanceof EClass)) return (EClass) element;
+
+        }
+        return null;
+    }
+
+    public static EObject createProxy (EClass eClass, URI uri) {
+        InternalEObject proxy = (InternalEObject) eClass.getEPackage ().getEFactoryInstance ().create (eClass);
+        proxy.eSetProxyURI (uri);
+        return proxy;
+    }
+
+    public static EObject resolve (TransactionalEditingDomain domain, EObject proxy) {
+        if (proxy == null) return null;
+
+        if (! proxy.eIsProxy ()) return proxy;
+
+        URI uri = EcoreUtil.getURI (proxy);
+        Resource.Factory factory = Resource.Factory.Registry.INSTANCE.getFactory (uri);
+        if (factory instanceof IExtendedResourceFactory) {
+            return ((IExtendedResourceFactory) factory).resolve (domain, proxy);
+        }
+        return Util.resolve (domain, proxy);
+    }
+
+}
+

@@ -1,0 +1,88 @@
+package org.eclipse.gmf.runtime.emf.ui.properties.commands;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.ui.views.properties.IPropertySource;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractModelCommand;
+
+public class SetModelPropertyValueCommand extends AbstractModelCommand {
+    private boolean valueResetOnUndo = false;
+    private final IPropertySource propertySource;
+    private final Object propertyId;
+    private Object undoValue;
+    private final Object propertyValue;
+
+    public SetModelPropertyValueCommand (String label, Object affectedObjects, IPropertySource propertySource, Object propertyId, Object propertyValue) {
+        super (label, affectedObjects);
+        this.propertySource = propertySource;
+        this.propertyId = propertyId;
+        this.propertyValue = propertyValue;
+    }
+
+    public boolean isRedoable () {
+        return true;
+    }
+
+    public boolean isUndoable () {
+        return true;
+    }
+
+    protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+        setValueResetOnUndo (! getPropertySource ().isPropertySet (getPropertyId ()));
+        if (! isValueResetOnUndo ()) {
+            setUndoValue (getPropertySource ().getPropertyValue (getPropertyId ()));
+        } else {
+            undoValue = null;
+        }
+        getPropertySource ().setPropertyValue (getPropertyId (), getPropertyValue ());
+        return newOKCommandResult (getPropertyValue ());
+    }
+
+    protected CommandResult doRedo () {
+        return doExecute (new NullProgressMonitor ());
+    }
+
+    protected CommandResult doUndo () {
+        if (isValueResetOnUndo ()) {
+            getPropertySource ().resetPropertyValue (getPropertyId ());
+        } else {
+            getPropertySource ().setPropertyValue (getPropertyId (), getUndoValue ());
+        }
+        return newOKCommandResult (getPropertySource ().getPropertyValue (getPropertyId ()));
+    }
+
+    protected boolean isValueResetOnUndo () {
+        return valueResetOnUndo;
+    }
+
+    protected void setValueResetOnUndo (boolean b) {
+        valueResetOnUndo = b;
+    }
+
+    protected IPropertySource getPropertySource () {
+        return propertySource;
+    }
+
+    protected Object getPropertyId () {
+        return propertyId;
+    }
+
+    protected Object getUndoValue () {
+        return undoValue;
+    }
+
+    protected void setUndoValue (Object object) {
+        undoValue = object;
+    }
+
+    protected Object getPropertyValue () {
+        return propertyValue;
+    }
+
+}
+

@@ -1,0 +1,186 @@
+package org.eclipse.gmf.runtime.emf.ui.properties.sections;
+
+import java.text.MessageFormat;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.commands.operations.IOperationHistory;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeTransactionalCommand;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.commands.RestoreDefaultPropertyValueCommand;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.commands.SetModelPropertyValueCommand;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesDebugOptions;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesPlugin;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesStatusCodes;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.l10n.EMFUIPropertiesMessages;
+
+import org.eclipse.ui.views.properties.IPropertySource;
+
+public class UndoableModelPropertySheetEntry extends PropertySheetEntry {
+    private final IOperationHistory operationHistory;
+    private TransactionalEditingDomain editingDomain;
+
+    public UndoableModelPropertySheetEntry (IOperationHistory operationHistory) {
+        this.operationHistory = operationHistory;
+    }
+
+    public void setEditingDomain (TransactionalEditingDomain editingDomain) {
+        this.editingDomain = editingDomain;
+    }
+
+    public TransactionalEditingDomain getEditingDomain () {
+        UndoableModelPropertySheetEntry parentEntry = getParentEntry ();
+        if (parentEntry == null || editingDomain != null) {
+            return editingDomain;
+        }
+        return parentEntry.getEditingDomain ();
+    }
+
+    public void applyEditorValue () {
+        if (editor == null) return;
+
+        if (! editor.isValueValid ()) {
+            setErrorText (editor.getErrorMessage ());
+            return;
+        } else setErrorText (null);
+
+        Object newValue = editor.getValue ();
+        boolean changed = false;
+        if (values.length > 1) {
+            changed = true;
+        } else if (editValue == null) {
+            if (newValue != null) changed = true;
+
+        } else if (! editValue.equals (newValue)) changed = true;
+
+        if (changed) setValue (newValue);
+
+    }
+
+    public void resetPropertyValue () {
+        if (parent == null) {
+            return;
+        }
+        String propertyName = getDescriptor ().getDisplayName ();
+        Object propertyId = getDescriptor ().getId ();
+        CompositeCommand cc = new CompositeCommand (propertyName);
+        RestoreDefaultPropertyValueCommand restoreCommand;
+        boolean executeCommand = false;
+        Object [] parentValues = getParentEntry ().getValues ();
+        for (int i = 0;
+        i < parentValues.length; i ++) {
+            IPropertySource source = getPropertySource (parentValues [i]);
+            if (source.isPropertySet (propertyId)) {
+                restoreCommand = new RestoreDefaultPropertyValueCommand (getEditingDomain (), propertyName, parentValues [i], source, propertyId);
+                cc.compose (restoreCommand);
+                executeCommand = true;
+            }
+        }
+        if (executeCommand) {
+            try {
+                getOperationHistory ().execute (cc, new NullProgressMonitor (), null);
+            } catch (ExecutionException e) {
+                Trace.catching (EMFPropertiesPlugin.getDefault (), EMFPropertiesDebugOptions.EXCEPTIONS_CATCHING, UndoableModelPropertySheetEntry.class, "resetPropertyValue", e);
+                Log.error (EMFPropertiesPlugin.getDefault (), EMFPropertiesStatusCodes.COMMAND_FAILURE, e.getLocalizedMessage (), e);
+            }
+            refreshValues ();
+        }
+    }
+
+    protected void setValue (Object newValue) {
+        for (int i = 0;
+        i < values.length; i ++) values [i] = newValue;
+
+        getParentEntry ().valueChanged (this, getCompositeCommand (MessageFormat.format (EMFUIPropertiesMessages.UndoablePropertySheetEntry_commandName, new String [] {getDescriptor ().getDisplayName ()})));
+        editValue = newValue;
+    }
+
+    protected void valueChanged (UndoableModelPropertySheetEntry child, ICommand command) {
+        String propertyName = child.getDescriptor ().getDisplayName ();
+        Object propertyId = child.getDescriptor ().getId ();
+        for (int i = 0;
+        i < values.length; i ++) command.compose (getPropertyCommand (propertyName, values [i], propertyId, child.getEditValue (i)));
+
+        if (getParentEntry () != null) {
+            getParentEntry ().valueChanged (this, command);
+        } else {
+            try {
+                getOperationHistory ().execute (command, new NullProgressMonitor (), null);
+            } catch (ExecutionException e) {
+                Trace.catching (EMFPropertiesPlugin.getDefault (), EMFPropertiesDebugOptions.EXCEPTIONS_CATCHING, UndoableModelPropertySheetEntry.class, "valueChanged", e);
+                Log.error (EMFPropertiesPlugin.getDefault (), EMFPropertiesStatusCodes.COMMAND_FAILURE, e.getLocalizedMessage (), e);
+            }
+        }
+    }
+
+    public void setValues (Object [] objects) {
+        super.setValues (objects);
+        if (getParentEntry () == null) {
+            for (int i = 0;
+            i < objects.length; i ++) {
+                EObject eObject = null;
+                if (objects [i] instanceof EObject) {
+                    eObject = (EObject) objects [i];
+                } else if (objects [i] instanceof IAdaptable) {
+                    eObject = (EObject) ((IAdaptable) objects [i]).getAdapter (EObject.class);
+                }
+
+                if (eObject != null) {
+                    setEditingDomain (TransactionUtil.getEditingDomain (eObject));
+                }
+            }
+        }
+    }
+
+    protected final IOperationHistory getOperationHistory () {
+        return operationHistory;
+    }
+
+    protected UndoableModelPropertySheetEntry getParentEntry () {
+        return (UndoableModelPropertySheetEntry) parent;
+    }
+
+    protected ICommand getPropertyCommand (String propertyName, Object object, Object propertyId, Object value) {
+        return new SetModelPropertyValueCommand (getEditingDomain (), propertyName, object, getPropertySource (object), propertyId, value);
+    }
+
+    protected ICompositeCommand getCompositeCommand (String propertyName) {
+        return new CompositeTransactionalCommand (getEditingDomain (), propertyName);
+    }
+
+    protected PropertySheetEntry [] createChildEntries (int size) {
+        return new UndoableModelPropertySheetEntry [size];
+    }
+
+    protected PropertySheetEntry createChildEntry () {
+        return new UndoableModelPropertySheetEntry (getOperationHistory ());
+    }
+
+}
+

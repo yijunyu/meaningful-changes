@@ -1,0 +1,297 @@
+35a36,36
+> import org.eclipse.emf.ecore.resource.ResourceSet;
+37a39,39
+> import org.eclipse.gmf.gmfgraph.DiagramElement;
+37,37c38,38
+< import org.eclipse.gmf.gmfgraph.Figure;
+---
+> import org.eclipse.gmf.gmfgraph.Canvas;
+62a65,65
+> 	public static final String OPTION_OUTPUT_DIAGRAM_ELEMENTS_FULL_PATH = SECTION_ID + ".outputDiagramElements";
+62,62c64,64
+< 	public static final String OPTION_OUTPUT_RESOURCE_FULL_PATH = SECTION_ID + ".outputResource";
+---
+> 	public static final String OPTION_OUTPUT_GALLERY_FULL_PATH = SECTION_ID + ".outputGallery";
+66a70,70
+> 	private FileNameOption myOutputDiagramElementsPathOption;
+67,67c71,71
+< 	private final CachedInputValidationState myCachedInputValidationState;
+---
+> 	private final InputValidationState myCachedInputValidationState;
+74,74c78,78
+< 		myOutputGalleryPathOption = addFileNameOption(true, OPTION_OUTPUT_RESOURCE_FULL_PATH, "Create Figure Gallery", "", THE_ONLY_PAGE_INDEX);
+---
+> 		myOutputGalleryPathOption = addFileNameOption(true, OPTION_OUTPUT_GALLERY_FULL_PATH, "Create Figure Gallery", "", THE_ONLY_PAGE_INDEX);
+75a80,81
+> 		myOutputDiagramElementsPathOption = addFileNameOption(true, OPTION_OUTPUT_DIAGRAM_ELEMENTS_FULL_PATH, "Mirror diagram elements", "", THE_ONLY_PAGE_INDEX);
+> 		myOutputDiagramElementsPathOption.setRequired(false);
+77,77c83,83
+< 		myCachedInputValidationState = new CachedInputValidationState();
+---
+> 		myCachedInputValidationState = new InputValidationState(myOutputGalleryPathOption, myOutputDiagramElementsPathOption);
+88,89d93
+< 		validateOptions(myInputPathOption);
+< 		validateOptions(myOutputGalleryPathOption);
+98,98c102,102
+< 		Resource resource = loadResource(myInputPathOption.getText());
+---
+> 		Resource input = loadResource(myInputPathOption.getText());
+99,99c103,103
+< 		FigureGallery[] figures = findFigures(resource);
+---
+> 		FigureGallery[] figures = findFigures(input);
+99a104,104
+> 		assert(figures.length > 0);
+118,118c127,127
+< 			resource.unload();
+---
+> 			input.unload();
+119a113,113
+> 			if (!generator.getRunStatus().isOK()){
+120,120d112
+< 		if (!generator.getRunStatus().isOK()){
+121,121c114,114
+< 			throw new CoreException(generator.getRunStatus());
+---
+> 				throw new CoreException(generator.getRunStatus());
+121a115,116
+> 			}
+> 			createSeparateResources(generator.getGenerationInfo(), input);
+123,123d129
+< 		createFigureGallery(generator.getGenerationInfo());
+125a130,132
+> 	
+> 	private void createSeparateResources(StandaloneGenerator.GenerationInfo info, Resource input) throws CoreException {
+> 		if (shouldGenerate(myOutputGalleryPathOption)){
+126,127d129
+< 	private void createFigureGallery(StandaloneGenerator.GenerationInfo info) throws CoreException {
+< 		if (!myOutputGalleryPathOption.isEmpty()){
+128,128c133,133
+< 			String path = myOutputGalleryPathOption.getText();
+---
+> 			String figureGalleryPath = myOutputGalleryPathOption.getText();
+128a134,136
+> 			ResourceSet separateResourceSet = new ResourceSetImpl();
+> 			StandaloneGalleryConverter converter = new StandaloneGalleryConverter(info);
+> 			
+129,129c137,137
+< 			Resource galleryResource = new ResourceSetImpl().createResource(URI.createFileURI(path));
+---
+> 			Resource galleryResource = separateResourceSet.createResource(URI.createFileURI(figureGalleryPath));
+130a139,146
+> 			
+> 			Resource diagramElementsResource = null;
+> 			if (shouldGenerate(myOutputDiagramElementsPathOption)){
+> 				Canvas mirror = converter.mirrorDiagramElements(Collections.singleton(input));
+> 				if (mirror != null){
+> 					diagramElementsResource = separateResourceSet.createResource(URI.createFileURI(myOutputDiagramElementsPathOption.getText()));
+> 					diagramElementsResource.getContents().add(mirror);
+> 				}
+130,130c138,138
+< 			galleryResource.getContents().add(new StandaloneGalleryConverter().convertFigureGallery(info));
+---
+> 			galleryResource.getContents().add(converter.convertFigureGallery());
+132a151,153
+> 				if (diagramElementsResource != null){
+> 					diagramElementsResource.save(null);
+> 				}
+134,134d154
+< 				throw new CoreException(new Status(//
+135,135c155,155
+< 						IStatus.ERROR, MY_PLUGIN_ID, 0, e.getMessage(), e
+---
+> 				throw new CoreException(new Status(IStatus.ERROR, MY_PLUGIN_ID, 0, e.getMessage(), e));
+136,136d155
+< 				));
+140a160,163
+> 	private boolean shouldGenerate(FileNameOption option){
+> 		return option.isEnabled() && !option.isEmpty();
+> 	}
+> 	
+193a217,219
+> 		if (validateInputPath() && validatePackageName() &&  
+> 			validateOutputOption(myOutputDiagramElementsPathOption) && 
+> 			validateOutputOption(myOutputGalleryPathOption)){   
+193a315,317
+> 	private boolean validateOutputOption(FileNameOption option) {
+> 		if (!option.isEnabled()){
+> 			return false;
+194,195d314
+< 		if (!validatePackageName()){
+< 			return;
+196a319,320
+> 		if (!validateMirrorDiagramWithoutFigureGallery()){
+> 			return false;
+196,196c318,318
+< 		}
+---
+> 		}
+197,198d318
+< 		if (!validateInputPath()){
+< 			return;
+199,199c321,321
+< 		}
+---
+> 		}
+200,200c322,322
+< 		if (!validateOutputGalleryPath()){
+---
+> 		if (option.isEmpty()){
+201,202d322
+< 			return;
+< 		}
+204a222,222
+> 	}
+283a302,303
+> 			myOutputDiagramElementsPathOption.setEnabled(false);
+> 			myOutputGalleryPathOption.setEnabled(false);
+288a309,309
+> 			flagError(myCachedInputValidationState.getErrorMessage());
+288a353,353
+> 	private void flagError(String message){
+289,289c354,354
+< 			getTheOnlyPage().setPageComplete(false);
+---
+> 		getTheOnlyPage().setPageComplete(false);
+290a356,357
+> 	}
+> 	
+290,290c355,355
+< 			getTheOnlyPage().setErrorMessage(myCachedInputValidationState.getErrorMessage());
+---
+> 		getTheOnlyPage().setErrorMessage(message);
+296,297d314
+< 	private boolean validateOutputGalleryPath() {
+< 		if (myOutputGalleryPathOption.isEmpty()){
+301a327,340
+> 		return validatePath(path);
+> 	}
+> 
+> 	private boolean validateMirrorDiagramWithoutFigureGallery(){
+> 		if (!myOutputDiagramElementsPathOption.isEmpty()){
+> 			if (myOutputGalleryPathOption.isEmpty() || myOutputDiagramElementsPathOption.getText().equals(myOutputGalleryPathOption.getText())){
+> 				flagError("In order to mirror diagram elements you have to generate separate figure gallery");
+> 				return false;
+> 			}
+> 		}
+> 		return true;
+> 	}
+> 	
+> 	private boolean validatePath(String path){
+301,301c326,326
+< 		String path = myOutputGalleryPathOption.getText();
+---
+> 		String path = option.getText();
+303,303c342,342
+< 			URI.createFileURI(path);
+---
+> 			return URI.createFileURI(path) != null; 
+305,305c344,344
+< 			String message = MessageFormat.format("Path {0} is invalid", new Object[] {path});
+---
+> 			flagError(MessageFormat.format("Path {0} is invalid", new Object[] {path}));
+306,307d344
+< 			getTheOnlyPage().setPageComplete(false);
+< 			getTheOnlyPage().setErrorMessage(message);
+310,310c405,405
+< 		return true;
+---
+> 				return;
+327,327c368,368
+< 	private static class CachedInputValidationState {
+---
+> 	private static class InputValidationState {
+329,329d369
+< 		private boolean myCachedIsValid;
+330a371,379
+> 		private boolean myHasDiagramElement;
+> 		private boolean myHasFigure;
+> 		private final FileNameOption myDiagramElementsOption;
+> 		private final FileNameOption myGalleryOption;
+> 		
+> 		public InputValidationState(FileNameOption galleryOption, FileNameOption diagramElementsOption){
+> 			myGalleryOption = galleryOption;
+> 			myDiagramElementsOption = diagramElementsOption;
+> 		}
+333a383,386
+> 				myCachedPath = path;
+> 				validateInputPath(path);
+> 				myGalleryOption.setEnabled(myHasFigure);
+> 				myDiagramElementsOption.setEnabled(myHasDiagramElement);
+334,334d382
+< 				myCachedIsValid = validateInputPath(path); 
+339,339c391,391
+< 			return myCachedIsValid;
+---
+> 			return myHasFigure;
+345a416,420
+> 		}
+> 
+> 		private void classifyContents(Resource resource){
+> 			myHasDiagramElement = false;
+> 			myHasFigure = false;
+345a398,400
+> 		private void validateInputPath(String path) {
+> 			myHasDiagramElement = false;
+> 			myHasFigure = false;
+346,346d415
+< 		private boolean hasAtLeastOneFigure(Resource resource){
+347,347c421,421
+< 			for (TreeIterator contents = resource.getAllContents(); contents.hasNext();){
+---
+> 			for (TreeIterator contents = resource.getAllContents(); contents.hasNext();){
+348,348c422,422
+< 				EObject next = (EObject) contents.next();
+---
+> 				EObject next = (EObject) contents.next();
+348a423,428
+> 				if (next instanceof FigureGallery){
+> 					if (!myHasFigure){
+> 						FigureGallery nextGallery = (FigureGallery) next;
+> 						myHasFigure = !nextGallery.getFigures().isEmpty();
+> 					}
+> 					contents.prune();
+349,350d422
+< 				if (next instanceof Figure){
+< 					return true;
+351,351c429,429
+< 				}
+---
+> 				}
+351a430,436
+> 				if (next instanceof DiagramElement){
+> 					myHasDiagramElement = true;
+> 					contents.prune();
+> 				}
+> 				if (myHasDiagramElement && myHasFigure){
+> 					break;
+> 				}
+352,352c437,437
+< 			}
+---
+> 			}
+353,356d437
+< 			return false;
+< 		}
+< 		
+< 		private boolean validateInputPath(String path) {
+357a402,402
+> 
+360,360d404
+< 				return false;
+364,364d408
+< 			boolean isValid = resource != null && hasAtLeastOneFigure(resource);
+365a410,410
+> 				classifyContents(resource);
+366,366d409
+< 				resource.unload();
+367a412,412
+> 			
+368,368c413,413
+< 			if (!isValid){
+---
+> 			if (!myHasFigure){
+370,370d414
+< 				return false;
+372,372d415
+< 			return true;

@@ -1,0 +1,105 @@
+13a14,21
+> import java.util.Iterator;
+> 
+> import org.eclipse.core.runtime.IStatus;
+> import org.eclipse.core.runtime.Status;
+> import org.eclipse.gef.commands.Command;
+> import org.eclipse.gef.commands.CommandStack;
+> import org.eclipse.gef.commands.CompoundCommand;
+> import org.eclipse.gmf.runtime.diagram.ui.dialogs.sortfilter.SortFilterPage;
+14a23,24
+> import org.eclipse.jface.dialogs.IDialogConstants;
+> import org.eclipse.jface.dialogs.MessageDialog;
+15a26,26
+> import org.eclipse.jface.preference.IPreferencePage;
+16a28,31
+> import org.eclipse.jface.preference.PreferenceManager;
+> import org.eclipse.jface.resource.JFaceResources;
+> import org.eclipse.jface.util.Policy;
+> import org.eclipse.jface.util.SafeRunnable;
+31a47,47
+> 	private CommandStack commandStack = null;
+37,37c53,53
+< 	public SortFilterDialog(Shell parentShell) {
+---
+> 	public SortFilterDialog(Shell parentShell, CommandStack commandStack) {
+38a55,55
+> 		this.commandStack = commandStack;
+68a86,162
+> 	/* (non-Javadoc)
+> 	 * @see org.eclipse.jface.preference.PreferenceDialog#okPressed()
+> 	 */
+> 	protected void okPressed() {
+> 		SafeRunnable.run(new SafeRunnable() {
+> 			private boolean errorOccurred;
+> 
+> 			
+> 			 /* (non-Javadoc)
+> 			 * 
+> 			 * @see org.eclipse.core.runtime.ISafeRunnable#run()
+> 			 */
+> 			 
+> 			public void run() {
+> 				getButton(IDialogConstants.OK_ID).setEnabled(false);
+> 				errorOccurred = false;
+> 				boolean hasFailedOK = false;
+> 				try {
+> 					// Notify all the pages and give them a chance to abort
+> 					Iterator nodes = getPreferenceManager().getElements(PreferenceManager.PRE_ORDER)
+> 							.iterator();
+> 					CompoundCommand cc = new CompoundCommand();
+> 					while (nodes.hasNext()) {
+> 						IPreferenceNode node = (IPreferenceNode) nodes.next();
+> 						IPreferencePage page = node.getPage();
+> 						if (page != null) {
+> 							if (page instanceof SortFilterPage) {
+> 								Command cmd = ((SortFilterPage)page).getCommand();
+> 								if (cmd != null && cmd.canExecute())
+> 									cc.add(cmd);
+> 							}
+> 							else if (!page.performOk()){
+> 								hasFailedOK = true;
+> 								return;
+> 							}
+> 						}
+> 					}
+> 					if (cc.canExecute())
+> 						commandStack.execute(cc);
+> 				} catch (Exception e) {
+> 					handleException(e);
+> 				} finally {
+> 					//Don't bother closing if the OK failed
+> 					if(hasFailedOK){
+> 						setReturnCode(FAILED);
+> 						getButton(IDialogConstants.OK_ID).setEnabled(true);
+> 						return;
+> 					}
+> 					
+> 					if (!errorOccurred) {
+> 						//Give subclasses the choice to save the state of the
+> 					    //preference pages.
+> 						handleSave();
+> 					}
+> 					setReturnCode(OK);
+> 					close();
+> 				}
+> 			}
+> 
+> 			
+> 			 /* (non-Javadoc)
+> 			 * 
+> 			 * @see org.eclipse.core.runtime.ISafeRunnable#handleException(java.lang.Throwable)
+> 			 */
+> 			 
+> 			public void handleException(Throwable e) {
+> 				errorOccurred = true;
+> 				
+> 				Policy.getLog().log(new Status(IStatus.ERROR, Policy.JFACE, 0, e.toString(), e));
+> 
+> 				setSelectedNodePreference(null);
+> 				String message = JFaceResources.getString("SafeRunnable.errorMessage"); //$NON-NLS-1$
+> 				MessageDialog.openError(getShell(), JFaceResources.getString("Error"), message); //$NON-NLS-1$
+> 
+> 			}
+> 		});
+> 	}

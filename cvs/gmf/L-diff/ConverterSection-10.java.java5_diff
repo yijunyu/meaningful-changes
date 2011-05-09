@@ -1,0 +1,67 @@
+45,46d44
+< import org.eclipse.emf.ecore.resource.ResourceSet;
+< 
+49,50d46
+< import org.eclipse.gmf.gmfgraph.Canvas;
+< 
+63,64d58
+< import org.eclipse.gmf.internal.graphdef.codegen.StandaloneGalleryConverter;
+< 
+143,144d136
+<         FigureGallery [] figures = findFigures (input);
+<         assert (figures.length > 0);
+152c144,147
+<         StandaloneGenerator generator = new StandaloneGenerator (figures, config, fqnSwitch);
+---
+>         final ConverterOptions options = newConverterOptions ();
+>         final ConverterOutcome converterOutcome = new ConverterOutcome (options, new Resource [] {input});
+>         assert converterOutcome.checkInputAgainstOptions ().isOK ();
+>         StandaloneGenerator generator = new StandaloneGenerator (converterOutcome.getProcessor (), config, fqnSwitch);
+160c155,158
+<             createSeparateResources (generator.getGenerationInfo (), input);
+---
+>             IStatus s = converterOutcome.createResources (new ResourceSetImpl (), URI.createFileURI (myOutputGalleryPathOption.getText ()), URI.createFileURI (myOutputDiagramElementsPathOption.getText ()), config);
+>             if (s.getSeverity () == IStatus.ERROR) {
+>                 throw new CoreException (s);
+>             }
+174,197c172,177
+<     private void createSeparateResources (StandaloneGenerator.GenerationInfo info, Resource input) throws CoreException {
+<         if (shouldGenerate (myOutputGalleryPathOption)) {
+<             String figureGalleryPath = myOutputGalleryPathOption.getText ();
+<             ResourceSet separateResourceSet = new ResourceSetImpl ();
+<             StandaloneGalleryConverter converter = new StandaloneGalleryConverter (info);
+<             Resource galleryResource = separateResourceSet.createResource (URI.createFileURI (figureGalleryPath));
+<             galleryResource.getContents ().add (converter.convertFigureGallery ());
+<             Resource diagramElementsResource = null;
+<             if (shouldGenerate (myOutputDiagramElementsPathOption)) {
+<                 Canvas mirror = converter.mirrorDiagramElements (Collections.singleton (input));
+<                 if (mirror != null) {
+<                     diagramElementsResource = separateResourceSet.createResource (URI.createFileURI (myOutputDiagramElementsPathOption.getText ()));
+<                     diagramElementsResource.getContents ().add (mirror);
+<                 }
+<             }
+<             try {
+<                 galleryResource.save (null);
+<                 if (diagramElementsResource != null) {
+<                     diagramElementsResource.save (null);
+<                 }
+<             } catch (IOException e) {
+<                 throw new CoreException (new Status (IStatus.ERROR, MY_PLUGIN_ID, 0, e.getMessage (), e));
+<             }
+<         }
+---
+>     private ConverterOptions newConverterOptions () {
+>         final ConverterOptions options = new ConverterOptions ();
+>         options.needMirroredGalleries = shouldGenerate (myOutputGalleryPathOption);
+>         options.needMirroredCanvas = shouldGenerate (myOutputDiagramElementsPathOption);
+>         options.separateMirrorFiles = options.needMirroredCanvas && myOutputGalleryPathOption.getText ().equals (myOutputDiagramElementsPathOption.getText ());
+>         return options;
+200c180
+<     private boolean shouldGenerate (FileNameOption option) {
+---
+>     private static boolean shouldGenerate (FileNameOption option) {
+223,226d202
+<     private FigureGallery [] findFigures (Resource resource) {
+<         return new FigureFinder ().findFigures (resource);
+<     }
+< 

@@ -1,0 +1,76 @@
+2c2
+<  * Copyright (c) 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2005, 2006 IBM Corporation and others.
+17c17
+< 
+---
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+18a19
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePlugin;
+23c24,25
+<  * Describes a metamodel.
+---
+>  * Describes a metamodel. Loading the metamodel is delayed until access is made
+>  * to {{@link #getEPackage()}.
+32c34,45
+< 	private final EPackage ePackage;
+---
+> 	private EPackage ePackage;
+> 	
+> 	/**
+> 	 * The namespace URI of the metamodel package.
+> 	 */
+> 	private final String nsURI;
+> 	
+> 	/**
+> 	 * Flag indicating that a metamodel could not be found with my namespace
+> 	 * URI.
+> 	 */
+> 	private boolean metamodelNotFound = false;
+40c53
+< 	 *             when the EPackage can't be found for the namespace URI
+---
+> 	 *             when the EPackage namespace URI is not
+46c59
+< 		String nsURI = configElement.getAttribute(ElementTypeXmlConfig.A_NSURI);
+---
+> 		nsURI = configElement.getAttribute(ElementTypeXmlConfig.A_NSURI);
+51,58d63
+< 		ePackage = (nsURI != null) ? EPackage.Registry.INSTANCE
+< 			.getEPackage(nsURI)
+< 			: null;
+< 
+< 		if (ePackage == null) {
+< 			throw EMFTypePluginStatusCodes.getMetamodelInitException(
+< 				nsURI, EMFTypeCoreMessages.metamodel_reason_nsURI_not_found_WARN_);
+< 		}
+66a72,89
+> 		
+> 		if (ePackage == null & !metamodelNotFound) {
+> 			ePackage = (getNsURI() != null) ? EPackage.Registry.INSTANCE
+> 					.getEPackage(getNsURI()) : null;
+> 
+> 			if (ePackage == null) {
+> 				metamodelNotFound = true;
+> 				Log
+> 						.error(
+> 								EMFTypePlugin.getPlugin(),
+> 								EMFTypePluginStatusCodes.METAMODEL_NOT_INITED,
+> 								EMFTypeCoreMessages
+> 										.bind(
+> 												EMFTypeCoreMessages.metamodel_not_init_WARN_,
+> 												nsURI,
+> 												EMFTypeCoreMessages.metamodel_reason_nsURI_not_found_WARN_));
+> 			}
+> 		}
+68a92,100
+> 	
+> 	/**
+> 	 * Gets the namespace URI for the metamodel.
+> 	 * 
+> 	 * @return the namespace URI
+> 	 */
+> 	public String getNsURI() {
+> 		return nsURI;
+> 	}

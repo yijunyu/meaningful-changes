@@ -1,0 +1,241 @@
+5a4,4
+> 
+5,5c3,3
+< import java.util.Collections;
+---
+> import java.util.ArrayList;
+12a7,7
+> import java.util.List;
+13,13d6
+< import org.eclipse.core.runtime.Status;
+14a9,23
+> import org.eclipse.core.commands.ExecutionException;
+> 
+> import org.eclipse.core.commands.operations.AbstractOperation;
+> 
+> import org.eclipse.core.commands.operations.IOperationApprover;
+> 
+> import org.eclipse.core.commands.operations.IUndoContext;
+> 
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> 
+> import org.eclipse.core.commands.operations.OperationHistoryFactory;
+> 
+> import org.eclipse.core.resources.IFile;
+> 
+> import org.eclipse.core.runtime.IAdaptable;
+14,14c8,8
+< 
+---
+> 
+19,22d34
+< import org.eclipse.gmf.runtime.common.core.internal.CommonCoreStatusCodes;
+< 
+< import org.eclipse.gmf.runtime.common.core.internal.l10n.CommonCoreMessages;
+< 
+26a39,40
+> public abstract class AbstractCommand extends AbstractOperation implements ICommand {
+>     private final List affectedFiles;
+27,29d38
+< public abstract class AbstractCommand implements ICommand {
+<     protected static final String EMPTY_STRING = "";
+<     private final String label;
+30a42,45
+> 
+>     public AbstractCommand (String label) {
+>         this (label, null);
+>     }
+30,30c41,41
+<     private CommandResult result = null;
+---
+>     private CommandResult commandResult;
+31a47,47
+>     public AbstractCommand (String label, List affectedFiles) {
+32,32d46
+<     protected AbstractCommand (String label) {
+33,33c48,48
+<         super ();
+---
+>         super (label);
+33a49,51
+>         if (affectedFiles == null) {
+>             this.affectedFiles = new ArrayList ();
+>         } else {
+34a53,53
+>         }
+34,34c52,52
+<         this.label = label;
+---
+>             this.affectedFiles = affectedFiles;
+36a56,57
+>     public List getAffectedFiles () {
+>         return affectedFiles;
+37,38d55
+<     public String getLabel () {
+<         return label;
+41,41c60,60
+<     public final CommandResult getCommandResult () {
+---
+>     public CommandResult getCommandResult () {
+42,42c61,61
+<         return result;
+---
+>         return commandResult;
+46,46c65,65
+<         this.result = result;
+---
+>         this.commandResult = result;
+49,50d67
+<     public Collection getAffectedObjects () {
+<         return Collections.EMPTY_LIST;
+52a75,76
+>     public ICommand reduce () {
+>         return this;
+53,54d74
+<     public boolean involvesReadOnlyNonWorkSpaceFiles () {
+<         return false;
+56a79,82
+>     public IStatus execute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+>         CommandResult result = doExecuteWithResult (monitor, info);
+>         setResult (result);
+>         return result.getStatus ();
+57,58d78
+<     public CMValidator getValidator () {
+<         return new CMValidator ();
+60a85,90
+>     protected abstract CommandResult doExecuteWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException;
+> 
+>     public IStatus redo (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+>         CommandResult result = doRedoWithResult (monitor, info);
+>         setResult (result);
+>         return result.getStatus ();
+61,62d84
+<     protected String getPluginId () {
+<         return CommonCorePlugin.getPluginId ();
+64a68,69
+>     public ICommand compose (IUndoableOperation operation) {
+>         if (operation != null) {
+64a93,121
+>     protected abstract CommandResult doRedoWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException;
+> 
+>     public IStatus undo (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+>         CommandResult result = doUndoWithResult (monitor, info);
+>         setResult (result);
+>         return result.getStatus ();
+>     }
+> 
+>     protected abstract CommandResult doUndoWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException;
+> 
+>     public void dispose () {
+>         super.dispose ();
+>         IUndoContext [] contexts = getContexts ();
+>         for (int i = 0;
+>         i < contexts.length; i ++) {
+>             removeContext (contexts [i]);
+>         }
+>     }
+> 
+>     public Collection getAffectedObjects () {
+>         return getAffectedFiles ();
+>     }
+> 
+>     public CMValidator getValidator () {
+>         return null;
+>     }
+> 
+>     public boolean involvesReadOnlyNonWorkSpaceFiles () {
+>         return false;
+65,66d67
+<     public ICommand compose (ICommand command) {
+<         assert null != command : "null command";
+67a71,72
+>         }
+>         return this;
+67,67c70,70
+<         return new CompositeCommand (getLabel ()).compose (this).compose (command);
+---
+>             return new CompositeCommand (getLabel ()).compose (this).compose (operation);
+71,71c125,125
+<         return true;
+---
+>         return canExecute ();
+75,75c129,129
+<         return false;
+---
+>         return canRedo ();
+79,79c133,133
+<         return false;
+---
+>         return canUndo ();
+83,83d136
+<         IProgressMonitor monitor = (progressMonitor == null) ? new NullProgressMonitor () : progressMonitor;
+84a138,139
+>             execute (progressMonitor, null);
+>         } catch (ExecutionException e) {
+85,90d137
+<             if (getValidator ().okToEdit (this)) {
+<                 setResult (doExecute (monitor));
+<             } else {
+<                 setResult (newCancelledCommandResult ());
+<             }
+<         } catch (Exception e) {
+96a146,147
+>             redo (new NullProgressMonitor (), null);
+>         } catch (ExecutionException e) {
+97,102d145
+<             if (getValidator ().okToEdit (this)) {
+<                 setResult (doRedo ());
+<             } else {
+<                 setResult (newCancelledCommandResult ());
+<             }
+<         } catch (Exception e) {
+108a154,155
+>             undo (new NullProgressMonitor (), null);
+>         } catch (ExecutionException e) {
+109,114d153
+<             if (getValidator ().okToEdit (this)) {
+<                 setResult (doUndo ());
+<             } else {
+<                 setResult (newCancelledCommandResult ());
+<             }
+<         } catch (Exception e) {
+119,138d159
+<     protected CommandResult newOKCommandResult () {
+<         return new CommandResult (new Status (IStatus.OK, getPluginId (), CommonCoreStatusCodes.OK, EMPTY_STRING, null));
+<     }
+< 
+<     protected CommandResult newOKCommandResult (Object returnValue) {
+<         return new CommandResult (new Status (IStatus.OK, getPluginId (), CommonCoreStatusCodes.OK, EMPTY_STRING, null), returnValue);
+<     }
+< 
+<     protected CommandResult newCancelledCommandResult () {
+<         return new CommandResult (new Status (IStatus.ERROR, getPluginId (), CommonCoreStatusCodes.CANCELLED, CommonCoreMessages.AbstractCommand__INFO__cancelOperation, null), null);
+<     }
+< 
+<     protected CommandResult newErrorCommandResult (String errorMessage) {
+<         return new CommandResult (new Status (IStatus.ERROR, getPluginId (), CommonCoreStatusCodes.COMMAND_FAILURE, errorMessage, null));
+<     }
+< 
+<     protected CommandResult newWarningCommandResult (String warningMessage, Object returnValue) {
+<         return new CommandResult (new Status (IStatus.WARNING, getPluginId (), CommonCoreStatusCodes.OK, warningMessage, null), returnValue);
+<     }
+< 
+140a162,162
+>         setResult (CommandResult.newErrorCommandResult (exception));
+141,141d161
+<         setResult (new CommandResult (new Status (IStatus.ERROR, getPluginId (), CommonCoreStatusCodes.COMMAND_FAILURE, String.valueOf (exception.getMessage ()), exception)));
+145,158d165
+<     protected abstract CommandResult doExecute (IProgressMonitor progressMonitor);
+< 
+<     protected CommandResult doRedo () {
+<         UnsupportedOperationException uoe = new UnsupportedOperationException ();
+<         Trace.throwing (CommonCorePlugin.getDefault (), CommonCoreDebugOptions.EXCEPTIONS_THROWING, getClass (), "doRedo", uoe);
+<         throw uoe;
+<     }
+< 
+<     protected CommandResult doUndo () {
+<         UnsupportedOperationException uoe = new UnsupportedOperationException ();
+<         Trace.throwing (CommonCorePlugin.getDefault (), CommonCoreDebugOptions.EXCEPTIONS_THROWING, getClass (), "doUndo", uoe);
+<         throw uoe;
+<     }
+< 

@@ -1,0 +1,146 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2003 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2008 IBM Corporation and others.
+37a38,40
+>  * to mean another request. Note that some transfers on different OS's occur at the drop time, hence
+>  * live feedback cannot be provided for these transfers (i.e. command created). If this is the case then to enable
+>  * drag and drop on different platforms {@link #isDataTransfered()} needs to be implemented.
+38,38d37
+<  * to mean another request.
+43,43c45,45
+<  * @author melaasar
+---
+>  * @author melaasar, aboyko
+53a56,56
+>         setEnablementDeterminedByCommand(true);
+62a66,66
+>         setEnablementDeterminedByCommand(true);
+69a196,196
+>         request.setObjects(getObjectsBeingDropped());
+69a74,74
+>         return  new DropObjectsRequest();
+70,71d195
+< 		DropObjectsRequest request =  new DropObjectsRequest();
+< 		request.setObjects(getObjectsBeingDropped());
+72,72c197,197
+< 		request.setAllowedDetail(getCurrentEvent().operations);
+---
+>         request.setAllowedDetail(getCurrentEvent().operations);
+73,73d197
+< 		return request;
+112a114,120
+>         /*
+>          * The edit policies creating the command for the drop request may modify the
+>          * required detail field, so it's being set for the event here. However, if the command
+>          * can't be created due to the fact that data hasn't been transfered yet then the request will
+>          * contain DND.DROP_NONE required detail that we don't want to set for the event.  
+>          */
+>         if (getDropObjectsRequest().getRequiredDetail() != DND.DROP_NONE) {
+114a123,123
+>     }
+122a132,138
+>         /*
+>          * The edit policies creating the command for the drop request may modify the
+>          * required detail field, so it's being set for the event here. However, if the command
+>          * can't be created due to the fact that data hasn't been transfered yet then the request will
+>          * contain DND.DROP_NONE required detail that we don't want to set for the event.  
+>          */
+>         if (getDropObjectsRequest().getRequiredDetail() != DND.DROP_NONE) {
+123a140,140
+>         }
+167a185,191
+> 	 * wipes out the request in {@link #isEnabled(DropTargetEvent)} method, we
+> 	 * don't. Hence we just update the necessary fields: <li>the mouse location
+> 	 * <li>the objects being dropped <li>the allowed detail that comes from the
+> 	 * DND event
+> 	 * 
+> 	 * @see org.eclipse.gef.dnd.AbstractTransferDropTargetListener#
+> 	 * 	updateTargetRequest()
+167,167c184,184
+< 	 * Assumes that the target request is a {@link DropObjectsRequest}. 
+---
+> 	 * Assumes that the target request is a {@link DropObjectsRequest}. GEF
+173a200,201
+>     /* (non-Javadoc)
+>      * @see org.eclipse.gef.dnd.AbstractTransferDropTargetListener#isEnabled(org.eclipse.swt.dnd.DropTargetEvent)
+174,175d199
+< 	/**
+< 	 * Make sure the target can produce a command
+177a204,205
+>     	/*
+>     	 * Cache the current event 
+178,186d203
+< 		if (super.isEnabled(event)){
+< 			boolean result = calculateTargetEditPart() != null;
+< 			return result;
+< 		}
+< 		return false;
+< 	}
+< 
+< 	/**
+< 	 * @see org.eclipse.gef.dnd.AbstractTransferDropTargetListener#updateTargetEditPart()
+187a207,207
+>         setCurrentEvent(event);
+188,190d206
+< 	protected void updateTargetEditPart() {
+< 		setTargetEditPart(calculateTargetEditPart());
+< 	}
+191a209,210
+>         /*
+>          * Update the target request and target editpart
+192,193d208
+< 	/**
+< 	 * @return an edit part that can produce an executable command for the target request
+195,195d211
+< 	private EditPart calculateTargetEditPart() {
+196a213,223
+>         updateTargetEditPart();
+>         
+>         if (getTargetEditPart() == null) {
+>             return false;
+>         } else if (isEnablementDeterminedByCommand() && isDataTransfered()) {
+>         	/*
+>         	 * Check the command only if:
+>         	 * 1) The data has been transfered from the drag source to the event
+>         	 * 2) The "ask for command" option is on. (It's "on" by default)
+>         	 */
+>             Command command = getCommand();
+197,203d212
+< 		EditPart ep = getViewer()
+< 			.findObjectAtExcluding(
+< 				getDropLocation(),
+< 				getExclusionSet(),
+< 				new EditPartViewer.Conditional() {
+< 					public boolean evaluate(EditPart editpart) {
+< 						Command command = editpart.getCommand(getTargetRequest());
+204a225,230
+>         } else {
+>         	/*
+>         	 * Otherwise we should enable the drop. Executable command needs to be created at the drop time anyway.
+>         	 * Hence, we'll fail the drop there if there is no target editpart or no data transfered. 
+>         	 */
+>             return true;
+206,209d231
+< 				});
+< 		if (ep != null) {
+< 			Command command = ep.getCommand(getTargetRequest());
+< 			return (command != null && command.canExecute())? ep : null;
+210a233,247
+> 
+>     /**
+> 	 * It is not a common use case to have the transfered data at the drag time,
+> 	 * hence live feedback cannot be provided for all types of DnD. Since the
+> 	 * occurrence of the data transfer at the drag time depends mostly on the
+> 	 * used OS and the the type of data transfer, clients are responsible to
+> 	 * experiment with their DnD and come up with the appropriate implementation
+> 	 * of this method for their specific DnD support. By default the method
+> 	 * returns <code>true</code>, which means that we assume that the data has
+> 	 * been transfered at the start of the drag
+> 	 * 
+> 	 * @return <code>true</code> if data has been transfered.
+> 	 */
+>     protected boolean isDataTransfered() {
+>         return true;
+211,211d232
+< 		return ep;

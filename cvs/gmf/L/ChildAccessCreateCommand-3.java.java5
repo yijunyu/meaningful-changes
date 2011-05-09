@@ -1,0 +1,101 @@
+package org.eclipse.gmf.graphdef.editor.edit.commands;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gmf.gmfgraph.ChildAccess;
+
+import org.eclipse.gmf.gmfgraph.Figure;
+
+import org.eclipse.gmf.gmfgraph.FigureDescriptor;
+
+import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+
+import org.eclipse.gmf.gmfgraph.GMFGraphPackage;
+
+import org.eclipse.gmf.graphdef.editor.edit.policies.GMFGraphBaseItemSemanticEditPolicy;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.emf.type.core.commands.CreateElementCommand;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.ConfigureRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest;
+
+public class ChildAccessCreateCommand extends CreateElementCommand {
+    private final EObject source;
+    private final EObject target;
+
+    public ChildAccessCreateCommand (CreateRelationshipRequest request, EObject source, EObject target) {
+        super (request);
+        this.source = source;
+        this.target = target;
+        if (request.getContainmentFeature () == null) {
+            setContainmentFeature (GMFGraphPackage.eINSTANCE.getFigureDescriptor_Accessors ());
+        }
+        super.setElementToEdit (source);
+    }
+
+    public boolean canExecute () {
+        if (source == null && target == null) {
+            return false;
+        }
+        if (source != null && false == source instanceof FigureDescriptor) {
+            return false;
+        }
+        if (target != null && false == target instanceof Figure) {
+            return false;
+        }
+        if (getSource () == null) {
+            return true;
+        }
+        return GMFGraphBaseItemSemanticEditPolicy.LinkConstraints.canCreateChildAccess_4002 (getSource (), getTarget ());
+    }
+
+    protected EObject doDefaultElementCreation () {
+        ChildAccess newElement = GMFGraphFactory.eINSTANCE.createChildAccess ();
+        getSource ().getAccessors ().add (newElement);
+        newElement.setFigure (getTarget ());
+        return newElement;
+    }
+
+    protected EClass getEClassToEdit () {
+        return GMFGraphPackage.eINSTANCE.getFigureDescriptor ();
+    }
+
+    protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+        if (! canExecute ()) {
+            throw new ExecutionException ("Invalid arguments in create link command");
+        }
+        return super.doExecuteWithResult (monitor, info);
+    }
+
+    protected ConfigureRequest createConfigureRequest () {
+        ConfigureRequest request = super.createConfigureRequest ();
+        request.setParameter (CreateRelationshipRequest.SOURCE, getSource ());
+        request.setParameter (CreateRelationshipRequest.TARGET, getTarget ());
+        return request;
+    }
+
+    protected void setElementToEdit (EObject element) {
+        throw new UnsupportedOperationException ();
+    }
+
+    protected FigureDescriptor getSource () {
+        return (FigureDescriptor) source;
+    }
+
+    protected Figure getTarget () {
+        return (Figure) target;
+    }
+
+}
+

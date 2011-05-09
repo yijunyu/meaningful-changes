@@ -1,0 +1,243 @@
+0a1,2
+> /*
+>  * Copyright (c) 2006, 2008 Borland Software Corporation
+1,2d0
+< /*******************************************************************************
+<  * Copyright (c) 2006, 2007 Eclipse.org
+7a8,12
+>  * 
+>  * Contributors:
+>  *     Artem Tikhomirov (Borland)
+>  *     Boris Blajer (Borland) - support for composite resources
+>  */
+8,8d7
+<  *******************************************************************************/
+29,29d33
+< 		if (hasCachedXtend(fullyQualifiedName)) {
+30,30c34,34
+< 			return cachedXtend.get(fullyQualifiedName);
+---
+> 			return loadXtendThroughCache(fullyQualifiedName);
+31,31d34
+< 		}
+32a45,49
+> 	protected XtendResource loadXtendThroughCache(String qualifiedName) throws IOException, ParserException {
+> 		if (hasCachedXtend(qualifiedName)) {
+> 			return cachedXtend.get(qualifiedName);
+> 		}
+> 		final XtendResource loaded = doLoadXtendResource(qualifiedName);
+33,33d44
+< 			final XtendResource loaded = doLoadXtendResource(fullyQualifiedName);
+34,34c50,50
+< 			assert loaded != null; // this is the contract of loadXtendResource
+---
+> 		assert loaded != null; // this is the contract of loadXtendResource
+35a52,53
+> 			cachedXtend.put(qualifiedName, loaded);
+> 		}
+35,35c51,51
+< 			if (shouldCache()) {
+---
+> 		if (shouldCache()) {
+36,37d51
+< 				cachedXtend.put(fullyQualifiedName, loaded);
+< 			}
+38a55,56
+> 	}
+> 	
+38,38c54,54
+< 			return loaded;
+---
+> 		return loaded;
+44,44c40,40
+< 			handleParserException(fullyQualifiedName, ex);
+---
+> 			handleParserException(ex);
+51a169,172
+> 	protected XpandResource[] loadXpandResources(Reader[] readers, String fullyQualifiedName) throws IOException, ParserException {
+> 		XpandResource[] result = new XpandResource[readers.length];
+> 		for (int i = 0; i < readers.length; i++) {
+> 			assert readers[i] != null;
+51a60,60
+> 		XtendResource[] result = loadXtendResources(rs, fullyQualifiedName);
+52,55d168
+< 		XtendResource[] result = new XtendResource[rs.length];
+< 		for (int i = 0; i < rs.length; i++) {
+< 			Reader r = rs[i];
+< 			assert r != null;
+56,56c173,173
+< 			try {
+---
+> 			try {
+56a174,175
+> 				result[i] = new XpandResourceParser().parse(readers[i], fullyQualifiedName);
+> 				assert result[i] != null; // this is the contract of parse
+57,58d173
+< 				result[i] = loadXtendResource(r, fullyQualifiedName);
+< 				assert result[i] != null; // this is the contract of loadXpandResource
+59,59c176,176
+< 			} finally {
+---
+> 			} finally {
+60,60c177,177
+< 				try {
+---
+> 				try {
+60a178,178
+> 					readers[i].close();
+61,61d177
+< 					r.close();
+62,62c179,179
+< 				} catch (Exception ex) {/*IGNORE*/}
+---
+> 				} catch (Exception ex) {/*IGNORE*/}
+63,64d179
+< 			}
+< 		}
+72,72d68
+< 		if (hasCachedXpand(fullyQualifiedName)) {
+73,73c69,69
+< 			return cachedXpand.get(fullyQualifiedName);
+---
+> 			return loadXpandThroughCache(fullyQualifiedName);
+74,74d69
+< 		}
+75a81,85
+> 	protected XpandResource loadXpandThroughCache(String qualifiedName) throws IOException, ParserException {
+> 		if (hasCachedXpand(qualifiedName)) {
+> 			return cachedXpand.get(qualifiedName);
+> 		}
+> 		final XpandResource loaded = doLoadXpandResource(qualifiedName);
+76,76d80
+< 			final XpandResource loaded = doLoadXpandResource(fullyQualifiedName);
+77,77c86,86
+< 			if (shouldCache()) {
+---
+> 		if (shouldCache()) {
+77a87,88
+> 			cachedXpand.put(qualifiedName, loaded);
+> 		}
+78,79d86
+< 				cachedXpand.put(fullyQualifiedName, loaded);
+< 			}
+80,80c89,89
+< 			return loaded;
+---
+> 		return loaded;
+80a90,91
+> 	}
+> 
+87,87c76,76
+< 			handleParserException(fullyQualifiedName, ex);
+---
+> 			handleParserException(ex);
+93,93d92
+< 		XpandResource[] unadvised = internalLoadXpandResources(fullyQualifiedName);
+96a99,101
+> 	    	Reader[] rs2 = resolveMultiple(aspectsTemplateName, XpandResource.TEMPLATE_EXTENSION);
+> 	    	// XXX relax resolveMultiple to return empty array and use length==0 here instead of exception
+> 	    	advices = loadXpandResources(rs2, aspectsTemplateName);
+97,97d98
+< 	    	advices = internalLoadXpandResources(aspectsTemplateName);
+103,103c107,107
+< 			handleParserException(fullyQualifiedName, ex);
+---
+> 			handleParserException(ex);
+132,132d92
+< 	private XpandResource[] internalLoadXpandResources(String fullyQualifiedName) throws IOException, ParserException {
+133,133c93,93
+< 		Reader[] rs = resolveMultiple(fullyQualifiedName, XpandResource.TEMPLATE_EXTENSION);
+---
+> 		Reader[] rs1 = resolveMultiple(fullyQualifiedName, XpandResource.TEMPLATE_EXTENSION);
+134,134c94,94
+< 		assert rs != null && rs.length > 0; // exception should be thrown to indicate issues with resolve
+---
+> 		assert rs1 != null && rs1.length > 0; // exception should be thrown to indicate issues with resolve
+135,135c95,95
+< 		XpandResource[] result = new XpandResource[rs.length];
+---
+> 		XpandResource[] unadvised = loadXpandResources(rs1, fullyQualifiedName);
+136,138d95
+< 		for (int i = 0; i < rs.length; i++) {
+< 			Reader r = rs[i];
+< 			assert r != null;
+140,140c155,155
+< 				result[i] = loadXpandResource(r, fullyQualifiedName);
+---
+> 				result[i] = new XtendResourceParser().parse(readers[i], fullyQualifiedName);
+143a159,159
+> 					readers[i].close();
+144,144d158
+< 					r.close();
+151,154d165
+< 	protected void handleParserException(String name, ParserException ex) {
+< 		Activator.logWarn(name + ":" + ex.getClass().getName());
+< 	}
+< 
+155a167,167
+> 	 * Readers get closed after parse attempt.
+156,158d166
+< 	 * @return never return <code>null</code>, throw exception instead
+< 	 * @throws IOException in case resource can't be read. Throw {@link java.io.FileNotFoundException} to indicate resource was not found. 
+< 	 * @deprecated use {@link #resolveMultiple(String, String)} instead.
+159a136,136
+> 	protected abstract void handleParserException(ParserException ex);
+160,161d135
+< 	@Deprecated
+< 	protected abstract Reader resolve(String fullyQualifiedName, String extension) throws IOException;
+162,162c137,137
+< 
+---
+> 
+163,163c138,138
+< 	/**
+---
+> 	/**
+164a140,141
+> 	 * This is to enable one template to partially override only a subset of parent templates.
+> 	 *  
+164,164c139,139
+< 	 * Returns an array of resolutions, in the order from newest to oldest. 
+---
+> 	 * Returns an array of resolutions, in the order from newest to oldest. 
+165,167d139
+< 	 * This is to enable one template to partially override only a subset of parent templates. 
+< 	 * By default, returns an array consisting of one Reader, the one that {@link #resolve(String, String)} returns.
+< 	 * Subclasses should override.
+168,168c142,142
+< 	 * @return never return <code>null</code> or an empty array, throw exception instead
+---
+> 	 * @return never return <code>null</code> or an empty array, throw exception instead
+169,169c143,143
+< 	 * @throws IOException in case resource can't be read. Throw {@link java.io.FileNotFoundException} to indicate resource was not found. 
+---
+> 	 * @throws IOException in case resource can't be read. Throw {@link java.io.FileNotFoundException} to indicate resource was not found. 
+170,170c144,144
+< 	 */
+---
+> 	 */
+171a146,153
+> 
+> 	/**
+> 	 * Readers get closed after parse attempt. 
+> 	 */
+> 	protected XtendResource[] loadXtendResources(Reader[] readers, String fullyQualifiedName) throws IOException, ParserException {
+> 		XtendResource[] result = new XtendResource[readers.length];
+> 		for (int i = 0; i < readers.length; i++) {
+> 			assert readers[i] != null;
+171,171c145,145
+< 	protected Reader[] resolveMultiple(String fullyQualifiedName, String extension) throws IOException {
+---
+> 	protected abstract Reader[] resolveMultiple(String fullyQualifiedName, String extension) throws IOException;
+172,172d145
+< 		return new Reader[] {resolve(fullyQualifiedName, extension)};
+174,176d180
+< 
+< 	protected XtendResource loadXtendResource(Reader reader, String fullyQualifiedName) throws IOException, ParserException {
+< 		return new XtendResourceParser().parse(reader, fullyQualifiedName);
+177a182,182
+> 		return result;
+178,180d181
+< 
+< 	protected XpandResource loadXpandResource(Reader reader, String fullyQualifiedName) throws IOException, ParserException {
+< 		return new XpandResourceParser().parse(reader, fullyQualifiedName);

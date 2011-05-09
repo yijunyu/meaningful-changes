@@ -1,0 +1,54 @@
+package org.eclipse.gmf.runtime.diagram.ui.resources.editor.parts;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.DocumentProviderRegistry;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDiagramDocument;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDiagramDocumentProvider;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.MEditingDomainElement;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.DocumentProviderRegistry.IDocumentProviderSelector;
+
+import org.eclipse.ui.IEditorInput;
+
+import org.eclipse.ui.IEditorMatchingStrategy;
+
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.ui.IEditorReference;
+
+import org.eclipse.ui.PartInitException;
+
+public class DiagramDocumentEditorMatchingStrategy implements IEditorMatchingStrategy {
+
+    public boolean matches (IEditorReference editorRef, IEditorInput input) {
+        IEditorInput existingEditorInput;
+        IEditorPart editor = editorRef.getEditor (false);
+        try {
+            existingEditorInput = editorRef.getEditorInput ();
+        } catch (PartInitException e) {
+            return false;
+        }
+        if (existingEditorInput.equals (input)) return true;
+        else if (! (input instanceof MEditingDomainElement) && (editor instanceof DiagramDocumentEditor)) {
+            IDiagramDocumentProvider docProvider = (IDiagramDocumentProvider) DocumentProviderRegistry.getDefault ().getDocumentProvider (input, new IDocumentProviderSelector () {
+
+                public boolean select (String documentType) {
+                    return documentType.equals (IDiagramDocument.class.getName ());
+                }
+
+            }
+
+            );
+            if (docProvider != null) {
+                IEditorInput editorInput = docProvider.createInputWithEditingDomain (input, ((DiagramDocumentEditor) editor).getEditingDomain ());
+                return existingEditorInput.equals (editorInput);
+            }
+        }
+
+        return false;
+    }
+
+}
+

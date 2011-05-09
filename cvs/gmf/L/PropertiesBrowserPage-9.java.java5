@@ -1,0 +1,207 @@
+package org.eclipse.gmf.runtime.diagram.ui.properties.views;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gmf.runtime.common.ui.action.actions.global.GlobalActionManager;
+
+import org.eclipse.gmf.runtime.common.ui.action.global.GlobalActionId;
+
+import org.eclipse.gmf.runtime.emf.ui.internal.MslUIPlugin;
+
+import org.eclipse.jface.action.IAction;
+
+import org.eclipse.jface.util.IPropertyChangeListener;
+
+import org.eclipse.jface.util.PropertyChangeEvent;
+
+import org.eclipse.jface.viewers.ISelection;
+
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+
+import org.eclipse.jface.viewers.IStructuredSelection;
+
+import org.eclipse.jface.viewers.LabelProviderChangedEvent;
+
+import org.eclipse.jface.viewers.SelectionChangedEvent;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.ui.IActionBars;
+
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.ui.IPartListener;
+
+import org.eclipse.ui.IViewPart;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.ui.IWorkbenchWindow;
+
+import org.eclipse.ui.actions.ActionFactory;
+
+import org.eclipse.ui.views.properties.PropertySheet;
+
+import org.eclipse.ui.views.properties.tabbed.ITabbedPropertySheetPageContributor;
+
+import org.eclipse.ui.views.properties.tabbed.TabbedPropertySheetPage;
+
+public class PropertiesBrowserPage extends TabbedPropertySheetPage implements IPropertyChangeListener {
+    private ITabbedPropertySheetPageContributor contributor;
+    private IWorkbenchWindow modelerViewWorkbenchWindow;
+    private IStructuredSelection modelerViewSelection = null;
+    private IPartListener modelerViewActivationListener = new IPartListener () {
+        private boolean propertiesBrowserActive = false;
+
+        public void partActivated (IWorkbenchPart part) {
+            propertiesBrowserActive = (part instanceof PropertySheet && ((PropertySheet) part).getCurrentPage ().equals (PropertiesBrowserPage.this));
+        }
+
+        public void partBroughtToTop (IWorkbenchPart part) {
+        }
+
+        public void partClosed (IWorkbenchPart part) {
+            if (part instanceof IEditorPart && propertiesBrowserActive) {
+                final IViewPart modelerView = (IViewPart) contributor;
+                modelerView.getSite ().getSelectionProvider ().addSelectionChangedListener (new ISelectionChangedListener () {
+
+                    public void selectionChanged (SelectionChangedEvent event) {
+                        IStructuredSelection newModelerViewSelection = (IStructuredSelection) modelerView.getSite ().getSelectionProvider ().getSelection ();
+                        modelerView.getSite ().getSelectionProvider ().removeSelectionChangedListener (this);
+                        if (! newModelerViewSelection.equals (modelerViewSelection)) {
+                            PropertiesBrowserPage.this.selectionChanged (modelerView, newModelerViewSelection);
+                        }
+                    }
+
+                }
+
+                );
+            }
+        }
+
+        public void partDeactivated (IWorkbenchPart part) {
+        }
+
+        public void partOpened (IWorkbenchPart part) {
+        }
+
+    }
+
+    ;
+    private IStructuredSelection selectedElements;
+
+    public PropertiesBrowserPage (ITabbedPropertySheetPageContributor contributor) {
+        super (contributor);
+        this.contributor = contributor;
+        MslUIPlugin.getDefault ().getPreferenceStore ().addPropertyChangeListener (this);
+    }
+
+    public void dispose () {
+        super.dispose ();
+        if (modelerViewWorkbenchWindow != null) {
+            modelerViewWorkbenchWindow.getPartService ().removePartListener (modelerViewActivationListener);
+            modelerViewWorkbenchWindow = null;
+        }
+        MslUIPlugin.getDefault ().getPreferenceStore ().removePropertyChangeListener (this);
+        contributor = null;
+        selectedElements = null;
+    }
+
+    public void setActionBars (IActionBars actionBars) {
+        if (contributor != null && contributor instanceof IWorkbenchPart) {
+            IAction action = GlobalActionManager.getInstance ().getGlobalActionHandler ((IWorkbenchPart) contributor, GlobalActionId.UNDO);
+            if (action != null) {
+                actionBars.setGlobalActionHandler (ActionFactory.UNDO.getId (), action);
+            }
+            action = GlobalActionManager.getInstance ().getGlobalActionHandler ((IWorkbenchPart) contributor, GlobalActionId.REDO);
+            if (action != null) {
+                actionBars.setGlobalActionHandler (ActionFactory.REDO.getId (), action);
+            }
+        }
+    }
+
+    public void propertyChange (PropertyChangeEvent event) {
+    }
+
+    public void setFocus () {
+        getControl ().setFocus ();
+    }
+
+    public void createControl (Composite parent) {
+        super.createControl (parent);
+        if (contributor instanceof IViewPart) {
+            modelerViewWorkbenchWindow = getSite ().getWorkbenchWindow ();
+            modelerViewWorkbenchWindow.getPartService ().addPartListener (modelerViewActivationListener);
+        }
+    }
+
+    public void selectionChanged (IWorkbenchPart part, ISelection selection) {
+        super.selectionChanged (part, selection);
+        if (selection instanceof IStructuredSelection) selectedElements = (IStructuredSelection) selection;
+
+        if (modelerViewWorkbenchWindow != null && part.equals (contributor)) {
+            IViewPart modelerView = (IViewPart) part;
+            modelerViewSelection = (IStructuredSelection) modelerView.getSite ().getSelectionProvider ().getSelection ();
+        }
+    }
+
+    public void labelProviderChanged (LabelProviderChangedEvent event) {
+        if (event.getElements () == null) {
+            super.labelProviderChanged (event);
+            return;
+        }
+        IStructuredSelection structuredSelection = getSelectedElements ();
+        if (structuredSelection == null) {
+            return;
+        }
+        List selection = new ArrayList ();
+        for (Iterator e = structuredSelection.iterator ();
+        e.hasNext ();) {
+            Object next = e.next ();
+            if (next instanceof IAdaptable) {
+                Object object = ((IAdaptable) next).getAdapter (EObject.class);
+                if (object != null) selection.add (object);
+
+            } else if (next instanceof EObject) {
+                selection.add (next);
+            }
+
+        }
+        if (selection.isEmpty ()) return;
+
+        List elementsAffected = new ArrayList ();
+        for (int i = 0;
+        i < event.getElements ().length; i ++) {
+            Object next = event.getElements () [i];
+            if (next instanceof IAdaptable) {
+                Object object = ((IAdaptable) next).getAdapter (EObject.class);
+                if (object != null) elementsAffected.add (object);
+
+            } else if (next instanceof EObject) {
+                elementsAffected.add (next);
+            }
+
+        }
+        selection.retainAll (elementsAffected);
+        if (! selection.isEmpty ()) super.labelProviderChanged (event);
+
+    }
+
+    public ITabbedPropertySheetPageContributor getContributor () {
+        return contributor;
+    }
+
+    protected IStructuredSelection getSelectedElements () {
+        return selectedElements;
+    }
+
+}
+

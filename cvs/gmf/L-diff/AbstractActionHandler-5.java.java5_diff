@@ -1,0 +1,100 @@
+2a3,12
+> import org.eclipse.core.commands.operations.IOperationHistory;
+> 
+> import org.eclipse.core.commands.operations.IOperationHistoryListener;
+> 
+> import org.eclipse.core.commands.operations.IUndoContext;
+> 
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> 
+> import org.eclipse.core.commands.operations.OperationHistoryEvent;
+> 
+8a19,36
+> import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+> 
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+> 
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+> 
+> import org.eclipse.gmf.runtime.common.ui.util.PartListenerAdapter;
+> 
+> import org.eclipse.gmf.runtime.common.ui.util.StatusLineUtil;
+> 
+35,57c63
+< import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+< 
+< import org.eclipse.gmf.runtime.common.core.command.CommandManagerChangeEvent;
+< 
+< import org.eclipse.gmf.runtime.common.core.command.ICommandManagerChangeListener;
+< 
+< import org.eclipse.gmf.runtime.common.core.util.Log;
+< 
+< import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+< 
+< import org.eclipse.gmf.runtime.common.core.util.Trace;
+< 
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+< 
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+< 
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+< 
+< import org.eclipse.gmf.runtime.common.ui.util.PartListenerAdapter;
+< 
+< import org.eclipse.gmf.runtime.common.ui.util.StatusLineUtil;
+< 
+< public abstract class AbstractActionHandler extends Action implements IDisposableAction, IActionWithProgress, ISelectionChangedListener, ICommandManagerChangeListener, IPropertyListener {
+---
+> public abstract class AbstractActionHandler extends Action implements IDisposableAction, IActionWithProgress, ISelectionChangedListener, IOperationHistoryListener, IPropertyListener {
+132,133c138,139
+<             if (isCommandStackListener ()) {
+<                 getCommandManager ().removeCommandManagerChangeListener (this);
+---
+>             if (isOperationHistoryListener ()) {
+>                 getOperationHistory ().removeOperationHistoryListener (this);
+147,148c153,154
+<             if (isCommandStackListener ()) {
+<                 getCommandManager ().addCommandManagerChangeListener (this);
+---
+>             if (isOperationHistoryListener ()) {
+>                 getOperationHistory ().addOperationHistoryListener (this);
+167c173,177
+<         return getActionManager ().getCommandManager ();
+---
+>         return CommandManager.getDefault ();
+>     }
+> 
+>     protected IOperationHistory getOperationHistory () {
+>         return getActionManager ().getOperationHistory ();
+239a250,253
+>     protected boolean isOperationHistoryListener () {
+>         return false;
+>     }
+> 
+265c279,283
+<     public final void commandManagerChanged (CommandManagerChangeEvent event) {
+---
+>     public void historyNotification (OperationHistoryEvent event) {
+>         IUndoableOperation operation = event.getOperation ();
+>         if (operation != null) {
+>             IUndoContext partContext = getUndoContext ();
+>             if (partContext != null && operation.hasContext (partContext)) {
+267a286,295
+>         }
+>     }
+> 
+>     protected IUndoContext getUndoContext () {
+>         IWorkbenchPart part = getWorkbenchPart ();
+>         if (part != null) {
+>             return (IUndoContext) part.getAdapter (IUndoContext.class);
+>         }
+>         return null;
+>     }

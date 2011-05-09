@@ -1,0 +1,108 @@
+package org.eclipse.gmf.runtime.common.ui.services.properties.descriptors;
+
+import java.util.ArrayList;
+
+import java.util.HashMap;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.ui.views.properties.IPropertyDescriptor;
+
+import org.eclipse.gmf.runtime.common.ui.services.properties.ICompositePropertySource;
+
+public class CompositePropertySource implements ICompositePropertySource {
+    private Object object = null;
+    private ICompositePropertySource enclosed = null;
+    private String category = null;
+    private Map propertyDescriptors = new HashMap ();
+
+    public CompositePropertySource (Object object) {
+        super ();
+        this.object = object;
+    }
+
+    public CompositePropertySource (Object object, String category) {
+        this (object);
+        this.category = category;
+    }
+
+    public void addPropertySource (ICompositePropertySource source) {
+        assert this != source : "self is not allowed - this will result in stack overflows";
+        if (this.enclosed == null) enclosed = source;
+        else enclosed.addPropertySource (source);
+
+    }
+
+    public void addPropertyDescriptor (ICompositeSourcePropertyDescriptor descriptor) {
+        if (! isPropertySet (descriptor.getId ())) {
+            if (descriptor.getCategory () == null) descriptor.setCategory (getCategory ());
+
+            getLocalDescriptors ().put (descriptor.getId (), descriptor);
+        }
+    }
+
+    public Object getEditableValue () {
+        if (getObject () == null && enclosed != null) return enclosed.getEditableValue ();
+
+        return getObject ();
+    }
+
+    public IPropertyDescriptor [] getPropertyDescriptors () {
+        List list = new ArrayList (getLocalDescriptors ().values ());
+        IPropertyDescriptor [] descriptors = new IPropertyDescriptor [list.size ()];
+        System.arraycopy (list.toArray (), 0, descriptors, 0, list.size ());
+        if (enclosed != null) {
+            IPropertyDescriptor [] enclosedDecriptors = enclosed.getPropertyDescriptors ();
+            IPropertyDescriptor [] all = new IPropertyDescriptor [descriptors.length + enclosedDecriptors.length];
+            System.arraycopy (enclosedDecriptors, 0, all, 0, enclosedDecriptors.length);
+            System.arraycopy (descriptors, 0, all, enclosedDecriptors.length, descriptors.length);
+            return all;
+        }
+        return descriptors;
+    }
+
+    public Object getPropertyValue (Object id) {
+        ICompositeSourcePropertyDescriptor descriptor = (ICompositeSourcePropertyDescriptor) getLocalDescriptors ().get (id);
+        return descriptor != null ? descriptor.getPropertyValue () : ((enclosed != null) ? enclosed.getPropertyValue (id) : null);
+    }
+
+    public boolean isPropertySet (Object id) {
+        return getLocalDescriptors ().containsKey (id) ? true : (enclosed != null ? enclosed.isPropertySet (id) : false);
+    }
+
+    public void resetPropertyValue (Object id) {
+        ICompositeSourcePropertyDescriptor descriptor = (ICompositeSourcePropertyDescriptor) getLocalDescriptors ().get (id);
+        if (descriptor != null) {
+            descriptor.resetPropertyValue ();
+        } else if (enclosed != null) enclosed.resetPropertyValue (id);
+
+    }
+
+    public void setPropertyValue (Object propertyId, Object value) {
+        CompositeSourcePropertyDescriptor descriptor = (CompositeSourcePropertyDescriptor) getLocalDescriptors ().get (propertyId);
+        if (descriptor != null) {
+            descriptor.setPropertyValue (value);
+        } else if (enclosed != null) enclosed.setPropertyValue (propertyId, value);
+
+    }
+
+    public String getCategory () {
+        return category;
+    }
+
+    public Object getObject () {
+        return object;
+    }
+
+    protected Map getLocalDescriptors () {
+        return propertyDescriptors;
+    }
+
+    protected ICompositePropertySource getEnclosed () {
+        return enclosed;
+    }
+
+}
+

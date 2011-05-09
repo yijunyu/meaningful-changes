@@ -1,0 +1,113 @@
+package org.eclipse.gmf.runtime.diagram.ui.figures;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.MarginBorder;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Insets;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.ConstrainedToolbarLayout;
+
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapModeUtil;
+
+import org.eclipse.gmf.runtime.gef.ui.figures.DefaultSizeNodeFigure;
+
+public class NoteFigure extends DefaultSizeNodeFigure {
+    private boolean diagrsamLinkMode = false;
+    ;
+    private boolean withDanglingCorner = true;
+    private int lineWidth = 1;
+    static public final int CLIP_HEIGHT_DP = 12;
+    static public final int MARGIN_DP = 5;
+    static public final int CLIP_MARGIN_DP = 14;
+    public static final int MARGIN = MapModeUtil.getMapMode ().DPtoLP (5);
+    static public final int CLIP_HEIGHT = MapModeUtil.getMapMode ().DPtoLP (12);
+    static public final int CLIP_MARGIN = MapModeUtil.getMapMode ().DPtoLP (14);
+
+    public NoteFigure () {
+        this (MapModeUtil.getMapMode ().DPtoLP (100), MapModeUtil.getMapMode ().DPtoLP (56), new Insets (MapModeUtil.getMapMode ().DPtoLP (MARGIN_DP), MapModeUtil.getMapMode ().DPtoLP (MARGIN_DP), MapModeUtil.getMapMode ().DPtoLP (MARGIN_DP), MapModeUtil.getMapMode ().DPtoLP (CLIP_MARGIN_DP)));
+    }
+
+    public NoteFigure (int width, int height, Insets insets) {
+        super (width, height);
+        setBorder (new MarginBorder (insets.top, insets.left, insets.bottom, insets.right));
+        ConstrainedToolbarLayout layout = new ConstrainedToolbarLayout ();
+        layout.setMinorAlignment (ConstrainedToolbarLayout.ALIGN_TOPLEFT);
+        layout.setSpacing (insets.top);
+        setLayoutManager (layout);
+    }
+
+    private int getClipHeight () {
+        return MapModeUtil.getMapMode (this).DPtoLP (12);
+    }
+
+    private int getClipWidth () {
+        return getClipHeight () + MapModeUtil.getMapMode (this).DPtoLP (1);
+    }
+
+    protected PointList getPointList (Rectangle r) {
+        PointList p = new PointList ();
+        p.addPoint (r.x, r.y);
+        if (! isDiagramLinkMode ()) {
+            p.addPoint (r.x + r.width - getClipWidth (), r.y);
+            p.addPoint (r.x + r.width - 1, r.y + getClipHeight ());
+        } else {
+            p.addPoint (r.x + r.width - 1, r.y);
+        }
+        p.addPoint (r.x + r.width - 1, r.y + r.height - 1);
+        p.addPoint (r.x, r.y + r.height - 1);
+        p.addPoint (r.x, r.y);
+        return p;
+    }
+
+    protected void paintBorder (Graphics g) {
+        if (! isDiagramLinkMode ()) {
+            Rectangle r = getBounds ();
+            PointList p = getPointList (r);
+            g.setLineWidth (lineWidth);
+            g.drawPolyline (p);
+            if (withDanglingCorner) {
+                PointList corner = new PointList ();
+                corner.addPoint (r.x + r.width - getClipWidth (), r.y);
+                corner.addPoint (r.x + r.width - getClipWidth (), r.y + getClipHeight ());
+                corner.addPoint (r.x + r.width, r.y + getClipHeight ());
+                g.drawPolyline (corner);
+            }
+        }
+    }
+
+    protected void paintFigure (Graphics g) {
+        super.paintFigure (g);
+        Rectangle r = getBounds ();
+        PointList p = getPointList (r);
+        g.fillPolygon (p);
+    }
+
+    public Dimension getPreferredSize (int wHint, int hHint) {
+        return super.getPreferredSize (wHint, hHint).getUnioned (new Dimension (2645, 1322));
+    }
+
+    public boolean setDiagramLinkMode (boolean diagramLinkMode) {
+        boolean bOldDiagramLinkMode = this.diagrsamLinkMode;
+        ConstrainedToolbarLayout layout = (ConstrainedToolbarLayout) getLayoutManager ();
+        if (diagramLinkMode) {
+            layout.setMinorAlignment (ConstrainedToolbarLayout.ALIGN_CENTER);
+        } else {
+            layout.setMinorAlignment (ConstrainedToolbarLayout.ALIGN_TOPLEFT);
+        }
+        this.diagrsamLinkMode = diagramLinkMode;
+        return bOldDiagramLinkMode;
+    }
+
+    public boolean isDiagramLinkMode () {
+        return diagrsamLinkMode;
+    }
+
+}
+

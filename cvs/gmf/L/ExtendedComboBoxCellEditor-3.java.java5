@@ -1,0 +1,180 @@
+package org.eclipse.gmf.runtime.common.ui.services.properties.extended;
+
+import java.text.MessageFormat;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.jface.viewers.CellEditor;
+
+import org.eclipse.jface.viewers.ILabelProvider;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.custom.CCombo;
+
+import org.eclipse.swt.events.KeyAdapter;
+
+import org.eclipse.swt.events.KeyEvent;
+
+import org.eclipse.swt.events.SelectionAdapter;
+
+import org.eclipse.swt.events.SelectionEvent;
+
+import org.eclipse.swt.events.TraverseEvent;
+
+import org.eclipse.swt.events.TraverseListener;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.swt.widgets.Control;
+
+public class ExtendedComboBoxCellEditor extends CellEditor {
+    final private String [] items;
+    private int selection;
+    private CCombo comboBox;
+    protected List list;
+    final private String emptyItem;
+
+    public static String [] createItems (List list, ILabelProvider labelProvider) {
+        String [] result;
+        if (list != null && list.size () > 0) {
+            result = new String [list.size ()];
+            int i = 0;
+            for (Iterator objects = list.iterator ();
+            objects.hasNext (); ++ i) {
+                Object object = objects.next ();
+                result [i] = labelProvider.getText (object);
+            }
+        } else {
+            result = new String [] {labelProvider.getText (null)};
+        }
+        return result;
+    }
+
+    public ExtendedComboBoxCellEditor (Composite parent, List list, ILabelProvider labelProvider, int style) {
+        this (parent, createItems (list, labelProvider), null, style);
+        this.list = list;
+    }
+
+    public ExtendedComboBoxCellEditor (Composite parent, String [] items, int style) {
+        this (parent, items, null, style);
+    }
+
+    public ExtendedComboBoxCellEditor (Composite parent, String [] items, String emptyItem, int style) {
+        super (parent, style);
+        assert null != items : "list of items cannot be null";
+        this.items = items;
+        this.emptyItem = emptyItem;
+        selection = 0;
+        populateComboBoxItems ();
+    }
+
+    void applyEditorValueAndDeactivate () {
+        selection = comboBox.getSelectionIndex ();
+        Object newValue = doGetValue ();
+        markDirty ();
+        setValueValid (isCorrect (newValue));
+        if (! isValueValid ()) {
+            setErrorMessage (MessageFormat.format (getErrorMessage (), new Object [] {newValue}));
+        }
+        fireApplyEditorValue ();
+        deactivate ();
+    }
+
+    protected Control createControl (Composite parent) {
+        comboBox = new CCombo (parent, getStyle ());
+        comboBox.setFont (parent.getFont ());
+        comboBox.setBackground (parent.getBackground ());
+        comboBox.addKeyListener (new KeyAdapter () {
+
+            public void keyPressed (KeyEvent e) {
+                keyReleaseOccured (e);
+            }
+
+        }
+
+        );
+        comboBox.addSelectionListener (new SelectionAdapter () {
+
+            public void widgetDefaultSelected (SelectionEvent event) {
+                applyEditorValueAndDeactivate ();
+            }
+
+            public void widgetSelected (SelectionEvent e) {
+                widgetDefaultSelected (e);
+            }
+
+        }
+
+        );
+        comboBox.addTraverseListener (new TraverseListener () {
+
+            public void keyTraversed (TraverseEvent e) {
+                if (e.detail == SWT.TRAVERSE_ESCAPE || e.detail == SWT.TRAVERSE_RETURN) {
+                    e.doit = false;
+                }
+            }
+
+        }
+
+        );
+        if (emptyItem != null) comboBox.setText (emptyItem);
+
+        return comboBox;
+    }
+
+    protected void doSetFocus () {
+        comboBox.setFocus ();
+    }
+
+    public LayoutData getLayoutData () {
+        LayoutData layoutData = super.getLayoutData ();
+        layoutData.minimumWidth = Math.max (30, layoutData.minimumWidth);
+        return layoutData;
+    }
+
+    public Object doGetValue () {
+        if (list != null && selection >= 0) {
+            return selection < list.size () && selection >= 0 ? list.get (selection) : null;
+        }
+        if (getStyle () == SWT.READ_ONLY && selection >= 0) return new Integer (selection);
+
+        if (selection < 0) return comboBox.getText ();
+
+        return comboBox.getItem (selection);
+    }
+
+    public void doSetValue (Object value) {
+        if (list != null) {
+            int index = list.indexOf (value);
+            if (index != - 1) {
+                doSetValue1 (new Integer (index));
+            }
+        } else doSetValue1 (value);
+
+    }
+
+    private void doSetValue1 (Object value) {
+        assert null != comboBox : "comboBox cannot be null";
+        if (value instanceof Integer) {
+            selection = ((Integer) value).intValue ();
+            comboBox.select (selection);
+        }
+        if (getStyle () != SWT.READ_ONLY) {
+            comboBox.setText (value.toString ());
+        }
+    }
+
+    private void populateComboBoxItems () {
+        if (comboBox != null && items != null) {
+            for (int i = 0;
+            i < items.length; i ++) comboBox.add (items [i], i);
+
+            setValueValid (true);
+        }
+    }
+
+}
+

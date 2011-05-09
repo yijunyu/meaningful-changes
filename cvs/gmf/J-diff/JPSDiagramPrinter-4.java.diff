@@ -1,0 +1,109 @@
+13a14
+> import java.awt.BasicStroke;
+31a33
+> import javax.print.attribute.standard.Chromaticity;
+38a41
+> import javax.print.attribute.standard.PrintQuality;
+40a44
+> import javax.print.attribute.standard.Sides;
+64a69,70
+> import org.eclipse.gmf.runtime.diagram.ui.printing.render.model.PrintOptions;
+> import org.eclipse.gmf.runtime.diagram.ui.printing.render.util.PrintHelper;
+67a74
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.ScaledGraphics;
+72d78
+< import org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics.RenderedScaledGraphics;
+93a100,102
+> 	// A constant that takes into account screen display DPI and the graphic DPI
+> 	// 72.0 DPI is an AWT constant @see java.awt.Graphics2D
+> 	private static double AWT_DPI_CONST = 72.0;
+94a104
+> 	// The print service used during printing.
+95a106,107
+> 	
+> 	// Page information that is collected up front and used during the async printing calls.
+97d108
+< 	private IPrintHelper printHelper;
+98a110,111
+> 	// The print helper contains page information.
+> 	private IPrintHelper printHelper;
+354c367,373
+< 									.getHeight()));
+---
+> 									.getHeight())) {
+> 				/*
+> 				 * (non-Javadoc)
+> 				 * @see org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.graphics.GraphicsToGraphics2DAdaptor#setLineWidth(int)
+> 				 */
+> 				public void setLineWidth(int width) {
+> 					super.setLineWidth(width);
+356c375
+< 			graphics = createMapModeGraphics(createPrinterGraphics(swtGraphics));
+---
+> 					BasicStroke scaledStroke = getStroke();
+358,359c377,378
+< 			// Take into account screen display DPI and the graphic DPI
+< 			// 72.0 DPI is an AWT constant @see java.awt.Graphics2D
+---
+> 					// Make a special case for line thickness to take the printer
+> 					// resolution into account.
+361c380,389
+< 			graphics.scale(72.0 / display_dpi.x);
+---
+> 					scaledStroke = new BasicStroke(
+> 							(float) (width * AWT_DPI_CONST / 100), 
+> 							scaledStroke.getEndCap(),
+> 							scaledStroke.getLineJoin(), 
+> 							scaledStroke.getMiterLimit(), 
+> 							scaledStroke.getDashArray(), 0);
+> 
+> 					getGraphics2D().setStroke(scaledStroke);
+> 				}
+> 			};
+362a391,392
+> 			graphics = createMapModeGraphics(createPrinterGraphics(swtGraphics));
+> 			graphics.scale(AWT_DPI_CONST / display_dpi.x);
+364,365c394
+< 		} catch (Exception e) {
+< 			System.out.println(e);
+---
+> 			
+381,383c410,411
+< 	
+< 	protected RenderedScaledGraphics createPrinterGraphics(Graphics theGraphics) {
+< 		return new RenderedScaledGraphics(theGraphics);
+---
+> 	protected ScaledGraphics createPrinterGraphics(Graphics theGraphics) {
+> 		return new ScaledGraphics(theGraphics);
+386d413
+< 	
+400a428,429
+> 		PrintOptions advancedOptions = ((PrintHelper) (printHelper)).getPrintOptions();
+> 
+430a460,480
+> 		if (advancedOptions.isQualityLow()) {
+> 			printRequestAttributeSet.add(PrintQuality.DRAFT);
+> 		} else if (advancedOptions.isQualityMed()) {
+> 			printRequestAttributeSet.add(PrintQuality.NORMAL);
+> 		} else if (advancedOptions.isQualityHigh()) {
+> 			printRequestAttributeSet.add(PrintQuality.HIGH);
+> 		}
+> 		if (advancedOptions.isSideDuplex()) {
+> 			printRequestAttributeSet.add(Sides.DUPLEX);
+> 		} else if (advancedOptions.isSideOneSided()) {
+> 			printRequestAttributeSet.add(Sides.ONE_SIDED);
+> 		} else if (advancedOptions.isSideTumble()) {
+> 			printRequestAttributeSet.add(Sides.TUMBLE);
+> 		}
+> 
+> 		if (advancedOptions.isChromaticityColor()) {
+> 			printRequestAttributeSet.add(Chromaticity.COLOR);
+> 		} else {
+> 			printRequestAttributeSet.add(Chromaticity.MONOCHROME);
+> 		}
+> 
+447a498,501
+> 		String userJobName = advancedOptions.getJobName();
+> 		if (userJobName != null && userJobName.length() > 0) {
+> 			jobName = userJobName;
+> 		}

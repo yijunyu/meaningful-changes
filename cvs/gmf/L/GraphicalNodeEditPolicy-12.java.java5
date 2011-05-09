@@ -1,0 +1,558 @@
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.draw2d.Connection;
+
+import org.eclipse.draw2d.ConnectionAnchor;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.PolylineConnection;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.GraphicalEditPart;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.requests.CreateConnectionRequest;
+
+import org.eclipse.gef.requests.ReconnectRequest;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.diagram.core.commands.SetConnectionAnchorsCommand;
+
+import org.eclipse.gmf.runtime.diagram.core.commands.SetConnectionEndsCommand;
+
+import org.eclipse.gmf.runtime.diagram.core.commands.SetPropertyCommand;
+
+import org.eclipse.gmf.runtime.diagram.core.edithelpers.CreateElementRequestAdapter;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.CreateCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.CreateOrSelectElementCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.SemanticCreateCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.XtoolsProxyCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.INodeEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ITreeBranchEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.commands.SetConnectionBendpointsCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.properties.Properties;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.requests.CreateViewRequestFactory;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.preferences.IPreferenceConstants;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.ChangePropertyValueRequest;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.CreateConnectionViewAndElementRequest;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.CreateConnectionViewRequest;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.CreateUnspecifiedTypeConnectionRequest;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.RequestConstants;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+
+import org.eclipse.gmf.runtime.emf.core.util.MetaModelUtil;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest;
+
+import org.eclipse.gmf.runtime.emf.ui.services.modelingassistant.ModelingAssistantService;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.Routing;
+
+import org.eclipse.gmf.runtime.notation.RoutingStyle;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.jface.preference.IPreferenceStore;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.swt.widgets.Display;
+
+public class GraphicalNodeEditPolicy extends org.eclipse.gef.editpolicies.GraphicalNodeEditPolicy {
+    private IAdaptable _viewAdapter;
+    private static final String CREATE_CONNECTION_COMMAND_LABEL = DiagramUIMessages.GraphicalNodeEditPolicy_createRelationshipCommand_label;
+    protected class PromptAndCreateConnectionCommand extends CreateOrSelectElementCommand {
+        private CreateConnectionRequest request;
+
+        public PromptAndCreateConnectionCommand (List content, CreateConnectionRequest request) {
+            super (CREATE_CONNECTION_COMMAND_LABEL, Display.getCurrent ().getActiveShell (), content);
+            this.request = request;
+        }
+
+        private Command createCommand;
+
+        protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+            CommandResult cmdResult = super.doExecute (progressMonitor);
+            if (! cmdResult.getStatus ().isOK ()) {
+                return cmdResult;
+            }
+            Command cmd = getConnectionCompleteCommand (cmdResult.getReturnValue (), getRequest ());
+            Assert.isTrue (cmd != null && cmd.canExecute ());
+            cmd.execute ();
+            createCommand = cmd;
+            return newOKCommandResult ();
+        }
+
+        protected CommandResult doUndo () {
+            if (createCommand != null) {
+                createCommand.undo ();
+            }
+            return super.doUndo ();
+        }
+
+        protected CommandResult doRedo () {
+            if (createCommand != null) {
+                createCommand.redo ();
+            }
+            return super.doRedo ();
+        }
+
+        private CreateConnectionRequest getRequest () {
+            return request;
+        }
+
+    }
+
+    protected Connection createDummyConnection (Request req) {
+        PolylineConnection c = (PolylineConnection) super.createDummyConnection (req);
+        c.setLineStyle (Graphics.LINE_DASHDOT);
+        c.setForegroundColor (((GraphicalEditPart) getHost ()).getFigure ().getForegroundColor ());
+        return c;
+    }
+
+    protected ConnectionAnchor getSourceConnectionAnchor (CreateConnectionRequest request) {
+        EditPart source = request.getSourceEditPart ();
+        return source instanceof INodeEditPart ? ((INodeEditPart) source).getSourceConnectionAnchor (request) : null;
+    }
+
+    protected ConnectionAnchor getTargetConnectionAnchor (CreateConnectionRequest request) {
+        EditPart target = request.getTargetEditPart ();
+        return target instanceof INodeEditPart ? ((INodeEditPart) target).getTargetConnectionAnchor (request) : null;
+    }
+
+    protected INodeEditPart getConnectableEditPart () {
+        return (INodeEditPart) getHost ();
+    }
+
+    protected INodeEditPart getConnectionCompleteEditPart (Request request) {
+        if (getHost () instanceof INodeEditPart) {
+            return (INodeEditPart) getHost ();
+        }
+        return null;
+    }
+
+    protected ConnectionAnchor getConnectionTargetAnchor (Request request) {
+        INodeEditPart node = getConnectableEditPart ();
+        if (node != null) return node.getTargetConnectionAnchor (request);
+
+        return null;
+    }
+
+    protected View getView () {
+        return (View) getHost ().getModel ();
+    }
+
+    protected String getSemanticHint (Request request) {
+        String hint = null;
+        if (request instanceof CreateConnectionViewAndElementRequest) {
+            CreateConnectionViewAndElementRequest ccvr = (CreateConnectionViewAndElementRequest) request;
+            CreateElementRequestAdapter requestAdapter = ccvr.getConnectionViewAndElementDescriptor ().getCreateElementRequestAdapter ();
+            CreateRelationshipRequest createElementRequest = (CreateRelationshipRequest) requestAdapter.getAdapter (CreateRelationshipRequest.class);
+            hint = MetaModelUtil.getDisplayName (createElementRequest.getElementType ().getEClass ());
+        } else if (request instanceof ReconnectRequest) {
+            ReconnectRequest rr = (ReconnectRequest) request;
+            hint = ViewUtil.getSemanticElementClassId ((View) rr.getConnectionEditPart ().getModel ());
+        } else if (request instanceof CreateConnectionViewRequest) {
+            CreateConnectionViewRequest ccvr = (CreateConnectionViewRequest) request;
+            hint = ccvr.getConnectionViewDescriptor ().getSemanticHint ();
+        }
+
+        return hint;
+    }
+
+    protected Command getRoutingAdjustment (IAdaptable connection, String connectionHint, Routing currentRouterType, EditPart target) {
+        Command cmd = null;
+        if (connectionHint == null || target == null || target.getModel () == null || ((View) target.getModel ()).getElement () == null) return null;
+
+        String targetHint = ViewUtil.getSemanticElementClassId ((View) target.getModel ());
+        Routing newRouterType = null;
+        if (target instanceof ITreeBranchEditPart && connectionHint.equals (targetHint)) {
+            newRouterType = Routing.TREE_LITERAL;
+            ChangePropertyValueRequest cpvr = new ChangePropertyValueRequest (StringStatics.BLANK, Properties.ID_ROUTING, newRouterType);
+            Command cmdRouter = target.getCommand (cpvr);
+            if (cmdRouter != null) cmd = cmd == null ? cmdRouter : cmd.chain (cmdRouter);
+
+        } else {
+            if (currentRouterType.equals (Routing.TREE_LITERAL)) {
+                IPreferenceStore store = (IPreferenceStore) ((IGraphicalEditPart) getHost ()).getDiagramPreferencesHint ().getPreferenceStore ();
+                newRouterType = Routing.get (store.getInt (IPreferenceConstants.PREF_LINE_STYLE));
+            }
+        }
+        if (newRouterType != null) {
+            ICommand spc = new SetPropertyCommand (connection, Properties.ID_ROUTING, StringStatics.BLANK, newRouterType);
+            Command cmdRouter = new EtoolsProxyCommand (spc);
+            if (cmdRouter != null) {
+                cmd = cmd == null ? cmdRouter : cmd.chain (cmdRouter);
+            }
+        }
+        return cmd;
+    }
+
+    protected Command getReconnectTargetCommand (ReconnectRequest request) {
+        INodeEditPart node = getConnectableEditPart ();
+        if (node == null) return null;
+
+        ConnectionAnchor targetAnchor = getConnectionTargetAnchor (request);
+        INodeEditPart targetEP = getConnectionCompleteEditPart (request);
+        if (targetEP == null) {
+            return null;
+        }
+        SetConnectionEndsCommand sceCommand = new SetConnectionEndsCommand (null);
+        sceCommand.setEdgeAdaptor (new EObjectAdapter ((EObject) request.getConnectionEditPart ().getModel ()));
+        sceCommand.setNewTargetAdaptor (targetEP);
+        SetConnectionAnchorsCommand scaCommand = new SetConnectionAnchorsCommand (null);
+        scaCommand.setEdgeAdaptor (new EObjectAdapter ((EObject) request.getConnectionEditPart ().getModel ()));
+        scaCommand.setNewTargetTerminal (targetEP.mapConnectionAnchorToTerminal (targetAnchor));
+        CompositeCommand cc = new CompositeCommand (DiagramUIMessages.Commands_SetConnectionEndsCommand_Target);
+        cc.compose (sceCommand);
+        cc.compose (scaCommand);
+        Command cmd = new EtoolsProxyCommand (cc);
+        EditPart cep = request.getConnectionEditPart ();
+        RoutingStyle style = (RoutingStyle) ((View) cep.getModel ()).getStyle (NotationPackage.eINSTANCE.getRoutingStyle ());
+        Routing currentRouter = Routing.MANUAL_LITERAL;
+        if (style != null) {
+            currentRouter = style.getRouting ();
+        }
+        Command cmdRouter = getRoutingAdjustment (request.getConnectionEditPart (), getSemanticHint (request), currentRouter, request.getTarget ());
+        if (cmdRouter != null) {
+            cmd = cmd == null ? cmdRouter : cmd.chain (cmdRouter);
+            ConnectionAnchor sourceAnchor = node.getSourceConnectionAnchor (request);
+            PointList pointList = new PointList ();
+            pointList.addPoint (sourceAnchor.getLocation (targetAnchor.getReferencePoint ()));
+            pointList.addPoint (targetAnchor.getLocation (sourceAnchor.getReferencePoint ()));
+            SetConnectionBendpointsCommand sbbCommand = new SetConnectionBendpointsCommand ();
+            sbbCommand.setEdgeAdapter (request.getConnectionEditPart ());
+            sbbCommand.setNewPointList (pointList, sourceAnchor.getReferencePoint (), targetAnchor.getReferencePoint ());
+            Command cmdBP = new EtoolsProxyCommand (sbbCommand);
+            if (cmdBP != null) {
+                cmd = cmd == null ? cmdBP : cmd.chain (cmdBP);
+            }
+        }
+        return cmd;
+    }
+
+    protected Command getReconnectSourceCommand (ReconnectRequest request) {
+        INodeEditPart node = getConnectableEditPart ();
+        if (node == null) return null;
+
+        ConnectionAnchor sourceAnchor = node.getSourceConnectionAnchor (request);
+        SetConnectionEndsCommand sceCommand = new SetConnectionEndsCommand (null);
+        sceCommand.setEdgeAdaptor (new EObjectAdapter ((View) request.getConnectionEditPart ().getModel ()));
+        sceCommand.setNewSourceAdaptor (new EObjectAdapter ((View) node.getModel ()));
+        SetConnectionAnchorsCommand scaCommand = new SetConnectionAnchorsCommand (null);
+        scaCommand.setEdgeAdaptor (new EObjectAdapter ((View) request.getConnectionEditPart ().getModel ()));
+        scaCommand.setNewSourceTerminal (node.mapConnectionAnchorToTerminal (sourceAnchor));
+        CompositeCommand cc = new CompositeCommand (DiagramUIMessages.Commands_SetConnectionEndsCommand_Source);
+        cc.compose (sceCommand);
+        cc.compose (scaCommand);
+        return new EtoolsProxyCommand (cc);
+    }
+
+    protected Command getConnectionCompleteCommand (CreateConnectionRequest request) {
+        EtoolsProxyCommand proxy = (EtoolsProxyCommand) request.getStartCommand ();
+        if (proxy == null) {
+            return null;
+        }
+        INodeEditPart targetEP = getConnectionCompleteEditPart (request);
+        if (targetEP == null) {
+            return null;
+        }
+        CompositeCommand cc = (CompositeCommand) proxy.getICommand ();
+        ConnectionAnchor targetAnchor = targetEP.getTargetConnectionAnchor (request);
+        SetConnectionEndsCommand sceCommand = (SetConnectionEndsCommand) cc.getCommands ().get (1);
+        sceCommand.setNewTargetAdaptor (new EObjectAdapter (((IGraphicalEditPart) targetEP).getNotationView ()));
+        SetConnectionAnchorsCommand scaCommand = (SetConnectionAnchorsCommand) cc.getCommands ().get (2);
+        scaCommand.setNewTargetTerminal (targetEP.mapConnectionAnchorToTerminal (targetAnchor));
+        setViewAdapter (sceCommand.getEdgeAdaptor ());
+        INodeEditPart sourceEditPart = (INodeEditPart) request.getSourceEditPart ();
+        ConnectionAnchor sourceAnchor = sourceEditPart.mapTerminalToConnectionAnchor (scaCommand.getNewSourceTerminal ());
+        PointList pointList = new PointList ();
+        if (request.getLocation () == null) {
+            pointList.addPoint (sourceAnchor.getLocation (targetAnchor.getReferencePoint ()));
+            pointList.addPoint (targetAnchor.getLocation (sourceAnchor.getReferencePoint ()));
+        } else {
+            pointList.addPoint (sourceAnchor.getLocation (request.getLocation ()));
+            pointList.addPoint (targetAnchor.getLocation (request.getLocation ()));
+        }
+        SetConnectionBendpointsCommand sbbCommand = (SetConnectionBendpointsCommand) cc.getCommands ().get (3);
+        sbbCommand.setNewPointList (pointList, sourceAnchor.getReferencePoint (), targetAnchor.getReferencePoint ());
+        return request.getStartCommand ();
+    }
+
+    protected final void setViewAdapter (IAdaptable viewAdapter) {
+        _viewAdapter = viewAdapter;
+    }
+
+    protected final IAdaptable getViewAdapter () {
+        return _viewAdapter;
+    }
+
+    protected Command getConnectionCreateCommand (CreateConnectionRequest request) {
+        if (! (request instanceof CreateConnectionViewRequest)) return null;
+
+        CreateConnectionViewRequest req = (CreateConnectionViewRequest) request;
+        CompositeCommand cc = new CompositeCommand (DiagramUIMessages.Commands_CreateCommand_Connection_Label);
+        Diagram diagramView = ((View) getHost ().getModel ()).getDiagram ();
+        CreateCommand createCommand = new CreateCommand (req.getConnectionViewDescriptor (), diagramView.getDiagram ());
+        setViewAdapter ((IAdaptable) createCommand.getCommandResult ().getReturnValue ());
+        SetConnectionEndsCommand sceCommand = new SetConnectionEndsCommand (null);
+        sceCommand.setEdgeAdaptor (getViewAdapter ());
+        sceCommand.setNewSourceAdaptor (new EObjectAdapter (getView ()));
+        ConnectionAnchor sourceAnchor = getConnectableEditPart ().getSourceConnectionAnchor (request);
+        SetConnectionAnchorsCommand scaCommand = new SetConnectionAnchorsCommand (null);
+        scaCommand.setEdgeAdaptor (getViewAdapter ());
+        scaCommand.setNewSourceTerminal (getConnectableEditPart ().mapConnectionAnchorToTerminal (sourceAnchor));
+        SetConnectionBendpointsCommand sbbCommand = new SetConnectionBendpointsCommand ();
+        sbbCommand.setEdgeAdapter (getViewAdapter ());
+        cc.compose (createCommand);
+        cc.compose (sceCommand);
+        cc.compose (scaCommand);
+        cc.compose (sbbCommand);
+        Command c = new EtoolsProxyCommand (cc);
+        request.setStartCommand (c);
+        return c;
+    }
+
+    public Command getCommand (Request request) {
+        if (RequestConstants.REQ_CONNECTION_START.equals (request.getType ())) {
+            if (request instanceof CreateConnectionViewAndElementRequest) {
+                return getConnectionAndRelationshipCreateCommand ((CreateConnectionViewAndElementRequest) request);
+            } else if (request instanceof CreateUnspecifiedTypeConnectionRequest) {
+                return getUnspecifiedConnectionCreateCommand ((CreateUnspecifiedTypeConnectionRequest) request);
+            }
+
+        } else if (RequestConstants.REQ_CONNECTION_END.equals (request.getType ())) {
+            if (request instanceof CreateConnectionViewAndElementRequest) {
+                return getConnectionAndRelationshipCompleteCommand ((CreateConnectionViewAndElementRequest) request);
+            } else if (request instanceof CreateUnspecifiedTypeConnectionRequest) {
+                return getUnspecifiedConnectionCompleteCommand ((CreateUnspecifiedTypeConnectionRequest) request);
+            }
+
+        }
+
+        return super.getCommand (request);
+    }
+
+    protected Command getConnectionAndRelationshipCreateCommand (CreateConnectionViewAndElementRequest request) {
+        CreateElementRequestAdapter requestAdapter = request.getConnectionViewAndElementDescriptor ().getCreateElementRequestAdapter ();
+        CreateRelationshipRequest createElementRequest = (CreateRelationshipRequest) requestAdapter.getAdapter (CreateRelationshipRequest.class);
+        View sourceView = (View) getHost ().getModel ();
+        createElementRequest.setSource (ViewUtil.resolveSemanticElement (sourceView));
+        Command createElementCommand = getHost ().getCommand (new EditCommandRequestWrapper ((CreateRelationshipRequest) requestAdapter.getAdapter (CreateRelationshipRequest.class)));
+        if (createElementCommand == null) return null;
+
+        return getConnectionCreateCommand (request);
+    }
+
+    private Command getUnspecifiedConnectionCreateCommand (final CreateUnspecifiedTypeConnectionRequest request) {
+        if (request.isDirectionReversed ()) {
+            return new Command () {
+
+                public boolean canExecute () {
+                    return true;
+                }
+
+            }
+
+            ;
+        } else {
+            final List commands = new ArrayList ();
+            for (Iterator iter = request.getAllRequests ().iterator ();
+            iter.hasNext ();) {
+                Request individualRequest = (Request) iter.next ();
+                Command cmd = null;
+                if (individualRequest instanceof CreateConnectionViewAndElementRequest) {
+                    cmd = getConnectionAndRelationshipCreateCommand ((CreateConnectionViewAndElementRequest) individualRequest);
+                } else if (individualRequest instanceof CreateConnectionViewRequest) {
+                    cmd = getConnectionCreateCommand ((CreateConnectionViewRequest) individualRequest);
+                }
+
+                if (cmd != null) {
+                    commands.add (cmd);
+                }
+            }
+            return new Command () {
+
+                public boolean canExecute () {
+                    for (Iterator iter = commands.iterator ();
+                    iter.hasNext ();) {
+                        Command cmd = (Command) iter.next ();
+                        if (cmd.canExecute ()) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+            }
+
+            ;
+        }
+    }
+
+    protected Command getConnectionAndRelationshipCompleteCommand (CreateConnectionViewAndElementRequest request) {
+        CreateElementRequestAdapter requestAdapter = request.getConnectionViewAndElementDescriptor ().getCreateElementRequestAdapter ();
+        CreateRelationshipRequest createElementRequest = (CreateRelationshipRequest) requestAdapter.getAdapter (CreateRelationshipRequest.class);
+        createElementRequest.setPrompt (! request.isUISupressed ());
+        INodeEditPart targetEP = getConnectionCompleteEditPart (request);
+        View sourceView = (View) request.getSourceEditPart ().getModel ();
+        View targetView = (View) targetEP.getModel ();
+        createElementRequest.setSource (ViewUtil.resolveSemanticElement (sourceView));
+        createElementRequest.setTarget (ViewUtil.resolveSemanticElement (targetView));
+        Command createElementCommand = targetEP.getCommand (new EditCommandRequestWrapper ((CreateRelationshipRequest) requestAdapter.getAdapter (CreateRelationshipRequest.class)));
+        if (null == createElementCommand) return null;
+
+        SemanticCreateCommand semanticCommand = new SemanticCreateCommand (requestAdapter, createElementCommand);
+        Command viewCommand = getConnectionCompleteCommand (request);
+        if (null == viewCommand) return null;
+
+        CompositeCommand cc = new CompositeCommand (semanticCommand.getLabel ());
+        cc.compose (semanticCommand);
+        cc.compose (new XtoolsProxyCommand (viewCommand));
+        return new EtoolsProxyCommand (cc);
+    }
+
+    protected Command getUnspecifiedConnectionCompleteCommand (CreateUnspecifiedTypeConnectionRequest request) {
+        if (request.isDirectionReversed ()) {
+            return getReversedUnspecifiedConnectionCompleteCommand (request);
+        }
+        List menuContent = getConnectionMenuContent (request);
+        if (menuContent.isEmpty ()) {
+            return null;
+        } else if (menuContent.size () == 1) {
+            return getConnectionCompleteCommand (menuContent.get (0), request);
+        } else {
+            return new EtoolsProxyCommand (getPromptAndCreateConnectionCommand (menuContent, request));
+        }
+
+    }
+
+    protected ICommand getPromptAndCreateConnectionCommand (List content, CreateConnectionRequest request) {
+        return new PromptAndCreateConnectionCommand (content, request);
+    }
+
+    protected Command getConnectionCompleteCommand (Object connectionType, CreateConnectionRequest request) {
+        if (connectionType instanceof IElementType) {
+            if (request instanceof CreateUnspecifiedTypeConnectionRequest) {
+                return getHost ().getCommand (((CreateUnspecifiedTypeConnectionRequest) request).getRequestForType ((IElementType) connectionType));
+            }
+        }
+        return null;
+    }
+
+    protected List getConnectionMenuContent (CreateConnectionRequest request) {
+        List validRelTypes = new ArrayList ();
+        if (request instanceof CreateUnspecifiedTypeConnectionRequest) {
+            CreateUnspecifiedTypeConnectionRequest unspecifiedRequest = (CreateUnspecifiedTypeConnectionRequest) request;
+            List allRequests = unspecifiedRequest.getAllRequests ();
+            if (allRequests.isEmpty ()) {
+                return null;
+            }
+            IGraphicalEditPart sourceEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests.get (0)).getSourceEditPart ();
+            IGraphicalEditPart targetEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests.get (0)).getTargetEditPart ();
+            List allRelTypes = unspecifiedRequest.useModelingAssistantService () ? ModelingAssistantService.getInstance ().getRelTypesOnSourceAndTarget (sourceEP, targetEP) : unspecifiedRequest.getElementTypes ();
+            for (Iterator iter = allRelTypes.iterator ();
+            iter.hasNext ();) {
+                IElementType type = (IElementType) iter.next ();
+                Command individualCmd = null;
+                Request createConnectionRequest = unspecifiedRequest.getRequestForType (type);
+                if (createConnectionRequest != null) {
+                    individualCmd = getHost ().getCommand (createConnectionRequest);
+                } else {
+                    CreateConnectionViewRequest connectionRequest = CreateViewRequestFactory.getCreateConnectionRequest (type, ((IGraphicalEditPart) getHost ()).getDiagramPreferencesHint ());
+                    connectionRequest.setSourceEditPart (null);
+                    connectionRequest.setTargetEditPart (sourceEP);
+                    connectionRequest.setType (RequestConstants.REQ_CONNECTION_START);
+                    sourceEP.getCommand (connectionRequest);
+                    connectionRequest.setSourceEditPart (sourceEP);
+                    connectionRequest.setTargetEditPart (targetEP);
+                    connectionRequest.setType (RequestConstants.REQ_CONNECTION_END);
+                    individualCmd = targetEP.getCommand (connectionRequest);
+                }
+                if (individualCmd != null && individualCmd.canExecute ()) {
+                    validRelTypes.add (type);
+                }
+            }
+        }
+        return validRelTypes;
+    }
+
+    protected Command getReversedUnspecifiedConnectionCompleteCommand (CreateUnspecifiedTypeConnectionRequest request) {
+        EditPart realSourceEP = request.getTargetEditPart ();
+        EditPart realTargetEP = request.getSourceEditPart ();
+        for (Iterator iter = request.getAllRequests ().iterator ();
+        iter.hasNext ();) {
+            CreateConnectionRequest connectionRequest = (CreateConnectionRequest) iter.next ();
+            connectionRequest.setSourceEditPart (null);
+            connectionRequest.setTargetEditPart (realSourceEP);
+            connectionRequest.setType (RequestConstants.REQ_CONNECTION_START);
+            realSourceEP.getCommand (connectionRequest);
+            connectionRequest.setSourceEditPart (realSourceEP);
+            connectionRequest.setTargetEditPart (realTargetEP);
+            connectionRequest.setType (RequestConstants.REQ_CONNECTION_END);
+        }
+        request.setDirectionReversed (false);
+        Command command = realTargetEP.getCommand (request);
+        return command;
+    }
+
+}
+

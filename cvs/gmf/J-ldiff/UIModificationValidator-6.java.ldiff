@@ -1,0 +1,88 @@
+2,2c2,2
+<  * Copyright (c) 2005, 2006 IBM Corporation and others.
+---
+>  * Copyright (c) 2005, 2008 IBM Corporation and others.
+18a19,19
+> import org.eclipse.gmf.runtime.common.core.command.FileModificationValidator.ISyncExecHelper;
+21a23,23
+> import org.eclipse.jface.operation.ModalContext;
+120a123,169
+>    /**
+>     *  Helper class that allows us to return status information 
+>     *  in addition to providing the option of clearing the 
+>     *  shell variable before running doValidate().
+>     *  
+>     * @author James Bruck (jbruck)
+>     */
+>     class RunnableWithStatus implements Runnable {
+> 
+> 		private final IFile[] files;
+> 		private IStatus status;
+> 		private Shell shell;
+> 		
+> 		RunnableWithStatus(IFile[] files, Shell shell) {
+> 			this.files = files;
+> 			this.shell = shell;
+> 		}
+> 
+> 		public void run() {
+> 			status = doValidateEdit(files, shell);
+> 		}
+> 		public IStatus getResult() {
+> 			return status;
+> 		}
+> 		
+> 		public void setShell(Shell shell) {
+> 			this.shell = shell;
+> 		}
+> 	}
+>         
+>     /**
+>      * This is the where the real call to validate the files takes place.
+>      * 
+>      * @param files list of files to validate.
+>      * @param shell the shell to use when displaying error messages.
+>      * @return the status indicating whether the validate succeeded or not.
+>      */
+>     protected IStatus doValidateEdit(IFile[] files, Shell shell) {
+> 
+> 		boolean ok = FileModificationValidator.getInstance().okToEdit(files,
+> 				CommonUIMessages.UIModificationValidator_ModificationMessage,
+> 				shell);
+> 		return ok ? Status.OK_STATUS : ERROR_STATUS;
+> 	}
+> 	    
+>     /*
+>      * (non-Javadoc)
+121,121d122
+< 	/* (non-Javadoc)
+125a175,175
+> 		RunnableWithStatus r = new RunnableWithStatus(files, shell);
+126,127d174
+< 		boolean ok = FileModificationValidator.getInstance().okToEdit(files,
+< 			CommonUIMessages.UIModificationValidator_ModificationMessage, shell);
+128a177,193
+> 		ISyncExecHelper syncExecHelper = org.eclipse.gmf.runtime.common.core.command.FileModificationValidator.SyncExecHelper
+> 				.getInstance();
+> 
+> 		if (ModalContext.isModalContextThread(Thread.currentThread())) {
+> 			Runnable safeRunnable = syncExecHelper.safeRunnable(r);
+> 			if( safeRunnable != null){
+> 				Display.getDefault().syncExec(safeRunnable);
+> 			} else {
+> 				r.run();
+> 			}
+> 		} else {
+> 			if (Display.getCurrent() == null) {
+> 				r.setShell(null);
+> 			}
+> 			r.run();
+> 		}
+> 		return r.getResult();
+129,130d176
+< 		return ok ? Status.OK_STATUS
+< 			: ERROR_STATUS;
+145,145c173,173
+< 
+---
+> 

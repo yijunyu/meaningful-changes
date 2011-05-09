@@ -1,0 +1,129 @@
+2a3,4
+> import java.util.List;
+> 
+4a7,8
+> import org.eclipse.emf.ecore.EClass;
+> 
+6a11,16
+> import org.eclipse.emf.ecore.EPackage;
+> 
+> import org.eclipse.emf.ecore.resource.Resource;
+> 
+> import org.eclipse.gmf.internal.bridge.resolver.DomainModelSourceImpl;
+> 
+10a21,22
+> import org.eclipse.gmf.internal.bridge.ui.Plugin;
+> 
+16a29,30
+> import org.eclipse.gmf.internal.common.ui.ModelSelectionPage;
+> 
+18a33,34
+> import org.eclipse.gmf.tooldef.ToolRegistry;
+> 
+22c38,64
+<     protected DefinitionPage toolDefinitionPage;
+---
+>     protected ModelSelectionPage toolingModelSelectionPage;
+>     protected DefinitionPage toolingDefinitionPage;
+>     protected WizardOperationMode mode = new WizardOperationMode ("gmftool", WizardOperationMode.CREATE);
+> 
+>     public void setMode (String mode) {
+>         this.mode.setMode (mode);
+>     }
+> 
+>     protected boolean isInReconcileMode () {
+>         return toolingModelSelectionPage != null && toolingModelSelectionPage.getResource () != null;
+>     }
+> 
+>     public boolean performFinish () {
+>         if (isInReconcileMode ()) {
+>             reconcileModel ();
+>             try {
+>                 WizardUtil.saveModel (getContainer (), toolingModelSelectionPage.getResource ());
+>             } catch (Exception exception) {
+>                 Plugin.log (exception);
+>                 return false;
+>             }
+>             WizardUtil.openEditor (toolingModelSelectionPage.getResource ().getURI ());
+>             return true;
+>         } else {
+>             return super.performFinish ();
+>         }
+>     }
+25,26c67,84
+<         ToolDefBuilder builder = new ToolDefBuilder ();
+<         return builder.process (toolDefinitionPage.getModel ());
+---
+>         ToolDefBuilder builder = new ToolDefBuilder (null);
+>         return builder.process (toolingDefinitionPage.getModel ());
+>     }
+> 
+>     @SuppressWarnings("unchecked")
+>     protected void reconcileModel () {
+>         ToolRegistry existingToolRegistry = null;
+>         for (EObject element : (List < ? extends EObject >) toolingModelSelectionPage.getResource ().getContents ()) {
+>             if (element instanceof ToolRegistry) {
+>                 existingToolRegistry = (ToolRegistry) element;
+>                 break;
+>             }
+>         }
+>         ToolDefBuilder builder = new ToolDefBuilder (existingToolRegistry);
+>         ToolRegistry toolRegistry = builder.process (toolingDefinitionPage.getModel ());
+>         if (toolRegistry != null && existingToolRegistry != toolRegistry) {
+>             toolingModelSelectionPage.getResource ().getContents ().add (toolRegistry);
+>         }
+29a88,108
+>         ResourceLocationProvider rloc = new ResourceLocationProvider (selection);
+>         if (mode.detectReconcile (rloc)) {
+>             toolingModelSelectionPage = new ModelSelectionPage ("ToolingModelSelectionPage", rloc) {
+> 
+>                 protected String getModelFileExtension () {
+>                     return "gmftool";
+>                 }
+> 
+>                 protected void setResource (Resource resource) {
+>                     super.setResource (resource);
+>                     setPageComplete (getResource () != null);
+>                 }
+> 
+>             }
+> 
+>             ;
+>             toolingModelSelectionPage.setPageComplete (false);
+>             toolingModelSelectionPage.setTitle ("Tooling Definition Model");
+>             toolingModelSelectionPage.setDescription ("Select tooling definition model to update. New tools will be added to this model.");
+>             addPage (toolingModelSelectionPage);
+>         } else {
+37c116
+<         ResourceLocationProvider rloc = new ResourceLocationProvider (selection);
+---
+>         }
+42,45c121,143
+<         toolDefinitionPage = new DefinitionPage ("ToolDefinitionPage", new StructureBuilder (new StructureResolver (), false), domainModelSelectionPage);
+<         toolDefinitionPage.setTitle ("Tooling Definition");
+<         toolDefinitionPage.setDescription ("Specify basic tooling definition of the domain model");
+<         addPage (toolDefinitionPage);
+---
+>         toolingDefinitionPage = new DefinitionPage ("ToolingDefinitionPage", new StructureBuilder (new StructureResolver (), false), domainModelSelectionPage) {
+> 
+>             protected DomainModelSourceImpl createDomainModelSource (EPackage contents, EClass diagramElement) {
+>                 if (isInReconcileMode ()) {
+>                     return new DomainModelSourceImpl (contents, diagramElement) {
+> 
+>                         public boolean isDisabled (EObject domainElement) {
+>                             return ToolDefBuilder.getCreationTool (toolingModelSelectionPage.getResource ().getAllContents (), domainElement) != null;
+>                         }
+> 
+>                     }
+> 
+>                     ;
+>                 }
+>                 return super.createDomainModelSource (contents, diagramElement);
+>             }
+> 
+>         }
+> 
+>         ;
+>         toolingDefinitionPage.setTitle ("Tooling Definition");
+>         toolingDefinitionPage.setDescription ("Specify basic tooling definition of the domain model");
+>         addPage (toolingDefinitionPage);

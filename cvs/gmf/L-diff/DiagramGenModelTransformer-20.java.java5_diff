@@ -1,0 +1,55 @@
+14a15,16
+> import java.util.LinkedList;
+> 
+60a63,64
+> import org.eclipse.gmf.codegen.gmfgen.GenAuditRoot;
+> 
+418c422
+<             getGenEssence ().setAudits (createGenAuditContainer (audits));
+---
+>             getGenEssence ().setAudits (createGenAuditRoot (audits));
+946c950,956
+<     private GenAuditContainer createGenAuditContainer (AuditContainer ac) {
+---
+>     private GenAuditRoot createGenAuditRoot (AuditContainer ac) {
+>         GenAuditRoot root = GMFGenFactory.eINSTANCE.createGenAuditRoot ();
+>         LinkedList < AuditContainer > containers = new LinkedList < AuditContainer > ();
+>         containers.add (ac);
+>         final HashMap < AuditContainer, LinkedList < GenAuditContainer > > pathMap = new HashMap < AuditContainer, LinkedList < GenAuditContainer > > ();
+>         do {
+>             AuditContainer nextChild = containers.removeFirst ();
+948,954c958,967
+<         gac.setId (ac.getId ());
+<         gac.setName (ac.getName ());
+<         gac.setDescription (ac.getDescription ());
+<         for (Iterator it = ac.getChildContainers ().iterator ();
+<         it.hasNext ();) {
+<             AuditContainer nextChild = (AuditContainer) it.next ();
+<             gac.getChildContainers ().add (createGenAuditContainer (nextChild));
+---
+>             gac.setId (nextChild.getId ());
+>             gac.setName (nextChild.getName ());
+>             gac.setDescription (nextChild.getDescription ());
+>             if (pathMap.containsKey (nextChild.getParentContainer ())) {
+>                 gac.getPath ().addAll (pathMap.get (nextChild.getParentContainer ()));
+>             }
+>             gac.getPath ().add (gac);
+>             if (nextChild.getChildContainers ().size () > 0) {
+>                 containers.addAll (nextChild.getChildContainers ());
+>                 pathMap.put (nextChild, new LinkedList < GenAuditContainer > (gac.getPath ()));
+956c969,970
+<         for (Iterator it = ac.getAudits ().iterator ();
+---
+>             root.getCategories ().add (gac);
+>             for (Iterator it = nextChild.getAudits ().iterator ();
+958c972,974
+<             gac.getAudits ().add (createGenAudit ((AuditRule) it.next ()));
+---
+>                 final GenAuditRule auditRule = createGenAudit ((AuditRule) it.next ());
+>                 auditRule.setCategory (gac);
+>                 root.getRules ().add (auditRule);
+960c976,977
+<         return gac;
+---
+>         } while (! containers.isEmpty ());
+>         return root;

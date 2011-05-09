@@ -1,0 +1,56 @@
+3,6d2
+< import java.io.FileInputStream;
+< 
+< import java.io.FileNotFoundException;
+< 
+8a5,6
+> import java.io.InputStream;
+> 
+20a19,20
+> import org.eclipse.core.runtime.Path;
+> 
+28a29,30
+> import org.osgi.framework.Bundle;
+> 
+66,71c68,72
+<             URL installURL = Platform.getBundle (element.getDeclaringExtension ().getNamespace ()).getEntry ("/");
+<             URL resolveURL = null;
+<             try {
+<                 resolveURL = Platform.resolve (installURL);
+<             } catch (IOException e1) {
+<                 assert (false);
+---
+>             Bundle bundle = Platform.getBundle (element.getDeclaringExtension ().getNamespace ());
+>             assert bundle != null;
+>             URL url = Platform.find (bundle, new Path (relativePath));
+>             if (url == null) {
+>                 Log.error (CommonCorePlugin.getDefault (), CommonCoreStatusCodes.SERVICE_FAILURE, "Couldn't find relative path " + relativePath + " in " + element.getDeclaringExtension ().getNamespace ());
+73,74c74
+<             String fullPath = resolveURL.getFile () + relativePath;
+<             Properties properties = new Properties ();
+---
+>             InputStream is = null;
+76,78c76,80
+<                 FileInputStream stream = new FileInputStream (fullPath);
+<                 properties.load (stream);
+<             } catch (FileNotFoundException e) {
+---
+>                 is = url.openStream ();
+>                 Properties properties = new Properties ();
+>                 properties.load (is);
+>                 propertiesMap.putAll (properties);
+>             } catch (IOException e) {
+80c82,85
+<                 continue;
+---
+>             } finally {
+>                 if (is != null) {
+>                     try {
+>                         is.close ();
+83d87
+<                 continue;
+85c89,90
+<             propertiesMap.putAll (properties);
+---
+>                 }
+>             }

@@ -1,0 +1,303 @@
+package org.eclipse.gmf.runtime.common.ui.action;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.jface.action.Action;
+
+import org.eclipse.jface.dialogs.ErrorDialog;
+
+import org.eclipse.jface.viewers.ISelection;
+
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+
+import org.eclipse.jface.viewers.ISelectionProvider;
+
+import org.eclipse.jface.viewers.IStructuredSelection;
+
+import org.eclipse.jface.viewers.SelectionChangedEvent;
+
+import org.eclipse.jface.viewers.StructuredSelection;
+
+import org.eclipse.swt.widgets.Event;
+
+import org.eclipse.ui.IPartListener;
+
+import org.eclipse.ui.IPropertyListener;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandManagerChangeEvent;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommandManagerChangeListener;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+
+import org.eclipse.gmf.runtime.common.ui.util.PartListenerAdapter;
+
+import org.eclipse.gmf.runtime.common.ui.util.StatusLineUtil;
+
+public abstract class AbstractActionHandler extends Action implements IDisposableAction, IRepeatableAction, ISelectionChangedListener, ICommandManagerChangeListener, IPropertyListener {
+    private boolean setup;
+    private boolean disposed;
+    private IWorkbenchPart workbenchPart;
+    private IWorkbenchPage workbenchPage;
+    private IPartListener partListener;
+
+    protected AbstractActionHandler (IWorkbenchPart workbenchPart) {
+        super ();
+        assert null != workbenchPart : "null workbenchPart";
+        setWorkbenchPart (workbenchPart);
+        this.workbenchPage = workbenchPart.getSite ().getPage ();
+        this.partListener = new PartListenerAdapter () {
+
+            public void partClosed (IWorkbenchPart part) {
+                if (getWorkbenchPart () == part) {
+                    dispose ();
+                }
+            }
+
+        }
+
+        ;
+        workbenchPage.addPartListener (partListener);
+    }
+
+    protected AbstractActionHandler (final IWorkbenchPage workbenchPage) {
+        super ();
+        assert null != workbenchPage : "null workbenchPage";
+        this.workbenchPage = workbenchPage;
+        this.partListener = new PartListenerAdapter () {
+
+            public void partActivated (IWorkbenchPart part) {
+                setWorkbenchPart (part);
+                if (part != null) refresh ();
+
+            }
+
+        }
+
+        ;
+        workbenchPage.addPartListener (partListener);
+    }
+
+    public void init () {
+        setDisposed (false);
+        if (getWorkbenchPart () == null) setWorkbenchPart (getWorkbenchPage ().getActivePart ());
+
+        if (getWorkbenchPart () != null) refresh ();
+
+    }
+
+    public void dispose () {
+        setWorkbenchPart (null);
+        if (partListener != null && workbenchPage != null) {
+            workbenchPage.removePartListener (partListener);
+            workbenchPage = null;
+            partListener = null;
+        }
+        setDisposed (true);
+    }
+
+    protected void setWorkbenchPart (IWorkbenchPart workbenchPart) {
+        if (getWorkbenchPart () == workbenchPart) return;
+
+        if (getWorkbenchPart () != null) {
+            if (isSelectionListener ()) {
+                ISelectionProvider provider = getWorkbenchPart ().getSite ().getSelectionProvider ();
+                if (provider != null) {
+                    provider.removeSelectionChangedListener (this);
+                }
+            }
+            if (isPropertyListener ()) {
+                getWorkbenchPart ().removePropertyListener (this);
+            }
+            if (isCommandStackListener ()) {
+                getCommandManager ().removeCommandManagerChangeListener (this);
+            }
+        }
+        this.workbenchPart = workbenchPart;
+        if (workbenchPart != null) {
+            if (isSelectionListener ()) {
+                ISelectionProvider provider = getWorkbenchPart ().getSite ().getSelectionProvider ();
+                if (provider != null) {
+                    provider.addSelectionChangedListener (this);
+                }
+            }
+            if (isPropertyListener ()) {
+                getWorkbenchPart ().addPropertyListener (this);
+            }
+            if (isCommandStackListener ()) {
+                getCommandManager ().addCommandManagerChangeListener (this);
+            }
+        }
+    }
+
+    protected final IWorkbenchPart getWorkbenchPart () {
+        return workbenchPart;
+    }
+
+    protected ActionManager getActionManager () {
+        ActionManager manager = null;
+        IWorkbenchPart wbPart = getWorkbenchPart ();
+        if (wbPart != null) {
+            manager = (ActionManager) wbPart.getAdapter (ActionManager.class);
+        }
+        return null == manager ? ActionManager.getDefault () : manager;
+    }
+
+    protected CommandManager getCommandManager () {
+        return getActionManager ().getCommandManager ();
+    }
+
+    public void run () {
+        getActionManager ().run (this);
+    }
+
+    public void run (IProgressMonitor progressMonitor) {
+        if (isSetup () || ! needsSetup ()) {
+            try {
+                StatusLineUtil.outputErrorMessage (getWorkbenchPart (), StringStatics.BLANK);
+                doRun (progressMonitor);
+            } catch (Exception e) {
+                handle (e);
+            }
+            setSetup (false);
+        } else {
+            throw new IllegalStateException ("action must be setup before it is run");
+        }
+    }
+
+    public void runWithEvent (Event event) {
+        getActionManager ().run (this);
+    }
+
+    public final void selectionChanged (SelectionChangedEvent event) {
+        refresh ();
+    }
+
+    public void propertyChanged (Object source, int propId) {
+    }
+
+    public String getLabel () {
+        return getText ();
+    }
+
+    protected ISelection getSelection () {
+        ISelection selection = null;
+        ISelectionProvider selectionProvider = getWorkbenchPart ().getSite ().getSelectionProvider ();
+        if (selectionProvider != null) {
+            selection = selectionProvider.getSelection ();
+        }
+        return (selection != null) ? selection : StructuredSelection.EMPTY;
+    }
+
+    protected IStructuredSelection getStructuredSelection () {
+        IStructuredSelection selection = null;
+        ISelectionProvider selectionProvider = null;
+        if (getWorkbenchPart () != null) {
+            selectionProvider = getWorkbenchPart ().getSite ().getSelectionProvider ();
+        }
+        if (selectionProvider != null && selectionProvider.getSelection () instanceof IStructuredSelection) {
+            selection = (IStructuredSelection) selectionProvider.getSelection ();
+        }
+        return (selection != null) ? selection : StructuredSelection.EMPTY;
+    }
+
+    public boolean isRepeatable () {
+        return isEnabled ();
+    }
+
+    public boolean isRunnable () {
+        return isEnabled ();
+    }
+
+    protected boolean isSelectionListener () {
+        return false;
+    }
+
+    protected boolean isPropertyListener () {
+        return false;
+    }
+
+    protected boolean isCommandStackListener () {
+        return false;
+    }
+
+    public void repeat (IProgressMonitor progressMonitor) {
+        run (progressMonitor);
+    }
+
+    protected void handle (Exception exception) {
+        Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "handle", exception);
+        IStatus status = new Status (IStatus.ERROR, CommonUIPlugin.getPluginId (), CommonUIStatusCodes.ACTION_FAILURE, String.valueOf (exception.getMessage ()), exception);
+        Log.log (CommonUIPlugin.getDefault (), status);
+        openErrorDialog (status);
+    }
+
+    protected void openErrorDialog (IStatus status) {
+        ErrorDialog.openError (getWorkbenchPart ().getSite ().getShell (), removeMnemonics (getLabel ()), null, status);
+    }
+
+    protected abstract void doRun (IProgressMonitor progressMonitor);
+
+    public WorkIndicatorType getWorkIndicatorType () {
+        return WorkIndicatorType.BUSY;
+    }
+
+    protected IPartListener getPartListener () {
+        return partListener;
+    }
+
+    protected IWorkbenchPage getWorkbenchPage () {
+        return workbenchPage;
+    }
+
+    public final void commandManagerChanged (CommandManagerChangeEvent event) {
+        refresh ();
+    }
+
+    public boolean isDisposed () {
+        return disposed;
+    }
+
+    protected void setDisposed (boolean b) {
+        disposed = b;
+    }
+
+    public boolean setup () {
+        setSetup (true);
+        return true;
+    }
+
+    public boolean isSetup () {
+        return setup;
+    }
+
+    protected void setSetup (boolean setup) {
+        this.setup = setup;
+    }
+
+    protected boolean needsSetup () {
+        return false;
+    }
+
+}
+

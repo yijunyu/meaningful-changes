@@ -1,0 +1,182 @@
+9,10d8
+< import java.util.HashSet;
+< 
+13,14d10
+< import java.util.Set;
+< 
+21,22d16
+< import org.eclipse.emf.ecore.util.EcoreUtil;
+< 
+33,33c41,41
+< import org.eclipse.gmf.common.codegen.ImportAssistant;
+---
+> import org.eclipse.gmf.gmfgraph.FigureDescriptor;
+33a42,42
+> 
+49,49c27,27
+< import org.eclipse.gmf.gmfgraph.FigureHandle;
+---
+> import org.eclipse.gmf.gmfgraph.ChildAccess;
+67,67c45,45
+< import org.eclipse.gmf.internal.common.codegen.NullImportAssistant;
+---
+> import org.eclipse.gmf.gmfgraph.RealFigure;
+68,68d45
+< 
+72,72d65
+<     private final Set < Figure > processedFigures;
+80,80d72
+<         processedFigures = new HashSet < Figure > ();
+81,81c73,73
+<         figureGenerator = new FigureGenerator (runtimeToken, mapModeCodeGenStrategy, null, true, dynamicFigureTemplates);
+---
+>         figureGenerator = new FigureGenerator (runtimeToken, null, mapModeCodeGenStrategy, null, true, dynamicFigureTemplates);
+83a76,76
+>     @Override
+88,88c81,81
+<         final Viewmap viewmap = createViewmap (node.getNodeFigure ());
+---
+>         final Viewmap viewmap = createViewmap (node.getFigure ());
+94a88,88
+>     @Override
+99,99c93,93
+<         return createViewmap (link.getConnectionFigure ());
+---
+>         return createViewmap (link.getFigure ());
+101a96,96
+>     @Override
+102,102c97,97
+<     public Viewmap create (DiagramLabel label) {
+---
+>     public Viewmap create (DiagramLabel diagramLabel) {
+103,103c98,98
+<         if (label.getFigure () == null) {
+---
+>         if (diagramLabel.getFigure () == null) {
+104a100,104
+>         }
+>         if (diagramLabel.getAccessor () == null) {
+>             return createViewmap (diagramLabel.getFigure ());
+>         } else {
+>             return createViewmap (diagramLabel.getFigure (), diagramLabel.getAccessor ());
+104,104c99,99
+<             return super.create (label);
+---
+>             return super.create (diagramLabel);
+105a115,115
+>         } else {
+106a117,117
+>         }
+106,106c116,116
+<         return createViewmap (label.getFigure ());
+---
+>             return createViewmap (compartment.getFigure (), compartment.getAccessor ());
+108a108,108
+>     @Override
+110,110d109
+<         FigureHandle handle = compartment.getFigure ();
+111,111c110,110
+<         if (handle == null) {
+---
+>         if (compartment.getFigure () == null) {
+113a113,113
+>         if (compartment.getAccessor () == null) {
+116a120,120
+>     private Viewmap createViewmap (FigureDescriptor figureDescriptor) {
+117,117d119
+<     private Viewmap createFigureViewmap (Figure figure) {
+118a122,126
+>         if (figureDescriptor.getActualFigure () == null) {
+>             throw new NullPointerException ();
+>         }
+>         final Figure figure = figureDescriptor.getActualFigure ();
+>         if (figure instanceof RealFigure && isBareInstance ((RealFigure) figure)) {
+119,125d121
+<         if (EcoreUtil.isAncestor (processedFigures, figure.getParent ())) {
+<             ParentAssignedViewmap v = GMFGenFactory.eINSTANCE.createParentAssignedViewmap ();
+<             v.setGetterName (NamingStrategy.INSTANCE.getChildFigureGetterName (figure));
+<             v.setFigureQualifiedClassName (fqnSwitch.get (figure));
+<             result = v;
+<         } else {
+<             if (isBareInstance (figure)) {
+127,127c128,128
+<                 v.setFigureQualifiedClassName (fqnSwitch.get (figure));
+---
+>             v.setFigureQualifiedClassName (figureGenerator.fqnSwitch (figure));
+131,131d131
+<                 ImportAssistant importManager = new NullImportAssistant (null, CodeGenUtil.validJavaIdentifier (figure.getName ()));
+132,132c132,132
+<                 v.setClassBody (figureGenerator.go (figure, importManager));
+---
+>             v.setClassBody (figureGenerator.go (figureDescriptor));
+133,133c133,133
+<                 v.setClassName (importManager.getCompilationUnitName ());
+---
+>             v.setClassName (getCompilationUnitName (figureDescriptor));
+135a136,137
+>         setupPluginDependencies (result, figureDescriptor.getActualFigure ());
+>         setupStyleAttributes (result, figureDescriptor.getActualFigure ());
+136,140d135
+<         }
+<         if (false == result instanceof ParentAssignedViewmap) {
+<             setupPluginDependencies (result, figure);
+<         }
+<         processedFigures.add (figure);
+143a141,146
+>     private Viewmap createViewmap (FigureDescriptor owner, ChildAccess labelAccess) {
+>         ParentAssignedViewmap v = GMFGenFactory.eINSTANCE.createParentAssignedViewmap ();
+>         v.setGetterName (NamingStrategy.getChildFigureGetterName (labelAccess));
+>         v.setFigureQualifiedClassName (figureGenerator.fqnSwitch (labelAccess.getFigure ()));
+>         setupStyleAttributes (v, labelAccess.getFigure ());
+>         return v;
+144,155d140
+<     private Viewmap createViewmap (FigureHandle figure) {
+<         Viewmap result;
+<         if (figure instanceof Figure) {
+<             result = createFigureViewmap ((Figure) figure);
+<         } else if (figure instanceof FigureAccessor) {
+<             result = createFigureAccessorViewmap ((FigureAccessor) figure);
+<         } else {
+<             throw new IllegalStateException ();
+<         }
+< 
+<         setupStyleAttributes (result, figure);
+<         return result;
+162,162c153,153
+<             v.setFigureQualifiedClassName (figureAccess.getTypedFigure ().getQualifiedClassName ());
+---
+>             v.setFigureQualifiedClassName (figureGenerator.fqnSwitch (figureAccess.getTypedFigure ()));
+178,178d173
+<             if (next instanceof Figure) {
+179,179c174,174
+<                 current = next;
+---
+>                 current = next;
+182a169,169
+>             if (next == null) {
+183,183c170,170
+<                 return null;
+---
+>                 return null;
+188a180,183
+>     private static String getCompilationUnitName (FigureDescriptor fd) {
+>         return CodeGenUtil.validJavaIdentifier (CodeGenUtil.capName (fd.getName ()));
+>     }
+> 
+189,189c184,184
+<     private static boolean isBareInstance (Figure figure) {
+---
+>     private static boolean isBareInstance (RealFigure figure) {
+193a189,189
+>         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getRealFigure_Name ());
+194,194d188
+<         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getIdentity_Name ());
+195,195c190,190
+<         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getFigure_Children ());
+---
+>         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getRealFigure_Children ());
+196,197d190
+<         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getFigureMarker_Parent ());
+<         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getFigureHandle_ReferencingElements ());
+199,199d191
+<             featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getCustomClass_BundleName ());

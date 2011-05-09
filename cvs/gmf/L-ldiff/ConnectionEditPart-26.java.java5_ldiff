@@ -1,0 +1,209 @@
+9,10d8
+< import java.util.Dictionary;
+< 
+13,14d10
+< import java.util.Hashtable;
+< 
+40a41,41
+> import org.eclipse.emf.transaction.RunnableWithResult;
+41,41d40
+< import org.eclipse.emf.ecore.ENamedElement;
+42,42c42,42
+< 
+---
+> 
+88a87,88
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+88a85,85
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+89,89c89,89
+< import org.eclipse.gmf.runtime.common.ui.services.action.filter.ActionFilterService;
+---
+> import org.eclipse.gmf.runtime.common.ui.services.action.filter.ActionFilterService;
+90a111,112
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+> 
+91,91c113,113
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+91a114,116
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+> 
+153,158d156
+< import org.eclipse.gmf.runtime.emf.core.EventTypes;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+< 
+< import org.eclipse.gmf.runtime.emf.core.util.MetaModelUtil;
+< 
+159,159c157,157
+< import org.eclipse.gmf.runtime.emf.core.util.ProxyUtil;
+---
+> import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+210a209,209
+>     private TransactionalEditingDomain editingDomain;
+225,225c224,224
+<         EObject semanticElement = ProxyUtil.resolve (MEditingDomainGetter.getMEditingDomain ((View) getModel ()), semanticProxy);
+---
+>         EObject semanticElement = EMFCoreUtil.resolve (getEditingDomain (), semanticProxy);
+241,241c240,240
+<         DiagramEventBroker.getInstance ().addNotificationListener (element, listener);
+---
+>         getDiagramEventBroker ().addNotificationListener (element, listener);
+252,252c251,251
+<         DiagramEventBroker.getInstance ().addNotificationListener (element, feature, listener);
+---
+>         getDiagramEventBroker ().addNotificationListener (element, feature, listener);
+288,288c287,287
+<                     DiagramEventBroker.getInstance ().removeNotificationListener ((EObject) obj [0], (EStructuralFeature) obj [1], (NotificationListener) obj [2]);
+---
+>                     getDiagramEventBroker ().removeNotificationListener ((EObject) obj [0], (EStructuralFeature) obj [1], (NotificationListener) obj [2]);
+290,290c289,289
+<                     DiagramEventBroker.getInstance ().removeNotificationListener ((EObject) obj [0], (NotificationListener) obj [1]);
+---
+>                     getDiagramEventBroker ().removeNotificationListener ((EObject) obj [0], (NotificationListener) obj [1]);
+427a427,427
+>         try {
+428,428c428,428
+<         Command cmd = (Command) MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+---
+>             Command cmd = (Command) TransactionUtil.getEditingDomain ((View) getModel ()).runExclusive (new RunnableWithResult.Impl () {
+429a430,430
+>                 public void run () {
+430,430d429
+<             public Object run () {
+431,431c431,431
+<                 return ConnectionEditPart.super.getCommand (request);
+---
+>                     setResult (ConnectionEditPart.super.getCommand (request));
+437a438,442
+>         } catch (InterruptedException e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "getCommand", e);
+>             Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "getCommand", e);
+>             return null;
+>         }
+471a477,477
+>         try {
+472,472c478,478
+<         return (EObject) MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+---
+>             return (EObject) TransactionUtil.getEditingDomain ((View) getModel ()).runExclusive (new RunnableWithResult.Impl () {
+473a480,480
+>                 public void run () {
+474,474d479
+<             public Object run () {
+475,475c481,481
+<                 return ViewUtil.resolveSemanticElement ((View) getModel ());
+---
+>                     setResult (ViewUtil.resolveSemanticElement ((View) getModel ()));
+480a487,491
+>         } catch (InterruptedException e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "resolveSemanticElement", e);
+>             Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "resolveSemanticElement", e);
+>             return null;
+>         }
+564,564c575,575
+<             DiagramEventBroker.getInstance ().removeNotificationListener ((EObject) objects [0], (EStructuralFeature) objects [1], (NotificationListener) objects [2]);
+---
+>             DiagramEventBroker.getInstance (getEditingDomain ()).removeNotificationListener ((EObject) objects [0], (EStructuralFeature) objects [1], (NotificationListener) objects [2]);
+566,566c577,577
+<             DiagramEventBroker.getInstance ().removeNotificationListener ((EObject) objects [0], (NotificationListener) objects [1]);
+---
+>             getDiagramEventBroker ().removeNotificationListener ((EObject) objects [0], (NotificationListener) objects [1]);
+613,618d623
+<     public Map getAppearancePropertiesMap () {
+<         Map properties = new HashMap ();
+<         fillAppearancePropertiesMap (properties);
+<         return properties;
+<     }
+< 
+632a638,639
+>         if (getSource () != null && getTarget () != null) {
+>             try {
+633,633c640,640
+<         if (getSource () != null && getTarget () != null) MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+---
+>                 TransactionUtil.getEditingDomain ((View) getModel ()).runExclusive (new Runnable () {
+635,635c642,642
+<             public Object run () {
+---
+>                     public void run () {
+644,644d650
+<                 return null;
+649a656,660
+>             } catch (InterruptedException e) {
+>                 Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "refresh", e);
+>                 Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "refresh", e);
+>             }
+>         }
+650,650d655
+< 
+799,818d808
+<     public void fillAppearancePropertiesMap (Map properties) {
+<         if (getAppearancePropertyIDs ().length > 0) {
+<             final Dictionary local_properties = new Hashtable ();
+<             for (int i = 0;
+<             i < getAppearancePropertyIDs ().length; i ++) {
+<                 String prob = getAppearancePropertyIDs () [i];
+<                 ENamedElement element = MetaModelUtil.getElement (prob);
+<                 if (element instanceof EStructuralFeature && ViewUtil.isPropertySupported ((View) getModel (), prob)) {
+<                     local_properties.put (getAppearancePropertyIDs () [i], getStructuralFeatureValue ((EStructuralFeature) element));
+<                 }
+<             }
+<             properties.put (((View) getModel ()).getType (), local_properties);
+<         }
+<         Iterator iterator = getChildren ().iterator ();
+<         while (iterator.hasNext ()) {
+<             IGraphicalEditPart child = (IGraphicalEditPart) iterator.next ();
+<             child.fillAppearancePropertiesMap (properties);
+<         }
+<     }
+< 
+841a832,833
+>         try {
+>             EditPart primaryChildEditPart = (EditPart) getEditingDomain ().runExclusive (new RunnableWithResult.Impl () {
+842,842d831
+<         EditPart primaryChildEditPart = (EditPart) MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+843a835,835
+>                 public void run () {
+844,844d834
+<             public Object run () {
+845,845c836,836
+<                 return getPrimaryChildEditPart ();
+---
+>                     setResult (getPrimaryChildEditPart ());
+853a845,848
+>         } catch (InterruptedException e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "performDirectEditRequest", e);
+>             Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "performDirectEditRequest", e);
+>         }
+866,866c861,861
+<         elementGuid = ProxyUtil.getProxyID (ref);
+---
+>         elementGuid = EMFCoreUtil.getProxyID (ref);
+972,972d966
+<         else if (event.getEventType () == EventTypes.UNRESOLVE && event.getNotifier () == ((View) getModel ()).getElement ()) handleMajorSemanticChange ();
+985a980,980
+>         if (editingDomain == null) {
+985,985c979,979
+<     public TransactionalEditingDomain getEditingDomain () {
+---
+>     public final TransactionalEditingDomain getEditingDomain () {
+986,986c981,981
+<         return TransactionUtil.getEditingDomain (getDiagramView ());
+---
+>             editingDomain = TransactionUtil.getEditingDomain (getDiagramView ());
+986a982,991
+>         }
+>         return editingDomain;
+>     }
+> 
+>     private DiagramEventBroker getDiagramEventBroker () {
+>         TransactionalEditingDomain theEditingDomain = getEditingDomain ();
+>         if (theEditingDomain != null) {
+>             return DiagramEventBroker.getInstance (theEditingDomain);
+>         }
+>         return null;

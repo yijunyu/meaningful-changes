@@ -1,0 +1,323 @@
+1a2,2
+>  * Copyright (c) 2008 Borland Software Corporation
+2,3d1
+<  * <copyright>
+<  * </copyright>
+4a4,7
+>  * All rights reserved. This program and the accompanying materials
+>  * are made available under the terms of the Eclipse Public License v1.0
+>  * which accompanies this distribution, and is available at
+>  * http://www.eclipse.org/legal/epl-v10.html
+5,23d3
+<  * $Id: SVGFigure.java,v 1.4 2008/08/08 13:10:05 dstadnik Exp $
+<  */
+< package org.eclipse.gmf.gmfgraph;
+< 
+< import org.eclipse.emf.common.util.EList;
+< 
+< /**
+<  * <!-- begin-user-doc -->
+<  * A representation of the model object '<em><b>SVG Figure</b></em>'.
+<  * <!-- end-user-doc -->
+<  *
+<  * <p>
+<  * The following features are supported:
+<  * <ul>
+<  *   <li>{@link org.eclipse.gmf.gmfgraph.SVGFigure#getDocumentURI <em>Document URI</em>}</li>
+<  *   <li>{@link org.eclipse.gmf.gmfgraph.SVGFigure#getProperties <em>Properties</em>}</li>
+<  *   <li>{@link org.eclipse.gmf.gmfgraph.SVGFigure#getAreaOfInterest <em>Area Of Interest</em>}</li>
+<  * </ul>
+<  * </p>
+24a9,10
+>  * Contributors:
+>  *    Dmitry Stadnik - initial API and implementation
+25,94d8
+<  * @see org.eclipse.gmf.gmfgraph.GMFGraphPackage#getSVGFigure()
+<  * @model
+<  * @generated
+<  */
+< public interface SVGFigure extends RealFigure {
+< 	/**
+< 	 * Returns the value of the '<em><b>Document URI</b></em>' attribute.
+< 	 * <!-- begin-user-doc -->
+< 	 * <p>
+< 	 * If the meaning of the '<em>Document URI</em>' attribute isn't clear,
+< 	 * there really should be more of a description here...
+< 	 * </p>
+< 	 * <!-- end-user-doc -->
+< 	 * @return the value of the '<em>Document URI</em>' attribute.
+< 	 * @see #setDocumentURI(String)
+< 	 * @see org.eclipse.gmf.gmfgraph.GMFGraphPackage#getSVGFigure_DocumentURI()
+< 	 * @model
+< 	 * @generated
+< 	 */
+< 	String getDocumentURI();
+< 
+< 	/**
+< 	 * Sets the value of the '{@link org.eclipse.gmf.gmfgraph.SVGFigure#getDocumentURI <em>Document URI</em>}' attribute.
+< 	 * <!-- begin-user-doc -->
+< 	 * <!-- end-user-doc -->
+< 	 * @param value the new value of the '<em>Document URI</em>' attribute.
+< 	 * @see #getDocumentURI()
+< 	 * @generated
+< 	 */
+< 	void setDocumentURI(String value);
+< 
+< 	/**
+< 	 * Returns the value of the '<em><b>Properties</b></em>' containment reference list.
+< 	 * The list contents are of type {@link org.eclipse.gmf.gmfgraph.SVGProperty}.
+< 	 * <!-- begin-user-doc -->
+< 	 * <p>
+< 	 * If the meaning of the '<em>Properties</em>' containment reference list isn't clear,
+< 	 * there really should be more of a description here...
+< 	 * </p>
+< 	 * <!-- end-user-doc -->
+< 	 * @return the value of the '<em>Properties</em>' containment reference list.
+< 	 * @see org.eclipse.gmf.gmfgraph.GMFGraphPackage#getSVGFigure_Properties()
+< 	 * @model containment="true"
+< 	 * @generated
+< 	 */
+< 	EList<SVGProperty> getProperties();
+< 
+< 	/**
+< 	 * Returns the value of the '<em><b>Area Of Interest</b></em>' containment reference.
+< 	 * <!-- begin-user-doc -->
+< 	 * <p>
+< 	 * If the meaning of the '<em>Area Of Interest</em>' containment reference isn't clear,
+< 	 * there really should be more of a description here...
+< 	 * </p>
+< 	 * <!-- end-user-doc -->
+< 	 * @return the value of the '<em>Area Of Interest</em>' containment reference.
+< 	 * @see #setAreaOfInterest(Rectangle2D)
+< 	 * @see org.eclipse.gmf.gmfgraph.GMFGraphPackage#getSVGFigure_AreaOfInterest()
+< 	 * @model containment="true"
+< 	 * @generated
+< 	 */
+< 	Rectangle2D getAreaOfInterest();
+< 
+< 	/**
+< 	 * Sets the value of the '{@link org.eclipse.gmf.gmfgraph.SVGFigure#getAreaOfInterest <em>Area Of Interest</em>}' containment reference.
+< 	 * <!-- begin-user-doc -->
+< 	 * <!-- end-user-doc -->
+< 	 * @param value the new value of the '<em>Area Of Interest</em>' containment reference.
+< 	 * @see #getAreaOfInterest()
+< 	 * @generated
+95a12,12
+> package org.eclipse.gmf.runtime.lite.svg;
+96,96d11
+< 	void setAreaOfInterest(Rectangle2D value);
+97a14,225
+> import java.awt.Graphics2D;
+> import java.awt.geom.Rectangle2D;
+> import java.awt.image.BufferedImage;
+> import java.io.IOException;
+> 
+> import javax.xml.xpath.XPath;
+> import javax.xml.xpath.XPathConstants;
+> import javax.xml.xpath.XPathExpressionException;
+> import javax.xml.xpath.XPathFactory;
+> 
+> import org.apache.batik.dom.svg.SAXSVGDocumentFactory;
+> import org.apache.batik.transcoder.Transcoder;
+> import org.apache.batik.transcoder.TranscoderException;
+> import org.apache.batik.transcoder.TranscoderInput;
+> import org.apache.batik.transcoder.TranscoderOutput;
+> import org.apache.batik.transcoder.image.ImageTranscoder;
+> import org.apache.batik.util.XMLResourceDescriptor;
+> import org.eclipse.core.runtime.IStatus;
+> import org.eclipse.draw2d.Figure;
+> import org.eclipse.draw2d.Graphics;
+> import org.eclipse.draw2d.geometry.Rectangle;
+> import org.eclipse.gmf.internal.runtime.lite.svg.Activator;
+> import org.eclipse.gmf.internal.runtime.lite.svg.ImageTranscoderEx;
+> import org.eclipse.gmf.internal.runtime.lite.svg.InferringNamespaceContext;
+> import org.eclipse.gmf.internal.runtime.lite.svg.SVGGraphics2D;
+> import org.eclipse.swt.graphics.Image;
+> import org.eclipse.swt.widgets.Display;
+> import org.w3c.dom.Document;
+> import org.w3c.dom.NodeList;
+> 
+> public class SVGFigure extends Figure {
+> 
+> 	private String uri;
+> 	private Document document;
+> 	private boolean failedToLoadDocument;
+> 	private boolean safeRendering;
+> 	private boolean directRenderingSucceeded;
+> 	private Rectangle2D aoi;
+> 
+> 	public final String getURI() {
+> 		return uri;
+> 	}
+> 
+> 	public final void setURI(String uri) {
+> 		setURI(uri, true);
+> 	}
+> 
+> 	public void setURI(String uri, boolean loadOnDemand) {
+> 		this.uri = uri;
+> 		document = null;
+> 		failedToLoadDocument = false;
+> 		if (loadOnDemand) {
+> 			loadDocument();
+> 		}
+> 	}
+> 
+> 	private void loadDocument() {
+> 		failedToLoadDocument = true;
+> 		if (uri == null) {
+> 			return;
+> 		}
+> 		String parser = XMLResourceDescriptor.getXMLParserClassName();
+> 		SAXSVGDocumentFactory factory = new SAXSVGDocumentFactory(parser);
+> 		try {
+> 			document = factory.createDocument(uri);
+> 			failedToLoadDocument = false;
+> 		} catch (IOException e) {
+> 			Activator.logError("Error loading SVG file", e);
+> 		}
+> 	}
+> 
+> 	protected final Document getDocument() {
+> 		if (failedToLoadDocument) {
+> 			return null;
+> 		}
+> 		if (document == null) {
+> 			loadDocument();
+> 		}
+> 		return document;
+> 	}
+> 
+> 	/**
+> 	 * Returns true if document was loaded without errors; tries to load document if needed.
+> 	 */
+> 	public final boolean checkContentAvailable() {
+> 		return getDocument() != null;
+> 	}
+> 
+> 	private XPath getXPath() {
+> 		XPath xpath = XPathFactory.newInstance().newXPath();
+> 		xpath.setNamespaceContext(new InferringNamespaceContext(getDocument().getDocumentElement()));
+> 		return xpath;
+> 	}
+> 
+> 	/**
+> 	 * Executes XPath query over the SVG document.
+> 	 */
+> 	protected final NodeList getNodes(String query) {
+> 		Document document = getDocument();
+> 		if (document != null) {
+> 			try {
+> 				return (NodeList) getXPath().evaluate(query, document, XPathConstants.NODESET);
+> 			} catch (XPathExpressionException e) {
+> 				throw new RuntimeException(e);
+> 			}
+> 		}
+> 		return null;
+> 	}
+> 
+> 	private void renderDocument(Transcoder transcoder, Document document) {
+> 		try {
+> 			Rectangle r = getClientArea();
+> 			transcoder.addTranscodingHint(ImageTranscoder.KEY_WIDTH, new Float(r.width));
+> 			transcoder.addTranscodingHint(ImageTranscoder.KEY_HEIGHT, new Float(r.height));
+> 			if (aoi != null) {
+> 				transcoder.addTranscodingHint(ImageTranscoder.KEY_AOI, aoi);
+> 			}
+> 			transcoder.transcode(new TranscoderInput(document), new TranscoderOutput());
+> 		} catch (TranscoderException e) {
+> 			Activator.logError("Error rendering SVG image", e);
+> 		}
+> 	}
+> 
+> 	@Override
+> 	protected void paintFigure(Graphics graphics) {
+> 		super.paintFigure(graphics);
+> 		Document document = getDocument();
+> 		if (document == null) {
+> 			return;
+> 		}
+> 		directRenderingSucceeded = false;
+> 		if (safeRendering) {
+> 			paintUsingAWT(graphics, document);
+> 		} else {
+> 			// Try to paint directly on provided graphics with fallback to
+> 			// safe routine.
+> 			try {
+> 				graphics.pushState();
+> 				paintDirectly(graphics, document);
+> 				directRenderingSucceeded = true;
+> 			} catch (RuntimeException e) {
+> 				Activator.log(IStatus.INFO, "Failed to paint SVG image directly", e);
+> 				graphics.restoreState();
+> 				paintUsingAWT(graphics, document);
+> 			} finally {
+> 				graphics.popState();
+> 			}
+> 		}
+> 	}
+> 
+> 	private void paintDirectly(final Graphics graphics, Document document) {
+> 		ImageTranscoderEx transcoder = new ImageTranscoderEx() {
+> 
+> 			@Override
+> 			protected Graphics2D createGraphics(int w, int h) {
+> 				return new SVGGraphics2D(graphics);
+> 			}
+> 		};
+> 		renderDocument(transcoder, document);
+> 	}
+> 
+> 	private void paintUsingAWT(Graphics graphics, Document document) {
+> 		Image image = null;
+> 		try {
+> 			// SimpleImageTranscoder transcoder = new SimpleImageTranscoder();
+> 			ImageTranscoderEx transcoder = new ImageTranscoderEx();
+> 			renderDocument(transcoder, document);
+> 			BufferedImage awtImage = transcoder.getBufferedImage();
+> 			if (awtImage != null) {
+> 				image = SVGGraphics2D.toSWT(Display.getCurrent(), awtImage);
+> 				Rectangle r = getClientArea();
+> 				graphics.drawImage(image, r.x, r.y);
+> 			}
+> 		} finally {
+> 			if (image != null) {
+> 				image.dispose();
+> 			}
+> 		}
+> 	}
+> 
+> 	public final boolean isDirectRenderingSucceeded() {
+> 		return directRenderingSucceeded;
+> 	}
+> 
+> 	public final boolean isSafeRendering() {
+> 		return safeRendering;
+> 	}
+> 
+> 	public void setSafeRendering(boolean safeRendering) {
+> 		this.safeRendering = safeRendering;
+> 		repaint();
+> 	}
+> 
+> 	public final Rectangle2D getAreaOfInterest() {
+> 		if (aoi == null) {
+> 			return null;
+> 		}
+> 		Rectangle2D result = new Rectangle2D.Double();
+> 		result.setRect(aoi);
+> 		return result;
+> 	}
+> 
+> 	public void setAreaOfInterest(Rectangle2D value) {
+> 		if (value == null) {
+> 			aoi = null;
+> 			return;
+> 		}
+> 		aoi = new Rectangle2D.Double();
+> 		aoi.setRect(value);
+> 		repaint();
+> 	}
+> }
+98,98d13
+< } // SVGFigure

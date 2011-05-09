@@ -1,0 +1,82 @@
+15a16,16
+> import org.eclipse.core.commands.ExecutionException;
+17a19,20
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+18,18d18
+< 
+19a22,23
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+21a26,28
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypeDebugOptions;
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePlugin;
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePluginStatusCodes;
+44a52,52
+>  * extension point.
+44,44c51,51
+<  * the <code>org.eclipse.gmf.runtime.emf.type.core.elementTypes</code> extension point.
+---
+>  * the <code>org.eclipse.gmf.runtime.emf.type.core.elementTypes</code>
+48,48c56,56
+< public class AbstractEditHelperAdvice
+---
+> public class AbstractEditHelperAdvice implements IEditHelperAdvice {
+49,49d56
+< 	implements IEditHelperAdvice {
+262a270,270
+> 			DuplicateElementsRequest request) {
+262,262c269,269
+< 	protected ICommand getBeforeDuplicateCommand(DuplicateElementsRequest request) {
+---
+> 	protected ICommand getBeforeDuplicateCommand(
+278,278c286,286
+< 	 * Gets my 'before' advice for getting the edit context for
+---
+> 	 * Gets my 'before' advice for getting the edit context for an edit request.
+279,279d286
+< 	 * an edit request.
+420a428,428
+> 	 * @param requestParameters
+421,421c429,429
+< 	 * @param requestParameters parameters to be set in the creation request
+---
+> 	 *            parameters to be set in the creation request
+425,425c433,433
+< 	protected EObject createType(EObject container, IElementType typeToCreate, Map requestParameters,
+---
+> 	protected EObject createType(EObject container, IElementType typeToCreate,
+426,426c434,434
+< 			IProgressMonitor progressMonitor) {
+---
+>             Map requestParameters, IProgressMonitor progressMonitor) {
+431a440,442
+>         TransactionalEditingDomain editingDomain = TransactionUtil
+>             .getEditingDomain(container);
+> 
+432,432c443,443
+< 		CreateElementRequest request = new CreateElementRequest(container,
+---
+> 		CreateElementRequest request = new CreateElementRequest(editingDomain,
+433,433c444,444
+< 			typeToCreate);
+---
+> 				container, typeToCreate);
+444a456,469
+> 		if (createTypeCommand != null && createTypeCommand.canExecute()) {
+>             
+>             try {
+>                 createTypeCommand.execute(progressMonitor, null);
+>                 
+>             } catch (ExecutionException e) {
+>                 Trace.catching(EMFTypePlugin.getPlugin(),
+>                     EMFTypeDebugOptions.EXCEPTIONS_CATCHING,
+>                     AbstractEditHelperAdvice.class, "createType", e); //$NON-NLS-1$
+>                 Log.error(EMFTypePlugin.getPlugin(),
+>                     EMFTypePluginStatusCodes.COMMAND_FAILURE, e
+>                         .getMessage(), e);
+>                 return null;
+>             }
+445,446d455
+< 		if (createTypeCommand != null && createTypeCommand.isExecutable()) {
+< 			createTypeCommand.execute(progressMonitor);

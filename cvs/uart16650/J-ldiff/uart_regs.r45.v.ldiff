@@ -1,0 +1,121 @@
+64a65,67
+> // Revision 1.23  2001/11/12 21:57:29  gorban
+> // fixed more typo bugs
+> //
+246,246d248
+< wire [7:0] 								counter_b;
+254,254c256,256
+< 	counter_t, counter_b, rf_count, rf_data_out, rf_error_bit, rf_overrun, rx_reset, lsr_mask);
+---
+> 	counter_t, rf_count, rf_data_out, rf_error_bit, rf_overrun, rx_reset, lsr_mask);
+269,269c271,271
+< 			wb_dat_o <= #1 rf_data_out[9:2];
+---
+> 			wb_dat_o <= #1 rf_data_out[10:3];
+298,298c300,300
+< wire	thre_write;
+---
+> wire	fifo_write;
+304,304c306,306
+< assign thre_write = (wb_we_i && wb_addr_i == `UART_REG_TR && !dlab);
+---
+> assign fifo_write = (wb_we_i && wb_addr_i == `UART_REG_TR && !dlab);
+453,453c455,455
+< assign lsr0 = (rf_count!=4'b0);  // data in receiver fifo available
+---
+> assign lsr0 = (rf_count==0 && fifo_write);  // data in receiver fifo available set condition
+456a459,459
+> assign lsr4 = rf_data_out[2]; // break error in the character
+457,457d458
+< assign lsr4 = (counter_b==8'b0); // break counter reached 0
+462a465,470
+> reg 	 lsr0_d;
+> 
+> always @(posedge clk or posedge wb_rst_i)
+> 	if (wb_rst_i) lsr0_d <= #1 0;
+> 	else lsr0_d <= #1 lsr0;
+> 
+464a473,474
+> 	else lsr0r <= #1 (rf_count==1 && fifo_read) ? 0 : // deassert condition
+> 					  lsr0r || (lsr0 && ~lsr0_d); // set on rise of lsr0 and keep asserted until deasserted 
+465,465d472
+< 	else lsr0r <= #1 lsr0;
+476,476c485,485
+< 	else	lsr1r <= #1	lsr_mask ? 0 : lsr1 && ~lsr1_d; // set on rise
+---
+> 	else	lsr1r <= #1	lsr_mask ? 0 : lsr1r || (lsr1 && ~lsr1_d); // set on rise
+487,487c496,496
+< 	else lsr2r <= #1 lsr_mask ? 0 : lsr2 && ~lsr2_d; // set on rise
+---
+> 	else lsr2r <= #1 lsr_mask ? 0 : lsr2r || (lsr2 && ~lsr2_d); // set on rise
+498,498c507,507
+< 	else lsr3r <= #1 lsr_mask ? 0 : lsr3 && ~lsr3_d; // set on rise
+---
+> 	else lsr3r <= #1 lsr_mask ? 0 : lsr3r || (lsr3 && ~lsr3_d); // set on rise
+509,509c518,518
+< 	else lsr4r <= #1 lsr_mask ? 0 : lsr4 && ~lsr4_d;
+---
+> 	else lsr4r <= #1 lsr_mask ? 0 : lsr4r || (lsr4 && ~lsr4_d);
+517,517c526,526
+< 	if (wb_rst_i) lsr5_d <= #1 0;
+---
+> 	if (wb_rst_i) lsr5_d <= #1 1;
+521,521c530,530
+< 	if (wb_rst_i) lsr5r <= #1 0;
+---
+> 	if (wb_rst_i) lsr5r <= #1 1;
+522,522c531,531
+< 	else lsr5r <= #1 (lsr_mask || iir_read || tx_fifo_write) ? 0 :  lsr5 && ~lsr5_d;
+---
+> 	else lsr5r <= #1 (lsr_mask || iir_read || tx_fifo_write) ? 0 :  lsr5r || (lsr5 && ~lsr5_d);
+528,528c537,537
+< 	if (wb_rst_i) lsr6_d <= #1 0;
+---
+> 	if (wb_rst_i) lsr6_d <= #1 1;
+532,532c541,541
+< 	if (wb_rst_i) lsr6r <= #1 0;
+---
+> 	if (wb_rst_i) lsr6r <= #1 1;
+533,533c542,542
+< 	else lsr6r <= #1 (lsr_mask || tx_fifo_write) ? 0 : lsr6 && ~lsr6_d;
+---
+> 	else lsr6r <= #1 (lsr_mask || tx_fifo_write) ? 0 : lsr6r || (lsr6 && ~lsr6_d);
+544,544c553,553
+< 	else lsr7r <= #1 lsr_mask ? 0 : lsr7 && ~lsr7_d;
+---
+> 	else lsr7r <= #1 lsr_mask ? 0 : lsr7r || (lsr7 && ~lsr7_d);
+576,576d584
+< //assign thre_int = threi_clear ? 0 : ier[`UART_IE_THRE] && lsr[`UART_LS_TFE];
+584a593,593
+> reg 	 rda_int_d;
+591a601,604
+> 	if (wb_rst_i) rda_int_d <= #1 0;
+> 	else rda_int_d <= #1 rda_int;
+> 
+> always  @(posedge clk or posedge wb_rst_i)
+608a622,622
+> wire 	 rda_int_rise;
+609a624,624
+> assign rda_int_rise    = rda_int & ~rda_int_d;
+616a632,632
+> reg	rda_int_pnd;
+629a646,652
+> 	if (wb_rst_i) rda_int_pnd <= #1 0; 
+> 	else 
+> 		rda_int_pnd <= #1 ((rf_count == {1'b0,trigger_level}) && fifo_read) ? 0 :  	// reset condition
+> 							rda_int_rise ? 1 :						// latch condition
+> 							rda_int_pnd && ier[`UART_IE_RDA];	// default operation: remove if masked
+> 
+> always  @(posedge clk or posedge wb_rst_i)
+632,632c655,655
+< 		thre_int_pnd <= #1 thre_write || iir_read ? 0 : 
+---
+> 		thre_int_pnd <= #1 fifo_write || iir_read ? 0 : 
+659,659c682,682
+< 					rda_int			? 1								:
+---
+> 					rda_int_pnd		? 1								:
+661,661c684,684
+< 					thre_int_pnd	? !(thre_write & iir_read) :
+---
+> 					thre_int_pnd	? !(fifo_write & iir_read) :

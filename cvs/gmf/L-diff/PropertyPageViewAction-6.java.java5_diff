@@ -1,0 +1,80 @@
+18a19,42
+> import org.eclipse.emf.ecore.EObject;
+> 
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+> import org.eclipse.gmf.runtime.common.ui.dialogs.PropertiesDialog;
+> 
+> import org.eclipse.gmf.runtime.common.ui.services.properties.extended.PropertyPagePropertyDescriptor;
+> 
+> import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesDebugOptions;
+> 
+> import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesPlugin;
+> 
+> import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesStatusCodes;
+> 
+> import org.eclipse.gmf.runtime.emf.ui.properties.internal.l10n.EMFUIPropertiesMessages;
+> 
+29,30d52
+< import org.eclipse.jface.resource.ImageDescriptor;
+< 
+45,62d66
+< import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+< 
+< import org.eclipse.gmf.runtime.common.core.util.Trace;
+< 
+< import org.eclipse.gmf.runtime.common.ui.dialogs.PropertiesDialog;
+< 
+< import org.eclipse.gmf.runtime.common.ui.services.properties.extended.PropertyPagePropertyDescriptor;
+< 
+< import org.eclipse.gmf.runtime.emf.core.exceptions.MSLActionAbandonedException;
+< 
+< import org.eclipse.gmf.runtime.emf.core.util.OperationUtil;
+< 
+< import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesDebugOptions;
+< 
+< import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesPlugin;
+< 
+< import org.eclipse.gmf.runtime.emf.ui.properties.internal.l10n.EMFUIPropertiesMessages;
+< 
+77a82,83
+>                 TransactionalEditingDomain domain = getEditingDomain ((IStructuredSelection) selection);
+>                 if (domain != null) {
+79c85
+<                     OperationUtil.runAsRead (new Runnable () {
+---
+>                         domain.runExclusive (new Runnable () {
+112,113c118,121
+<                 } catch (MSLActionAbandonedException e) {
+<                     e.printStackTrace ();
+---
+>                     } catch (InterruptedException e) {
+>                         Trace.catching (EMFPropertiesPlugin.getDefault (), EMFPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", e);
+>                         Log.error (EMFPropertiesPlugin.getDefault (), EMFPropertiesStatusCodes.ACTION_FAILURE, e.getLocalizedMessage (), e);
+>                     }
+173a182,198
+>     private TransactionalEditingDomain getEditingDomain (IStructuredSelection s) {
+>         TransactionalEditingDomain result = null;
+>         for (Iterator i = s.iterator ();
+>         i.hasNext ();) {
+>             Object next = i.next ();
+>             result = TransactionUtil.getEditingDomain (next);
+>             if (result == null && next instanceof IAdaptable) {
+>                 EObject eObject = (EObject) ((IAdaptable) next).getAdapter (EObject.class);
+>                 result = TransactionUtil.getEditingDomain (eObject);
+>             }
+>             if (result != null) {
+>                 return result;
+>             }
+>         }
+>         return null;
+>     }
+> 

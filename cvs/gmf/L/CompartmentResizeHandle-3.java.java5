@@ -1,0 +1,80 @@
+package org.eclipse.gmf.runtime.diagram.ui.internal.handles;
+
+import java.util.Collections;
+
+import java.util.List;
+
+import org.eclipse.draw2d.Cursors;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.PositionConstants;
+
+import org.eclipse.draw2d.RelativeLocator;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gef.DragTracker;
+
+import org.eclipse.gef.handles.AbstractHandle;
+
+import org.eclipse.gef.tools.ResizeTracker;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.figures.GatedPaneFigure;
+
+import org.eclipse.gmf.runtime.diagram.ui.figures.ResizableCompartmentFigure;
+
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapMode;
+
+public class CompartmentResizeHandle extends AbstractHandle {
+    private int location = PositionConstants.NORTH;
+
+    public CompartmentResizeHandle (IGraphicalEditPart owner, int location) {
+        setOwner (owner);
+        this.location = location;
+        setLocator (new RelativeLocator (owner.getFigure (), location));
+        setCursor (Cursors.getDirectionalCursor (location));
+    }
+
+    protected DragTracker createDragTracker () {
+        return new ResizeTracker (getOwner (), location) {
+
+            protected List createOperationSet () {
+                return Collections.singletonList (getOwner ());
+            }
+
+        }
+
+        ;
+    }
+
+    public Dimension getPreferredSize (int wHint, int hHint) {
+        Rectangle rect = getOwnerFigure ().getBounds ().getCopy ();
+        MapMode.translateToDP (rect);
+        if ((location & PositionConstants.NORTH_SOUTH) != 0) return new Dimension (rect.width, 3);
+        else return new Dimension (3, rect.height);
+
+    }
+
+    protected IFigure getCompartmentFigure () {
+        if (getOwner ().getFigure () instanceof GatedPaneFigure) {
+            return ((GatedPaneFigure) getOwner ().getFigure ()).getElementPane ();
+        }
+        return getOwner ().getFigure ();
+    }
+
+    public boolean containsPoint (int x, int y) {
+        if (super.containsPoint (x, y)) {
+            ResizableCompartmentFigure f = (ResizableCompartmentFigure) getCompartmentFigure ();
+            boolean before = (location & PositionConstants.NORTH_WEST) != 0;
+            return f.getAdjacentSibling (before) != null;
+        }
+        return false;
+    }
+
+}
+

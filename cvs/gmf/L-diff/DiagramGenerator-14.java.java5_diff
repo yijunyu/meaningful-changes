@@ -1,0 +1,126 @@
+8a9,10
+> import java.util.HashSet;
+> 
+10a13,14
+> import java.util.LinkedList;
+> 
+16a21,22
+> import java.util.Stack;
+> 
+33c39
+< import org.eclipse.gef.EditPartViewer;
+---
+> import org.eclipse.gef.EditPart;
+39,40d44
+< import org.eclipse.gef.editparts.AbstractEditPart;
+< 
+45,46d48
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.ConnectionNodeEditPart;
+< 
+77,78d78
+< import org.eclipse.gmf.runtime.notation.Edge;
+< 
+135c135
+<         ArrayList connectionsToPaint = new ArrayList ();
+---
+>         List < GraphicalEditPart > connectionsToPaint = new LinkedList < GraphicalEditPart > ();
+137,140c137,140
+<         for (int i = 0;
+<         i < editparts.size (); i ++) {
+<             IGraphicalEditPart editPart = (IGraphicalEditPart) sortedEditparts.get (i);
+<             if (editPart instanceof ConnectionNodeEditPart) {
+---
+>         for (Iterator editPartsItr = editparts.listIterator ();
+>         editPartsItr.hasNext ();) {
+>             IGraphicalEditPart editPart = (IGraphicalEditPart) editPartsItr.next ();
+>             if (editPart instanceof ConnectionEditPart) {
+143,145c143
+<                 List editParts = new ArrayList ();
+<                 getNestedEditParts (editPart, editParts);
+<                 findConnectionsToPaint (editParts, connectionsToPaint);
+---
+>                 connectionsToPaint.addAll (findConnectionsToPaint (editPart));
+152,155c150,152
+<         for (int i = 0;
+<         i < connectionsToPaint.size (); i ++) {
+<             IGraphicalEditPart editPart = (IGraphicalEditPart) connectionsToPaint.get (i);
+<             IFigure figure = editPart.getFigure ();
+---
+>         for (Iterator < GraphicalEditPart > connItr = connectionsToPaint.iterator ();
+>         connItr.hasNext ();) {
+>             IFigure figure = connItr.next ().getFigure ();
+160a158,196
+>     private Collection < ConnectionEditPart > findConnectionsToPaint (IGraphicalEditPart editPart) {
+>         HashSet < GraphicalEditPart > editParts = new HashSet < GraphicalEditPart > ();
+>         HashSet < ConnectionEditPart > connectionEPs = new HashSet < ConnectionEditPart > ();
+>         HashSet < ConnectionEditPart > connectionsToPaint = new HashSet < ConnectionEditPart > ();
+>         getNestedEditParts (editPart, editParts);
+>         for (Iterator < GraphicalEditPart > editPartsItr = editParts.iterator ();
+>         editPartsItr.hasNext ();) {
+>             connectionEPs.addAll (getAllConnectionsFrom (editPartsItr.next ()));
+>         }
+>         while (! connectionEPs.isEmpty ()) {
+>             Stack < ConnectionEditPart > connectionsPath = new Stack < ConnectionEditPart > ();
+>             ConnectionEditPart conn = connectionEPs.iterator ().next ();
+>             connectionEPs.remove (conn);
+>             connectionsPath.add (conn);
+>             EditPart target = conn.getTarget ();
+>             while (connectionEPs.contains (target)) {
+>                 ConnectionEditPart targetConn = (ConnectionEditPart) target;
+>                 connectionEPs.remove (targetConn);
+>                 connectionsPath.add (targetConn);
+>                 target = targetConn.getTarget ();
+>             }
+>             if (editParts.contains (target) || connectionsToPaint.contains (target)) {
+>                 connectionsToPaint.addAll (connectionsPath);
+>             }
+>         }
+>         return connectionsToPaint;
+>     }
+> 
+>     private List < ConnectionEditPart > getAllConnectionsFrom (GraphicalEditPart ep) {
+>         LinkedList < ConnectionEditPart > connections = new LinkedList < ConnectionEditPart > ();
+>         for (Iterator itr = ep.getSourceConnections ().iterator ();
+>         itr.hasNext ();) {
+>             ConnectionEditPart sourceConn = (ConnectionEditPart) itr.next ();
+>             connections.add (sourceConn);
+>             connections.addAll (getAllConnectionsFrom (sourceConn));
+>         }
+>         return connections;
+>     }
+> 
+179c215
+<     private Map findDecorations (List editparts) {
+---
+>     private Map findDecorations (Collection editparts) {
+183c219
+<             IGraphicalEditPart first = (IGraphicalEditPart) editparts.get (0);
+---
+>             IGraphicalEditPart first = (IGraphicalEditPart) editparts.iterator ().next ();
+273c309
+<     private void getNestedEditParts (IGraphicalEditPart childEditPart, List editParts) {
+---
+>     private void getNestedEditParts (IGraphicalEditPart childEditPart, Collection editParts) {
+282,303d317
+<     private void findConnectionsToPaint (List editParts, List connectionsToPaint) {
+<         EditPartViewer viewer = getDiagramEditPart ().getRoot ().getViewer ();
+<         for (Iterator iter = editParts.iterator ();
+<         iter.hasNext ();) {
+<             IGraphicalEditPart element = (IGraphicalEditPart) iter.next ();
+<             View view = (View) element.getModel ();
+<             if (element instanceof ShapeEditPart) {
+<                 List sourceConnections = view.getSourceEdges ();
+<                 for (int i = 0;
+<                 i < sourceConnections.size (); i ++) {
+<                     Edge edge = (Edge) sourceConnections.get (i);
+<                     View toView = (edge).getTarget ();
+<                     AbstractEditPart toEditPart = (AbstractEditPart) viewer.getEditPartRegistry ().get (toView);
+<                     if (editParts.contains (toEditPart)) {
+<                         ConnectionNodeEditPart connectionEditPart = (ConnectionNodeEditPart) viewer.getEditPartRegistry ().get (edge);
+<                         connectionsToPaint.add (connectionEditPart);
+<                     }
+<                 }
+<             }
+<         }
+<     }
+< 

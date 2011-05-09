@@ -1,0 +1,263 @@
+package org.eclipse.gmf.internal.common.codegen;
+
+import java.util.ArrayList;
+
+import java.util.Arrays;
+
+import java.util.Collection;
+
+import java.util.HashSet;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Set;
+
+import org.eclipse.core.runtime.CoreException;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.Platform;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.gmf.internal.common.Activator;
+
+import org.eclipse.jdt.core.ICompilationUnit;
+
+import org.eclipse.jdt.core.IJavaProject;
+
+import org.eclipse.jdt.core.compiler.IProblem;
+
+import org.eclipse.jdt.core.dom.AST;
+
+import org.eclipse.jdt.core.dom.ASTParser;
+
+import org.eclipse.jdt.core.dom.CompilationUnit;
+
+import org.eclipse.jdt.core.dom.ImportDeclaration;
+
+import org.eclipse.jdt.core.dom.Name;
+
+import org.eclipse.jdt.core.dom.QualifiedName;
+
+import org.eclipse.jdt.core.dom.SimpleName;
+
+import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
+
+import org.eclipse.jdt.ui.PreferenceConstants;
+
+import org.eclipse.jface.text.BadLocationException;
+
+import org.eclipse.jface.text.Document;
+
+import org.eclipse.jface.text.IDocument;
+
+import org.eclipse.text.edits.MalformedTreeException;
+
+import org.eclipse.text.edits.MultiTextEdit;
+
+import org.eclipse.text.edits.ReplaceEdit;
+
+import org.eclipse.text.edits.TextEdit;
+
+public class OrganizeImportsPostprocessor {
+    private final boolean myRestoreExistingImports;
+
+    public OrganizeImportsPostprocessor () {
+        this (true);
+    }
+
+    public OrganizeImportsPostprocessor (boolean restoreExistingImports) {
+        myRestoreExistingImports = restoreExistingImports;
+    }
+
+    public void organizeImports (ICompilationUnit icu, IProgressMonitor progress) throws CoreException {
+        IDocument document = new Document (icu.getBuffer ().getContents ());
+        ASTParser parser = ASTParser.newParser (AST.JLS3);
+        parser.setSource (icu);
+        CompilationUnit cu = (CompilationUnit) parser.createAST (progress);
+        TextEdit importsEdit = organizeImports (cu, progress);
+        try {
+            importsEdit.apply (document);
+        } catch (BadLocationException e) {
+            throw new CoreException (new Status (IStatus.ERROR, Activator.getID (), 0, "Unable to apply imports text changes", e));
+        } catch (MalformedTreeException ex) {
+            throw new CoreException (new Status (IStatus.ERROR, Activator.getID (), 0, "Unable to apply imports text changes", ex));
+        }
+        icu.getBuffer ().setContents (document.get ());
+    }
+
+    public TextEdit organizeImports (CompilationUnit astRoot, IProgressMonitor progress) throws CoreException {
+        MultiTextEdit result = new MultiTextEdit ();
+        Set < String > oldSingleImports = new HashSet < String > ();
+        Set < String > oldDemandImports = new HashSet < String > ();
+        if (isDebug ()) {
+            collectExistingImports (astRoot, oldSingleImports, oldDemandImports);
+        }
+        if (! checkForNoSyntaxErrors (astRoot)) {
+            throw new CoreException (new Status (IStatus.ERROR, Activator.getID (), 0, "Imports are unable to be organized due to syntax errors in the compilation unit", null));
+        }
+        Collection < Name > qualifiedTypeReferences = new ArrayList < Name > ();
+        Collection < SimpleName > simpleTypeReferences = new ArrayList < SimpleName > ();
+        Collection < String > importsAdded = new ArrayList < String > ();
+        PackageReferencesCollector.collect (astRoot, qualifiedTypeReferences, simpleTypeReferences, importsAdded);
+        ImportRewrite importRewrite = createImportRewrite (astRoot);
+        ImportRewrite.ImportRewriteContext context = new ReferencedTypesAwareImportRewriteContext (simpleTypeReferences, importRewrite);
+        Iterator < Name > refIterator = qualifiedTypeReferences.iterator ();
+        while (refIterator.hasNext ()) {
+            Name typeRef = refIterator.next ();
+            if (typeRef.isQualifiedName ()) {
+                QualifiedName qualifiedName = (QualifiedName) typeRef;
+                SimpleName simpleName = qualifiedName.getName ();
+                boolean added = addImport (simpleName.getIdentifier (), qualifiedName.getFullyQualifiedName (), importRewrite, context, importsAdded);
+                if (added) {
+                    Name qualifier = qualifiedName.getQualifier ();
+                    int qualifierStart = qualifier.getStartPosition ();
+                    int simpleNameStart = simpleName.getStartPosition ();
+                    try {
+                        result.addChild (new ReplaceEdit (qualifierStart, simpleNameStart - qualifierStart, ""));
+                    } catch (MalformedTreeException e) {
+                        throw new CoreException (new Status (IStatus.ERROR, Activator.getID (), 0, "Unable to produce correct text changes for replacing full name: " + qualifiedName, e));
+                    }
+                }
+            } else {
+                SimpleName simpleName = (SimpleName) typeRef;
+                addImport (simpleName.getIdentifier (), simpleName.getFullyQualifiedName (), importRewrite, context, importsAdded);
+            }
+        }
+        TextEdit edit = importRewrite.rewriteImports (progress);
+        try {
+            result.addChild (edit);
+        } catch (MalformedTreeException e) {
+            throw new CoreException (new Status (IStatus.ERROR, Activator.getID (), 0, "Text changes conflict while organizing imports", e));
+        }
+        if (isDebug ()) {
+            determineImportDifferences (importRewrite, oldSingleImports, oldDemandImports);
+        }
+        return result;
+    }
+
+    private boolean addImport (String typeName, String fullName, ImportRewrite importRewrite, ImportRewrite.ImportRewriteContext context, Collection < String > importsAdded) {
+        boolean resultIsOk = importRewrite.addImport (fullName, context).equals (typeName);
+        if (resultIsOk && ! importsAdded.contains (fullName)) {
+            importsAdded.add (fullName);
+        }
+        return resultIsOk;
+    }
+
+    private void collectExistingImports (CompilationUnit astRoot, Set < String > oldSingleImports, Set < String > oldDemandImports) {
+        List imports = astRoot.imports ();
+        for (int i = 0;
+        i < imports.size (); i ++) {
+            ImportDeclaration curr = (ImportDeclaration) imports.get (i);
+            String id = curr.getName ().getFullyQualifiedName ();
+            if (curr.isOnDemand ()) {
+                oldDemandImports.add (id);
+            } else {
+                oldSingleImports.add (id);
+            }
+        }
+    }
+
+    private boolean checkForNoSyntaxErrors (CompilationUnit astRoot) {
+        IProblem [] problems = astRoot.getProblems ();
+        for (int i = 0;
+        i < problems.length; i ++) {
+            IProblem curr = problems [i];
+            if (curr.isError () && (curr.getID () & IProblem.Syntax) != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private class ReferencedTypesAwareImportRewriteContext extends ImportRewrite.ImportRewriteContext {
+        private Collection < SimpleName > mySimpleTypesReferenced;
+        private ImportRewrite myImportRewrite;
+
+        public ReferencedTypesAwareImportRewriteContext (Collection < SimpleName > simpleTypesReferenced, ImportRewrite importRewrite) {
+            mySimpleTypesReferenced = simpleTypesReferenced;
+            myImportRewrite = importRewrite;
+        }
+
+        public int findInContext (String qualifier, String name, int kind) {
+            int result = myImportRewrite.getDefaultImportRewriteContext ().findInContext (qualifier, name, kind);
+            if (result == RES_NAME_UNKNOWN) {
+                for (Iterator < SimpleName > it = mySimpleTypesReferenced.iterator ();
+                it.hasNext ();) {
+                    SimpleName next = it.next ();
+                    if (name.equals (next.getIdentifier ())) {
+                        return RES_NAME_CONFLICT;
+                    }
+                }
+            }
+            return result;
+        }
+
+    };
+
+    public ImportRewrite createImportRewrite (CompilationUnit astRoot) {
+        return configureImportRewrite (ImportRewrite.create (astRoot, myRestoreExistingImports));
+    }
+
+    private static ImportRewrite configureImportRewrite (ImportRewrite rewrite) {
+        IJavaProject project = rewrite.getCompilationUnit ().getJavaProject ();
+        String order = PreferenceConstants.getPreference (PreferenceConstants.ORGIMPORTS_IMPORTORDER, project);
+        rewrite.setImportOrder (order.split (";", 0));
+        String thres = PreferenceConstants.getPreference (PreferenceConstants.ORGIMPORTS_ONDEMANDTHRESHOLD, project);
+        try {
+            int num = Integer.parseInt (thres);
+            if (num == 0) {
+                num = 1;
+            }
+            rewrite.setOnDemandImportThreshold (num);
+        } catch (NumberFormatException e) {
+        }
+        String thresStatic = PreferenceConstants.getPreference (PreferenceConstants.ORGIMPORTS_STATIC_ONDEMANDTHRESHOLD, project);
+        try {
+            int num = Integer.parseInt (thresStatic);
+            if (num == 0) {
+                num = 1;
+            }
+            rewrite.setStaticOnDemandImportThreshold (num);
+        } catch (NumberFormatException e) {
+        }
+        return rewrite;
+    }
+
+    private void determineImportDifferences (ImportRewrite importsStructure, Set < String > oldSingleImports, Set < String > oldDemandImports) {
+        ArrayList < String > importsAdded = new ArrayList < String > ();
+        importsAdded.addAll (Arrays.asList (importsStructure.getCreatedImports ()));
+        importsAdded.addAll (Arrays.asList (importsStructure.getCreatedStaticImports ()));
+        Object [] content = oldSingleImports.toArray ();
+        for (int i = 0;
+        i < content.length; i ++) {
+            String importName = (String) content [i];
+            if (importsAdded.remove (importName)) {
+                oldSingleImports.remove (importName);
+            }
+        }
+        content = oldDemandImports.toArray ();
+        for (int i = 0;
+        i < content.length; i ++) {
+            String importName = (String) content [i];
+            if (importsAdded.remove (importName + ".*")) {
+                oldDemandImports.remove (importName);
+            }
+        }
+        int fNumberOfImportsAdded = importsAdded.size ();
+        int fNumberOfImportsRemoved = oldSingleImports.size () + oldDemandImports.size ();
+        Activator.log (new Status (IStatus.INFO, Activator.getID (), 0, "[imports added]: " + fNumberOfImportsAdded, null));
+        Activator.log (new Status (IStatus.INFO, Activator.getID (), 0, "[imports removed]: " + fNumberOfImportsRemoved, null));
+    }
+
+    private static boolean isDebug () {
+        return Boolean.parseBoolean (Platform.getDebugOption (Activator.getID () + "/debug/organizeImports"));
+    }
+
+}
+

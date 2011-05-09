@@ -1,0 +1,38 @@
+14a15
+> import java.net.MalformedURLException;
+20a22
+> import org.eclipse.core.runtime.IStatus;
+21a24
+> import org.eclipse.core.runtime.Status;
+25a29
+> import org.eclipse.emf.common.CommonPlugin;
+158,162c162,164
+< 		myTemplatePath = new String[] {
+< 				usePrecompiled ? null : templateDirectory != null && templateDirectory.indexOf(":") == -1 ? //$NON-NLS-1$
+< 						URI.createPlatformResourceURI(templateDirectory, true).toString() : templateDirectory,
+< 				baseURL.toString()
+< 		};
+---
+> 		final URL dynamicURL = usePrecompiled ? null : getDynamicTemplatesURL(templateDirectory);
+> 		
+> 		myTemplatePath = new String[] { dynamicURL != null ? dynamicURL.toString() : null, baseURL.toString() };
+165a168
+> 		if (dynamicURL == null) {
+166a170,172
+> 		} else {
+> 			myResourceManager = new BundleResourceManager(dynamicURL, baseURL);
+> 		}
+299a306,318
+> 	private static URL getDynamicTemplatesURL(String templateDirectory) {
+> 		if (templateDirectory != null) {
+> 			URI templatesURI = templateDirectory.indexOf(":") == -1 ? URI.createPlatformResourceURI(templateDirectory, true) : URI.createURI(templateDirectory); //$NON-NLS-1$
+> 			try {
+> 				return new URL(CommonPlugin.resolve(templatesURI).toString());
+> 			} catch (MalformedURLException e) {
+> 				String pluginID = "org.eclipse.gmf.codegen"; //$NON-NLS-1$
+> 				Platform.getLog(Platform.getBundle(pluginID)).log(new Status(IStatus.ERROR, pluginID, 0, "Incorrecct dynamic templates location", e)); //$NON-NLS-1$
+> 			}
+> 		}
+> 		return null;
+> 	}
+> 

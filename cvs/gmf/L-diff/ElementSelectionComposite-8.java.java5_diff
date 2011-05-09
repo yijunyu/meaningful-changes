@@ -1,0 +1,156 @@
+9c9,11
+< import org.eclipse.core.runtime.IProgressMonitor;
+---
+> import java.util.regex.Matcher;
+> 
+> import java.util.regex.Pattern;
+11c13
+< import org.eclipse.core.runtime.jobs.Job;
+---
+> import org.eclipse.core.runtime.IProgressMonitor;
+26a29,30
+> import org.eclipse.jface.viewers.Viewer;
+> 
+66c70,76
+<     private Job job;
+---
+>     private ElementSelectionServiceJob job;
+>     private final ElementSelectionService elementSelectionService;
+>     private char firstCharacter = Character.MIN_VALUE;
+>     private String lastSearchedFor = StringStatics.BLANK;
+>     private int lastScopeSearchedFor = 0;
+>     private List matchingObjects = new ArrayList ();
+>     private Pattern pattern;
+68a79,82
+>         this (title, input, ElementSelectionService.getInstance ());
+>     }
+> 
+>     public ElementSelectionComposite (String title, AbstractElementSelectionInput input, ElementSelectionService elementSelectionService) {
+71a86,87
+>         this.elementSelectionService = elementSelectionService;
+>         this.lastScopeSearchedFor = input.getScope ().intValue ();
+137c153,163
+<         tableViewer.setSorter (new ViewerSorter ());
+---
+>         tableViewer.setSorter (new ViewerSorter () {
+> 
+>             public int compare (Viewer viewer, Object e1, Object e2) {
+>                 if (e1 instanceof IMatchingObject && e2 instanceof IMatchingObject) return ((IMatchingObject) e1).getName ().toLowerCase ().compareTo (((IMatchingObject) e2).getName ().toLowerCase ());
+> 
+>                 return super.compare (viewer, e1, e2);
+>             }
+> 
+>         }
+> 
+>         );
+145,150c171,198
+<     private void handleFilterChange () {
+<         input.setInput (filterText.getText ());
+<         fillTableViewer ();
+<         Object element = tableViewer.getElementAt (0);
+<         if (element != null) {
+<             tableViewer.setSelection (new StructuredSelection (element), true);
+---
+>     public void handleFilterChange () {
+>         if (filterText.getText ().equals (StringStatics.BLANK)) {
+>             cancel ();
+>             matchingObjects.clear ();
+>             tableViewer.getTable ().removeAll ();
+>             firstCharacter = Character.MIN_VALUE;
+>             return;
+>         }
+>         String filter = validatePattern (filterText.getText ());
+>         pattern = Pattern.compile (filter);
+>         if (firstCharacter != filterText.getText ().charAt (0) || this.input.getScope ().intValue () != this.lastScopeSearchedFor || ! filterText.getText ().startsWith (lastSearchedFor)) {
+>             cancel ();
+>             matchingObjects.clear ();
+>             tableViewer.getTable ().removeAll ();
+>             firstCharacter = filterText.getText ().charAt (0);
+>             this.lastScopeSearchedFor = this.input.getScope ().intValue ();
+>             startElementSelectionService ();
+>         } else {
+>             tableViewer.getTable ().removeAll ();
+>             for (Iterator i = matchingObjects.iterator ();
+>             i.hasNext ();) {
+>                 IMatchingObject matchingObject = (IMatchingObject) i.next ();
+>                 Matcher matcher = pattern.matcher (matchingObject.getName ().toLowerCase ());
+>                 if (matcher.matches ()) {
+>                     tableViewer.add (matchingObject);
+>                     setSelection ();
+>                 }
+>             }
+152d199
+<         handleSelectionChange ();
+155,158c202,204
+<     private void fillTableViewer () {
+<         tableViewer.getTable ().removeAll ();
+<         if (! input.getInput ().equals (StringStatics.BLANK)) {
+<             filterText.setEnabled (false);
+---
+>     private void startElementSelectionService () {
+>         input.setInput (filterText.getText ());
+>         lastSearchedFor = filterText.getText ();
+161,162c207
+<             job = ElementSelectionService.getInstance ().getMatchingObjects (input, this);
+<         }
+---
+>         job = elementSelectionService.getMatchingObjects (input, this);
+204,205c249
+<                 filterText.setEnabled (true);
+<                 filterText.setFocus ();
+---
+>                 job = null;
+206a251
+>                 IMatchingObject matchingObject = matchingObjectEvent.getMatchingObject ();
+208,209c253,259
+<                 progressBar.subTask (matchingObjectEvent.getMatchingObject ().getName ());
+<                 tableViewer.add (matchingObjectEvent.getMatchingObject ());
+---
+>                 progressBar.subTask (matchingObject.getName ());
+>                 matchingObjects.add (matchingObject);
+>                 Matcher matcher = pattern.matcher (matchingObject.getName ().toLowerCase ());
+>                 if (matcher.matches ()) {
+>                     tableViewer.add (matchingObject);
+>                     setSelection ();
+>                 }
+216c266,270
+<             job.cancel ();
+---
+>             elementSelectionService.cancelJob (job);
+>             job = null;
+>             progressBar.done ();
+>             progressBar.setVisible (false);
+>         }
+217a272,303
+> 
+>     private String validatePattern (String string) {
+>         if (string.equals (StringStatics.BLANK)) {
+>             return string;
+>         }
+>         StringBuffer result = new StringBuffer ();
+>         for (int i = 0;
+>         i < string.length (); i ++) {
+>             char c = Character.toLowerCase (string.charAt (i));
+>             if (c == '?') {
+>                 result.append ('.');
+>             } else if (c == '*') {
+>                 result.append (".*");
+>             } else {
+>                 result.append (c);
+>             }
+> 
+>         }
+>         result.append (".*");
+>         return result.toString ();
+>     }
+> 
+>     protected void setSelection () {
+>         StructuredSelection selection = (StructuredSelection) tableViewer.getSelection ();
+>         if (selection.isEmpty ()) {
+>             tableViewer.getTable ().setSelection (0);
+>             handleSelectionChange ();
+>         }
+>     }
+> 
+>     public ElementSelectionServiceJob getSelectionServiceJob () {
+>         return job;

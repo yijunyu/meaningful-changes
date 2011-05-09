@@ -1,0 +1,628 @@
+package org.eclipse.gmf.runtime.emf.core.util;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.HashMap;
+
+import java.util.HashSet;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import java.util.Set;
+
+import org.eclipse.emf.common.notify.Adapter;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.common.notify.Notifier;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.emf.ecore.InternalEObject;
+
+import org.eclipse.emf.ecore.EStructuralFeature.Setting;
+
+import org.eclipse.emf.ecore.impl.EClassImpl;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.ecore.resource.ResourceSet;
+
+import org.eclipse.emf.ecore.util.EContentsEList;
+
+import org.eclipse.emf.ecore.util.ECrossReferenceAdapter;
+
+import org.eclipse.emf.ecore.util.ECrossReferenceEList;
+
+import org.eclipse.emf.ecore.util.ExtendedMetaData;
+
+import org.eclipse.emf.ecore.util.FeatureMapUtil;
+
+import org.eclipse.emf.ecore.util.InternalEList;
+
+public class CrossReferenceAdapter extends ECrossReferenceAdapter {
+    private Map imports = new HashMap ();
+    private Map exports = new HashMap ();
+    private boolean resolve = true;
+    private static Map eClassToChangeableFeatures = new HashMap ();
+    private static List nullList = new ArrayList (1);
+
+    public CrossReferenceAdapter () {
+        this (true);
+    }
+
+    public CrossReferenceAdapter (boolean resolve) {
+        super ();
+        this.resolve = resolve;
+    }
+
+    public void selfAdapt (Notification notification) {
+        super.selfAdapt (notification);
+        Object notifier = notification.getNotifier ();
+        Object feature = notification.getFeature ();
+        if (notifier instanceof Resource) {
+            if (notification.getFeatureID (Resource.class) == Resource.RESOURCE__IS_LOADED) {
+                if (! notification.getNewBooleanValue ()) {
+                    deregisterReferences ((Resource) notifier);
+                } else {
+                    for (Iterator i = ((Resource) notifier).getContents ().iterator ();
+                    i.hasNext ();) {
+                        EObject child = (EObject) i.next ();
+                        if (child != null) {
+                            updateImportsAndExports ((Resource) notifier, child, true);
+                        }
+                    }
+                }
+            }
+            return;
+        }
+        if (! (notifier instanceof EObject) || ! (feature instanceof EReference)) {
+            return;
+        }
+        EReference reference = (EReference) feature;
+        if (! isImportExportCapable (reference, (EObject) notifier)) {
+            return;
+        }
+        switch (notification.getEventType ()) {
+            case Notification.RESOLVE :
+            case Notification.SET :
+            case Notification.UNSET :
+                {
+                    EObject oldValue = (EObject) notification.getOldValue ();
+                    if (oldValue != null) {
+                        deregisterReference (((EObject) notification.getNotifier ()).eResource (), oldValue.eResource ());
+                    }
+                    EObject newValue = (EObject) notification.getNewValue ();
+                    if (newValue != null) {
+                        registerReference (((EObject) notification.getNotifier ()).eResource (), newValue.eResource ());
+                    }
+                    break;
+                } case Notification.ADD :
+                {
+                    EObject newValue = (EObject) notification.getNewValue ();
+                    if (newValue != null) {
+                        registerReference (((EObject) notification.getNotifier ()).eResource (), newValue.eResource ());
+                    }
+                    break;
+                } case Notification.ADD_MANY :
+                {
+                    Collection newValues = (Collection) notification.getNewValue ();
+                    for (Iterator i = newValues.iterator ();
+                    i.hasNext ();) {
+                        EObject newValue = (EObject) i.next ();
+                        registerReference (((EObject) notification.getNotifier ()).eResource (), newValue.eResource ());
+                    }
+                    break;
+                } case Notification.REMOVE :
+                {
+                    EObject oldValue = (EObject) notification.getOldValue ();
+                    if (oldValue != null) {
+                        deregisterReference (((EObject) notification.getNotifier ()).eResource (), oldValue.eResource ());
+                    }
+                    break;
+                } case Notification.REMOVE_MANY :
+                {
+                    Collection oldValues = (Collection) notification.getOldValue ();
+                    for (Iterator i = oldValues.iterator ();
+                    i.hasNext ();) {
+                        EObject oldValue = (EObject) i.next ();
+                        deregisterReference (((EObject) notification.getNotifier ()).eResource (), oldValue.eResource ());
+                    }
+                    break;
+                }}
+    }
+
+    protected void handleContainment (Notification notification) {
+        super.handleContainment (notification);
+        Object notifier = notification.getNotifier ();
+        if (notifier instanceof ResourceSet) {
+            return;
+        }
+        switch (notification.getEventType ()) {
+            case Notification.ADD :
+                {
+                    EObject newValue = (EObject) notification.getNewValue ();
+                    if (newValue != null) {
+                        Resource resource;
+                        if (notifier instanceof Resource) {
+                            resource = (Resource) notifier;
+                        } else {
+                            resource = ((EObject) notification.getNotifier ()).eResource ();
+                        }
+                        updateImportsAndExports (resource, newValue, true);
+                    }
+                    break;
+                } case Notification.ADD_MANY :
+                {
+                    Resource resource;
+                    if (notifier instanceof Resource) {
+                        resource = (Resource) notifier;
+                    } else {
+                        resource = ((EObject) notification.getNotifier ()).eResource ();
+                    }
+                    Collection newValues = (Collection) notification.getNewValue ();
+                    for (Iterator iter = newValues.iterator ();
+                    iter.hasNext ();) {
+                        EObject next = (EObject) iter.next ();
+                        if (next != null) {
+                            updateImportsAndExports (resource, next, true);
+                        }
+                    }
+                    break;
+                } case Notification.REMOVE :
+                {
+                    EObject oldValue = (EObject) notification.getOldValue ();
+                    if (oldValue != null) {
+                        Resource resource;
+                        if (notifier instanceof Resource) {
+                            resource = (Resource) notifier;
+                        } else {
+                            resource = ((EObject) notification.getNotifier ()).eResource ();
+                        }
+                        updateImportsAndExports (resource, oldValue, false);
+                    }
+                    break;
+                } case Notification.REMOVE_MANY :
+                {
+                    Resource resource;
+                    if (notifier instanceof Resource) {
+                        resource = (Resource) notifier;
+                        if (! resource.isLoaded ()) {
+                            deregisterReferences (resource);
+                            return;
+                        }
+                    } else {
+                        resource = ((EObject) notification.getNotifier ()).eResource ();
+                    }
+                    Collection oldValues = (Collection) notification.getOldValue ();
+                    for (Iterator iter = oldValues.iterator ();
+                    iter.hasNext ();) {
+                        EObject next = (EObject) iter.next ();
+                        if (next != null) {
+                            updateImportsAndExports (resource, next, false);
+                        }
+                    }
+                    break;
+                }}
+    }
+
+    public void updateImportsAndExports (Resource resource, EObject value, boolean register) {
+        CrossReferenceAdapter adapter = getExistingCrossReferenceAdapter (value);
+        if (register) {
+            if (adapter != null) {
+                for (Iterator iter = adapter.getInverseReferences (value).iterator ();
+                iter.hasNext ();) {
+                    EStructuralFeature.Setting next = (EStructuralFeature.Setting) iter.next ();
+                    EReference ref = (EReference) next.getEStructuralFeature ();
+                    EObject owner = next.getEObject ();
+                    if (isImportExportCapable (ref, owner)) {
+                        registerReference (owner.eResource (), resource);
+                    }
+                }
+            }
+        } else {
+            EContentsEList.FeatureIterator crossReferences = getOptimizedCrossReferenceIterator (value);
+            while (crossReferences.hasNext ()) {
+                EObject referent = (EObject) crossReferences.next ();
+                if (referent != null) {
+                    EReference eReference = (EReference) crossReferences.feature ();
+                    if (isImportExportCapable (eReference, referent)) {
+                        Resource referencedResource = referent.eResource ();
+                        deregisterReference (resource, referencedResource);
+                    }
+                }
+            }
+            if (adapter != null) {
+                for (Iterator iter = adapter.getInverseReferences (value).iterator ();
+                iter.hasNext ();) {
+                    EStructuralFeature.Setting next = (EStructuralFeature.Setting) iter.next ();
+                    EReference ref = (EReference) next.getEStructuralFeature ();
+                    EObject owner = next.getEObject ();
+                    if (isImportExportCapable (ref, owner)) {
+                        deregisterReference (owner.eResource (), resource);
+                    }
+                }
+            }
+        }
+        if (adapter != null) {
+            adapter.updateImportsAndExportsForContents (resource, value, register);
+        }
+    }
+
+    public void updateImportsAndExportsForContents (Resource resource, EObject value, boolean register) {
+        for (Iterator i = resolve () ? value.eContents ().iterator () : ((InternalEList) value.eContents ()).basicIterator ();
+        i.hasNext ();) {
+            updateImportsAndExports (resource, (EObject) i.next (), register);
+        }
+    }
+
+    public void setTarget (Notifier target) {
+        super.setTarget (target);
+        if (target instanceof EObject) {
+            EObject eObject = (EObject) target;
+            Resource resource = eObject.eResource ();
+            EContentsEList.FeatureIterator crossReferences = getOptimizedCrossReferenceIterator (eObject);
+            while (crossReferences.hasNext ()) {
+                EObject referent = (EObject) crossReferences.next ();
+                if (referent != null) {
+                    EReference eReference = (EReference) crossReferences.feature ();
+                    if (isImportExportCapable (eReference, referent)) {
+                        Resource referencedResource = referent.eResource ();
+                        registerReference (resource, referencedResource);
+                    }
+                }
+            }
+        }
+    }
+
+    public void unsetTarget (Notifier notifier) {
+        super.unsetTarget (notifier);
+        if (notifier instanceof Resource) {
+            deregisterReferences ((Resource) notifier);
+        }
+    }
+
+    public Set getImports (Resource referencer) {
+        Map importsMap = getImportsMap (referencer);
+        if (importsMap != null) {
+            return Collections.unmodifiableSet (importsMap.keySet ());
+        } else {
+            return Collections.EMPTY_SET;
+        }
+    }
+
+    public Set getExports (Resource referenced) {
+        Map exportsMap = getExportsMap (referenced);
+        if (exportsMap != null) {
+            return Collections.unmodifiableSet (exportsMap.keySet ());
+        } else {
+            return Collections.EMPTY_SET;
+        }
+    }
+
+    private Map getImportsMap (Resource resource) {
+        return (Map) imports.get (resource);
+    }
+
+    private Map getExportsMap (Resource resource) {
+        return (Map) exports.get (resource);
+    }
+
+    private void registerReference (final Resource referencer, final Resource referenced) {
+        if ((referencer != null) && (referenced != null) && (referencer != referenced)) {
+            Map importsMap = getImportsMap (referencer);
+            if (importsMap == null) {
+                importsMap = new HashMap ();
+                imports.put (referencer, importsMap);
+            }
+            Counter importsCount = (Counter) importsMap.get (referenced);
+            if (importsCount == null) {
+                importsCount = new Counter ();
+                importsMap.put (referenced, importsCount);
+                importAdded (referencer, referenced);
+            } else {
+                importsCount.inc ();
+            }
+            Map exportsMap = getExportsMap (referenced);
+            if (exportsMap == null) {
+                exportsMap = new HashMap ();
+                exports.put (referenced, exportsMap);
+            }
+            Counter exportsCount = (Counter) exportsMap.get (referencer);
+            if (exportsCount == null) {
+                exportsCount = new Counter ();
+                exportsMap.put (referencer, exportsCount);
+                exportAdded (referenced, referencer);
+            } else {
+                exportsCount.inc ();
+            }
+        }
+    }
+
+    protected void importAdded (Resource referencer, Resource referenced) {
+    }
+
+    protected void importRemoved (Resource referencer, Resource referenced) {
+    }
+
+    protected void exportAdded (Resource referenced, Resource referencer) {
+    }
+
+    protected void exportRemoved (Resource referenced, Resource referencer) {
+    }
+
+    private void deregisterReference (final Resource referencer, final Resource referenced) {
+        if ((referencer != null) && (referenced != null) && (referencer != referenced)) {
+            Map importsMap = getImportsMap (referencer);
+            if (importsMap != null) {
+                Counter importsCount = (Counter) importsMap.get (referenced);
+                if ((importsCount != null) && importsCount.dec ()) {
+                    importsMap.remove (referenced);
+                    importRemoved (referencer, referenced);
+                    if (importsMap.isEmpty ()) {
+                        imports.remove (referencer);
+                    }
+                }
+            }
+            Map exportsMap = getExportsMap (referenced);
+            if (exportsMap != null) {
+                Counter exportsCount = (Counter) exportsMap.get (referencer);
+                if ((exportsCount != null) && exportsCount.dec ()) {
+                    exportsMap.remove (referencer);
+                    exportRemoved (referenced, referencer);
+                    if (exportsMap.isEmpty ()) {
+                        exports.remove (referenced);
+                    }
+                }
+            }
+        }
+    }
+
+    private void deregisterReferences (final Resource referencer) {
+        Object [] resImports = getImports (referencer).toArray ();
+        for (int i = 0;
+        i < resImports.length; i ++) {
+            final Resource referenced = (Resource) resImports [i];
+            Map importsMap = getImportsMap (referencer);
+            if (importsMap != null) {
+                importsMap.remove (referenced);
+                importRemoved (referencer, referenced);
+                if (importsMap.isEmpty ()) {
+                    imports.remove (referencer);
+                }
+            }
+            Map exportsMap = getExportsMap (referenced);
+            if (exportsMap != null) {
+                exportsMap.remove (referencer);
+                exportRemoved (referenced, referencer);
+                if (exportsMap.isEmpty ()) {
+                    exports.remove (referenced);
+                }
+            }
+        }
+    }
+
+    public Set getInverseReferencers (EObject referenced, EReference reference, EClass type) {
+        return getReferencers (getInverseReferences (referenced), reference, type);
+    }
+
+    public Set getInverseReferencersCrossResource (EObject referenced, EReference reference, EClass type) {
+        return getReferencers (getInverseReferencesCrossResource (referenced), reference, type);
+    }
+
+    public Collection getInverseReferencesCrossResource (EObject eObject) {
+        return getInverseReferencesCrossResource (eObject, ! resolve ());
+    }
+
+    public Set getNonNavigableInverseReferencers (EObject referenced, EReference reference, EClass type) {
+        return getReferencers (getNonNavigableInverseReferences (referenced), reference, type);
+    }
+
+    private Set getReferencers (Collection references, EReference reference, EClass type) {
+        Set set = new HashSet ();
+        if (! references.isEmpty ()) {
+            for (Iterator iter = references.iterator ();
+            iter.hasNext ();) {
+                Setting setting = (Setting) iter.next ();
+                if (reference == null || reference == setting.getEStructuralFeature ()) {
+                    EObject referencer = setting.getEObject ();
+                    if (referencer != null && (type == null || type.isInstance (referencer))) {
+                        set.add (referencer);
+                    }
+                }
+            }
+        }
+        return set;
+    }
+
+    public static CrossReferenceAdapter getExistingCrossReferenceAdapter (Notifier notifier) {
+        if (notifier == null) {
+            return null;
+        }
+        List adapters = notifier.eAdapters ();
+        for (int i = 0, size = adapters.size ();
+        i < size; ++ i) {
+            Adapter adapter = (Adapter) adapters.get (i);
+            if (adapter instanceof CrossReferenceAdapter) {
+                return (CrossReferenceAdapter) adapter;
+            }
+        }
+        return null;
+    }
+
+    public static CrossReferenceAdapter getCrossReferenceAdapter (ResourceSet resourceSet) {
+        if (resourceSet == null) {
+            return null;
+        }
+        CrossReferenceAdapter result = getExistingCrossReferenceAdapter (resourceSet);
+        if (result == null) {
+            result = new CrossReferenceAdapter ();
+            resourceSet.eAdapters ().add (result);
+        }
+        return result;
+    }
+
+    private static final class Counter {
+        private int value = 1;
+
+        Counter () {
+            super ();
+        }
+
+        int getValue () {
+            return value;
+        }
+
+        void inc () {
+            value ++;
+        }
+
+        boolean dec () {
+            return -- value <= 0;
+        }
+
+    }
+
+    protected boolean resolve () {
+        return this.resolve;
+    }
+
+    public Collection getInverseReferences (EObject eObject, boolean _resolve) {
+        Collection result = new ArrayList ();
+        if (_resolve) {
+            resolveAll (eObject);
+        }
+        EObject eContainer = eObject.eContainer ();
+        if (eContainer != null) {
+            result.add (((InternalEObject) eContainer).eSetting (eObject.eContainmentFeature ()));
+        }
+        Collection nonNavigableInverseReferences = (Collection) inverseCrossReferencer.get (eObject);
+        if (nonNavigableInverseReferences != null) {
+            result.addAll (nonNavigableInverseReferences);
+        }
+        for (Iterator i = eObject.eClass ().getEAllReferences ().iterator ();
+        i.hasNext ();) {
+            EReference eReference = (EReference) i.next ();
+            EReference eOpposite = eReference.getEOpposite ();
+            if (eOpposite != null && ! eReference.isContainer () && ! eReference.isContainment () && eObject.eIsSet (eReference)) {
+                if (FeatureMapUtil.isMany (eObject, eReference)) {
+                    Object collection = eObject.eGet (eReference);
+                    for (Iterator j = resolve () ? ((Collection) collection).iterator () : ((InternalEList) collection).basicIterator ();
+                    j.hasNext ();) {
+                        InternalEObject referencingEObject = (InternalEObject) j.next ();
+                        result.add (referencingEObject.eSetting (eOpposite));
+                    }
+                } else {
+                    InternalEObject referencingEObject = ((InternalEObject) eObject.eGet (eReference, resolve ()));
+                    if (referencingEObject != null) {
+                        result.add (referencingEObject.eSetting (eOpposite));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    private static List getCrossReferencesChangeableFeatures (EClass eCls) {
+        List features = (List) eClassToChangeableFeatures.get (eCls);
+        if (features == null) {
+            features = nullList;
+            EStructuralFeature [] crossReferenceFeatures = ((EClassImpl.FeatureSubsetSupplier) eCls.getEAllStructuralFeatures ()).crossReferences ();
+            if (crossReferenceFeatures != null) {
+                features = new ArrayList (crossReferenceFeatures.length);
+                for (int i = 0;
+                i < crossReferenceFeatures.length; i ++) {
+                    EStructuralFeature feature = crossReferenceFeatures [i];
+                    if (isMutable (feature)) features.add (feature);
+
+                }
+            }
+            eClassToChangeableFeatures.put (eCls, features);
+        }
+        return features != nullList ? features : null;
+    }
+
+    static boolean isMutable (EStructuralFeature feature) {
+        boolean result = feature.isChangeable ();
+        if (result) {
+            if (feature.isDerived ()) {
+                EStructuralFeature group = ExtendedMetaData.INSTANCE.getGroup (feature);
+                result = (group != null) && ! FeatureMapUtil.isFeatureMap (feature);
+            }
+        }
+        return result;
+    }
+
+    private EContentsEList.FeatureIterator getOptimizedCrossReferenceIterator (EObject eObj) {
+        List features = getCrossReferencesChangeableFeatures (eObj.eClass ());
+        if (features != null) {
+            EContentsEList list = null;
+            if (features.size () > 0) {
+                list = new ECrossReferenceEList (eObj, (EStructuralFeature []) features.toArray (new EStructuralFeature [features.size ()])) {
+                }
+
+                ;
+            } else {
+                list = ECrossReferenceEList.EMPTY_CROSS_REFERENCE_ELIST;
+            }
+            return (EContentsEList.FeatureIterator) (resolve () ? list.iterator () : ((InternalEList) list).basicIterator ());
+        }
+        return (EContentsEList.FeatureIterator) ECrossReferenceEList.EMPTY_CROSS_REFERENCE_ELIST.iterator ();
+    }
+
+    public Collection getInverseReferencesCrossResource (EObject eObject, boolean resolve) {
+        Collection result = new ArrayList ();
+        if (resolve) {
+            resolveAll (eObject);
+        }
+        EObject eContainer = eObject.eContainer ();
+        if (eContainer != null) {
+            result.add (((InternalEObject) eContainer).eSetting (eObject.eContainmentFeature ()));
+        }
+        Collection nonNavigableInverseReferences = (Collection) inverseCrossReferencer.get (eObject);
+        if (nonNavigableInverseReferences != null) {
+            result.addAll (nonNavigableInverseReferences);
+        }
+        for (Iterator i = eObject.eClass ().getEAllReferences ().iterator ();
+        i.hasNext ();) {
+            EReference eReference = (EReference) i.next ();
+            EReference eOpposite = eReference.getEOpposite ();
+            if (eOpposite != null && isImportExportCapable (eReference, eObject) && eObject.eIsSet (eReference)) {
+                if (FeatureMapUtil.isMany (eObject, eReference)) {
+                    Object collection = eObject.eGet (eReference);
+                    for (Iterator j = resolve () ? ((Collection) collection).iterator () : ((InternalEList) collection).basicIterator ();
+                    j.hasNext ();) {
+                        InternalEObject referencingEObject = (InternalEObject) j.next ();
+                        result.add (referencingEObject.eSetting (eOpposite));
+                    }
+                } else {
+                    InternalEObject referencingEObject = ((InternalEObject) eObject.eGet (eReference, resolve ()));
+                    if (referencingEObject != null) {
+                        result.add (referencingEObject.eSetting (eOpposite));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    protected boolean isImportExportCapable (EReference reference, EObject owner) {
+        return ! reference.isContainer () && ! reference.isContainment () && reference.isResolveProxies () && reference.isChangeable ();
+    }
+
+}
+

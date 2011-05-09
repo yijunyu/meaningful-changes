@@ -1,0 +1,84 @@
+17,20d16
+< import org.eclipse.jface.util.LocalSelectionTransfer;
+< 
+< import org.eclipse.jface.viewers.ISelection;
+< 
+29,30d24
+< import org.eclipse.swt.dnd.TransferData;
+< 
+38,62c32,36
+<         TransferData [] data = getCurrentEvent ().dataTypes;
+<         List fileList = new ArrayList ();
+<         for (int i = 0;
+<         i < data.length; i ++) {
+<             if (FileTransfer.getInstance ().isSupportedType (data [i])) {
+<                 try {
+<                     Object files = FileTransfer.getInstance ().nativeToJava (data [i]);
+<                     if (files instanceof String []) {
+<                         String [] fileStrings = (String []) files;
+<                         for (int j = 0;
+<                         j < fileStrings.length; j ++) fileList.add (fileStrings [j]);
+< 
+<                     }
+<                 } catch (SWTException e) {
+<                     continue;
+<                 }
+<             }
+<         }
+<         if (fileList.size () == 0) {
+<             ISelection selection = null;
+<             if (LocalSelectionTransfer.getTransfer ().getSelection () != null) {
+<                 selection = LocalSelectionTransfer.getTransfer ().getSelection ();
+<             }
+<             if (selection instanceof IStructuredSelection && ! selection.isEmpty ()) {
+<                 Object [] array = ((IStructuredSelection) selection).toArray ();
+---
+>         List < String > filesList = new ArrayList < String > ();
+>         if (getCurrentEvent ().data instanceof String []) {
+>             insertFileNamesFromStringArray (filesList, (String []) getCurrentEvent ().data);
+>         } else if (getCurrentEvent ().data instanceof IStructuredSelection) {
+>             Object [] array = ((IStructuredSelection) getCurrentEvent ().data).toArray ();
+67c41
+<                         fileList.add (dropFile.getLocation ().toOSString ());
+---
+>                     filesList.add (dropFile.getLocation ().toOSString ());
+69a44,51
+>         } else {
+>             try {
+>                 Object files = FileTransfer.getInstance ().nativeToJava (getCurrentEvent ().currentDataType);
+>                 if (files instanceof String []) {
+>                     insertFileNamesFromStringArray (filesList, (String []) files);
+>                 }
+>             } catch (SWTException e) {
+>                 return null;
+71d52
+<             return fileList;
+73d53
+<         if (fileList.size () > 0) return fileList;
+74a55,57
+>         if (filesList.size () > 0) {
+>             return filesList;
+>         }
+77a61,67
+>     private void insertFileNamesFromStringArray (List < String > filesList, String [] fileNames) {
+>         for (int i = 0;
+>         i < fileNames.length; i ++) {
+>             filesList.add (fileNames [i]);
+>         }
+>     }
+> 
+81d70
+<             List dropObjects = getDropObjectsRequest ().getObjects ();
+83c72
+<                 return dropObjects != null && ! dropObjects.isEmpty ();
+---
+>                 return true;
+86c75
+<                 if (dropObjects == null || dropObjects.isEmpty () || target == null) {
+---
+>                 if (target == null) {
+95a85,88
+>     protected boolean isDataTransfered () {
+>         return super.isDataTransfered () && ! getDropObjectsRequest ().getObjects ().isEmpty ();
+>     }
+> 

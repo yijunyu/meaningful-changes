@@ -1,0 +1,230 @@
+package org.eclipse.gmf.runtime.diagram.ui.printing.internal.util;
+
+import java.util.Collection;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gef.RootEditPart;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramRootEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.PageBreakEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.figures.PageBreaksFigure;
+
+import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.MapModeGraphics;
+
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.IMapMode;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.swt.graphics.Point;
+
+public abstract class DiagramPrinter implements Runnable {
+    protected Point display_dpi;
+    protected Collection < Diagram > diagrams;
+    protected PreferencesHint preferencesHint;
+    protected IMapMode mapMode;
+    protected Point translated;
+    protected float userScale;
+    protected boolean isScaledPercent = false;
+    protected boolean fitToPage = false;
+    protected boolean printRangePageSelection = false;
+    protected int pageFrom = 1, pageTo = 1;
+    protected int rows = 1;
+    protected int columns = 1;
+    protected Graphics swtGraphics;
+    protected Graphics graphics;
+
+    public DiagramPrinter (PreferencesHint preferencesHint, IMapMode mm) {
+        super ();
+        this.preferencesHint = preferencesHint;
+        this.mapMode = mm;
+    }
+
+    protected org.eclipse.draw2d.geometry.Point getPageCount (DiagramEditPart dgrmEP, Rectangle figureBounds, org.eclipse.draw2d.geometry.Point pageSize, boolean applyUserScale) {
+        RootEditPart rootEditPart = dgrmEP.getRoot ();
+        if (rootEditPart instanceof DiagramRootEditPart) {
+            DiagramRootEditPart diagramRootEditPart = (DiagramRootEditPart) rootEditPart;
+            PageBreakEditPart pageBreakEditPart = diagramRootEditPart.getPageBreakEditPart ();
+            float fNumCols = ((PageBreaksFigure) pageBreakEditPart.getFigure ()).getPageCount ().y * (applyUserScale ? userScale : 1);
+            float fNumRows = ((PageBreaksFigure) pageBreakEditPart.getFigure ()).getPageCount ().x * (applyUserScale ? userScale : 1);
+            int numCols = (int) Math.ceil (fNumCols);
+            int numRows = (int) Math.ceil (fNumRows);
+            return new org.eclipse.draw2d.geometry.Point (numCols, numRows);
+        } else {
+            float fNumRows = (figureBounds.height * (applyUserScale ? userScale : 1)) / pageSize.y;
+            int numRows = (int) Math.ceil (fNumRows);
+            float fNumCols = (figureBounds.width * (applyUserScale ? userScale : 1)) / pageSize.x;
+            int numCols = (int) Math.ceil (fNumCols);
+            return new org.eclipse.draw2d.geometry.Point (numCols, numRows);
+        }
+    }
+
+    protected int calculateRowFromPage (int pageNum, int totalNumColumns) {
+        int row = pageNum / totalNumColumns;
+        if (pageNum % totalNumColumns != 0) {
+            row ++;
+        }
+        return row;
+    }
+
+    protected int calculateColumnFromPage (int pageNum, int totalNumColumns, int cRow) {
+        return (pageNum - ((cRow - 1) * totalNumColumns));
+    }
+
+    protected void dispose () {
+        if (this.graphics != null) {
+            try {
+                this.graphics.dispose ();
+            } catch (NullPointerException e) {
+            } finally {
+                this.graphics = null;
+            }
+        }
+        if (this.swtGraphics != null) {
+            try {
+                this.swtGraphics.dispose ();
+            } catch (NullPointerException e) {
+            } finally {
+                this.swtGraphics = null;
+            }
+        }
+    }
+
+    protected MapModeGraphics createMapModeGraphics (Graphics theGraphics) {
+        return new MapModeGraphics (theGraphics, getMapMode ());
+    }
+
+    public void setPrintRangePages (int pageFrom, int pageTo) {
+        assert pageFrom > 0 : "From page in print range page selection must be bigger than zero.";
+        assert (pageTo > 0 && pageTo >= pageFrom) : "To page in print range page selection must be bigger than zero and from page.";
+        this.pageFrom = pageFrom;
+        this.pageTo = pageTo;
+    }
+
+    public Point getDisplayDPI () {
+        return display_dpi;
+    }
+
+    public void setDisplayDPI (Point display_dpi) {
+        this.display_dpi = display_dpi;
+    }
+
+    public PreferencesHint getPreferencesHint () {
+        return preferencesHint;
+    }
+
+    public void setPreferencesHint (PreferencesHint preferencesHint) {
+        this.preferencesHint = preferencesHint;
+    }
+
+    public IMapMode getMapMode () {
+        return mapMode;
+    }
+
+    public void setMapMode (IMapMode mm) {
+        this.mapMode = mm;
+    }
+
+    public Point getTranslated () {
+        return translated;
+    }
+
+    public void setTranslated (Point translated) {
+        this.translated = translated;
+    }
+
+    public float getUserScale () {
+        return userScale;
+    }
+
+    public void setScaledPercent (int scalePercent) {
+        this.isScaledPercent = true;
+        this.userScale = (scalePercent) / 100.0f;
+    }
+
+    public void setScaledPercent (boolean isScaledPercent) {
+        this.isScaledPercent = isScaledPercent;
+    }
+
+    public boolean isFitToPage () {
+        return fitToPage;
+    }
+
+    public void setFitToPage (boolean fitToPage) {
+        this.fitToPage = fitToPage;
+    }
+
+    public boolean isPrintRangePageSelection () {
+        return printRangePageSelection;
+    }
+
+    public void setPrintRangePageSelection (boolean printRangePageSelection) {
+        this.printRangePageSelection = printRangePageSelection;
+    }
+
+    public int getPageFrom () {
+        return pageFrom;
+    }
+
+    public void setPageFrom (int pageFrom) {
+        this.pageFrom = pageFrom;
+    }
+
+    public int getPageTo () {
+        return pageTo;
+    }
+
+    public void setPageTo (int pageTo) {
+        this.pageTo = pageTo;
+    }
+
+    public int getRows () {
+        return rows;
+    }
+
+    public void setRows (int rows) {
+        this.rows = rows;
+    }
+
+    public int getColumns () {
+        return columns;
+    }
+
+    public void setColumns (int columns) {
+        this.columns = columns;
+    }
+
+    public Graphics getSwtGraphics () {
+        return swtGraphics;
+    }
+
+    public void setSwtGraphics (Graphics swtGraphics) {
+        this.swtGraphics = swtGraphics;
+    }
+
+    public Graphics getGraphics () {
+        return graphics;
+    }
+
+    public void setGraphics (Graphics graphics) {
+        this.graphics = graphics;
+    }
+
+    public void setDiagrams (Collection < Diagram > diagrams) {
+        this.diagrams = diagrams;
+    }
+
+    public Collection < Diagram > getDiagrams () {
+        return diagrams;
+    }
+
+}
+

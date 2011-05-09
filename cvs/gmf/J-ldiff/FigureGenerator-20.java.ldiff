@@ -1,0 +1,68 @@
+13a14,16
+> import java.lang.reflect.InvocationTargetException;
+> 
+> import org.eclipse.core.runtime.IProgressMonitor;
+14a18,18
+> import org.eclipse.gmf.common.UnexpectedBehaviourException;
+15,15c73,73
+< import org.eclipse.emf.codegen.jet.JETException;
+---
+> import org.eclipse.gmf.internal.common.codegen.TextEmitter;
+76,76c80,80
+< public class FigureGenerator {
+---
+> public class FigureGenerator implements TextEmitter {
+77,77d80
+< 	private final String packageName;
+80a84,84
+> 	public FigureGenerator(FigureQualifiedNameSwitch figureNameSwitch) {
+81,81d83
+< 	public FigureGenerator(String aPackageName, ImportAssistant importManager, FigureQualifiedNameSwitch figureNameSwitch) {
+82,82c85,85
+< 		this(aPackageName, importManager, figureNameSwitch, new MapModeCodeGenStrategy.RuntimeUnspecifiedMapMode());
+---
+> 		this(figureNameSwitch, new MapModeCodeGenStrategy.RuntimeUnspecifiedMapMode());
+85,85c88,88
+< 	public FigureGenerator(String aPackageName, ImportAssistant importManager, FigureQualifiedNameSwitch figureNameSwitch, MapModeCodeGenStrategy mapModeStrategy) {
+---
+> 	public FigureGenerator(FigureQualifiedNameSwitch figureNameSwitch, MapModeCodeGenStrategy mapModeStrategy) {
+86,86d88
+< 		packageName = aPackageName;
+110,110c112,112
+< 		myTopDispatcher = new GraphDefDispatcher(topFactory, keyMap, importManager, figureNameSwitch, mapModeStrategy);
+---
+> 		myTopDispatcher = new GraphDefDispatcher(topFactory, keyMap, figureNameSwitch, mapModeStrategy);
+112,112c114,114
+< 		myInnerDispatcher = new GraphDefDispatcher(innerFactory, keyMap, importManager, figureNameSwitch, mapModeStrategy);
+---
+> 		myInnerDispatcher = new GraphDefDispatcher(innerFactory, keyMap, figureNameSwitch, mapModeStrategy);
+113,119d114
+< 	}
+< 
+< 	/**
+< 	 * @return possibly <code>null</code>
+< 	 */
+< 	public String getPackageStatement() {
+< 		return packageName;
+175a171,178
+> 	public String generate(IProgressMonitor monitor, Object[] arguments) throws InterruptedException, InvocationTargetException, UnexpectedBehaviourException {
+> 		if (arguments == null || arguments.length != 2 || false == arguments[0] instanceof Figure || false == arguments[1] instanceof ImportAssistant) {
+> 			throw new UnexpectedBehaviourException("Single Figure expected as argument: " + arguments);
+> 		}
+> 		return go((Figure) arguments[0], (ImportAssistant) arguments[1]);
+> 	}
+> 
+> 	public String go(Figure fig, ImportAssistant importManager) {
+176,176d170
+< 	public String go(Figure fig) throws JETException {
+177a180,181
+> 		myTopDispatcher.setImportManager(importManager);
+> 		myInnerDispatcher.setImportManager(importManager);
+178,178c182,182
+< 		Object args = new Object[] {fig, myTopDispatcher.getImportManager(), myTopDispatcher.getFQNSwitch(), myInnerDispatcher};
+---
+> 		Object args = new Object[] {fig, importManager, myTopDispatcher.getFQNSwitch(), myInnerDispatcher};
+182a187,187
+> 		return res;
+183,183d186
+< 		return packageName == null ? res : "package " + packageName + ";\n" + res;

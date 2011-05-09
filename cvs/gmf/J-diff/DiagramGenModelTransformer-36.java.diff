@@ -1,0 +1,77 @@
+17d16
+< import java.util.HashSet;
+22d20
+< import java.util.Set;
+99c97
+< 	private final Set<org.eclipse.gmf.mappings.ValueExpression> myProcessedExpressions = new HashSet<org.eclipse.gmf.mappings.ValueExpression>();
+---
+> 	private final Map<org.eclipse.gmf.mappings.ValueExpression, ValueExpression> myProcessedExpressions;
+124a123
+> 		myProcessedExpressions = new HashMap<org.eclipse.gmf.mappings.ValueExpression, ValueExpression>();
+792,793d790
+< 			genFeatureValSpec.setBody(featureValSpec.getValue().getBody());
+< 			genFeatureValSpec.setLanguage(createGenLanguage(featureValSpec.getValue().getLanguage()));
+794a792,794
+> 			ValueExpression value = GMFGenFactory.eINSTANCE.createValueExpression();
+> 			value.setBody(featureValSpec.getValue().getBody());
+> 			genFeatureValSpec.setValue(bindToProvider(featureValSpec.getValue(), value));
+796d795
+< 			bindToProvider(featureValSpec.getValue(), genFeatureValSpec);
+812c811
+< 	private static GenLanguage createGenLanguage(Language mapLang) {
+---
+> 	private static GenLanguage detectGenLanguage(Language mapLang) {
+832,836c831,833
+< 		GenConstraint modelElementSelector = GMFGenFactory.eINSTANCE.createGenConstraint();
+< 		modelElementSelector.setBody(constraint.getBody());
+< 		modelElementSelector.setLanguage(createGenLanguage(constraint.getLanguage()));
+< 		bindToProvider(constraint, modelElementSelector);
+< 		return modelElementSelector;
+---
+> 		GenConstraint genConstraint = GMFGenFactory.eINSTANCE.createGenConstraint();
+> 		genConstraint.setBody(constraint.getBody());
+> 		return bindToProvider(constraint, genConstraint);
+1020,1022c1017
+< 			valueExpression.setLanguage(createGenLanguage(metric.getRule().getLanguage()));
+< 			bindToProvider(metric.getRule(), valueExpression);
+< 			genMetric.setRule(valueExpression);
+---
+> 			genMetric.setRule(bindToProvider(metric.getRule(), valueExpression));
+1036,1037c1031,1037
+< 	private void bindToProvider(org.eclipse.gmf.mappings.ValueExpression expression, ValueExpression genExpression) {
+< 		if(!myProcessedExpressions.add(expression)) {
+---
+> 	/**
+> 	 * ValueExpressions may be reused, as such clients should treat second argument as template and record return value
+> 	 * as actual expression.
+> 	 * @return actual gmfgen::ValueExpression to reference
+> 	 */
+> 	private <T extends ValueExpression> T bindToProvider(org.eclipse.gmf.mappings.ValueExpression expression, T genExpression) {
+> 		if(myProcessedExpressions.containsKey(expression)) {
+1039c1039,1040
+< 			return;
+---
+> 			@SuppressWarnings("unchecked") T reuse = (T) myProcessedExpressions.get(expression);
+> 			return reuse;
+1041,1042c1042
+< 		
+< 		GenLanguage language = genExpression.getLanguage();
+---
+> 		GenLanguage language = detectGenLanguage(expression.getLanguage());
+1044c1044
+< 			return;
+---
+> 			return genExpression;
+1060,1062d1059
+< 			if(provider == null) {
+< 				return;
+< 			}
+1065a1063,1064
+> 		myProcessedExpressions.put(expression, genExpression);
+> 		return genExpression;
+1079a1079,1081
+> 		} else {
+> 			newProvider = GMFGenFactory.eINSTANCE.createGenExpressionInterpreter();
+> 			// fake provider with no language set to fail validation (XXX perhaps, makes sense to add 'unrecognized' language?)
+1080a1083
+> 		assert newProvider != null;

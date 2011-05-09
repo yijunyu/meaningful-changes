@@ -1,0 +1,72 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2006 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2007 IBM Corporation and others.
+13a14,15
+> import java.util.Iterator;
+> 
+18a21,21
+> import org.eclipse.gef.EditPart;
+20a24,26
+> import org.eclipse.gef.Request;
+> import org.eclipse.gef.RequestConstants;
+> import org.eclipse.gef.requests.SelectionRequest;
+31,33d36
+< /*
+<  * @canBeSeenBy %partners
+<  */
+36,36c39,39
+<  * @author mmostafa
+---
+>  * @author mmostafa, crevells
+146a150,199
+> 
+>     public EditPart getTargetEditPart(Request request) {
+> 
+>         if (RequestConstants.REQ_SELECTION == request.getType()
+>             && getParent() instanceof GroupEditPart) {
+>             
+>             // If the shape is already selected then do not give up selection to
+>             // the group.
+>             if (getSelected() != SELECTED_NONE) {
+>                 return super.getTargetEditPart(request);
+>             }
+> 
+>             GroupEditPart groupEP = (GroupEditPart) getParent();
+> 
+>             // Normally when a shape is not selected, the right-mouse button
+>             // will cause the shape to be selected and the context menu to show.
+>             // If the shape is in a group, we do not want this behavior as we
+>             // want the context menu of the group to show.
+>             if (getSelected() == SELECTED_NONE
+>                 && (request instanceof SelectionRequest)
+>                 && ((SelectionRequest) request).getLastButtonPressed() == 3) {
+>                 return groupEP.getTargetEditPart(request);
+>             }
+>           
+>             // If the group is currently selected, then this is the second click
+>             // then the shape should be selected.
+>             if (groupEP.getSelected() != SELECTED_NONE) {
+>                 return super.getTargetEditPart(request);
+>             }
+> 
+>             // If any of the group's children are currently selected then the
+>             // selection of another child of the group will result in the child
+>             // being selected and not the group.
+>             for (Iterator iter = groupEP.getChildren().iterator(); iter
+>                 .hasNext();) {
+>                 EditPart childEP = (EditPart) iter.next();
+>                 if (childEP.getSelected() != SELECTED_NONE) {
+>                     return super.getTargetEditPart(request);
+>                 }
+> 
+>             }
+> 
+>             // otherwise we want the group to get selected
+>             return groupEP.getTargetEditPart(request);
+>         }
+> 
+>         return super.getTargetEditPart(request);
+>     }
+> 
+>      

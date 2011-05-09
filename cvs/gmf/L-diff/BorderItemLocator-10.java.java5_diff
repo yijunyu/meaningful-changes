@@ -1,0 +1,86 @@
+98c98
+<     private Point locateOnParent (Point suggestedLocation, int suggestedSide, IFigure borderItem) {
+---
+>     protected Point locateOnParent (Point suggestedLocation, int suggestedSide, IFigure borderItem) {
+156c156
+<     private boolean conflicts (Point recommendedLocation, IFigure targetBorderItem) {
+---
+>     protected IFigure getConflictingBorderItemFigure (Point recommendedLocation, IFigure targetBorderItem) {
+166c166
+<                     return true;
+---
+>                     return borderItem;
+170c170
+<         return false;
+---
+>         return null;
+173c173
+<     private Point locateOnBorder (Point suggestedLocation, int suggestedSide, int circuitCount, IFigure borderItem) {
+---
+>     protected Point locateOnBorder (Point suggestedLocation, int suggestedSide, int circuitCount, IFigure borderItem) {
+178c178,179
+<         if (circuitCount < 4 && conflicts (recommendedLocation, borderItem)) {
+---
+>         IFigure conflictingBorderItem = getConflictingBorderItemFigure (recommendedLocation, borderItem);
+>         if (circuitCount < 4 && conflictingBorderItem != null) {
+181,182c182,184
+<                     recommendedLocation.y += borderItemSize.height + vertical_gap;
+<                 } while (conflicts (recommendedLocation, borderItem));
+---
+>                     recommendedLocation.y = calculateNextNonConflictingPosition (conflictingBorderItem.getBounds ().getBottomLeft ().y, vertical_gap, suggestedSide, borderItem);
+>                     conflictingBorderItem = getConflictingBorderItemFigure (recommendedLocation, borderItem);
+>                 } while (conflictingBorderItem != null);
+184a187,188
+>                 } else if (recommendedLocation.y < getParentBorder ().getTopLeft ().y - borderItemSize.height) {
+>                     return locateOnBorder (recommendedLocation, PositionConstants.NORTH, circuitCount + 1, borderItem);
+185a190
+> 
+188,189c193,195
+<                     recommendedLocation.x += borderItemSize.width + horizontal_gap;
+<                 } while (conflicts (recommendedLocation, borderItem));
+---
+>                     recommendedLocation.x = calculateNextNonConflictingPosition (conflictingBorderItem.getBounds ().getTopRight ().x, horizontal_gap, suggestedSide, borderItem);
+>                     conflictingBorderItem = getConflictingBorderItemFigure (recommendedLocation, borderItem);
+>                 } while (conflictingBorderItem != null);
+191a198,199
+>                 } else if (recommendedLocation.x < getParentBorder ().getBottomLeft ().x - borderItemSize.width) {
+>                     return locateOnBorder (recommendedLocation, PositionConstants.WEST, circuitCount + 1, borderItem);
+192a201
+> 
+195,196c204,206
+<                     recommendedLocation.y -= (borderItemSize.height + vertical_gap);
+<                 } while (conflicts (recommendedLocation, borderItem));
+---
+>                     recommendedLocation.y = calculateNextNonConflictingPosition (conflictingBorderItem.getBounds ().getLocation ().y, vertical_gap, suggestedSide, borderItem);
+>                     conflictingBorderItem = getConflictingBorderItemFigure (recommendedLocation, borderItem);
+>                 } while (conflictingBorderItem != null);
+198a209,210
+>                 } else if (recommendedLocation.y > getParentBorder ().getBottomRight ().y) {
+>                     return locateOnBorder (recommendedLocation, PositionConstants.SOUTH, circuitCount + 1, borderItem);
+199a212
+> 
+202,203c215,217
+<                     recommendedLocation.x -= (borderItemSize.width + horizontal_gap);
+<                 } while (conflicts (recommendedLocation, borderItem));
+---
+>                     recommendedLocation.x = calculateNextNonConflictingPosition (conflictingBorderItem.getBounds ().getLocation ().x, horizontal_gap, suggestedSide, borderItem);
+>                     conflictingBorderItem = getConflictingBorderItemFigure (recommendedLocation, borderItem);
+>                 } while (conflictingBorderItem != null);
+205a220,221
+>                 } else if (recommendedLocation.x > getParentBorder ().getTopRight ().x) {
+>                     return locateOnBorder (recommendedLocation, PositionConstants.EAST, circuitCount + 1, borderItem);
+206a223
+> 
+212a230,241
+>     protected int calculateNextNonConflictingPosition (int currentPosition, int interval, int currentSide, IFigure borderItem) {
+>         switch (currentSide) {
+>             case PositionConstants.WEST :
+>             case PositionConstants.SOUTH :
+>                 return currentPosition + interval;
+>             case PositionConstants.EAST :
+>             case PositionConstants.NORTH :
+>             default :
+>                 return currentPosition - interval;
+>         }
+>     }
+> 

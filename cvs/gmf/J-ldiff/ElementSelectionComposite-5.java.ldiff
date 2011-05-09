@@ -1,0 +1,115 @@
+13a14,14
+> import java.util.HashMap;
+15a17,17
+> import java.util.Map;
+16a19,21
+> import org.eclipse.core.runtime.IProgressMonitor;
+> import org.eclipse.core.runtime.jobs.Job;
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+17,17d18
+< import org.eclipse.gmf.runtime.common.ui.services.internal.elementselection.ElementSelectionCompositeContentProvider;
+18,18c22,22
+< import org.eclipse.gmf.runtime.common.ui.services.internal.elementselection.ElementSelectionCompositeLabelProvider;
+---
+> import org.eclipse.gmf.runtime.common.ui.services.internal.l10n.CommonUIServicesMessages;
+20a25,25
+> import org.eclipse.jface.viewers.LabelProvider;
+23a29,29
+> import org.eclipse.jface.wizard.ProgressMonitorPart;
+30a37,37
+> import org.eclipse.swt.graphics.Image;
+51a59,59
+>     implements IElementSelectionListener {
+51,51c58,58
+< public abstract class ElementSelectionComposite {
+---
+> public abstract class ElementSelectionComposite
+73a82,86
+>      * The progress bar when searching for matching objects.
+>      */
+>     private ProgressMonitorPart progressBar;
+> 
+>     /**
+78a92,96
+>      * The job running the element selection service.
+>      */
+>     private Job job;
+> 
+>     /**
+168a187,202
+>         progressBar = new ProgressMonitorPart(result, new GridLayout());
+>         progressBar.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+>         progressBar.setVisible(false);
+> 
+>         tableViewer.setLabelProvider(new LabelProvider() {
+> 
+>             public Image getImage(Object element) {
+>                 assert element instanceof AbstractMatchingObject;
+>                 return ((AbstractMatchingObject) element).getImage();
+>             }
+> 
+>             public String getText(Object element) {
+>                 assert element instanceof AbstractMatchingObject;
+>                 return ((AbstractMatchingObject) element).getDisplayName();
+>             }
+>         });
+169,172d186
+<         tableViewer
+<             .setLabelProvider(new ElementSelectionCompositeLabelProvider());
+<         tableViewer
+<             .setContentProvider(new ElementSelectionCompositeContentProvider());
+196a227,227
+>         fillTableViewer();
+197,197d226
+<         tableViewer.setInput(input);
+205a236,261
+>      * Fill the table viewer with results from the element selection service.
+>      */
+>     private void fillTableViewer() {
+>         /*
+>          * Clean the previous list
+>          */
+>         tableViewer.getTable().removeAll();
+> 
+>         /*
+>          * Initialize all possible matching objects from the select element
+>          * service.
+>          */
+>         if (!input.getInput().equals(StringStatics.BLANK)) {
+>             filterText.setEnabled(false);
+>             progressBar.setVisible(true);
+>             progressBar.beginTask(
+>                 CommonUIServicesMessages.ElementSelectionService_ProgressName,
+>                 IProgressMonitor.UNKNOWN);
+> 
+>             job = ElementSelectionService.getInstance().getMatchingObjects(
+>                 input, this);
+>         }
+> 
+>     }
+> 
+>     /**
+256a313,335
+> 
+>     public void matchingObjectEvent(IMatchingObjectEvent matchingObjectEvent) {
+>         if (!progressBar.isDisposed()) {
+>             if (matchingObjectEvent.getEventType() == MatchingObjectEventType.END_OF_MATCHES) {
+>                 progressBar.done();
+>                 progressBar.setVisible(false);
+>                 filterText.setEnabled(true);
+>                 filterText.setFocus();
+>             } else {
+>                 progressBar.worked(1);
+>                 progressBar.subTask(matchingObjectEvent.getMatchingObject()
+>                     .getName());
+>                 tableViewer.add(matchingObjectEvent.getMatchingObject());
+>             }
+>         }
+>     }
+> 
+>     /**
+>      * Cancel the job running the element selection service.
+>      */
+>     public void cancel() {
+>         job.cancel();
+>     }

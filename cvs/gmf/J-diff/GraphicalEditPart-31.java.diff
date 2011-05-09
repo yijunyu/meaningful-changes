@@ -1,0 +1,263 @@
+17d16
+< import java.util.Dictionary;
+20d18
+< import java.util.Hashtable;
+31d28
+< import org.eclipse.emf.ecore.ENamedElement;
+33a31
+> import org.eclipse.emf.transaction.RunnableWithResult;
+52a51,52
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+55d54
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+64a64,66
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+70d71
+< import org.eclipse.gmf.runtime.diagram.ui.internal.properties.Properties;
+80,82c81
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+< import org.eclipse.gmf.runtime.emf.core.util.MetaModelUtil;
+< import org.eclipse.gmf.runtime.emf.core.util.ProxyUtil;
+---
+> import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+127a127,131
+> 	 * Cache the editing domain after it is retrieved.
+> 	 */
+> 	private TransactionalEditingDomain editingDomain;
+> 
+> 	/**
+151c155
+< 		EObject semanticElement = ProxyUtil.resolve(MEditingDomainGetter.getMEditingDomain((EObject)getModel()), semanticProxy);
+---
+> 		EObject semanticElement = EMFCoreUtil.resolve(TransactionUtil.getEditingDomain((EObject)getModel()), semanticProxy);
+181c185
+< 		DiagramEventBroker.getInstance().addNotificationListener(element,listener);
+---
+> 		getDiagramEventBroker().addNotificationListener(element,listener);
+205c209
+< 		DiagramEventBroker.getInstance().addNotificationListener(element,feature,listener);
+---
+> 		getDiagramEventBroker().addNotificationListener(element,feature,listener);
+250c254
+< 					DiagramEventBroker.getInstance().
+---
+> 					getDiagramEventBroker().
+253c257
+< 					DiagramEventBroker.getInstance().removeNotificationListener((EObject) obj[0],(NotificationListener) obj[1]);
+---
+> 					getDiagramEventBroker().removeNotificationListener((EObject) obj[0],(NotificationListener) obj[1]);
+301c305
+< 					semanticObject = ProxyUtil.resolve(MEditingDomainGetter.getMEditingDomain(element), element);
+---
+> 					semanticObject = EMFCoreUtil.resolve(TransactionUtil.getEditingDomain(element), element);
+396,399c400,407
+< 			cmd =  (Command) MEditingDomainGetter.getMEditingDomain((EObject)getModel()).runAsRead(new MRunnable() {
+< 				
+< 				public Object run() {
+< 					return GraphicalEditPart.super.getCommand(request);
+---
+> 			try {
+> 				cmd = (Command) TransactionUtil.getEditingDomain(
+> 					(EObject) getModel()).runExclusive(
+> 					new RunnableWithResult.Impl() {
+> 
+> 						public void run() {
+> 							setResult(GraphicalEditPart.super
+> 								.getCommand(request));
+401a410,417
+> 			} catch (InterruptedException e) {
+> 				Trace.catching(DiagramUIPlugin.getInstance(),
+> 					DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+> 					"getCommand", e); //$NON-NLS-1$
+> 				Log.error(DiagramUIPlugin.getInstance(),
+> 					DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING,
+> 					"getCommand", e); //$NON-NLS-1$
+> 			}
+594c610,613
+< 		return (EObject) MEditingDomainGetter.getMEditingDomain((EObject)getModel()).runAsRead(new MRunnable() {
+---
+> 		try {
+> 			return (EObject) TransactionUtil.getEditingDomain(
+> 				(EObject) getModel()).runExclusive(
+> 				new RunnableWithResult.Impl() {
+596c615
+< 			public Object run() {
+---
+> 					public void run() {
+598,600c617,620
+< 				if (model instanceof View)
+< 					return ViewUtil.resolveSemanticElement((View)getModel());
+< 				else if (model instanceof EObject){
+---
+> 						if (model instanceof View) {
+> 							setResult(ViewUtil
+> 								.resolveSemanticElement((View) getModel()));
+> 						} else if (model instanceof EObject) {
+603c623
+< 				    	return ProxyUtil.resolve(element); 
+---
+> 								setResult(EMFCoreUtil.resolve(getEditingDomain(), element));
+605c625
+< 						return element;
+---
+> 								setResult(element);
+607d626
+< 				return null;
+609a629,638
+> 		} catch (InterruptedException e) {
+> 			Trace.catching(DiagramUIPlugin.getInstance(),
+> 				DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+> 				"resolveSemanticElement", e); //$NON-NLS-1$
+> 			Log.error(DiagramUIPlugin.getInstance(),
+> 				DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING,
+> 				"resolveSemanticElement", e); //$NON-NLS-1$
+> 			return null;
+> 		}
+> 
+692c721,723
+< 		MEditingDomainGetter.getMEditingDomain((EObject)getModel()).runAsRead(new MRunnable() {
+---
+> 		try {
+> 			TransactionUtil.getEditingDomain((EObject) getModel())
+> 				.runExclusive(new Runnable() {
+694c725
+< 			public Object run() {
+---
+> 				public void run() {
+703d733
+< 				return null;
+705a736,744
+> 		} catch (InterruptedException e) {
+> 			Trace.catching(DiagramUIPlugin.getInstance(),
+> 				DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+> 				"refresh", e); //$NON-NLS-1$
+> 			Log.error(DiagramUIPlugin.getInstance(),
+> 				DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING,
+> 				"refresh", e); //$NON-NLS-1$
+> 		}
+> 
+774c813
+< 			DiagramEventBroker.getInstance().
+---
+> 			getDiagramEventBroker().
+779c818
+< 			DiagramEventBroker.getInstance().removeNotificationListener((EObject) objects[0],(NotificationListener) objects[1]);
+---
+> 			getDiagramEventBroker().removeNotificationListener((EObject) objects[0],(NotificationListener) objects[1]);
+904,980d942
+< 	 * Return a Map of all the appearance property ids supported by the edit
+< 	 * part and its children.
+< 	 * 
+< 	 * Each entry in the map is the factory hint of the edit part as key and a
+< 	 * dictionary of appearance properties as values. The edit parts are the
+< 	 * receiver itself and it's children.
+< 	 * 
+< 	 * For example, the connectable shape edit part with name, attribute,
+< 	 * operation and shape compartments will return a map where: 1 entry:
+< 	 * connectable shape factory hint -> dictionary: Properties.ID_FONT -> font
+< 	 * data Properties.ID_FONTCOLOR -> font color Properties.ID_LINECOLOR ->
+< 	 * line color Properties.ID_FILLCOLOR -> fill color 2d entry: attribute
+< 	 * compartment hint -> dictionary(empty) 3d entry: operation compartment
+< 	 * hint -> dictionary(empty) 4d entry: shape compartment hint ->
+< 	 * dictionary(empty)
+< 	 * 
+< 	 * @return Map
+< 	 */
+< 	public Map getAppearancePropertiesMap() {
+< 		Map properties = new HashMap();
+< 		fillAppearancePropertiesMap(properties);
+< 		// for each of the children fill
+< 		Iterator iterator = getChildren().iterator();
+< 		while (iterator.hasNext()) {
+< 			IGraphicalEditPart child = (IGraphicalEditPart) iterator.next();
+< 			child.fillAppearancePropertiesMap(properties);
+< 		}
+< 		return properties;
+< 	}
+< 
+< 	/**
+< 	 * Add to the parent edit part appearance properties map. Edit parts that
+< 	 * have thier own appearance properties in addition to the parent edit part
+< 	 * font, font color, line color and fill color should override this method
+< 	 * to include their specific appearance properties.
+< 	 * 
+< 	 * @param properties -
+< 	 *            map of appearence properties to which we add our own. The map
+< 	 *            has the reciever as a key and string array of the supported
+< 	 *            appearance property ids.
+< 	 */
+< 	public void fillAppearancePropertiesMap(Map properties) {
+< 		if (getAppearancePropertyIDs().length > 0) {
+< 			// only if there are any appearance properties
+< 			final Dictionary local_properties = new Hashtable();
+< 			for (int i = 0; i < getAppearancePropertyIDs().length; i++) {
+< 				String prob = getAppearancePropertyIDs()[i];
+< 				ENamedElement element = MetaModelUtil.getElement(prob);
+< 				if (element instanceof EStructuralFeature &&
+< 					hasNotationView()&&
+< 					ViewUtil.isPropertySupported((View)getModel(), prob))
+< 					local_properties.put(
+< 						getAppearancePropertyIDs()[i],
+< 						getStructuralFeatureValue((EStructuralFeature)element));
+< 			}
+< 			if (hasNotationView())
+< 				properties.put(((View) getModel()).getType(), local_properties);
+< 		}
+< 	}
+< 
+< 	/**
+< 	 * a static array of appearance property ids applicable to shapes
+< 	 */
+< 	private static final String[] appearanceProperties = new String[] {Properties.ID_ISVISIBLE};
+< 
+< 	/**
+< 	 * Returns an array of the appearance property ids applicable to the
+< 	 * receiver. Fro this type it is Properties.ID_ISVISIBLE
+< 	 * 
+< 	 * @return - an array of the appearance property ids applicable to the
+< 	 *         receiver
+< 	 */
+< 	private String[] getAppearancePropertyIDs() {
+< 		return appearanceProperties;
+< 	}
+< 
+< 	/**
+1078c1040
+< 		elementGuid = ProxyUtil.getProxyID(ref);
+---
+> 		elementGuid = EMFCoreUtil.getProxyID(ref);
+1252a1215,1219
+> 	public Command transactionAboutToCommit(Notification notification) {
+> 		return null;
+> 	}
+> 
+> 	
+1325c1292
+<      * Derives my editing domain from my diagram view element. Subclasses may
+---
+>      * Derives my editing domain from my diagram element. Subclasses may
+1328,1329c1295,1312
+<     public TransactionalEditingDomain getEditingDomain() {
+<         return TransactionUtil.getEditingDomain(getDiagramView());
+---
+>     public final TransactionalEditingDomain getEditingDomain() {
+>         if (editingDomain == null) {
+>             editingDomain = TransactionUtil.getEditingDomain(getDiagramView());
+>         }
+>         return editingDomain;
+>     }
+>     
+>     /**
+>      * Gets the diagram event broker from the editing domain.
+>      * 
+>      * @return the diagram event broker
+>      */
+>     private DiagramEventBroker getDiagramEventBroker() {
+>         TransactionalEditingDomain theEditingDomain = getEditingDomain();
+>         if (theEditingDomain != null) {
+>             return DiagramEventBroker.getInstance(theEditingDomain);
+>         }
+>         return null;

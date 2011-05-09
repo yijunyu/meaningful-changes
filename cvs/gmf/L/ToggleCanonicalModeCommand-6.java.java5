@@ -1,0 +1,163 @@
+package org.eclipse.gmf.runtime.diagram.ui.internal.commands;
+
+import java.lang.ref.WeakReference;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.workspace.AbstractEMFOperation;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.GroupEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.CanonicalEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+
+public class ToggleCanonicalModeCommand extends Command {
+    private boolean _enable;
+    private Collection _semanticHosts = new ArrayList ();
+    private AbstractEMFOperation op = null;
+    private TransactionalEditingDomain domain;
+
+    public ToggleCanonicalModeCommand (Collection editParts, boolean enable) {
+        super (DiagramUIMessages.ToggleCanonicalModeCommand_Label);
+        Object [] editparts = new Object [editParts.size ()];
+        editParts.toArray (editparts);
+        for (int i = 0;
+        i < editparts.length; i ++) {
+            EditPart editPart = (EditPart) editparts [i];
+            if (editPart != null) {
+                CanonicalEditPolicy editPolicy = getCanonicalEditPolicy (editPart);
+                if (editPolicy != null) {
+                    _semanticHosts.add (new WeakReference (editPolicy.getSemanticHost ()));
+                }
+            }
+        }
+        _enable = enable;
+    }
+
+    public ToggleCanonicalModeCommand (EObject element, boolean enable) {
+        super (DiagramUIMessages.ToggleCanonicalModeCommand_Label);
+        _semanticHosts.add (new WeakReference (element));
+        _enable = enable;
+    }
+
+    public ToggleCanonicalModeCommand (EditPart target, boolean enable) {
+        this (Collections.singletonList (target), enable);
+    }
+
+    public static ToggleCanonicalModeCommand getToggleCanonicalModeCommand (Collection editParts, boolean enable) {
+        ToggleCanonicalModeCommand cmd = new ToggleCanonicalModeCommand (editParts, enable);
+        return cmd.getSemanticHosts ().isEmpty () ? null : cmd;
+    }
+
+    public static ToggleCanonicalModeCommand getToggleCanonicalModeCommand (ToggleCanonicalModeCommand tcmd, boolean enable) {
+        if (tcmd == null || tcmd.getSemanticHosts ().isEmpty ()) {
+            return null;
+        }
+        ToggleCanonicalModeCommand cmd = new ToggleCanonicalModeCommand (Collections.EMPTY_LIST, enable);
+        cmd.setSemanticHosts (tcmd.getSemanticHosts ());
+        return cmd;
+    }
+
+    protected final Collection getSemanticHosts () {
+        return _semanticHosts;
+    }
+
+    private final void setSemanticHosts (Collection hosts) {
+        _semanticHosts.clear ();
+        _semanticHosts.addAll (hosts);
+    }
+
+    protected static CanonicalEditPolicy getCanonicalEditPolicy (EditPart editPart) {
+        while (editPart instanceof GroupEditPart) {
+            editPart = editPart.getParent ();
+        }
+        return (CanonicalEditPolicy) editPart.getEditPolicy (EditPolicyRoles.CANONICAL_ROLE);
+    }
+
+    public void execute () {
+        if (_enable && domain != null) {
+            op = new AbstractEMFOperation (domain, "") {
+
+                protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+                    DoEnable (_enable);
+                    return Status.OK_STATUS;
+                }
+
+            }
+
+            ;
+            try {
+                op.execute (null, null);
+            } catch (ExecutionException e) {
+                DoEnable (_enable);
+            }
+        } else {
+            DoEnable (_enable);
+        }
+    }
+
+    private void DoEnable (boolean enable) {
+        Iterator references = getSemanticHosts ().iterator ();
+        while (references.hasNext ()) {
+            WeakReference wr = (WeakReference) references.next ();
+            EObject semanticHost = (EObject) wr.get ();
+            if (semanticHost != null) {
+                List ceps = CanonicalEditPolicy.getRegisteredEditPolicies (semanticHost);
+                for (int i = 0;
+                i < ceps.size (); i ++) {
+                    CanonicalEditPolicy cep = (CanonicalEditPolicy) ceps.get (i);
+                    cep.enableRefresh (enable);
+                }
+            }
+        }
+    }
+
+    public void redo () {
+        execute ();
+    }
+
+    public void undo () {
+        DoEnable (! _enable);
+        if (op != null) {
+            try {
+                op.undo (null, null);
+            } catch (ExecutionException e) {
+            }
+        }
+    }
+
+    public void setDomain (TransactionalEditingDomain d) {
+        domain = d;
+    }
+
+}
+

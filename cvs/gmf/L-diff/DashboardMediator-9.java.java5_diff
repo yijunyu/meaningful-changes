@@ -1,0 +1,151 @@
+6a7,8
+> import java.util.HashMap;
+> 
+8a11,12
+> import java.util.Map;
+> 
+26a31,36
+> import org.eclipse.gmf.bridge.ui.dashboard.DashboardAction;
+> 
+> import org.eclipse.gmf.bridge.ui.dashboard.DashboardFacade;
+> 
+> import org.eclipse.gmf.bridge.ui.dashboard.DashboardState;
+> 
+30a41,42
+> import org.eclipse.gmf.internal.bridge.ui.dashboard.DashboardActionRegistry.DashboardActionDescriptor;
+> 
+39,42d50
+< import org.eclipse.gmf.internal.codegen.popup.actions.ExecuteTemplatesAction;
+< 
+< import org.eclipse.gmf.internal.codegen.popup.actions.TransformToGenModel;
+< 
+79c87
+< public class DashboardMediator {
+---
+> public class DashboardMediator implements DashboardFacade {
+84a93
+>     private Map < String, ActionContainer > locations;
+87a97
+>         locations = new HashMap < String, ActionContainer > ();
+90a101,104
+>     public boolean isStrict () {
+>         return STRICT;
+>     }
+> 
+92a107,113
+>         locations.put (DashboardFacade.LOCATION_DM, view.getDMFigure ());
+>         locations.put (DashboardFacade.LOCATION_DGM, view.getDGMFigure ());
+>         locations.put (DashboardFacade.LOCATION_GDM, view.getGDMFigure ());
+>         locations.put (DashboardFacade.LOCATION_TDM, view.getTDMFigure ());
+>         locations.put (DashboardFacade.LOCATION_MM, view.getMMFigure ());
+>         locations.put (DashboardFacade.LOCATION_GM, view.getGMFigure ());
+>         locations.put (DashboardFacade.LOCATION_MM2GM, view.getMM2GMFigure ());
+111d131
+<         view.getGMFigure ().addAction (createLinkFigure (Messages.DashboardMediator_5, new GenerateDEAction ()));
+116c136,138
+<         view.getMM2GMFigure ().addAction (createLinkFigure (Messages.DashboardMediator_7, new GenerateGMAction ()));
+---
+>         for (DashboardActionDescriptor descriptor : Plugin.getDefault ().getDashboardActionRegistry ().getDescriptors ()) {
+>             addDashboardAction (descriptor);
+>         }
+119a142,155
+>     protected void addDashboardAction (DashboardActionDescriptor descriptor) {
+>         ActionContainer location = locations.get (descriptor.getLocation ());
+>         if (location == null) {
+>             Plugin.getDefault ().getLog ().log (Plugin.createError ("Unknown GMF Dashboard location: " + descriptor.getLocation (), null));
+>             return;
+>         }
+>         DashboardAction action = descriptor.createDashboardAction ();
+>         if (action == null) {
+>             return;
+>         }
+>         action.init (this);
+>         location.addAction (createLinkFigure (descriptor.getLabel (), action), descriptor.isStandard ());
+>     }
+> 
+126c162
+<     protected IFile getFile (String fileName) {
+---
+>     public IFile getFile (String fileName) {
+130c166
+<     protected String getName (IFile file) {
+---
+>     public String getName (IFile file) {
+154c190
+<     protected void updateStatus () {
+---
+>     public void updateStatus () {
+177a214,216
+>         public void init (DashboardFacade context) {
+>         }
+> 
+204a244,246
+>         public void init (DashboardFacade context) {
+>         }
+> 
+231a274,276
+>         public void init (DashboardFacade context) {
+>         }
+> 
+520a566,568
+>         public void init (DashboardFacade context) {
+>         }
+> 
+628,684d675
+<     private class GenerateGMAction implements DashboardAction {
+< 
+<         public boolean isEnabled () {
+<             if (STRICT) {
+<                 if (state.dmFileName == null || state.dgmFileName == null || state.tdmFileName == null) {
+<                     return false;
+<                 }
+<             }
+<             return project != null && state.mmFileName != null;
+<         }
+< 
+<         public void run () {
+<             IFile file = getFile (state.mmFileName);
+<             TransformToGenModel action = new TransformToGenModel ();
+<             IAction uiAction = new Action () {
+<             }
+< 
+<             ;
+<             uiAction.setText (Messages.DashboardMediator_13);
+<             IWorkbenchWindow window = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ();
+<             action.setActivePart (uiAction, window.getPartService ().getActivePart ());
+<             action.selectionChanged (uiAction, new StructuredSelection (file));
+<             action.run (uiAction);
+<             IFile gfile = action.getGenModelFile ();
+<             state.gmFileName = getName (gfile);
+<             updateStatus ();
+<         }
+< 
+<     }
+< 
+<     private class GenerateDEAction implements DashboardAction {
+< 
+<         public boolean isEnabled () {
+<             if (STRICT) {
+<                 if (state.dmFileName == null || state.dgmFileName == null) {
+<                     return false;
+<                 }
+<             }
+<             return project != null && state.gmFileName != null;
+<         }
+< 
+<         public void run () {
+<             IFile file = getFile (state.gmFileName);
+<             ExecuteTemplatesAction action = new ExecuteTemplatesAction ();
+<             IAction uiAction = new Action () {
+<             }
+< 
+<             ;
+<             uiAction.setText (Messages.DashboardMediator_14);
+<             IWorkbenchWindow window = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ();
+<             action.setActivePart (uiAction, window.getPartService ().getActivePart ());
+<             action.selectionChanged (uiAction, new StructuredSelection (file));
+<             action.run (uiAction);
+<         }
+< 
+<     }
+< 

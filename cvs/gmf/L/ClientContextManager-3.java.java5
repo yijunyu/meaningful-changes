@@ -1,0 +1,266 @@
+package org.eclipse.gmf.runtime.emf.type.core;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Iterator;
+
+import java.util.Map;
+
+import java.util.Set;
+
+import java.util.regex.Pattern;
+
+import java.util.regex.PatternSyntaxException;
+
+import org.eclipse.core.runtime.CoreException;
+
+import org.eclipse.core.runtime.IConfigurationElement;
+
+import org.eclipse.core.runtime.IExtension;
+
+import org.eclipse.core.runtime.IExtensionPoint;
+
+import org.eclipse.core.runtime.Platform;
+
+import org.eclipse.core.runtime.dynamichelpers.ExtensionTracker;
+
+import org.eclipse.core.runtime.dynamichelpers.IExtensionChangeHandler;
+
+import org.eclipse.core.runtime.dynamichelpers.IExtensionTracker;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypeDebugOptions;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePlugin;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePluginStatusCodes;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.descriptors.IEditHelperAdviceDescriptor;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.impl.DefaultClientContext;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.impl.XMLClientContext;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.l10n.EMFTypeCoreMessages;
+
+public final class ClientContextManager {
+    public static final String ELEMENT_TYPE_BINDINGS_EXT_P_NAME = "elementTypeBindings";
+    private static final String E_CLIENT_CONTEXT = "clientContext";
+    private static final String E_BINDING = "binding";
+    private static final String A_CONTEXT = "context";
+    private static final String E_ELEMENT_TYPE = "elementType";
+    private static final String E_ADVICE = "advice";
+    private static final String A_REF = "ref";
+    private static final String A_PATTERN = "pattern";
+    private static final ClientContextManager INSTANCE = new ClientContextManager ();
+    private final Set clientContexts = new java.util.HashSet ();
+    private final Map clientContextMap = new java.util.HashMap ();
+    private ExtensionTracker extensionTracker;
+    private IExtensionChangeHandler extensionListener;
+
+    private ClientContextManager () {
+        super ();
+        IConfigurationElement [] configs = Platform.getExtensionRegistry ().getConfigurationElementsFor (EMFTypePlugin.getPluginId (), ELEMENT_TYPE_BINDINGS_EXT_P_NAME);
+        if (EMFTypePlugin.isDynamicAware ()) {
+            startExtensionTracking ();
+        }
+        configureElementTypeBindings (configs);
+    }
+
+    private void startExtensionTracking () {
+        extensionListener = new IExtensionChangeHandler () {
+
+            public void addExtension (IExtensionTracker tracker, IExtension extension) {
+                configureElementTypeBindings (extension.getConfigurationElements ());
+            }
+
+            public void removeExtension (IExtension extension, Object [] objects) {
+            }
+
+        }
+
+        ;
+        IExtensionPoint point = Platform.getExtensionRegistry ().getExtensionPoint (EMFTypePlugin.getPluginId (), ELEMENT_TYPE_BINDINGS_EXT_P_NAME);
+        extensionTracker = new ExtensionTracker ();
+        extensionTracker.registerHandler (extensionListener, ExtensionTracker.createExtensionPointFilter (point));
+    }
+
+    public static final ClientContextManager getInstance () {
+        return INSTANCE;
+    }
+
+    public static final IClientContext getDefaultClientContext () {
+        return getInstance ().getClientContext (DefaultClientContext.ID);
+    }
+
+    public IClientContext getClientContext (String contextId) {
+        if (DefaultClientContext.ID.equals (contextId)) {
+            return DefaultClientContext.getInstance ();
+        }
+        return (IClientContext) clientContextMap.get (contextId);
+    }
+
+    public Set getClientContexts () {
+        return clientContexts;
+    }
+
+    public IClientContext getClientContextFor (EObject eObject) {
+        Collection contexts = new java.util.ArrayList ();
+        for (Iterator iter = getClientContexts ().iterator ();
+        iter.hasNext ();) {
+            IClientContext next = (IClientContext) iter.next ();
+            IElementMatcher matcher = next.getMatcher ();
+            try {
+                if (matcher.matches (eObject)) {
+                    contexts.add (next);
+                }
+            } catch (RuntimeException e) {
+                iter.remove ();
+                clientContextMap.remove (next.getId ());
+                Trace.catching (EMFTypePlugin.getPlugin (), EMFTypeDebugOptions.EXCEPTIONS_CATCHING, getClass (), "getClientContextsFor", e);
+                Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.CLIENT_MATCHER_FAILURE, EMFTypeCoreMessages.bind (EMFTypeCoreMessages.client_matcherFailure_ERROR_, next.getId ()));
+            }
+        }
+        return getClientContext (contexts);
+    }
+
+    private IClientContext getClientContext (Collection contexts) {
+        IClientContext result = DefaultClientContext.getInstance ();
+        if (contexts.size () > 1) {
+            result = new MultiClientContext (contexts);
+        } else if (! contexts.isEmpty ()) {
+            result = (IClientContext) contexts.iterator ().next ();
+        }
+
+        return result;
+    }
+
+    public IClientContext getBinding (IElementTypeDescriptor elementTypeDescriptor) {
+        Collection result = new ArrayList ();
+        for (Iterator i = getClientContexts ().iterator ();
+        i.hasNext ();) {
+            IClientContext next = (IClientContext) i.next ();
+            if (next.includes (elementTypeDescriptor)) {
+                result.add (next);
+            }
+        }
+        return getClientContext (result);
+    }
+
+    public IClientContext getBinding (IElementType elementType) {
+        Collection result = new ArrayList ();
+        for (Iterator i = getClientContexts ().iterator ();
+        i.hasNext ();) {
+            IClientContext next = (IClientContext) i.next ();
+            if (next.includes (elementType)) {
+                result.add (next);
+            }
+        }
+        return getClientContext (result);
+    }
+
+    public IClientContext getBinding (IEditHelperAdviceDescriptor advice) {
+        Collection result = new ArrayList ();
+        for (Iterator i = getClientContexts ().iterator ();
+        i.hasNext ();) {
+            IClientContext next = (IClientContext) i.next ();
+            if (next.includes (advice)) {
+                result.add (next);
+            }
+        }
+        return getClientContext (result);
+    }
+
+    private synchronized void configureElementTypeBindings (IConfigurationElement [] elements) {
+        configureClientContexts (elements);
+        configureBindings (elements);
+    }
+
+    public void registerClientContext (IClientContext clientContext) {
+        if (clientContexts.add (clientContext)) {
+            clientContextMap.put (clientContext.getId (), clientContext);
+        }
+    }
+
+    private void configureClientContexts (IConfigurationElement [] elements) {
+        for (int i = 0;
+        i < elements.length; i ++) {
+            IConfigurationElement config = elements [i];
+            if (E_CLIENT_CONTEXT.equals (config.getName ())) {
+                try {
+                    ClientContext context = new XMLClientContext (config);
+                    if (clientContexts.add (context)) {
+                        clientContextMap.put (context.getId (), context);
+                    }
+                } catch (CoreException ce) {
+                    String sourcePluginId = config.getDeclaringExtension ().getContributor ().getName ();
+                    Log.error (EMFTypePlugin.getPlugin (), ce.getStatus ().getCode (), EMFTypeCoreMessages.bind (EMFTypeCoreMessages.xml_parsing_elementTypeBindings_ERROR_, sourcePluginId, ce.getStatus ().getMessage ()), null);
+                } catch (Exception e) {
+                    String sourcePluginId = config.getDeclaringExtension ().getContributor ().getName ();
+                    Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.ERROR_PARSING_XML, EMFTypeCoreMessages.bind (EMFTypeCoreMessages.xml_parsing_elementTypeBindings_ERROR_, sourcePluginId, e.getMessage ()), e);
+                }
+            }
+        }
+    }
+
+    private void configureBindings (IConfigurationElement [] elements) {
+        for (int i = 0;
+        i < elements.length; i ++) {
+            IConfigurationElement config = elements [i];
+            if (E_BINDING.equals (config.getName ())) {
+                String contextId = config.getAttribute (A_CONTEXT);
+                if (contextId == null) {
+                    Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.BINDING_NO_CONTEXT, EMFTypeCoreMessages.bind (EMFTypeCoreMessages.xml_parsing_elementTypeBindings_ERROR_, config.getDeclaringExtension ().getContributor ().getName (), EMFTypeCoreMessages.binding_noContextId_ERROR_));
+                } else {
+                    ClientContext context = (ClientContext) getClientContext (contextId);
+                    if (context == null) {
+                        Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.BINDING_NO_SUCH_CONTEXT, EMFTypeCoreMessages.bind (EMFTypeCoreMessages.xml_parsing_elementTypeBindings_ERROR_, config.getDeclaringExtension ().getContributor ().getName (), EMFTypeCoreMessages.binding_noSuchContext_ERROR_));
+                    } else {
+                        configureBindings (context, config);
+                    }
+                }
+            }
+        }
+    }
+
+    private void configureBindings (ClientContext context, IConfigurationElement config) {
+        configureBindings (context, config, E_ELEMENT_TYPE);
+        configureBindings (context, config, E_ADVICE);
+    }
+
+    private void configureBindings (ClientContext context, IConfigurationElement config, String elementName) {
+        IConfigurationElement [] children = config.getChildren (elementName);
+        for (int i = 0;
+        i < children.length; i ++) {
+            String ref = children [i].getAttribute (A_REF);
+            String patternString = children [i].getAttribute (A_PATTERN);
+            if (ref == null && patternString == null) {
+                Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.BINDING_NO_REF_OR_PATTERN, EMFTypeCoreMessages.bind (EMFTypeCoreMessages.xml_parsing_elementTypeBindings_ERROR_, config.getDeclaringExtension ().getContributor ().getName (), EMFTypeCoreMessages.bind (EMFTypeCoreMessages.binding_no_ref_or_pattern_ERROR_, context.getId ())));
+                return;
+            }
+            if (ref != null && patternString != null) {
+                Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.BINDING_BOTH_REF_AND_PATTERN, EMFTypeCoreMessages.bind (EMFTypeCoreMessages.xml_parsing_elementTypeBindings_ERROR_, config.getDeclaringExtension ().getContributor ().getName (), EMFTypeCoreMessages.bind (EMFTypeCoreMessages.binding_both_ref_and_pattern_ERROR_, context.getId ())));
+                return;
+            }
+            if (ref != null) {
+                context.bindId (ref);
+            } else {
+                try {
+                    Pattern pattern = Pattern.compile (patternString);
+                    context.bindPattern (pattern);
+                } catch (PatternSyntaxException pse) {
+                    Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.PATTERN_INVALID_SYNTAX, EMFTypeCoreMessages.bind (EMFTypeCoreMessages.xml_parsing_elementTypeBindings_ERROR_, config.getDeclaringExtension ().getContributor ().getName (), EMFTypeCoreMessages.bind (EMFTypeCoreMessages.pattern_invalid_syntax_ERROR_, patternString)));
+                }
+            }
+        }
+    }
+
+}
+

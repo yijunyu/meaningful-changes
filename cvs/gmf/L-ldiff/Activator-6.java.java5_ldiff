@@ -1,0 +1,146 @@
+0a1,13
+> package org.eclipse.gmf.internal.xpand;
+> 
+> import java.util.HashMap;
+> 
+> import java.util.LinkedHashSet;
+> 
+> import java.util.Map;
+> 
+> import java.util.Set;
+> 
+> import org.eclipse.core.resources.IProject;
+> 
+> import org.eclipse.core.runtime.CoreException;
+1,1c23,23
+< package org.eclipse.gmf.internal.runtime.lite;
+---
+> import org.eclipse.gmf.internal.xpand.build.MetaModelSource;
+7a18,18
+> 
+7,7c17,17
+< import org.eclipse.jface.resource.ImageDescriptor;
+---
+> import org.eclipse.core.runtime.Plugin;
+9,9c21,21
+< import org.eclipse.jface.resource.ImageRegistry;
+---
+> import org.eclipse.emf.ecore.EPackage;
+10a25,25
+> import org.eclipse.gmf.internal.xpand.build.WorkspaceResourceManager;
+11,11d24
+< import org.eclipse.ui.plugin.AbstractUIPlugin;
+15,15c29,29
+< public class Activator extends AbstractUIPlugin {
+---
+> public class Activator extends Plugin {
+16,16d29
+<     public static final String PLUGIN_ID = "org.eclipse.gmf.runtime.lite";
+17,17c30,30
+<     private static Activator plugin;
+---
+>     private static Activator anInstance;
+20,20c38,38
+<         plugin = this;
+---
+>         anInstance = this;
+22a35,35
+>     @Override
+26a41,41
+>     @Override
+28,28c43,43
+<         plugin = null;
+---
+>         anInstance = null;
+32,33d46
+<     public static Activator getDefault () {
+<         return plugin;
+35a51,52
+>     public static void logWarn (String message) {
+>         log (new Status (IStatus.WARNING, getId (), 0, message, null));
+36,37d50
+<     public void logError (String error) {
+<         logError (error, null);
+39a55,59
+>     public static void logError (Exception e) {
+>         if (e instanceof CoreException) {
+>             log (((CoreException) e).getStatus ());
+>         } else {
+>             log (new Status (IStatus.ERROR, getId (), 0, e.getMessage (), e));
+40,43d54
+<     @Override
+<     protected void initializeImageRegistry (ImageRegistry reg) {
+<         PluginImages.initialize ();
+<         super.initializeImageRegistry (reg);
+45,47d60
+< 
+<     public void logError (String error, Throwable throwable) {
+<         log (error, throwable, IStatus.ERROR);
+49a63,64
+>     public static void log (IStatus status) {
+>         anInstance.getLog ().log (status);
+50,52d62
+<     private void debug (String message, Throwable throwable) {
+<         if (! isDebugging ()) {
+<             return;
+53a66,71
+> 
+>     private final Map < IProject, ResourceManager > resourceManagers = new HashMap < IProject, ResourceManager > ();
+> 
+>     public static ResourceManager getResourceManager (IProject context) {
+>         if (anInstance.resourceManagers.containsKey (context)) {
+>             return anInstance.resourceManagers.get (context);
+54,58d65
+<         if (message != null) {
+<             System.err.println (message);
+<         }
+<         if (throwable != null) {
+<             throwable.printStackTrace ();
+59a73,75
+>         ResourceManager resourceManager = new WorkspaceResourceManager (context);
+>         registerResourceManager (context, resourceManager);
+>         return resourceManager;
+61a78,80
+>     public static void registerResourceManager (IProject project, ResourceManager resourceManager) {
+>         assert ! anInstance.resourceManagers.containsKey (project);
+>         anInstance.resourceManagers.put (project, resourceManager);
+62,63d77
+<     public void logWarning (String error) {
+<         logWarning (error, null);
+65a83,87
+>     private final Set < MetaModelSource > modelSources = new LinkedHashSet < MetaModelSource > ();
+> 
+>     public static void registerModelSource (MetaModelSource modelSource) {
+>         assert modelSource != null;
+>         anInstance.modelSources.add (modelSource);
+66,67d82
+<     public void logWarning (String error, Throwable throwable) {
+<         log (error, throwable, IStatus.WARNING);
+69a90,92
+>     public static EPackage findMetaModel (String nsURI) {
+>         if (anInstance == null) {
+>             return null;
+70,72d89
+<     private void log (String error, Throwable throwable, int severity) {
+<         if (error == null && throwable != null) {
+<             error = throwable.getMessage ();
+73a94,97
+>         for (MetaModelSource s : anInstance.modelSources) {
+>             EPackage p = s.find (nsURI);
+>             if (p != null) {
+>                 return p;
+74,75d93
+<         getLog ().log (new Status (severity, getBundle ().getSymbolicName (), IStatus.OK, error, throwable));
+<         debug (error, throwable);
+76a99,100
+>         }
+>         return EPackage.Registry.INSTANCE.getEPackage (nsURI);
+76a47,47
+>     public static String getId () {
+77,78d46
+< 
+<     public static ImageDescriptor getImageDescriptor (String imageFilePath) {
+79,79c48,48
+<         return imageDescriptorFromPlugin (getDefault ().getBundle ().getSymbolicName (), imageFilePath);
+---
+>         return anInstance.getBundle ().getSymbolicName ();

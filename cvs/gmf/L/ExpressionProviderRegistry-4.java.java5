@@ -1,0 +1,164 @@
+package org.eclipse.gmf.internal.validate.expressions;
+
+import java.util.Collections;
+
+import java.util.HashMap;
+
+import java.util.Map;
+
+import java.util.Set;
+
+import org.eclipse.core.runtime.CoreException;
+
+import org.eclipse.core.runtime.IConfigurationElement;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.InvalidRegistryObjectException;
+
+import org.eclipse.core.runtime.Platform;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.gmf.internal.validate.GMFValidationPlugin;
+
+import org.eclipse.osgi.util.NLS;
+
+public class ExpressionProviderRegistry {
+    private static final ExpressionProviderRegistry INSTANCE = new ExpressionProviderRegistry ();
+    private Map < String, Descriptor > registry;
+
+    private ExpressionProviderRegistry () {
+        registry = new HashMap < String, Descriptor > ();
+        initialiaze ();
+    }
+
+    public static ExpressionProviderRegistry getInstance () {
+        return INSTANCE;
+    }
+
+    public IModelExpressionProvider getProvider (String language) {
+        Descriptor descriptor = getDescriptor (language);
+        if (descriptor != null && descriptor.getStatus ().isOK ()) {
+            return descriptor.getProvider ();
+        }
+        return null;
+    }
+
+    public Set < String > getLanguages () {
+        return registry.keySet ();
+    }
+
+    public Descriptor getDescriptor (String language) {
+        return registry.get (language);
+    }
+
+    private void initialiaze () {
+        IConfigurationElement [] configs = Platform.getExtensionRegistry ().getConfigurationElementsFor (Descriptor.GLOBAL_EXTENSION_ID);
+        for (int i = 0;
+        i < configs.length; i ++) {
+            IConfigurationElement element = configs [i];
+            Descriptor descriptor = new Descriptor (element);
+            if (descriptor.getStatus ().isOK ()) {
+                String lang = descriptor.getLanguage ();
+                assert lang != null;
+                Descriptor currentDsc = registry.get (lang);
+                if (currentDsc == null) {
+                    registry.put (lang, descriptor);
+                } else {
+                    String message = NLS.bind (Messages.providerAlreadyExistsIgnore, new Object [] {currentDsc.getProviderClassName (), lang, descriptor.getProviderClassName ()});
+                    GMFValidationPlugin.log (GMFValidationPlugin.createStatus (IStatus.ERROR, 0, message, null));
+                }
+            }
+        }
+        registry = Collections.unmodifiableMap (registry);
+    }
+
+    static class Descriptor {
+        static final String EXTENSION_ID = "expressionProviders";
+        static final String GLOBAL_EXTENSION_ID = GMFValidationPlugin.getPluginId () + "." + EXTENSION_ID;
+        public static final String ATTR_CLASS = "class";
+        public static final String ATTR_LANGUAGE = "language";
+        public static final String ATTR_REQUIRES_MODEL_CLASS = "requiresModelClass";
+        public static final String ATTR_NAME = "name";
+        public static final String ATTR_DESCRIPTION = "description";
+        public static final String ATTR_LOOSELY_TYPED = "isLooselyTyped";
+        private IConfigurationElement configElement;
+        private String language;
+        private String className;
+        private boolean modelReflection;
+        private boolean isLooselyTyped;
+        private String name;
+        private String description;
+        private IStatus status;
+        private IModelExpressionProvider provider;
+
+        Descriptor (IConfigurationElement config) {
+            this.status = Status.OK_STATUS;
+            try {
+                configure (config);
+            } catch (InvalidRegistryObjectException e) {
+                GMFValidationPlugin.log (IStatus.ERROR, Messages.initDescriptorFailure, e);
+            }
+        }
+
+        public IStatus getStatus () {
+            return status;
+        }
+
+        public String getLanguage () {
+            return language;
+        }
+
+        public boolean supportsModelReflection () {
+            return modelReflection;
+        }
+
+        public boolean isLooselyTyped () {
+            return isLooselyTyped;
+        }
+
+        public String getProviderClassName () {
+            return className;
+        }
+
+        public String getName () {
+            return name;
+        }
+
+        public String getDescription () {
+            return description;
+        }
+
+        IModelExpressionProvider getProvider () {
+            if (provider == null && getStatus ().isOK ()) {
+                try {
+                    provider = (IModelExpressionProvider) configElement.createExecutableExtension (ATTR_CLASS);
+                } catch (CoreException e) {
+                    String message = NLS.bind (Messages.providerCreationFailure, getProviderClassName ());
+                    GMFValidationPlugin.log (IStatus.ERROR, message, e);
+                }
+            }
+            return provider;
+        }
+
+        private void configure (IConfigurationElement config) {
+            this.configElement = config;
+            language = configElement.getAttribute (ATTR_LANGUAGE);
+            if (language == null || language.trim ().length () == 0) {
+                this.status = GMFValidationPlugin.createStatus (IStatus.ERROR, 0, Messages.missingProviderLanguage, null);
+            }
+            className = config.getAttribute (ATTR_CLASS);
+            if (className == null || className.trim ().length () == 0) {
+                this.status = GMFValidationPlugin.createStatus (IStatus.ERROR, 0, Messages.missingProviderClass, null);
+            }
+            modelReflection = "true".equals (config.getAttribute (ATTR_REQUIRES_MODEL_CLASS));
+            isLooselyTyped = "true".equals (config.getAttribute (ATTR_LOOSELY_TYPED));
+            name = config.getAttribute (ATTR_NAME);
+            description = config.getAttribute (ATTR_DESCRIPTION);
+        }
+
+    }
+
+}
+

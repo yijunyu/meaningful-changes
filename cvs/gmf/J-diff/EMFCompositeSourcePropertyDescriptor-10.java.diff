@@ -1,0 +1,163 @@
+20,21d19
+< import org.eclipse.emf.common.command.Command;
+< import org.eclipse.emf.common.command.CompoundCommand;
+25d22
+< import org.eclipse.emf.ecore.EObject;
+29d25
+< import org.eclipse.emf.edit.command.SetCommand;
+31d26
+< import org.eclipse.emf.edit.domain.EditingDomain;
+35,36d29
+< import org.eclipse.emf.edit.provider.ItemPropertyDescriptor;
+< import org.eclipse.emf.edit.provider.ItemPropertyDescriptorDecorator;
+40,41d32
+< import org.eclipse.emf.transaction.impl.InternalTransaction;
+< import org.eclipse.emf.transaction.impl.InternalTransactionalEditingDomain;
+44d34
+< import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+442,467d431
+<         
+<         // TODO Temporary fix for https://bugs.eclipse.org/bugs/show_bug.cgi?id=127528
+<         // 
+<         // Once https://bugs.eclipse.org/bugs/show_bug.cgi?id=128117 is fixed, 
+<         // TransactionalOperationItemPropertyDescriptor can be deleted and the 
+<         // following line can be used instead:
+<         //
+<         // getItemDescriptor().setPropertyValue(getObject(), value);
+<         //
+<         
+<         InternalTransactionalEditingDomain editingDomain = (InternalTransactionalEditingDomain) TransactionUtil
+<             .getEditingDomain(getObject());
+< 
+<         InternalTransaction transaction = editingDomain.getActiveTransaction();
+< 
+<         if (transaction != null && !transaction.isReadOnly()) {
+<             // we're executing an EMF transactional operation, so use a property
+<             // descriptor that won't execute the EMF set command through the
+<             // editing domain command stack
+<             ItemPropertyDescriptorDecorator decorator = new TransactionalOperationItemPropertyDescriptor(
+<                 editingDomain, getObject(), itemPropertyDescriptor);
+<             decorator.setPropertyValue(getObject(), value);
+< 
+<         } else {
+<             // no transaction open so execute the EMF set command through the
+<             // editing domain command stack
+470d433
+<     }
+538,653d500
+<     
+<     /**
+<      * Property descriptor decorator that overrides
+<      * {@link #setPropertyValue(Object, Object)} to execute the EMF commands
+<      * directly, rather than through the EMF command stack.
+<      * <P>
+<      * This decorator should only be used when the properties are being changed
+<      * through an {@link AbstractTransactionalCommand}.
+<      * 
+<      * @author ldamus
+<      */
+<     protected class TransactionalOperationItemPropertyDescriptor
+<         extends ItemPropertyDescriptorDecorator {
+< 
+<         private final EditingDomain editingDomain;
+< 
+<         /**
+<          * Initializes me with my editing domain, the object whose properties I
+<          * describe and my item property descriptor delegate.
+<          * 
+<          * @param editingDomain
+<          *            the editing domain
+<          * @param object
+<          *            the object whose properties I describe
+<          * @param itemPropertyDescriptor
+<          *            the delegate
+<          */
+<         public TransactionalOperationItemPropertyDescriptor(
+<                 EditingDomain editingDomain, Object object,
+<                 IItemPropertyDescriptor itemPropertyDescriptor) {
+< 
+<             super(object, itemPropertyDescriptor);
+<             this.editingDomain = editingDomain;
+<         }
+< 
+<         /**
+<          * Sets the property value without executing commands on the editing
+<          * domain command stack.
+<          */
+<         public void setPropertyValue(Object thisObject, Object newValue) {
+< 
+<             if (editingDomain == null) {
+<                 // no editing domain, so no my delegate will not execute a
+<                 // command through the command stack
+<                 itemPropertyDescriptor.setPropertyValue(thisObject, newValue);
+<                 return;
+<             }
+< 
+<             EObject eObject = (EObject) this.object;
+< 
+<             Object owner = null;
+< 
+<             if (getItemDescriptor() instanceof ItemPropertyDescriptor) {
+<                 owner = ((ItemPropertyDescriptor) getItemDescriptor())
+<                     .getCommandOwner();
+<             }
+< 
+<             Object commandOwner = (owner != null) ? owner
+<                 : eObject;
+< 
+<             Object featureObject = getFeature(eObject);
+< 
+<             if (featureObject instanceof EReference[]) {
+<                 EReference[] parentReferences = (EReference[]) featureObject;
+<                 Command removeCommand = null;
+< 
+<                 for (int i = 0; i < parentReferences.length; ++i) {
+<                     Object formerValue = eObject.eGet(parentReferences[i]);
+< 
+<                     if (formerValue != null) {
+<                         final EReference parentReference = parentReferences[i];
+< 
+<                         if (formerValue == newValue) {
+<                             return;
+< 
+<                         } else if (parentReference.getEType().isInstance(
+<                             newValue)) {
+< 
+<                             SetCommand.create(editingDomain, commandOwner,
+<                                 parentReference, newValue).execute();
+<                             return;
+< 
+<                         } else {
+<                             removeCommand = SetCommand.create(editingDomain,
+<                                 commandOwner, parentReference, null);
+<                             break;
+<                         }
+<                     }
+<                 }
+< 
+<                 for (int i = 0; i < parentReferences.length; ++i) {
+<                     final EReference parentReference = parentReferences[i];
+< 
+<                     if (parentReference.getEType().isInstance(newValue)) {
+<                         if (removeCommand != null) {
+<                             final CompoundCommand compoundCommand = new CompoundCommand(
+<                                 CompoundCommand.LAST_COMMAND_ALL);
+<                             compoundCommand.append(removeCommand);
+<                             compoundCommand.append(SetCommand.create(
+<                                 editingDomain, commandOwner, parentReference,
+<                                 newValue));
+<                             compoundCommand.execute();
+< 
+<                         } else {
+<                             SetCommand.create(editingDomain, commandOwner,
+<                                 parentReference, newValue).execute();
+<                         }
+<                         break;
+<                     }
+<                 }
+<             } else {
+<                 SetCommand.create(editingDomain, commandOwner, featureObject,
+<                     newValue).execute();
+<             }
+<         }
+<     }

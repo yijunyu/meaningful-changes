@@ -1,0 +1,305 @@
+14a15,15
+> import java.awt.Graphics2D;
+46a48,48
+> import org.eclipse.draw2d.SWTGraphics;
+83a86,87
+> import org.eclipse.swt.graphics.GC;
+> import org.eclipse.swt.graphics.Image;
+89,89c93,93
+<  * This class supports printing using the Java Print Service API.
+---
+>  * This class supports printing using the Java Print Service API. The logic of
+89a94,94
+>  * calculating page break etc. follows that of SWT printing but the actual
+90,90d93
+<  * The logic of calculating page break etc. follows that of SWT printing
+91,91c95,95
+<  * but the actual printing is done asynchronously in a platform independent way.
+---
+>  * printing is done asynchronously in a platform independent way.
+107,107c111,111
+< 	// Page information that is collected up front and used during the async printing calls.
+---
+> 	// Page information that is collected up front and used during the async
+107a112,112
+> 	// printing calls.
+187a193,193
+> 	 * @param dgrmEP
+188,188c194,194
+< 	 * @param dgrmEP The diagram edit part to print
+---
+> 	 *            The diagram edit part to print
+188a195,197
+> 	 * @param loadedPreferences
+> 	 *            true if existing prefs could be loaded successfully, false if
+> 	 *            not and defaults are being used. This parameter is important
+189,190d194
+< 	 * @param loadedPreferences true if existing prefs could be loaded
+<      * 		successfully, false if not and defaults are being used.  This parameter
+191,191c198,198
+<      * 		is important to obtain the correct page break bounds.
+---
+> 	 *            to obtain the correct page break bounds.
+191a199,200
+> 	 * @param fPreferences
+> 	 *            the preferenceStore that could either contain existing
+192,192d198
+< 	 * @param fPreferences the preferenceStore that could either contain
+193,193c201,201
+<      * 		existing preferences or defaults
+---
+> 	 *            preferences or defaults
+263,263c271,271
+< 	 * Print the diagram figure to fit the number and rows and columns
+---
+> 	 * Print the diagram figure to fit the number and rows and columns specified
+264,264c272,272
+<      * specified by the user.
+---
+> 	 * by the user.
+265a274,274
+> 	 * @param dgrmEP
+266a276,278
+> 	 * @param loadedPreferences
+> 	 *            true if existing prefs could be loaded successfully, false if
+> 	 *            not and defaults are being used. This parameter is important
+266,266c275,275
+< 	 * @param dgrmEP The diagram edit part to print
+---
+> 	 *            The diagram edit part to print
+267,268d275
+< 	 * @param loadedPreferences true if existing prefs could be loaded
+<      * 		successfully, false if not and defaults are being used.  This parameter
+269,269c279,279
+<      * 		is important to obtain the correct page break bounds.
+---
+> 	 *            to obtain the correct page break bounds.
+269a280,281
+> 	 * @param fPreferences
+> 	 *            the preferenceStore that could either contain existing
+270,270d279
+< 	 * @param fPreferences the preferenceStore that could either contain
+271,271c282,282
+<      * 		existing preferences or defaults
+---
+> 	 *            preferences or defaults
+363a375,377
+> 			printGraphics.setClip(0, 0, (int) pageFormat.getWidth(),
+> 					(int) pageFormat.getHeight());
+> 			swtGraphics = new PrinterGraphicsToGraphics2DAdapter(
+364,364d374
+< 			swtGraphics = new GraphicsToGraphics2DAdaptor(
+366a380,380
+> 									.getHeight()));
+366a628,639
+> 	/**
+> 	 * A specialized graphics adapter used in printing.
+> 	 * 
+> 	 * There are several issues with the base adapter such as incorrect line
+> 	 * width settings and issues with gradient fill causing printing to be
+> 	 * offset wich are concerns specific to printing.
+> 	 * 
+> 	 * @author James Bruck (jbruck)
+> 	 * 
+> 	 */
+> 	private class PrinterGraphicsToGraphics2DAdapter extends
+> 			GraphicsToGraphics2DAdaptor {
+367,373d627
+< 									.getHeight())) {
+< 				/*
+< 				 * (non-Javadoc)
+< 				 * @see org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.graphics.GraphicsToGraphics2DAdaptor#setLineWidth(int)
+< 				 */
+< 				public void setLineWidth(int width) {
+< 					super.setLineWidth(width);
+374a641,644
+> 		public PrinterGraphicsToGraphics2DAdapter(Graphics2D graphics,
+> 				Rectangle viewPort) {
+> 			super(graphics, viewPort);
+> 		}
+374,374c640,640
+< 
+---
+> 
+375,385d640
+< 					BasicStroke scaledStroke = getStroke();
+< 					//
+< 					// Make a special case for line thickness to take the printer
+< 					// resolution into account.
+< 					//
+< 					scaledStroke = new BasicStroke(
+< 							(float) (width * AWT_DPI_CONST / 100), 
+< 							scaledStroke.getEndCap(),
+< 							scaledStroke.getLineJoin(), 
+< 							scaledStroke.getMiterLimit(), 
+< 							scaledStroke.getDashArray(), 0);
+386,386c645,645
+< 
+---
+> 
+386a646,664
+> 		/*
+> 		 * (non-Javadoc)
+> 		 * 
+> 		 * @see org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.graphics.GraphicsToGraphics2DAdaptor#setLineWidth(int)
+> 		 */
+> 		public void setLineWidth(int width) {
+> 			super.setLineWidth(width);
+> 
+> 			BasicStroke scaledStroke = getStroke();
+> 			//
+> 			// Make a special case for line thickness to take the
+> 			// printer resolution into account.
+> 			//
+> 			scaledStroke = new BasicStroke(
+> 					(float) (width * AWT_DPI_CONST / 100), scaledStroke
+> 							.getEndCap(), scaledStroke.getLineJoin(),
+> 					scaledStroke.getMiterLimit(), scaledStroke.getDashArray(),
+> 					0);
+> 
+387,387c665,665
+< 					getGraphics2D().setStroke(scaledStroke);
+---
+> 			getGraphics2D().setStroke(scaledStroke);
+388a667,674
+> 
+> 		/*
+> 		 * (non-Javadoc)
+> 		 * 
+> 		 * @see org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.graphics.GraphicsToGraphics2DAdaptor#fillGradient(int,
+> 		 *      int, int, int, boolean)
+> 		 */
+> 		public void fillGradient(int x, int y, int w, int h, boolean vertical) {
+388,388c666,666
+< 				}
+---
+> 		}
+389a676,697
+> 			// A bug in the draw2d layer causes printed output to be
+> 			// offset if we use gradient fill. We will use an image
+> 			// instead.
+> 			//
+> 			Image tempImage = new Image(Display.getDefault(),
+> 					new org.eclipse.swt.graphics.Rectangle(x, y, w, h));
+> 			GC gc = new GC(tempImage);
+> 			SWTGraphics tempGraphics = new SWTGraphics(gc);
+> 
+> 			tempGraphics.setForegroundColor(swtGraphics.getForegroundColor());
+> 			tempGraphics.setBackgroundColor(swtGraphics.getBackgroundColor());
+> 			tempGraphics.fillGradient(
+> 					new org.eclipse.draw2d.geometry.Rectangle(0, 0, w, h),
+> 					vertical);
+> 			drawImage(tempImage, 0, 0, w, h, x, y, w, h);
+> 
+> 			tempGraphics.dispose();
+> 			gc.dispose();
+> 			tempImage.dispose();
+> 		}
+> 	}
+> 
+389,389c675,675
+< 			};
+---
+> 			//
+393a387,387
+> 
+394,394d386
+< 			
+424,424c416,416
+< 	protected PrintRequestAttributeSet initializePrintOptions(DocPrintJob printJob,
+---
+> 	protected PrintRequestAttributeSet initializePrintOptions(
+425,425d416
+< 			String jobName,
+426,426c417,417
+< 			IPreferenceStore fPreferences) {
+---
+> 			DocPrintJob printJob, String jobName, IPreferenceStore fPreferences) {
+428,428c419,419
+< 		PrintOptions advancedOptions = ((PrintHelper) (printHelper)).getPrintOptions();
+---
+> 		PrintOptions advancedOptions = ((PrintHelper) (printHelper))
+428a420,420
+> 				.getPrintOptions();
+458a395,395
+> 	 * 
+459,459d394
+< 
+474,495d464
+< 
+< 		if (advancedOptions.isChromaticityColor()) {
+< 			printRequestAttributeSet.add(Chromaticity.COLOR);
+< 		} else {
+< 			printRequestAttributeSet.add(Chromaticity.MONOCHROME);
+< 		}
+< 
+< 		if (advancedOptions.isQualityLow()) {
+< 			printRequestAttributeSet.add(PrintQuality.DRAFT);
+< 		} else if (advancedOptions.isQualityMed()) {
+< 			printRequestAttributeSet.add(PrintQuality.NORMAL);
+< 		} else if (advancedOptions.isQualityHigh()) {
+< 			printRequestAttributeSet.add(PrintQuality.HIGH);
+< 		}
+< 		if (advancedOptions.isSideDuplex()) {
+< 			printRequestAttributeSet.add(Sides.DUPLEX);
+< 		} else if (advancedOptions.isSideOneSided()) {
+< 			printRequestAttributeSet.add(Sides.ONE_SIDED);
+< 		} else if (advancedOptions.isSideTumble()) {
+< 			printRequestAttributeSet.add(Sides.TUMBLE);
+< 		}
+< 
+506,506c475,475
+< 		printRequestAttributeSet.add(new MediaPrintableArea((float) 0.0,
+---
+> 		printRequestAttributeSet.add(new MediaPrintableArea(0f, 0f, (mediaSize
+507,507d475
+< 				(float) 0.0, (mediaSize.getX(MediaSize.INCH)), (mediaSize
+508,508c476,476
+< 						.getY(MediaSize.INCH)), MediaPrintableArea.INCH));
+---
+> 				.getX(MediaSize.INCH)), (mediaSize.getY(MediaSize.INCH)),
+508a477,477
+> 				MediaPrintableArea.INCH));
+540,540d508
+< 		
+541,541c509,509
+< 		PrintRequestAttributeSet printRequestAttributeSet = initializePrintOptions(printJob,
+---
+> 		PrintRequestAttributeSet printRequestAttributeSet = initializePrintOptions(
+541a510,511
+> 				printJob, diagramEditPart.getDiagramView().getName(),
+> 				fPreferences);
+542,543d509
+< 				diagramEditPart
+< 				.getDiagramView().getName(), fPreferences);
+577a546,546
+> 	 * @param page
+578,578c547,547
+< 	 * @param page indicates which page to print.
+---
+> 	 *            indicates which page to print.
+629a599,599
+> 						+ figureBounds.x,
+629,629c598,598
+< 						(scaledWidth - margins.left - margins.right) * (colIndex - 1) + figureBounds.x, 
+---
+> 				(scaledWidth - margins.left - margins.right) * (colIndex - 1)
+630a601,602
+> 						+ figureBounds.y, scaledWidth - margins.right
+> 						- margins.left, scaledHeight - margins.top
+630,630c600,600
+< 						(scaledHeight - margins.bottom - margins.top)* (rowIndex - 1) + figureBounds.y, 
+---
+> 				(scaledHeight - margins.bottom - margins.top) * (rowIndex - 1)
+631,631d600
+< 						 scaledWidth - margins.right - margins.left, 
+632,632c603,603
+< 						 scaledHeight - margins.top - margins.bottom);
+---
+> 						- margins.bottom);
+642a614,614
+> 	 * @param margins
+643,643c615,615
+< 	 * @param margins the page margins to adjust
+---
+> 	 *            the page margins to adjust

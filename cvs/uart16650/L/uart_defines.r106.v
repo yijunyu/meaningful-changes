@@ -1,0 +1,71 @@
+`ifdef DATA_BUS_WIDTH_8
+`define UART_ADDR_WIDTH 3
+`define UART_DATA_WIDTH 8
+`else
+`define UART_ADDR_WIDTH 5
+`define UART_DATA_WIDTH 32
+`endif
+`define UART_REG_RB `UART_ADDR_WIDTHd0
+`define UART_REG_TR `UART_ADDR_WIDTHd0
+`define UART_REG_IE `UART_ADDR_WIDTHd1
+`define UART_REG_II `UART_ADDR_WIDTHd2
+`define UART_REG_FC `UART_ADDR_WIDTHd2
+`define UART_REG_LC `UART_ADDR_WIDTHd3
+`define UART_REG_MC `UART_ADDR_WIDTHd4
+`define UART_REG_LS `UART_ADDR_WIDTHd5
+`define UART_REG_MS `UART_ADDR_WIDTHd6
+`define UART_REG_SR `UART_ADDR_WIDTHd7
+`define UART_REG_DL1 `UART_ADDR_WIDTHd0
+`define UART_REG_DL2 `UART_ADDR_WIDTHd1
+`define UART_IE_RDA 0
+`define UART_IE_THRE 1
+`define UART_IE_RLS 2
+`define UART_IE_MS 3
+`define UART_II_IP 0
+`define UART_II_II 3 : 1
+`define UART_II_RLS 3b011
+`define UART_II_RDA 3b010
+`define UART_II_TI 3b110
+`define UART_II_THRE 3b001
+`define UART_II_MS 3b000
+`define UART_FC_TL 1 : 0
+`define UART_FC_1 2b00
+`define UART_FC_4 2b01
+`define UART_FC_8 2b10
+`define UART_FC_14 2b11
+`define UART_LC_BITS 1 : 0
+`define UART_LC_SB 2
+`define UART_LC_PE 3
+`define UART_LC_EP 4
+`define UART_LC_SP 5
+`define UART_LC_BC 6
+`define UART_LC_DL 7
+`define UART_MC_DTR 0
+`define UART_MC_RTS 1
+`define UART_MC_OUT1 2
+`define UART_MC_OUT2 3
+`define UART_MC_LB 4
+`define UART_LS_DR 0
+`define UART_LS_OE 1
+`define UART_LS_PE 2
+`define UART_LS_FE 3
+`define UART_LS_BI 4
+`define UART_LS_TFE 5
+`define UART_LS_TE 6
+`define UART_LS_EI 7
+`define UART_MS_DCTS 0
+`define UART_MS_DDSR 1
+`define UART_MS_TERI 2
+`define UART_MS_DDCD 3
+`define UART_MS_CCTS 4
+`define UART_MS_CDSR 5
+`define UART_MS_CRI 6
+`define UART_MS_CDCD 7
+`define UART_FIFO_WIDTH 8
+`define UART_FIFO_DEPTH 16
+`define UART_FIFO_POINTER_W 4
+`define UART_FIFO_COUNTER_W 5
+`define UART_FIFO_REC_WIDTH 11
+`define VERBOSE_WB 0
+`define VERBOSE_LINE_STATUS 0
+`define FAST_TEST 1

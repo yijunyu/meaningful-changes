@@ -1,0 +1,148 @@
+1,1c1,1
+< /*
+---
+> /**
+2,2c2,2
+<  * Copyright (c) 2006, 2007 Borland Software Corporation
+---
+>  * Copyright (c) 2006 Eclipse.org
+10,10c10,10
+<  *    Artem Tikhomirov (Borland) - initial API and implementation
+---
+>  *    bblajer - initial API and implementation
+12,12c12,12
+< package org.eclipse.gmf.internal.graphdef.codegen;
+---
+> package org.eclipse.gmf.internal.runtime.lite;
+13a14,14
+> import org.eclipse.core.runtime.IStatus;
+14,17d13
+< import java.net.MalformedURLException;
+< import java.net.URL;
+< import java.util.ArrayList;
+< 
+18,18c15,15
+< import org.eclipse.core.runtime.Plugin;
+---
+> import org.eclipse.core.runtime.Status;
+18a16,16
+> import org.eclipse.jface.resource.ImageDescriptor;
+19,19d15
+< import org.eclipse.gmf.graphdef.codegen.MapModeCodeGenStrategy;
+20,20c17,17
+< import org.eclipse.gmf.internal.xpand.ResourceManager;
+---
+> import org.eclipse.jface.resource.ImageRegistry;
+21,21c18,18
+< import org.eclipse.gmf.internal.xpand.util.BundleResourceManager;
+---
+> import org.eclipse.ui.plugin.AbstractUIPlugin;
+23a21,27
+> /**
+>  * The activator class controls the plug-in life cycle
+>  */
+> public class Activator extends AbstractUIPlugin {
+> 
+> 	// The plug-in ID
+> 	public static final String PLUGIN_ID = "org.eclipse.gmf.runtime.lite";
+24,25d20
+< public class Activator extends Plugin {
+< 	private static Activator instance;
+26a29,34
+> 	// The shared instance
+> 	private static Activator plugin;
+> 	
+> 	/**
+> 	 * The constructor
+> 	 */
+28,28c36,36
+< 		instance = this;
+---
+> 		plugin = this;
+30a39,50
+> 	/*
+> 	 * (non-Javadoc)
+> 	 * @see org.eclipse.ui.plugin.AbstractUIPlugin#start(org.osgi.framework.BundleContext)
+> 	 */
+> 	public void start(BundleContext context) throws Exception {
+> 		super.start(context);
+> 	}
+> 
+> 	/*
+> 	 * (non-Javadoc)
+> 	 * @see org.eclipse.ui.plugin.AbstractUIPlugin#stop(org.osgi.framework.BundleContext)
+> 	 */
+31,31d38
+< 	@Override
+33,33c52,52
+< 		instance = null;
+---
+> 		plugin = null;
+36a56,90
+> 	/**
+> 	 * Returns the shared instance
+> 	 *
+> 	 * @return the shared instance
+> 	 */
+> 	public static Activator getDefault() {
+> 		return plugin;
+> 	}
+> 
+> 	public void logError(String error) {
+> 		logError(error, null);
+> 	}
+> 
+> 	@Override
+> 	protected void initializeImageRegistry(ImageRegistry reg) {
+> 		PluginImages.initialize();
+> 		super.initializeImageRegistry(reg);
+> 	}
+> 	/**
+> 	 * @param throwable actual error or null could be passed
+> 	 */
+> 	public void logError(String error, Throwable throwable) {
+> 		log(error, throwable, IStatus.ERROR);
+> 	}
+> 
+> 	private void debug(String message, Throwable throwable) {
+> 		if (!isDebugging()) {
+> 			return;
+> 		}
+> 		if (message != null) {
+> 			System.err.println(message);
+> 		}
+> 		if (throwable != null) {
+> 			throwable.printStackTrace();
+> 		}
+37,47d55
+< 	public static ResourceManager createResourceEngine(MapModeCodeGenStrategy strategy) {
+< 		try {
+< 			URL baseURL = instance.getBundle().getEntry("/templates/");
+< 			ArrayList<URL> urls = new ArrayList<URL>(3);
+< 			if (strategy.getToken().length() > 0) {
+< 				urls.add(new URL(baseURL, strategy.getToken() + '/'));
+< 			}
+< 			urls.add(baseURL);
+< 			return new BundleResourceManager(urls.toArray(new URL[urls.size()]));
+< 		} catch (MalformedURLException ex) {
+< 			throw new Error();
+48a92,110
+> 
+> 	public void logWarning(String error) {
+> 		logWarning(error, null);
+> 	}
+> 
+> 	public void logWarning(String error, Throwable throwable) {
+> 		log(error, throwable, IStatus.WARNING);
+> 	}
+> 
+> 	private void log(String error, Throwable throwable, int severity) {
+> 		if (error == null && throwable != null) {
+> 			error = throwable.getMessage();
+> 		}
+> 		getLog().log(new Status(severity, getBundle().getSymbolicName(), IStatus.OK, error, throwable));
+> 		debug(error, throwable);
+> 	}
+> 
+> 	public static ImageDescriptor getImageDescriptor(String imageFilePath) {
+> 		return imageDescriptorFromPlugin(getDefault().getBundle().getSymbolicName(), imageFilePath);

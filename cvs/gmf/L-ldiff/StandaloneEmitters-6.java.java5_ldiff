@@ -1,0 +1,172 @@
+2a3,3
+> import java.lang.reflect.InvocationTargetException;
+3,3c15,15
+< import org.eclipse.core.runtime.Platform;
+---
+> import org.eclipse.core.runtime.IProgressMonitor;
+4a5,5
+> import java.util.Arrays;
+5,5c17,17
+< import org.eclipse.gmf.common.UnexpectedBehaviourException;
+---
+> import org.eclipse.gmf.common.UnexpectedBehaviourException;
+6a7,7
+> import java.util.Collections;
+7,7c19,19
+< import org.eclipse.gmf.graphdef.codegen.standalone.templates.BuildPropertiesGenerator;
+---
+> import org.eclipse.gmf.graphdef.codegen.StandaloneGenerator.Config;
+8a9,9
+> import java.util.LinkedList;
+9,9d8
+< import org.eclipse.gmf.graphdef.codegen.standalone.templates.ManifestMFGenerator;
+10a11,11
+> import java.util.List;
+11,11d10
+< import org.eclipse.gmf.graphdef.codegen.standalone.templates.PluginActivatorGenerator;
+12a13,13
+> import java.util.Map;
+13,13d12
+< import org.eclipse.gmf.graphdef.codegen.standalone.templates.PluginPropertiesGenerator;
+15,15c23,23
+< import org.eclipse.gmf.internal.codegen.dispatch.CachingEmitterFactory;
+---
+> import org.eclipse.gmf.internal.graphdef.codegen.Activator;
+17,17c25,25
+< import org.eclipse.gmf.internal.codegen.dispatch.EmitterFactory;
+---
+> import org.eclipse.gmf.internal.xpand.BufferOutput;
+19,19c27,27
+< import org.eclipse.gmf.internal.codegen.dispatch.EmitterFactoryImpl;
+---
+> import org.eclipse.gmf.internal.xpand.XpandFacade;
+21,21c29,29
+< import org.eclipse.gmf.internal.codegen.dispatch.NoSuchTemplateException;
+---
+> import org.eclipse.gmf.internal.xpand.expression.Variable;
+23,23d22
+< import org.eclipse.gmf.internal.codegen.dispatch.StaticTemplateRegistry;
+25,25d24
+< import org.eclipse.gmf.internal.codegen.dispatch.TemplateRegistry;
+27,27d26
+< import org.eclipse.gmf.internal.common.codegen.JETEmitterAdapter;
+29,29c21,21
+< import org.eclipse.gmf.internal.common.codegen.TextEmitter;
+---
+> import org.eclipse.gmf.internal.common.codegen.TextEmitter;
+31,31c31,31
+< public class StandaloneEmitters {
+---
+> class StandaloneEmitters {
+32,32c32,32
+<     private final EmitterFactory myFactory;
+---
+>     private final MapModeCodeGenStrategy myMapModeStrategy;
+33a34,35
+>     StandaloneEmitters (MapModeCodeGenStrategy mapModeStrategy) {
+>         myMapModeStrategy = mapModeStrategy;
+34,35d33
+<     public StandaloneEmitters () {
+<         myFactory = new CachingEmitterFactory (new EmitterFactoryImpl (getTemplatePath (), createTemplateRegistry ()));
+38a39,49
+>         return new XpandTextEmitter (myMapModeStrategy) {
+> 
+>             public String generate (IProgressMonitor monitor, Object [] arguments) throws InterruptedException, InvocationTargetException, UnexpectedBehaviourException {
+>                 StringBuilder result = new StringBuilder ();
+>                 createEngine (result).evaluate ("plugin::BuildProperties::Init", new Object (), null);
+>                 return result.toString ();
+>             }
+> 
+>         }
+> 
+>         ;
+39,39d38
+<         return getRegistered (BuildPropertiesGenerator.class);
+42a53,66
+>         return new XpandTextEmitter (myMapModeStrategy) {
+> 
+>             public String generate (IProgressMonitor monitor, Object [] arguments) throws InterruptedException, InvocationTargetException, UnexpectedBehaviourException {
+>                 assert arguments != null && arguments.length > 0 && arguments [0] instanceof Config;
+>                 Config config = (Config) arguments [0];
+>                 StringBuilder result = new StringBuilder ();
+>                 Object [] params = new Object [] {config.getPluginFriendlyName (), config.getPluginProviderName ()};
+>                 createEngine (result).evaluate ("plugin::PluginProperties::Init", new Object (), params);
+>                 return result.toString ();
+>             }
+> 
+>         }
+> 
+>         ;
+43,43d52
+<         return getRegistered (PluginPropertiesGenerator.class);
+46a70,91
+>         return new XpandTextEmitter (myMapModeStrategy) {
+> 
+>             public String generate (IProgressMonitor monitor, Object [] arguments) throws InterruptedException, InvocationTargetException, UnexpectedBehaviourException {
+>                 assert arguments != null && arguments.length > 0 && arguments [0] instanceof Object [];
+>                 Object [] actualArgs = (Object []) arguments [0];
+>                 assert actualArgs.length > 1 && actualArgs [0] instanceof Config && actualArgs [1] instanceof String [];
+>                 Config config = (Config) actualArgs [0];
+>                 List < String > requiredBundles = new LinkedList < String > ();
+>                 if (config.needsMapMode ()) {
+>                     requiredBundles.add ("org.eclipse.gmf.runtime.draw2d.ui");
+>                 }
+>                 requiredBundles.addAll (Arrays.asList ((String []) actualArgs [1]));
+>                 List < String > exportedPackages = (config.getMainPackageName () == null || config.getMainPackageName ().trim ().length () == 0) ? Collections.singletonList (config.getPluginActivatorPackageName ()) : Arrays.asList (config.getPluginActivatorPackageName (), config.getMainPackageName ());
+>                 StringBuilder result = new StringBuilder ();
+>                 Object [] params = new Object [] {config.getPluginID (), config.getPluginActivatorPackageName () + '.' + config.getPluginActivatorClassName (), exportedPackages, requiredBundles,};
+>                 createEngine (result).evaluate ("plugin::Manifest::Init", new Object (), params);
+>                 return result.toString ();
+>             }
+> 
+>         }
+> 
+>         ;
+47,47d69
+<         return getRegistered (ManifestMFGenerator.class);
+50a95,103
+>         return new XpandTextEmitter (myMapModeStrategy) {
+> 
+>             public String generate (IProgressMonitor monitor, Object [] arguments) throws InterruptedException, InvocationTargetException, UnexpectedBehaviourException {
+>                 assert arguments != null && arguments.length > 0 && arguments [0] instanceof Object [];
+>                 Config config = (Config) ((Object []) arguments [0]) [0];
+>                 StringBuilder result = new StringBuilder ();
+>                 Object [] params = new Object [] {config.getPluginActivatorPackageName (), config.getPluginActivatorClassName (), config.getPluginID (),};
+>                 createEngine (result).evaluate ("plugin::Activator::Init", new Object (), params);
+>                 return result.toString ();
+51,51d94
+<         return getRegistered (PluginActivatorGenerator.class);
+54,58d105
+<     private TextEmitter getRegistered (Class key) throws UnexpectedBehaviourException {
+<         try {
+<             return new JETEmitterAdapter (myFactory.acquireEmitter (key));
+<         } catch (NoSuchTemplateException ex) {
+<             throw new UnexpectedBehaviourException (ex.getMessage (), ex);
+59a107,108
+> 
+>         ;
+61a111,115
+>     private static abstract class XpandTextEmitter implements TextEmitter {
+>         protected final MapModeCodeGenStrategy myMapModeStrategy;
+> 
+>         protected XpandTextEmitter (MapModeCodeGenStrategy mapModeStrategy) {
+>             myMapModeStrategy = mapModeStrategy;
+62,63d110
+<     private static String [] getTemplatePath () {
+<         return new String [] {Platform.getBundle ("org.eclipse.gmf.graphdef.codegen").getEntry ("/templates").toString ()};
+65a118,121
+>         protected XpandFacade createEngine (StringBuilder result) {
+>             final Map < String, StringBuilder > slots = Collections.emptyMap ();
+>             final List < Variable > globals = Collections.emptyList ();
+>             return Activator.createTemplateEngine (myMapModeStrategy, new BufferOutput (result, slots), globals);
+66,72d117
+<     private static TemplateRegistry createTemplateRegistry () {
+<         StaticTemplateRegistry result = new StaticTemplateRegistry (StandaloneEmitters.class.getClassLoader ());
+<         registerTemplate (result, BuildPropertiesGenerator.class, "/plugin/build.propertiesjet");
+<         registerTemplate (result, ManifestMFGenerator.class, "/plugin/manifest.mfjet");
+<         registerTemplate (result, PluginPropertiesGenerator.class, "/plugin/plugin.propertiesjet");
+<         registerTemplate (result, PluginActivatorGenerator.class, "/plugin/plugin.javajet");
+<         return result;
+75,76d123
+<     private static void registerTemplate (StaticTemplateRegistry registry, Class compiled, String path) {
+<         registry.put (compiled, path, compiled);

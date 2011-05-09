@@ -1,0 +1,136 @@
+package org.eclipse.gmf.internal.xpand.build;
+
+import java.io.FileNotFoundException;
+
+import java.io.IOException;
+
+import java.io.Reader;
+
+import java.util.LinkedList;
+
+import org.eclipse.core.resources.ICommand;
+
+import org.eclipse.core.resources.IFile;
+
+import org.eclipse.core.resources.IProject;
+
+import org.eclipse.core.resources.IResource;
+
+import org.eclipse.core.runtime.CoreException;
+
+import org.eclipse.core.runtime.IPath;
+
+import org.eclipse.core.runtime.Path;
+
+import org.eclipse.gmf.internal.xpand.Activator;
+
+import org.eclipse.gmf.internal.xpand.ResourceManager;
+
+import org.eclipse.gmf.internal.xpand.ResourceMarker;
+
+import org.eclipse.gmf.internal.xpand.expression.SyntaxConstants;
+
+import org.eclipse.gmf.internal.xpand.model.XpandResource;
+
+import org.eclipse.gmf.internal.xpand.util.ParserException;
+
+import org.eclipse.gmf.internal.xpand.util.ResourceManagerImpl;
+
+import org.eclipse.gmf.internal.xpand.util.StreamConverter;
+
+import org.eclipse.gmf.internal.xpand.xtend.ast.XtendResource;
+
+public class WorkspaceResourceManager extends ResourceManagerImpl {
+    private final IProject contextProject;
+
+    public WorkspaceResourceManager (IProject context) {
+        this.contextProject = context;
+    }
+
+    public XtendResource loadXtendResource (IFile file) throws CoreException, IOException, ParserException {
+        if (file == null) {
+            return null;
+        }
+        assert file.getProject () == contextProject;
+        Reader r = null;
+        try {
+            r = new StreamConverter ().toContentsReader (file);
+            return remember (file, super.loadXtendResource (r, toFullyQualifiedName (file)));
+        } finally {
+            if (r != null) {
+                r.close ();
+            }
+        }
+    }
+
+    public XpandResource loadXpandResource (IFile file) throws CoreException, IOException, ParserException {
+        if (file == null) {
+            return null;
+        }
+        assert file.getProject () == contextProject;
+        Reader r = null;
+        try {
+            r = new StreamConverter ().toContentsReader (file);
+            return remember (file, super.loadXpandResource (r, toFullyQualifiedName (file)));
+        } finally {
+            if (r != null) {
+                r.close ();
+            }
+        }
+    }
+
+    protected < T extends ResourceMarker > T remember (IFile resource, T loadedResource) {
+        return loadedResource;
+    }
+
+    public void forget (IFile resource) {
+    }
+
+    protected Reader resolve (String fqn, String ext) throws IOException {
+        IPath p = new Path (fqn.replaceAll (SyntaxConstants.NS_DELIM, "/")).addFileExtension (ext);
+        IResource r = contextProject.findMember (p);
+        if (r == null) {
+            r = contextProject.findMember (new Path ("templates/").append (p));
+        }
+        if (false == r instanceof IFile) {
+            throw new FileNotFoundException (p.toString ());
+        }
+        try {
+            return new StreamConverter ().toContentsReader ((IFile) r);
+        } catch (CoreException ex) {
+            IOException wrap = new IOException (ex.getStatus ().getMessage ());
+            wrap.initCause (ex);
+            throw wrap;
+        }
+    }
+
+    protected ResourceManager [] getDependenies () {
+        LinkedList < ResourceManager > rv = new LinkedList < ResourceManager > ();
+        try {
+            IProject [] referencedProjects = contextProject.getReferencedProjects ();
+            for (IProject next : referencedProjects) {
+                if (! next.isAccessible () || ! hasXpandBuilder (next)) {
+                    continue;
+                }
+                rv.add (Activator.getResourceManager (next));
+            }
+        } catch (CoreException e) {
+        }
+        return rv.toArray (new ResourceManager [rv.size ()]);
+    }
+
+    private static boolean hasXpandBuilder (IProject p) throws CoreException {
+        for (ICommand c : p.getDescription ().getBuildSpec ()) {
+            if (OawBuilder.getBUILDER_ID ().equals (c.getBuilderName ())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String toFullyQualifiedName (IFile file) {
+        return file.getProjectRelativePath ().toString ().replaceAll ("/", SyntaxConstants.NS_DELIM);
+    }
+
+}
+

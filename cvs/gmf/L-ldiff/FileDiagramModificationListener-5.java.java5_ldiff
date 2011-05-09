@@ -1,0 +1,61 @@
+11,12d10
+< import org.eclipse.emf.transaction.DemultiplexingListener;
+< 
+15,18d12
+< import org.eclipse.emf.transaction.ResourceSetListener;
+< 
+< import org.eclipse.emf.transaction.TransactionalEditingDomain;
+< 
+27a22,24
+>     private NotificationFilter diagramResourceModifiedFilter;
+>     private FileDocumentProvider documentProvider;
+>     private IFileEditorInput input;
+28,28d21
+<     private ResourceSetListener diagramSavedListener = null;
+31a28,30
+>         this.documentProvider = documentProvider;
+>         this.input = input;
+>         Diagram diagram = document.getDiagram ();
+32,32d27
+<         final Diagram diagram = document.getDiagram ();
+33a32,32
+>     }
+33,33c31,31
+<         NotificationFilter diagramResourceModifiedFilter = NotificationFilter.createNotifierFilter (diagram.eResource ()).and (NotificationFilter.createEventTypeFilter (Notification.SET).or (NotificationFilter.createEventTypeFilter (Notification.UNSET))).and (NotificationFilter.createFeatureFilter (Resource.class, Resource.RESOURCE__IS_MODIFIED));
+---
+>         diagramResourceModifiedFilter = NotificationFilter.createNotifierFilter (diagram.eResource ()).and (NotificationFilter.createEventTypeFilter (Notification.SET).or (NotificationFilter.createEventTypeFilter (Notification.UNSET))).and (NotificationFilter.createFeatureFilter (Resource.class, Resource.RESOURCE__IS_MODIFIED));
+34,35d31
+<         if (diagramSavedListener == null) {
+<             diagramSavedListener = new DemultiplexingListener (diagramResourceModifiedFilter) {
+36a34,41
+>     public boolean isAdapterForType (Object type) {
+>         return type == FileDiagramModificationListener.class || super.isAdapterForType (type);
+>     }
+> 
+>     public void notifyChanged (Notification notification) {
+>         super.notifyChanged (notification);
+>         if (diagramResourceModifiedFilter.matches (notification)) {
+>             if (getDiagramDocument ().getDiagram () != null && notification.getNotifier () instanceof Resource) {
+37,38d33
+<                 protected void handleNotification (TransactionalEditingDomain domain, Notification notification) {
+<                     if (diagram != null && notification.getNotifier () instanceof Resource) {
+45,45c48,48
+<                                     document.setContent (document.getContent (), documentProvider.computeModificationStamp (input.getFile ()));
+---
+>                             getDiagramDocument ().setContent (getDiagramDocument ().getContent (), documentProvider.computeModificationStamp (input.getFile ()));
+52,66d54
+< 
+<             }
+< 
+<             ;
+<         }
+<     }
+< 
+<     public void startListening () {
+<         super.startListening ();
+<         getEditingDomain ().addResourceSetListener (diagramSavedListener);
+<     }
+< 
+<     public void stopListening () {
+<         getEditingDomain ().removeResourceSetListener (diagramSavedListener);
+<         super.stopListening ();

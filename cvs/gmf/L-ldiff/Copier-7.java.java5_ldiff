@@ -1,0 +1,50 @@
+6a7,8
+> import java.util.Map;
+> 
+12a15,16
+> import org.eclipse.emf.ecore.EStructuralFeature.Setting;
+> 
+17,17c21,21
+<     public EObject copyToCurrent (EObject currentParent, EObject old);
+---
+>     public EObject copyToCurrent (EObject currentParent, EObject old, Reconciler reconciler);
+21,21c25,25
+<         public EObject copyToCurrent (EObject currentParent, EObject old) {
+---
+>         public EObject copyToCurrent (EObject currentParent, EObject old, Reconciler reconciler) {
+28,28c32,32
+<     public static final Copier COMPLETE_COPY = new Copier () {
+---
+>     public static final Copier COMPLETE_COPY_NO_CROSSREF = new Copier () {
+30,30c34,34
+<         public EObject copyToCurrent (EObject currentParent, EObject old) {
+---
+>         public EObject copyToCurrent (EObject currentParent, EObject old, Reconciler reconciler) {
+59a64,90
+>     public static final Copier COMPLETE_COPY_WITH_CROSSREF = new Copier () {
+> 
+>         public EObject copyToCurrent (EObject currentParent, EObject old, Reconciler reconciler) {
+>             final Map < EObject, Collection < Setting > > crossReferences = EcoreUtil.CrossReferencer.find (Collections.singleton (old));
+>             EClass currentParentEClass = currentParent.eClass ();
+>             EObject oldParent = old.eContainer ();
+>             EClass oldParentEClass = oldParent.eClass ();
+>             EObject currentCopy = null;
+>             if (currentParentEClass.equals (oldParentEClass)) {
+>                 currentCopy = EcoreUtil.copy (old);
+>                 EStructuralFeature containment = old.eContainingFeature ();
+>                 Object currentValue = currentParent.eGet (containment);
+>                 if (currentValue instanceof Collection) {
+>                     @SuppressWarnings("unchecked")
+>                     Collection < Object > asCollection = (Collection < Object >) currentValue;
+>                     asCollection.add (currentCopy);
+>                 } else {
+>                     currentParent.eSet (containment, currentCopy);
+>                 }
+>                 reconciler.registerCrossReferencesToUpdate (crossReferences);
+>             }
+>             return currentCopy;
+>         }
+> 
+>     }
+> 
+>     ;

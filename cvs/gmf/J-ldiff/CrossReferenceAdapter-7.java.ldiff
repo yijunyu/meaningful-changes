@@ -1,0 +1,625 @@
+36,36d35
+< import org.eclipse.emf.ecore.util.EcoreUtil;
+40,40c39,39
+<  * An adapter that maintains itself as an adapter for all contained objects.
+---
+>  * An adapter that maintains itself as an adapter for all contained objects. It
+41a41,41
+>  * {@link ResourceSet}.
+41,41c40,40
+<  * It can be installed for an {@link EObject}, a {@link Resource}, or a {@link ResourceSet}.
+---
+>  * can be installed for an {@link EObject}, a {@link Resource}, or a
+43,43c43,43
+<  * This adapter maintain information on inverse references, resource imports, and resource
+---
+>  * This adapter maintain information on inverse references, resource imports,
+44,44c44,44
+<  * exports.
+---
+>  * and resource exports.
+58,63d57
+< 	 * Flag used to check if the invocations of the setTarget are occuring
+< 	 * due to containment change notifications.
+< 	 */
+< 	private boolean isProcessingNotification = false;
+< 	
+< 	/**
+72a67,67
+> 	 * @param resolve
+73,73c68,68
+< 	 * @param resolve flag to determine if the proxies need to be resolved
+---
+> 	 *            flag to determine if the proxies need to be resolved
+83a79,79
+> 	 * @param notification
+84,84c80,80
+< 	 * @param notification the event notification
+---
+> 	 *            the event notification
+104,104d99
+< 		if (!(notifier instanceof EObject)
+105,105c100,100
+< 				|| !(feature instanceof EReference)) {
+---
+> 		if (!(notifier instanceof EObject) || !(feature instanceof EReference)) {
+119a115,115
+> 				deregisterReference(((EObject) notification.getNotifier())
+120,121d114
+< 					deregisterReference(
+< 							((EObject)notification.getNotifier()).eResource(),
+122,122c116,116
+< 							oldValue.eResource());
+---
+> 						.eResource(), oldValue.eResource());
+125a120,120
+> 				registerReference(((EObject) notification.getNotifier())
+126,127d119
+< 					registerReference(
+< 							((EObject)notification.getNotifier()).eResource(),
+128,128c121,121
+< 							newValue.eResource());
+---
+> 						.eResource(), newValue.eResource());
+134a128,128
+> 				registerReference(((EObject) notification.getNotifier())
+135,136d127
+< 					registerReference(
+< 							((EObject)notification.getNotifier()).eResource(),
+137,137c129,129
+< 							newValue.eResource());
+---
+> 						.eResource(), newValue.eResource());
+144a137,137
+> 				registerReference(((EObject) notification.getNotifier())
+145,146d136
+< 					registerReference(
+< 							((EObject)notification.getNotifier()).eResource(),
+147,147c138,138
+< 							newValue.eResource());
+---
+> 						.eResource(), newValue.eResource());
+153a145,145
+> 				deregisterReference(((EObject) notification.getNotifier())
+154,155d144
+< 					deregisterReference(
+< 							((EObject)notification.getNotifier()).eResource(),
+156,156c146,146
+< 							oldValue.eResource());
+---
+> 						.eResource(), oldValue.eResource());
+163a154,154
+> 				deregisterReference(((EObject) notification.getNotifier())
+164,165d153
+< 					deregisterReference(
+< 							((EObject)notification.getNotifier()).eResource(),
+166,166c155,155
+< 							oldValue.eResource());
+---
+> 						.eResource(), oldValue.eResource());
+186a176,211
+> 		case Notification.ADD: {
+> 			EObject newValue = (EObject) notification.getNewValue();
+> 
+> 			if (newValue != null) {
+> 				Resource resource;
+> 				if (notifier instanceof Resource) {
+> 					resource = (Resource) notifier;
+> 				} else {
+> 					resource = ((EObject) notification.getNotifier())
+> 							.eResource();
+> 				}
+> 
+> 				add(resource, newValue);
+> 			}
+> 			break;
+> 		}
+> 		case Notification.ADD_MANY: {
+> 			Resource resource;
+> 			if (notifier instanceof Resource) {
+> 				resource = (Resource) notifier;
+> 			} else {
+> 				resource = ((EObject) notification.getNotifier()).eResource();
+> 			}
+> 
+> 			Collection newValues = (Collection) notification.getNewValue();
+> 
+> 			for (Iterator iter = newValues.iterator(); iter.hasNext();) {
+> 				EObject next = (EObject) iter.next();
+> 
+> 				if (next != null) {
+> 					add(resource, next);
+> 				}
+> 			}
+> 			break;
+> 		}
+> 
+187,188d175
+< 		case Notification.SET:
+< 		case Notification.UNSET:
+197,197c220,220
+< 					resource = ((EObject) notification.getNotifier()).eResource();
+---
+> 					resource = ((EObject) notification.getNotifier())
+197a221,221
+> 							.eResource();
+226a251,278
+> 	 * Adds all aggregate cross-references for the specified resource, due to
+> 	 * attachment of an eObject.
+> 	 * 
+> 	 * @param resource
+> 	 *            a resource
+> 	 * @param eObject
+> 	 *            an object being removed from it
+> 	 */
+> 	protected void add(Resource resource, EObject eObject) {
+> 		// now, register incoming unidirectional references and opposites
+> 		CrossReferenceAdapter adapter = getExistingCrossReferenceAdapter(eObject);
+> 		if (adapter != null) {
+> 			for (Iterator iter = adapter.getInverseReferencers(eObject, null,
+> 					null).iterator(); iter.hasNext();) {
+> 				registerReference(((EObject) iter.next()).eResource(), resource);
+> 			}
+> 		}
+> 
+> 		// go through the children of the eObject
+> 		for (Iterator i = resolve() ? eObject.eContents().iterator()
+> 				: ((InternalEList) eObject.eContents()).basicIterator(); i
+> 				.hasNext();) {
+> 			EObject notifier = (EObject) i.next();
+> 			add(resource, notifier);
+> 		}
+> 	}
+> 
+> 	/**
+236,238d287
+< 		for (Iterator allContents = EcoreUtil.getAllContents(Collections.singleton(eObject)); allContents.hasNext();) {
+< 			EObject next = (EObject) allContents.next();
+< 			
+239a289,290
+> 		EContentsEList.FeatureIterator crossReferences = (EContentsEList.FeatureIterator) (resolve() ? eObject
+> 				.eCrossReferences().iterator()
+240,240d288
+< 		    EContentsEList.FeatureIterator crossReferences =
+241,241c291,291
+< 		    	(EContentsEList.FeatureIterator) next.eCrossReferences().iterator();
+---
+> 				: ((InternalEList) eObject.eCrossReferences()).basicIterator());
+252,256d301
+< 						
+< 						if (eReference.getEOpposite() != null) {
+< 							// implied incoming reference
+< 							deregisterReference(referencedResource, resource);
+< 						}
+260a306,310
+> 		// now, deregister incoming unidirectional references and opposites
+> 		CrossReferenceAdapter adapter = getExistingCrossReferenceAdapter(eObject);
+> 		if (adapter != null) {
+> 			for (Iterator iter = adapter.getInverseReferencers(eObject, null,
+> 					null).iterator(); iter.hasNext();) {
+261,262d305
+< 			// now, deregister incoming unidirectional references
+< 			for (Iterator iter = getNonNavigableInverseReferencers(next, null, null).iterator(); iter.hasNext();) {
+263a312,312
+> 						resource);
+263,263c311,311
+< 				deregisterReference(((EObject)iter.next()).eResource(), resource);
+---
+> 				deregisterReference(((EObject) iter.next()).eResource(),
+265a315,322
+> 
+> 		// go through the children of the eObject
+> 		for (Iterator i = resolve() ? eObject.eContents().iterator()
+> 				: ((InternalEList) eObject.eContents()).basicIterator(); i
+> 				.hasNext();) {
+> 			EObject notifier = (EObject) i.next();
+> 			remove(resource, notifier);
+> 		}
+287,287c344,344
+< 					EReference eReference = (EReference) crossReferences.feature();
+---
+> 					EReference eReference = (EReference) crossReferences
+287a345,345
+> 							.feature();
+296,304d353
+< 			
+< 			// need to process containment changes. This will compute references
+< 			// from existing EObjects to the added EObjects. This would happen when detached
+< 			// EObjects are referenced by the existing EObjects
+< 			if (isProcessingNotification) {
+< 				for (Iterator iter = getInverseReferencers(eObject, null, null).iterator(); iter.hasNext();) {
+< 					registerReference(((EObject)iter.next()).eResource(), resource);
+< 				}
+< 			}
+320a370,370
+> 	 * @param referencer
+321,321c371,371
+< 	 * @param referencer the resource to retrieve imports for
+---
+> 	 *            the resource to retrieve imports for
+337a388,388
+> 	 * @param referenced
+338,338c389,389
+< 	 * @param referenced the resource to retrieve exports for
+---
+> 	 *            the resource to retrieve exports for
+373,373c424,424
+< 	 * Registers a reference updating the imports and exports maps
+---
+> 	 * Registers a reference updating the imports and exports maps accordingly.
+374,374d424
+< 	 * accordingly.
+375a426,426
+> 	 * @param referencer
+376,376c427,427
+< 	 * @param referencer the referencing resource
+---
+> 	 *            the referencing resource
+376a428,428
+> 	 * @param referenced
+377,377c429,429
+< 	 * @param referenced the referenced resouce
+---
+> 	 *            the referenced resouce
+426a479,481
+> 	 * import of the <code>referenced</code> resource by the
+> 	 * <code>referencer</code>. This implementation does nothing; subclasses
+> 	 * need not call <code>super</code>.
+427,428d478
+< 	 * import of the <code>referenced</code> resource by the <code>referencer</code>.
+< 	 * This implementation does nothing; subclasses need not call <code>super</code>.
+429,429c482,482
+< 	 * 
+---
+> 	 * 
+429a483,483
+> 	 * @param referencer
+430,430c484,484
+< 	 * @param referencer the referencing resource (doing the importing)
+---
+> 	 *            the referencing resource (doing the importing)
+430a485,485
+> 	 * @param referenced
+431,431c486,486
+< 	 * @param referenced the resource that it references
+---
+> 	 *            the resource that it references
+437a493,496
+> 	 * Hook to be implemented by subclasses upon the elimination of an import of
+> 	 * the <code>referenced</code> resource by the <code>referencer</code>.
+> 	 * This implementation does nothing; subclasses need not call
+> 	 * <code>super</code>.
+438,440d492
+< 	 * Hook to be implemented by subclasses upon the elimination of an
+< 	 * import of the <code>referenced</code> resource by the <code>referencer</code>.
+< 	 * This implementation does nothing; subclasses need not call <code>super</code>.
+441a498,498
+> 	 * @param referencer
+441,441c497,497
+< 	 * 
+---
+> 	 * 
+442,442c499,499
+< 	 * @param referencer the formerly referencing resource (doing the importing)
+---
+> 	 *            the formerly referencing resource (doing the importing)
+442a500,500
+> 	 * @param referenced
+443,443c501,501
+< 	 * @param referenced the resource that it had referenced
+---
+> 	 *            the resource that it had referenced
+450a509,511
+> 	 * export of the <code>referenced</code> resource to the
+> 	 * <code>referencer</code>. This implementation does nothing; subclasses
+> 	 * need not call <code>super</code>.
+451,452d508
+< 	 * export of the <code>referenced</code> resource to the <code>referencer</code>.
+< 	 * This implementation does nothing; subclasses need not call <code>super</code>.
+453,453c512,512
+< 	 * 
+---
+> 	 * 
+453a513,513
+> 	 * @param referenced
+454,454c514,514
+< 	 * @param referenced the resource being referenced (doing the exporting)
+---
+> 	 *            the resource being referenced (doing the exporting)
+454a515,515
+> 	 * @param referencer
+455,455c516,516
+< 	 * @param referencer the referencing resource
+---
+> 	 *            the referencing resource
+461a523,526
+> 	 * Hook to be implemented by subclasses upon the elimination of an export of
+> 	 * the <code>referenced</code> resource to the <code>referencer</code>.
+> 	 * This implementation does nothing; subclasses need not call
+> 	 * <code>super</code>.
+462,464d522
+< 	 * Hook to be implemented by subclasses upon the elimination of an
+< 	 * export of the <code>referenced</code> resource to the <code>referencer</code>.
+< 	 * This implementation does nothing; subclasses need not call <code>super</code>.
+465,465c527,527
+< 	 * 
+---
+> 	 * 
+465a528,528
+> 	 * @param referenced
+466,466c529,529
+< 	 * @param referenced the resource formerly being referenced (doing the exporting)
+---
+> 	 *            the resource formerly being referenced (doing the exporting)
+466a530,530
+> 	 * @param referencer
+467,467c531,531
+< 	 * @param referencer the formerly referencing resource
+---
+> 	 *            the formerly referencing resource
+476a541,541
+> 	 * @param referencer
+477a543,543
+> 	 * @param referenced
+477,477c542,542
+< 	 * @param referencer the referencing resource
+---
+> 	 *            the referencing resource
+478,478c544,544
+< 	 * @param referenced the referenced resource
+---
+> 	 *            the referenced resource
+526a593,593
+> 	 * @param referencer
+527,527c594,594
+< 	 * @param referencer the referencing resource
+---
+> 	 *            the referencing resource
+565,565d631
+< 
+566a633,638
+> 	 * Returns a Set of EObjects that reference the given EObject. If an
+> 	 * EReference is specified, the scope of the search is limited only to that
+> 	 * EReference. To include all references specify a value of null. If an
+> 	 * EClass type is specified, the returned Set will only include those
+> 	 * referencers that match the given type. To include all types specify a
+> 	 * value of null.
+567,571d632
+< 	 * Returns a Set of EObjects that reference the given EObject.
+< 	 * If an EReference is specified, the scope of the search is limited
+< 	 * only to that EReference. To include all references specify a value of null.
+< 	 * If an EClass type is specified, the returned Set will only include those
+< 	 * referencers that match the given type. To include all types specify a value of null.
+572a640,644
+> 	 * @param referenced
+> 	 *            the referenced EObject
+> 	 * @param reference
+> 	 *            the reference to find referencers on, null for any reference
+> 	 * @param type
+572,572c639,639
+< 	 * 
+---
+> 	 * 
+573,574d639
+< 	 * @param referenced the referenced EObject
+< 	 * @param reference the reference to find referencers on, null for any reference
+575,575c645,645
+< 	 * @param type the type of the referencers, use null for any type
+---
+> 	 *            the type of the referencers, use null for any type
+578,578c648,648
+< 	public Set getInverseReferencers(EObject referenced, EReference reference, EClass type) {
+---
+> 	public Set getInverseReferencers(EObject referenced, EReference reference,
+578a649,649
+> 			EClass type) {
+584a656,659
+> 	 * search is limited only to that EReference. To include all references
+> 	 * specify a value of null. If an EClass type is specified, the returned Set
+> 	 * will only include those referencers that match the given type. To include
+> 	 * all types specify a value of null.
+585,588d655
+< 	 * search is limited only to that EReference. To include all references specify
+< 	 * a value of null. If an EClass type is specified, the returned Set will only
+< 	 * include those referencers that match the given type. To include all types
+< 	 * specify a value of null.
+589a661,665
+> 	 * @param referenced
+> 	 *            the referenced EObject
+> 	 * @param reference
+> 	 *            the reference to find referencers on, null for any reference
+> 	 * @param type
+589,589c660,660
+< 	 * 
+---
+> 	 * 
+590,591d660
+< 	 * @param referenced the referenced EObject
+< 	 * @param reference the reference to find referencers on, null for any reference
+592,592c666,666
+< 	 * @param type the type of the referencers, use null for any type
+---
+> 	 *            the type of the referencers, use null for any type
+594a669,670
+> 	public Set getNonNavigableInverseReferencers(EObject referenced,
+> 			EReference reference, EClass type) {
+595,595d668
+< 	public Set getNonNavigableInverseReferencers(EObject referenced, EReference reference, EClass type) {
+596a672,672
+> 				reference, type);
+596,596c671,671
+< 		return getReferencers(getNonNavigableInverseReferences(referenced), reference, type);
+---
+> 		return getReferencers(getNonNavigableInverseReferences(referenced),
+599a676,677
+> 	 * Extracts the EObjects from the EStructuralFeature.Setting references and
+> 	 * returns a filtered Set based on the given reference and type.
+600,601d675
+< 	 * Extracts the EObjects from the EStructuralFeature.Setting references
+< 	 * and returns a filtered Set based on the given reference and type.
+602a679,683
+> 	 * @param references
+> 	 *            a collection of EStructuralFeature.Setting
+> 	 * @param reference
+> 	 *            the reference to find referencers on, null for any reference
+> 	 * @param type
+602,602c678,678
+< 	 * 
+---
+> 	 * 
+603,604d678
+< 	 * @param references a collection of EStructuralFeature.Setting
+< 	 * @param reference the reference to find referencers on, null for any reference
+605,605c684,684
+< 	 * @param type the type of the referencers, use null for any type
+---
+> 	 *            the type of the referencers, use null for any type
+608,608c687,687
+< 	private Set getReferencers(Collection references, EReference reference, EClass type) {
+---
+> 	private Set getReferencers(Collection references, EReference reference,
+608a688,688
+> 			EClass type) {
+612a693,693
+> 				if (reference == null
+613,613c694,694
+< 				if (reference == null || reference == setting.getEStructuralFeature()) {
+---
+> 						|| reference == setting.getEStructuralFeature()) {
+614a696,696
+> 					if (referencer != null
+615,615c697,697
+< 					if (referencer != null && (type == null || type.isInstance(referencer))) {
+---
+> 							&& (type == null || type.isInstance(referencer))) {
+625,625c707,707
+< 	 * Searches the adapter list of the given Notifier for a CrossReferenceAdapter.
+---
+> 	 * Searches the adapter list of the given Notifier for a
+626,626c708,708
+< 	 * If not found, returns null.
+---
+> 	 * CrossReferenceAdapter. If not found, returns null.
+627a710,710
+> 	 * @param notifier
+628,628c711,711
+< 	 * @param notifier the notifier to search
+---
+> 	 *            the notifier to search
+631a715,715
+> 			Notifier notifier) {
+631,631c714,714
+< 	public static CrossReferenceAdapter getExistingCrossReferenceAdapter(Notifier notifier) {
+---
+> 	public static CrossReferenceAdapter getExistingCrossReferenceAdapter(
+648,648c732,732
+< 	 * Obtains the cross-reference adapter for the specified resource set,
+---
+> 	 * Obtains the cross-reference adapter for the specified resource set, if
+649,649c733,733
+< 	 * if necessary creating it and attaching it.
+---
+> 	 * necessary creating it and attaching it.
+651a736,736
+> 	 *            the resource set
+651,651c735,735
+< 	 * @param resourceSet the resource set
+---
+> 	 * @param resourceSet
+655a741,741
+> 			ResourceSet resourceSet) {
+655,655c740,740
+< 	public static CrossReferenceAdapter getCrossReferenceAdapter(ResourceSet resourceSet) {
+---
+> 	public static CrossReferenceAdapter getCrossReferenceAdapter(
+660,660c746,746
+< 		CrossReferenceAdapter result = getExistingCrossReferenceAdapter(
+---
+> 		CrossReferenceAdapter result = getExistingCrossReferenceAdapter(resourceSet);
+661,661d746
+< 			resourceSet);
+703a789,789
+> 		 *         otherwise
+703,703c788,788
+< 		 * @return <code>true</code> if I am now zero; <code>false</code>, otherwise
+---
+> 		 * @return <code>true</code> if I am now zero; <code>false</code>,
+718,718c804,804
+< 	    if (eContainer != null)
+---
+> 		if (eContainer != null) {
+719,719d804
+< 	    {
+720a806,806
+> 					.eContainmentFeature()));
+720,720c805,805
+< 	      result.add(((InternalEObject)eContainer).eSetting(eObject.eContainmentFeature()));
+---
+> 			result.add(((InternalEObject) eContainer).eSetting(eObject
+722a809,810
+> 		Collection nonNavigableInverseReferences = (Collection) inverseCrossReferencer
+> 				.get(eObject);
+723,723d808
+< 	    Collection nonNavigableInverseReferences = (Collection)inverseCrossReferencer.get(eObject);
+724,724c811,811
+< 	    if (nonNavigableInverseReferences != null)
+---
+> 		if (nonNavigableInverseReferences != null) {
+725,725d811
+< 	    {
+729,729c815,815
+< 	    for (Iterator i = eObject.eClass().getEAllReferences().iterator(); i.hasNext(); )
+---
+> 		for (Iterator i = eObject.eClass().getEAllReferences().iterator(); i
+729a816,816
+> 				.hasNext();) {
+730,730d815
+< 	    {
+732a819,821
+> 			if (eOpposite != null && !eReference.isContainer()
+> 					&& !eReference.isContainment()
+> 					&& eObject.eIsSet(eReference)) {
+733,734d818
+< 	      if (eOpposite != null && !eReference.isContainer() && !eReference.isContainment() && eObject.eIsSet(eReference))
+< 	      {
+735,735c822,822
+< 	        if (eReference.isMany())
+---
+> 				if (eReference.isMany()) {
+736,736d822
+< 	        {
+737a824,826
+> 					for (Iterator j = resolve() ? ((Collection) collection)
+> 							.iterator() : ((InternalEList) collection)
+> 							.basicIterator(); j.hasNext();) {
+738,739d823
+< 	          for (Iterator j = resolve() ? ((Collection)collection).iterator() : ((InternalEList)collection).basicIterator(); j.hasNext(); )
+< 	          {
+740a828,828
+> 								.next();
+740,740c827,827
+< 	            InternalEObject referencingEObject = (InternalEObject)j.next();
+---
+> 						InternalEObject referencingEObject = (InternalEObject) j
+742a831,831
+> 				} else {
+743,745d830
+< 	        }
+< 	        else
+< 	        {
+747a834,834
+> 							.eGet(eReference, resolve()));
+747,747c833,833
+< 	        	InternalEObject referencingEObject = ((InternalEObject)eObject.eGet(eReference, resolve()));
+---
+> 					InternalEObject referencingEObject = ((InternalEObject) eObject
+757,765d843
+< 
+< 	public final void notifyChanged(Notification notification) {
+< 		try {
+< 			isProcessingNotification = true;
+< 			super.notifyChanged(notification);
+< 		} finally {
+< 			isProcessingNotification = false;
+< 		}
+< 	}	

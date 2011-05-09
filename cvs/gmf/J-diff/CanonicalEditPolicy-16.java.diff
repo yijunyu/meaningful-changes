@@ -1,0 +1,117 @@
+26a27
+> import org.eclipse.core.commands.ExecutionException;
+27a29
+> import org.eclipse.core.runtime.IProgressMonitor;
+28a31,32
+> import org.eclipse.core.runtime.NullProgressMonitor;
+> import org.eclipse.core.runtime.Status;
+33a38
+> import org.eclipse.emf.transaction.Transaction;
+34a40
+> import org.eclipse.emf.workspace.AbstractEMFOperation;
+42a49,50
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+44d51
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+52a60
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+53a62
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+56,58c65
+< import org.eclipse.gmf.runtime.emf.core.edit.MObjectState;
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunOption;
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+---
+> import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+60d66
+< import org.eclipse.gmf.runtime.emf.core.util.EObjectUtil;
+409c415
+< 			views.addAll(EObjectUtil.getReferencers(element, features));
+---
+> 			views.addAll(EMFCoreUtil.getReferencers(element, features));
+470,473c476,486
+< 		int options = MRunOption.UNCHECKED /*| MRunOption.SILENT*/;
+< 		MEditingDomainGetter.getMEditingDomain((View)getHost().getModel()).runWithOptions(new MRunnable() {
+< 		//MEditingDomainGetter.getMEditingDomain((View)getHost().getModel()).runAsUnchecked( new MRunnable() {
+< 			public Object run() { 
+---
+> 		Map options = Collections.singletonMap(Transaction.OPTION_UNPROTECTED,
+> 			Boolean.TRUE);
+> 
+> 		AbstractEMFOperation operation = new AbstractEMFOperation(
+> 			((IGraphicalEditPart) getHost()).getEditingDomain(),
+> 			StringStatics.BLANK, options) {
+> 
+> 			protected IStatus doExecute(IProgressMonitor monitor,
+> 					IAdaptable info)
+> 				throws ExecutionException {
+> 
+475c488,500
+< 				return null;
+---
+> 
+> 				return Status.OK_STATUS;
+> 			}
+> 		};
+> 		try {
+> 			operation.execute(new NullProgressMonitor(), null);
+> 		} catch (ExecutionException e) {
+> 			Trace.catching(DiagramUIPlugin.getInstance(),
+> 				DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+> 				"executeCommand", e); //$NON-NLS-1$
+> 			Log.warning(DiagramUIPlugin.getInstance(),
+> 				DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING,
+> 				"executeCommand", e); //$NON-NLS-1$
+477c502
+< 		},options);
+---
+> 		
+730c755
+< 				DiagramEventBroker.getInstance().addNotificationListener(element,listener);
+---
+> 				getDiagramEventBroker().addNotificationListener(element,listener);
+763c788
+< 				DiagramEventBroker.getInstance().addNotificationListener(element,feature,listener);
+---
+> 				getDiagramEventBroker().addNotificationListener(element,feature,listener);
+782,783c807,809
+< 			DiagramEventBroker.getInstance().removeNotificationListener(
+< 				(EObject)objects[0],(EStructuralFeature)objects[1],(NotificationListener) objects[2]);
+---
+> 			getDiagramEventBroker().removeNotificationListener(
+> 				(EObject) objects[0], (EStructuralFeature) objects[1],
+> 				(NotificationListener) objects[2]);
+785c811
+< 			DiagramEventBroker.getInstance().removeNotificationListener(
+---
+> 			getDiagramEventBroker().removeNotificationListener(
+811c837,847
+< 		return host().isActive() && !EObjectUtil.getState((EObject)host().getModel()).equals(MObjectState.DETACHED);
+---
+> 		if (!host().isActive()) {
+> 			return false;
+> 		}
+> 
+> 		// is it detached?
+> 		EObject eObject = (EObject) host().getModel();
+> 		if (eObject != null && eObject.eResource() == null
+> 			&& !eObject.eIsProxy()) {
+> 			return false;
+> 		}
+> 		return true;
+1142a1179,1192
+> 	
+>     /**
+>      * Gets the diagram event broker from the editing domain.
+>      * 
+>      * @return the diagram event broker
+>      */
+>     private DiagramEventBroker getDiagramEventBroker() {
+>         TransactionalEditingDomain theEditingDomain = ((IGraphicalEditPart) getHost())
+>             .getEditingDomain();
+>         if (theEditingDomain != null) {
+>             return DiagramEventBroker.getInstance(theEditingDomain);
+>         }
+>         return null;
+>     }

@@ -1,0 +1,139 @@
+2a3,6
+> import java.util.HashSet;
+> 
+> import java.util.Set;
+> 
+4a9,12
+> import org.eclipse.core.resources.IProject;
+> 
+> import org.eclipse.core.resources.ProjectScope;
+> 
+6a15,16
+> import org.eclipse.core.runtime.Platform;
+> 
+15a26,27
+>     private static final String PREF_KEY = "gmf_dashboard";
+>     private static final String OPTION_PREFIX = "option_";
+28c40,41
+<     private Preferences prefs;
+---
+>     private Set < String > enabledOptions;
+>     private IProject project;
+30a44
+>         enabledOptions = new HashSet < String > ();
+33,40c47,59
+<     public DashboardState (Preferences prefs) {
+<         this.prefs = prefs;
+<         dm = read (DM_KEY);
+<         dgm = read (DGM_KEY);
+<         gdm = read (GDM_KEY);
+<         tdm = read (TDM_KEY);
+<         mm = read (MM_KEY);
+<         gm = read (GM_KEY);
+---
+>     public DashboardState (IProject project) {
+>         this ();
+>         this.project = project;
+>         Preferences prefs = getPreferences ();
+>         if (prefs != null) {
+>             readOptions (prefs);
+>             dm = read (prefs, DM_KEY);
+>             dgm = read (prefs, DGM_KEY);
+>             gdm = read (prefs, GDM_KEY);
+>             tdm = read (prefs, TDM_KEY);
+>             mm = read (prefs, MM_KEY);
+>             gm = read (prefs, GM_KEY);
+>         }
+161c180,193
+<     private URI read (String key) {
+---
+>     public boolean getOption (String name) {
+>         return enabledOptions.contains (name);
+>     }
+> 
+>     public void setOption (String name, boolean value) {
+>         if (name == null) {
+>             throw new IllegalArgumentException ();
+>         }
+>         if (value) {
+>             enabledOptions.add (name);
+>         } else {
+>             enabledOptions.remove (name);
+>         }
+>         Preferences prefs = getPreferences ();
+163c195,201
+<             return null;
+---
+>             return;
+>         }
+>         String key = OPTION_PREFIX + name;
+>         if (value) {
+>             prefs.put (key, "*");
+>         } else {
+>             prefs.remove (key);
+164a203,219
+>         savePreferences (prefs);
+>     }
+> 
+>     private void readOptions (Preferences prefs) {
+>         try {
+>             for (String key : prefs.keys ()) {
+>                 if (key.startsWith (OPTION_PREFIX)) {
+>                     enabledOptions.add (key.substring (OPTION_PREFIX.length ()));
+>                 }
+>             }
+>         } catch (BackingStoreException e) {
+>             IStatus status = Plugin.createError ("Unable to read options", e);
+>             Plugin.getDefault ().getLog ().log (status);
+>         }
+>     }
+> 
+>     private URI read (Preferences prefs, String key) {
+178a234,236
+>         if (project == null) {
+>             return;
+>         }
+182a241
+>         Preferences prefs = getPreferences ();
+183a243,246
+>         savePreferences (prefs);
+>     }
+> 
+>     private void savePreferences (Preferences prefs) {
+191a255,290
+>     private Preferences getPreferences () {
+>         if (project == null) {
+>             return null;
+>         }
+>         Preferences node = getExistingPreferences ();
+>         if (node != null) {
+>             return node;
+>         }
+>         return new ProjectScope (project).getNode (Plugin.getPluginID ()).node (PREF_KEY);
+>     }
+> 
+>     private Preferences getExistingPreferences () {
+>         if (project == null) {
+>             return null;
+>         }
+>         Preferences node = Platform.getPreferencesService ().getRootNode ().node (ProjectScope.SCOPE);
+>         try {
+>             if (! node.nodeExists (project.getName ())) {
+>                 return null;
+>             }
+>             node = node.node (project.getName ());
+>             if (! node.nodeExists (Plugin.getPluginID ())) {
+>                 return null;
+>             }
+>             node = node.node (Plugin.getPluginID ());
+>             if (! node.nodeExists (PREF_KEY)) {
+>                 return null;
+>             }
+>             return node.node (PREF_KEY);
+>         } catch (BackingStoreException e) {
+>             IStatus status = Plugin.createError ("Unable to read state", e);
+>             Plugin.getDefault ().getLog ().log (status);
+>         }
+>         return null;
+>     }
+> 

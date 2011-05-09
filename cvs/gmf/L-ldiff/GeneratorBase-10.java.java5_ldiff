@@ -1,0 +1,65 @@
+20a21,24
+> import java.util.HashMap;
+> 
+> import java.util.Iterator;
+> 
+58a63,66
+> import org.eclipse.emf.ecore.EClass;
+> 
+> import org.eclipse.emf.ecore.EObject;
+> 
+447a456,509
+>     protected static final class Counter {
+>         private final HashMap < EClass, Integer > myCounters = new HashMap < EClass, Integer > ();
+>         private final HashMap < EClass, Integer > myCache = new HashMap < EClass, Integer > ();
+>         private final Integer CACHE_MISS = new Integer (0);
+> 
+>         public Counter () {
+>         }
+> 
+>         public void registerFactor (EClass eClass, int count) {
+>             myCounters.put (eClass, count);
+>         }
+> 
+>         public int getTotal (EObject from) {
+>             int total = process (from);
+>             for (Iterator it = from.eAllContents ();
+>             it.hasNext ();) {
+>                 total += process ((EObject) it.next ());
+>             }
+>             return total;
+>         }
+> 
+>         @SuppressWarnings("unchecked")
+>         protected int process (EObject next) {
+>             final EClass nextKey = next.eClass ();
+>             Integer cachedValue = checkCached (nextKey);
+>             if (cachedValue != null) {
+>                 return cachedValue;
+>             }
+>             LinkedList < EClass > checkQueue = new LinkedList < EClass > ();
+>             checkQueue.add (nextKey);
+>             do {
+>                 EClass key = checkQueue.removeFirst ();
+>                 if (myCounters.containsKey (key)) {
+>                     final Integer value = myCounters.get (key);
+>                     cache (nextKey, value);
+>                     return value;
+>                 } else {
+>                     checkQueue.addAll (key.getESuperTypes ());
+>                 }
+>             } while (! checkQueue.isEmpty ());
+>             cache (nextKey, CACHE_MISS);
+>             return 0;
+>         }
+> 
+>         private Integer checkCached (EClass nextKey) {
+>             return myCache.get (nextKey);
+>         }
+> 
+>         private void cache (EClass nextKey, Integer value) {
+>             myCache.put (nextKey, value);
+>         }
+> 
+>     }
+> 

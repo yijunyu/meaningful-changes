@@ -1,0 +1,68 @@
+15a16
+> import java.util.Collections;
+20a22
+> import org.eclipse.core.commands.ExecutionException;
+25a28
+> import org.eclipse.core.runtime.IAdaptable;
+40a44
+> import org.eclipse.emf.ecore.util.EcoreUtil;
+43a48
+> import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+51a57
+> import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+71c77,78
+< 					"org.eclipse.ui.part.FileEditorInput", "org.eclipse.emf.common.ui.URIEditorInput" }), null));
+---
+> 					"org.eclipse.ui.part.FileEditorInput", "org.eclipse.emf.common.ui.URIEditorInput" }), //$NON-NLS-1$ //$NON-NLS-2$ 
+> 					null));
+88c95,96
+< 					"org.eclipse.ui.part.FileEditorInput", "org.eclipse.emf.common.ui.URIEditorInput" }), null));
+---
+> 					"org.eclipse.ui.part.FileEditorInput", "org.eclipse.emf.common.ui.URIEditorInput" }), //$NON-NLS-1$ //$NON-NLS-2$ 
+> 					null));
+232c240,241
+< 					"org.eclipse.ui.part.FileEditorInput", "org.eclipse.emf.common.ui.URIEditorInput" }), null));
+---
+> 					"org.eclipse.ui.part.FileEditorInput", "org.eclipse.emf.common.ui.URIEditorInput" }), //$NON-NLS-1$ //$NON-NLS-2$ 
+> 					null));
+532a542,581
+> 		} else {
+> 			URI newResoruceURI;
+> 			List affectedFiles = null;
+> 			if (element instanceof FileEditorInput) {
+> 				IFile newFile = ((FileEditorInput) element).getFile();
+> 				affectedFiles = Collections.singletonList(newFile);
+> 				newResoruceURI = URI.createPlatformResourceURI(newFile.getFullPath().toString(), true);
+> 			} else if (element instanceof URIEditorInput) {
+> 				newResoruceURI = ((URIEditorInput) element).getURI();
+> 			} else {
+> 				fireElementStateChangeFailed(element);
+> 				throw new CoreException(new Status(IStatus.ERROR, GMFGraphDiagramEditorPlugin.ID, 0, NLS.bind(Messages.GMFGraphDocumentProvider_IncorrectInputError, new Object[] { element,
+> 						"org.eclipse.ui.part.FileEditorInput", "org.eclipse.emf.common.ui.URIEditorInput" }), //$NON-NLS-1$ //$NON-NLS-2$ 
+> 						null));
+> 			}
+> 			if (false == document instanceof IDiagramDocument) {
+> 				fireElementStateChangeFailed(element);
+> 				throw new CoreException(new Status(IStatus.ERROR, GMFGraphDiagramEditorPlugin.ID, 0,
+> 						"Incorrect document used: " + document + " instead of org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDiagramDocument", null)); //$NON-NLS-1$ //$NON-NLS-2$
+> 			}
+> 			IDiagramDocument diagramDocument = (IDiagramDocument) document;
+> 			final Resource newResource = diagramDocument.getEditingDomain().getResourceSet().createResource(newResoruceURI);
+> 			final Diagram diagramCopy = (Diagram) EcoreUtil.copy(diagramDocument.getDiagram());
+> 			try {
+> 				new AbstractTransactionalCommand(diagramDocument.getEditingDomain(), NLS.bind(Messages.GMFGraphDocumentProvider_SaveAsOperation, diagramCopy.getName()), affectedFiles) {
+> 
+> 					protected CommandResult doExecuteWithResult(IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+> 						newResource.getContents().add(diagramCopy);
+> 						return CommandResult.newOKCommandResult();
+> 					}
+> 				}.execute(monitor, null);
+> 				newResource.save(GMFGraphDiagramEditorUtil.getSaveOptions());
+> 			} catch (ExecutionException e) {
+> 				fireElementStateChangeFailed(element);
+> 				throw new CoreException(new Status(IStatus.ERROR, GMFGraphDiagramEditorPlugin.ID, 0, e.getLocalizedMessage(), null));
+> 			} catch (IOException e) {
+> 				fireElementStateChangeFailed(element);
+> 				throw new CoreException(new Status(IStatus.ERROR, GMFGraphDiagramEditorPlugin.ID, 0, e.getLocalizedMessage(), null));
+> 			}
+> 			newResource.unload();

@@ -1,0 +1,108 @@
+9,9c9,9
+< import java.util.Iterator;
+---
+> import java.util.Enumeration;
+69,69c69,69
+<     protected String format (Map < String, String > oldHeaders) {
+---
+>     protected String format (Map < String, String > oldHeaders) throws BundleException {
+75,75c75,75
+<             sb.append (formatValue (e.getValue ()));
+---
+>             sb.append (formatValue (e.getKey (), e.getValue ()));
+81,81c81,81
+<     protected CharSequence formatValue (String value) {
+---
+>     protected CharSequence formatValue (String headerHint, String value) throws BundleException {
+85,85c85,85
+<         String [] values = ManifestElement.getArrayFromList (value);
+---
+>         ManifestElement [] values = ManifestElement.parseHeader (headerHint, value);
+88,88c88,88
+<         sb.append (values [0]);
+---
+>         sb.append (formatValue (values [0]));
+93a94,122
+>             sb.append (formatValue (values [i]));
+>         }
+>         return sb;
+>     }
+> 
+>     protected CharSequence formatValue (ManifestElement element) {
+>         StringBuilder sb = new StringBuilder (element.getValue ());
+>         for (Enumeration < ? > en = element.getDirectiveKeys ();
+>         en != null && en.hasMoreElements ();) {
+>             final String directiveKey = (String) en.nextElement ();
+>             for (String v : element.getDirectives (directiveKey)) {
+>                 sb.append (';');
+>                 sb.append (directiveKey);
+>                 sb.append (':');
+>                 sb.append ('=');
+>                 sb.append (v);
+>             }
+>         }
+>         for (Enumeration < ? > en = element.getKeys ();
+>         en != null && en.hasMoreElements ();) {
+>             final String attrKey = (String) en.nextElement ();
+>             for (String v : element.getAttributes (attrKey)) {
+>                 sb.append (';');
+>                 sb.append (attrKey);
+>                 sb.append ('=');
+>                 sb.append ('"');
+>                 sb.append (v);
+>                 sb.append ('"');
+>             }
+94,94d93
+<             sb.append (values [i]);
+130a159,162
+>         ManifestElement [] oldValues = ManifestElement.parseHeader (header, oldValue);
+>         if (oldValues == null || oldValues.length == 0) {
+>             return newValue;
+>         }
+131,132d158
+<         String [] oldValues = ManifestElement.getArrayFromList (oldValue);
+<         LinkedList < String > returnValue = new LinkedList < String > ();
+136,136c166,166
+<             returnValue.add (oldValues [i]);
+---
+>             lookupValues [i] = oldValues [i].getValue ();
+137,139d166
+<             ManifestElement [] parsed = ManifestElement.parseHeader (header, oldValues [i]);
+<             assert parsed != null && parsed.length > 0;
+<             lookupValues [i] = parsed.length == 1 ? parsed [0].getValue () : oldValues [i];
+141a169,170
+>         LinkedList < ManifestElement > additionalElements = new LinkedList < ManifestElement > ();
+>         for (ManifestElement n : ManifestElement.parseHeader (header, newValue)) {
+142,150d168
+<         for (String n : ManifestElement.getArrayFromList (newValue)) {
+<             ManifestElement [] parsed = ManifestElement.parseHeader (header, n);
+<             assert parsed != null && parsed.length > 0;
+<             String toLookUp;
+<             if (parsed.length == 1) {
+<                 toLookUp = parsed [0].getValue ();
+<             } else {
+<                 toLookUp = n;
+<             }
+151,151c171,171
+<             if (Arrays.binarySearch (lookupValues, toLookUp) < 0) {
+---
+>             if (Arrays.binarySearch (lookupValues, n.getValue ()) < 0) {
+152,152c172,172
+<                 returnValue.add (n);
+---
+>                 additionalElements.add (n);
+155a176,177
+>         for (ManifestElement me : oldValues) {
+>             sb.append (formatValue (me));
+156,159d175
+<         for (Iterator < String > it = returnValue.iterator ();
+<         it.hasNext ();) {
+<             sb.append (it.next ());
+<             if (it.hasNext ()) {
+161a180,182
+>         for (ManifestElement me : additionalElements) {
+>             sb.append (formatValue (me));
+>             sb.append (',');
+162a184,185
+>         assert sb.charAt (sb.length () - 1) == ',';
+>         sb.setLength (sb.length () - 1);

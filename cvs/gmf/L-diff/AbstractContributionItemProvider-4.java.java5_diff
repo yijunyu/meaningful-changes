@@ -1,0 +1,391 @@
+4a5,6
+> import java.util.HashSet;
+> 
+9,21c11
+< import org.eclipse.core.runtime.IAdaptable;
+< 
+< import org.eclipse.jface.action.ActionContributionItem;
+< 
+< import org.eclipse.jface.action.GroupMarker;
+< 
+< import org.eclipse.jface.action.IAction;
+< 
+< import org.eclipse.jface.action.IContributionItem;
+< 
+< import org.eclipse.jface.action.IContributionManager;
+< 
+< import org.eclipse.jface.action.IMenuManager;
+---
+> import java.util.Set;
+23,37c13
+< import org.eclipse.jface.action.Separator;
+< 
+< import org.eclipse.jface.viewers.ISelection;
+< 
+< import org.eclipse.jface.viewers.ISelectionProvider;
+< 
+< import org.eclipse.jface.viewers.IStructuredSelection;
+< 
+< import org.eclipse.jface.viewers.StructuredSelection;
+< 
+< import org.eclipse.ui.IActionBars;
+< 
+< import org.eclipse.ui.IWorkbenchPart;
+< 
+< import org.eclipse.ui.actions.ActionGroup;
+---
+> import org.eclipse.core.runtime.IAdaptable;
+72a49,98
+> import org.eclipse.jface.action.ActionContributionItem;
+> 
+> import org.eclipse.jface.action.GroupMarker;
+> 
+> import org.eclipse.jface.action.IAction;
+> 
+> import org.eclipse.jface.action.IContributionItem;
+> 
+> import org.eclipse.jface.action.IContributionManager;
+> 
+> import org.eclipse.jface.action.IContributionManagerOverrides;
+> 
+> import org.eclipse.jface.action.IMenuListener;
+> 
+> import org.eclipse.jface.action.IMenuManager;
+> 
+> import org.eclipse.jface.action.Separator;
+> 
+> import org.eclipse.jface.viewers.ISelection;
+> 
+> import org.eclipse.jface.viewers.ISelectionProvider;
+> 
+> import org.eclipse.jface.viewers.IStructuredSelection;
+> 
+> import org.eclipse.jface.viewers.StructuredSelection;
+> 
+> import org.eclipse.swt.widgets.Composite;
+> 
+> import org.eclipse.swt.widgets.CoolBar;
+> 
+> import org.eclipse.swt.widgets.Menu;
+> 
+> import org.eclipse.swt.widgets.ToolBar;
+> 
+> import org.eclipse.ui.IActionBars;
+> 
+> import org.eclipse.ui.IPluginContribution;
+> 
+> import org.eclipse.ui.IWorkbenchPart;
+> 
+> import org.eclipse.ui.PlatformUI;
+> 
+> import org.eclipse.ui.actions.ActionGroup;
+> 
+> import org.eclipse.ui.activities.IIdentifier;
+> 
+> import org.eclipse.ui.activities.IWorkbenchActivitySupport;
+> 
+> import org.eclipse.ui.activities.WorkbenchActivityHelper;
+> 
+76a103,104
+>     private IPluginContribution pluginContribution;
+>     private Set partDescriptors = new HashSet ();
+101a130,134
+>         contributeToActionBars (actionBars, partDescriptor, false);
+>     }
+> 
+>     private void contributeToActionBars (IActionBars actionBars, IWorkbenchPartDescriptor partDescriptor, boolean updateOnly) {
+>         partDescriptors.add (partDescriptor);
+106a140
+>                 if (! updateOnly) {
+107a142
+>                 }
+110a146
+>                 if (! updateOnly) {
+111a148
+>                 }
+114a152
+>                 if (! updateOnly) {
+115a154
+>                 }
+120a160
+>                 if (! updateOnly) {
+121a162
+>                 }
+130a172,177
+>     public final void updateActionBars (IActionBars actionBars, IWorkbenchPartDescriptor partDescriptor) {
+>         if (! partDescriptors.contains (partDescriptor)) {
+>             contributeToActionBars (actionBars, partDescriptor, true);
+>         }
+>     }
+> 
+163a211
+>         partDescriptors.remove (partDescriptor);
+328c376
+<                 if (action != null) return new ActionContributionItem (action);
+---
+>                 if (action != null) return new PluginActionContributionItem (action);
+371c419
+<                 return createMenuManager (menuId, partDescriptor);
+---
+>                 return new PluginMenuManager (createMenuManager (menuId, partDescriptor));
+392c440
+<                 if (isSeparator) return new Separator (groupId);
+---
+>                 if (isSeparator) return new PluginSeparator (groupId);
+394c442
+<                 return new GroupMarker (groupId);
+---
+>                 return new PluginGroupMarker (groupId);
+426a475,726
+>     private boolean areActivitiesEnabled () {
+>         if (! WorkbenchActivityHelper.isFiltering ()) return true;
+> 
+>         IWorkbenchActivitySupport workbenchActivitySupport = PlatformUI.getWorkbench ().getActivitySupport ();
+>         IIdentifier id = workbenchActivitySupport.getActivityManager ().getIdentifier (WorkbenchActivityHelper.createUnifiedId (getPluginContribution ()));
+>         if (id != null && ! id.isEnabled ()) {
+>             return false;
+>         }
+>         return true;
+>     }
+> 
+>     void setPluginContribution (IPluginContribution pluginContribution) {
+>         this.pluginContribution = pluginContribution;
+>     }
+> 
+>     IPluginContribution getPluginContribution () {
+>         return pluginContribution;
+>     }
+> 
+>     private class PluginMenuManager implements IMenuManager {
+>         private IMenuManager realMenuManager;
+> 
+>         public PluginMenuManager (IMenuManager menuManager) {
+>             this.realMenuManager = menuManager;
+>         }
+> 
+>         public void add (IAction action) {
+>             realMenuManager.add (action);
+>         }
+> 
+>         public void add (IContributionItem item) {
+>             realMenuManager.add (item);
+>         }
+> 
+>         public void addMenuListener (IMenuListener listener) {
+>             realMenuManager.addMenuListener (listener);
+>         }
+> 
+>         public void appendToGroup (String groupName, IAction action) {
+>             realMenuManager.appendToGroup (groupName, action);
+>         }
+> 
+>         public void appendToGroup (String groupName, IContributionItem item) {
+>             realMenuManager.appendToGroup (groupName, item);
+>         }
+> 
+>         public void dispose () {
+>             realMenuManager.dispose ();
+>         }
+> 
+>         public void fill (Composite parent) {
+>             realMenuManager.fill (parent);
+>         }
+> 
+>         public void fill (CoolBar parent, int index) {
+>             realMenuManager.fill (parent, index);
+>         }
+> 
+>         public void fill (Menu parent, int index) {
+>             realMenuManager.fill (parent, index);
+>         }
+> 
+>         public void fill (ToolBar parent, int index) {
+>             realMenuManager.fill (parent, index);
+>         }
+> 
+>         public IContributionItem find (String id) {
+>             return realMenuManager.find (id);
+>         }
+> 
+>         public IMenuManager findMenuUsingPath (String path) {
+>             return realMenuManager.findMenuUsingPath (path);
+>         }
+> 
+>         public IContributionItem findUsingPath (String path) {
+>             return realMenuManager.findUsingPath (path);
+>         }
+> 
+>         public String getId () {
+>             return realMenuManager.getId ();
+>         }
+> 
+>         public IContributionItem [] getItems () {
+>             return realMenuManager.getItems ();
+>         }
+> 
+>         public IContributionManagerOverrides getOverrides () {
+>             return realMenuManager.getOverrides ();
+>         }
+> 
+>         public boolean getRemoveAllWhenShown () {
+>             return realMenuManager.getRemoveAllWhenShown ();
+>         }
+> 
+>         public void insertAfter (String id, IAction action) {
+>             realMenuManager.insertAfter (id, action);
+>         }
+> 
+>         public void insertAfter (String id, IContributionItem item) {
+>             realMenuManager.insertAfter (id, item);
+>         }
+> 
+>         public void insertBefore (String id, IAction action) {
+>             realMenuManager.insertBefore (id, action);
+>         }
+> 
+>         public void insertBefore (String id, IContributionItem item) {
+>             realMenuManager.insertBefore (id, item);
+>         }
+> 
+>         public boolean isDirty () {
+>             return realMenuManager.isDirty ();
+>         }
+> 
+>         public boolean isDynamic () {
+>             return realMenuManager.isDynamic ();
+>         }
+> 
+>         public boolean isEmpty () {
+>             return realMenuManager.isEmpty ();
+>         }
+> 
+>         public boolean isEnabled () {
+>             return realMenuManager.isEnabled ();
+>         }
+> 
+>         public boolean isGroupMarker () {
+>             return realMenuManager.isGroupMarker ();
+>         }
+> 
+>         public boolean isSeparator () {
+>             return realMenuManager.isSeparator ();
+>         }
+> 
+>         public boolean isVisible () {
+>             if (! areActivitiesEnabled ()) {
+>                 return false;
+>             }
+>             return realMenuManager.isVisible ();
+>         }
+> 
+>         public void markDirty () {
+>             realMenuManager.markDirty ();
+>         }
+> 
+>         public void prependToGroup (String groupName, IAction action) {
+>             realMenuManager.prependToGroup (groupName, action);
+>         }
+> 
+>         public void prependToGroup (String groupName, IContributionItem item) {
+>             realMenuManager.prependToGroup (groupName, item);
+>         }
+> 
+>         public IContributionItem remove (IContributionItem item) {
+>             return realMenuManager.remove (item);
+>         }
+> 
+>         public IContributionItem remove (String id) {
+>             return realMenuManager.remove (id);
+>         }
+> 
+>         public void removeAll () {
+>             realMenuManager.removeAll ();
+>         }
+> 
+>         public void removeMenuListener (IMenuListener listener) {
+>             realMenuManager.removeMenuListener (listener);
+>         }
+> 
+>         public void saveWidgetState () {
+>             realMenuManager.saveWidgetState ();
+>         }
+> 
+>         public void setParent (IContributionManager parent) {
+>             realMenuManager.setParent (parent);
+>         }
+> 
+>         public void setRemoveAllWhenShown (boolean removeAll) {
+>             realMenuManager.setRemoveAllWhenShown (removeAll);
+>         }
+> 
+>         public void setVisible (boolean visible) {
+>             realMenuManager.setVisible (visible);
+>         }
+> 
+>         public void update () {
+>             realMenuManager.update ();
+>         }
+> 
+>         public void update (boolean force) {
+>             realMenuManager.update (force);
+>         }
+> 
+>         public void update (String id) {
+>             realMenuManager.update (id);
+>         }
+> 
+>         public void updateAll (boolean force) {
+>             realMenuManager.updateAll (force);
+>         }
+> 
+>     }
+> 
+>     private class PluginSeparator extends Separator {
+> 
+>         public PluginSeparator () {
+>             super ();
+>         }
+> 
+>         public PluginSeparator (String groupName) {
+>             super (groupName);
+>         }
+> 
+>         public boolean isVisible () {
+>             if (! areActivitiesEnabled ()) {
+>                 return false;
+>             }
+>             return super.isVisible ();
+>         }
+> 
+>     }
+> 
+>     private class PluginGroupMarker extends GroupMarker {
+> 
+>         public PluginGroupMarker (String groupName) {
+>             super (groupName);
+>         }
+> 
+>         public boolean isVisible () {
+>             if (! areActivitiesEnabled ()) {
+>                 return false;
+>             }
+>             return super.isVisible ();
+>         }
+> 
+>     }
+> 
+>     private class PluginActionContributionItem extends ActionContributionItem {
+> 
+>         public PluginActionContributionItem (IAction action) {
+>             super (action);
+>         }
+> 
+>         public boolean isVisible () {
+>             if (! areActivitiesEnabled ()) {
+>                 return false;
+>             }
+>             return super.isVisible ();
+>         }
+> 
+>     }
+> 

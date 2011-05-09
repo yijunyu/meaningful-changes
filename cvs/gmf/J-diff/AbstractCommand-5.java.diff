@@ -1,0 +1,627 @@
+2c2
+<  * Copyright (c) 2002, 2004 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2006 IBM Corporation and others.
+13a14
+> import java.util.ArrayList;
+15c16
+< import java.util.Collections;
+---
+> import java.util.List;
+16a18,25
+> import org.eclipse.core.commands.ExecutionException;
+> import org.eclipse.core.commands.operations.AbstractOperation;
+> import org.eclipse.core.commands.operations.IOperationApprover;
+> import org.eclipse.core.commands.operations.IUndoContext;
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> import org.eclipse.core.commands.operations.OperationHistoryFactory;
+> import org.eclipse.core.resources.IFile;
+> import org.eclipse.core.runtime.IAdaptable;
+20,21d28
+< import org.eclipse.core.runtime.Status;
+< 
+24,25d30
+< import org.eclipse.gmf.runtime.common.core.internal.CommonCoreStatusCodes;
+< import org.eclipse.gmf.runtime.common.core.internal.l10n.CommonCoreMessages;
+30,41c35,43
+<  * An abstract implementation of the
+<  * {@link org.eclipse.gmf.runtime.common.core.command.ICommand} interface.
+<  * Logging, exception handling and file edit validation are done in a uniform
+<  * way in the {@link #execute(IProgressMonitor)} method.
+<  * <P>
+<  * Concrete subclasses must implement the <code>doExecute(IProgressMonitor)</code>
+<  * method to perform their task.
+<  * <P>
+<  * By default this command is neither redoable nor undoable. Subclasses must
+<  * override the {@link #isUndoable()}and {@link #isRedoable()} methods to allow
+<  * the command to be undone or redone and implement the {@link #redo()}and
+<  * {@link #undo()}methods.
+---
+>  * An abstract superclass for GMF {@link IUndoableOperation}s that do not
+>  * modify EMF model resources.
+>  * <p>
+>  * The operation provides a list of {@link IFile}s that are expected to be modified when
+>  * the operation is executed, undone or redone. An {@link IOperationApprover} is
+>  * registered with the {@link OperationHistoryFactory#getOperationHistory()} to
+>  * validate the modification to these resources.
+>  * <p>
+>  * This class is meant to be extended by clients.
+43a46
+>  * @author ldamus
+48c51,52
+< public abstract class AbstractCommand implements ICommand {
+---
+> public abstract class AbstractCommand extends AbstractOperation
+> 		implements ICommand {
+50,53c54
+< 	/**
+< 	 * The empty string.
+< 	 */
+< 	protected static final String EMPTY_STRING = ""; //$NON-NLS-1$
+---
+> 	private final List affectedFiles;
+55,58c56
+< 	/**
+< 	 * The label for this command.
+< 	 */
+< 	private final String label;
+---
+> 	private CommandResult commandResult;
+61c59,62
+< 	 * The result of executing, undoing, or redoing this command.
+---
+>      * Initializes me with a label.
+>      * 
+>      * @param label
+>      *            the operation label
+63c64,66
+< 	private CommandResult result = null;
+---
+>     public AbstractCommand(String label) {
+>         this(label, null);
+>     }
+66c69,70
+< 	 * Creates a new command with the specified label.
+---
+> 	 * Initializes me with a label and a list of {@link IFile}s that anticipate modifying
+> 	 * when I am executed, undone or redone.
+68c72,75
+< 	 * @param label The label for the new command.
+---
+> 	 * @param label
+> 	 *            the operation label
+> 	 * @param affectedFiles
+> 	 *            the list of affected {@link IFile}s; may be <code>null</code>
+70,71c77,81
+< 	protected AbstractCommand(String label) {
+< 		super();
+---
+> 	public AbstractCommand(String label, List affectedFiles) {
+> 		super(label);
+> 
+> 		if (affectedFiles == null) {
+> 			this.affectedFiles = new ArrayList();
+73c83,85
+< 		this.label = label;
+---
+> 		} else {
+> 			this.affectedFiles = affectedFiles;
+> 		}
+77c89,90
+< 	 * {@inheritDoc}
+---
+> 	 * Returns the {@link IFile}s that may be modified when the operation is
+> 	 * executed, undone or redone.
+79,80c92,93
+< 	public String getLabel() {
+< 		return label;
+---
+> 	public List getAffectedFiles() {
+> 		return affectedFiles;
+83,87c96,98
+< 	/**
+< 	 * {@inheritDoc}
+< 	 */
+< 	public final CommandResult getCommandResult() {
+< 		return result;
+---
+> 	// Documentation copied from the interface
+> 	public CommandResult getCommandResult() {
+> 		return commandResult;
+91c102
+< 	 * Sets the <code>result</code> instance variable to the specified value.
+---
+> 	 * Sets the command result.
+93,94c104,105
+< 	 * @param result The new value for the <code>result</code> instance
+< 	 *                variable.
+---
+> 	 * @param result
+> 	 *            the new result for this command.
+97c108
+< 		this.result = result;
+---
+> 		this.commandResult = result;
+100,104c111,119
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommand#getAffectedObjects()
+< 	 */
+< 	public Collection getAffectedObjects() {
+< 		return Collections.EMPTY_LIST;
+---
+> 	// Documentation copied from the interface
+> 	public ICommand compose(IUndoableOperation operation) {
+> 
+> 		if (operation != null) {
+> 
+> 			return new CompositeCommand(getLabel()).compose(this)
+> 					.compose(operation);
+> 		}
+> 		return this;
+107,111c122,124
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommand#involvesReadOnlyNonWorkSpaceFiles()
+< 	 */
+< 	public boolean involvesReadOnlyNonWorkSpaceFiles() {
+< 		return false;
+---
+> 	// Documentation copied from the interface
+>     public ICommand reduce() {
+>         return this;
+114,115c127,129
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommand#getValidator()
+---
+> 	/**
+> 	 * Delegates to {@link #doExecuteWithResult(IProgressMonitor, IAdaptable)} and sets
+> 	 * the command result.
+117,118c131,136
+< 	public CMValidator getValidator() {
+< 		return new CMValidator();
+---
+> 	public IStatus execute(IProgressMonitor monitor, IAdaptable info)
+> 			throws ExecutionException {
+> 
+> 		CommandResult result = doExecuteWithResult(monitor, info);
+> 		setResult(result);
+> 		return result.getStatus();
+122,123c140,150
+< 	 * Retrieves the plug-in identifier to be used in command results produced
+< 	 * by this command.
+---
+> 	 * Performs the actual work of executing this command. Subclasses must
+> 	 * implement this method to perform some operation.
+> 	 * 
+> 	 * @param progressMonitor
+> 	 *            the progress monitor provided by the operation history
+> 	 * @param info
+> 	 *            the IAdaptable (or <code>null</code>) provided by the
+> 	 *            caller in order to supply UI information for prompting the
+> 	 *            user if necessary. When this parameter is not
+> 	 *            <code>null</code>, it should minimally contain an adapter
+> 	 *            for the org.eclipse.swt.widgets.Shell.class.
+125,126c152,155
+< 	 * @return The plug-in identifier to be used in command results produced by
+< 	 *          this command.
+---
+> 	 * @return The result of executing this command.
+> 	 * 
+> 	 * @throws ExecutionException
+> 	 *             if, for some reason, I fail to complete the operation
+128,130c157,159
+< 	protected String getPluginId() {
+< 		return CommonCorePlugin.getPluginId();
+< 	}
+---
+> 	protected abstract CommandResult doExecuteWithResult(
+> 			IProgressMonitor progressMonitor, IAdaptable info)
+> 			throws ExecutionException;
+132,133c161,163
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommand#compose(org.eclipse.gmf.runtime.common.core.command.ICommand)
+---
+> 	/**
+> 	 * Delegates to {@link #doRedoWithResult(IProgressMonitor, IAdaptable)} and sets the
+> 	 * command result.
+135,136c165,166
+< 	public ICommand compose(ICommand command) {
+< 		assert null != command : "null command"; //$NON-NLS-1$
+---
+> 	public IStatus redo(IProgressMonitor monitor, IAdaptable info)
+> 			throws ExecutionException {
+138c168,170
+< 		return new CompositeCommand(getLabel()).compose(this).compose(command);
+---
+> 		CommandResult result = doRedoWithResult(monitor, info);
+> 		setResult(result);
+> 		return result.getStatus();
+141,142c173,189
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommand#isExecutable()
+---
+> 	/**
+> 	 * Performs the actual work of redoing this command. Subclasses must
+> 	 * implement this method to perform the redo.
+> 	 * 
+> 	 * @param progressMonitor
+> 	 *            the progress monitor provided by the operation history
+> 	 * @param info
+> 	 *            the IAdaptable (or <code>null</code>) provided by the
+> 	 *            caller in order to supply UI information for prompting the
+> 	 *            user if necessary. When this parameter is not
+> 	 *            <code>null</code>, it should minimally contain an adapter
+> 	 *            for the org.eclipse.swt.widgets.Shell.class.
+> 	 * 
+> 	 * @return The result of redoing this command.
+> 	 * 
+> 	 * @throws ExecutionException
+> 	 *             on failure to redo
+144,146c191,192
+< 	public boolean isExecutable() {
+< 		return true;
+< 	}
+---
+> 	protected abstract CommandResult doRedoWithResult(IProgressMonitor progressMonitor,
+> 			IAdaptable info) throws ExecutionException;
+148,149c194,196
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommand#isRedoable()
+---
+> 	/**
+> 	 * Delegates to {@link #doUndoWithResult(IProgressMonitor, IAdaptable)} and sets the
+> 	 * command result.
+151,153c198,199
+< 	public boolean isRedoable() {
+< 		return false;
+< 	}
+---
+> 	public IStatus undo(IProgressMonitor monitor, IAdaptable info)
+> 			throws ExecutionException {
+155,159c201,203
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommand#isUndoable()
+< 	 */
+< 	public boolean isUndoable() {
+< 		return false;
+---
+> 		CommandResult result = doUndoWithResult(monitor, info);
+> 		setResult(result);
+> 		return result.getStatus();
+162,163c206,222
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommand#execute(org.eclipse.core.runtime.IProgressMonitor)
+---
+> 	/**
+> 	 * Performs the actual work of undoing this command. Subclasses must
+> 	 * implement this method to perform the undo.
+> 	 * 
+> 	 * @param progressMonitor
+> 	 *            the progress monitor provided by the operation history
+> 	 * @param info
+> 	 *            the IAdaptable (or <code>null</code>) provided by the
+> 	 *            caller in order to supply UI information for prompting the
+> 	 *            user if necessary. When this parameter is not
+> 	 *            <code>null</code>, it should minimally contain an adapter
+> 	 *            for the org.eclipse.swt.widgets.Shell.class.
+> 	 * 
+> 	 * @return The result of undoing this command.
+> 	 * 
+> 	 * @throws ExecutionException
+> 	 *             on failure to undo
+165c224,225
+< 	public void execute(IProgressMonitor progressMonitor) {
+---
+> 	protected abstract CommandResult doUndoWithResult(IProgressMonitor progressMonitor,
+> 			IAdaptable info) throws ExecutionException;
+167,170c227,228
+< 		IProgressMonitor monitor =
+< 			(progressMonitor == null)
+< 				? new NullProgressMonitor()
+< 				: progressMonitor;
+---
+>     public void dispose() {
+>         super.dispose();
+172,183c230,233
+< 		try {
+< 			if (getValidator().okToEdit(this)) { 
+< 				setResult(doExecute(monitor));
+< 			} else {
+< 				// We are not going to do the undo/redo.
+< 				// We do not want the stack affected so we must return an appropriate result.
+< 				// This way the caller will know that the undo/redo was not sucessful and will
+< 				// not adjust the stack.
+< 				setResult(newCancelledCommandResult());	
+< 			}
+< 		} catch (Exception e) {
+< 			handle(e);
+---
+>         // clear my contexts
+>         IUndoContext[] contexts = getContexts();
+>         for (int i = 0; i < contexts.length; i++) {
+>             removeContext(contexts[i]);
+187,206c237,241
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommand#redo()
+< 	 */
+< 	public void redo() {
+< 
+< 		try {
+< 			// First check if we have access to the units to be modified.
+< 			if (getValidator().okToEdit(this)) {
+< 				setResult(doRedo());
+< 			} else {
+< 				// We are not going to do the undo/redo.
+< 				// We do not want the stack affected so we must return an appropriate result.
+< 				// This way the caller will know that the undo/redo was not sucessful and will
+< 				// not adjust the stack.
+< 				setResult(newCancelledCommandResult());
+< 			}
+< 		} catch (Exception e) {
+< 			handle(e);
+< 		}
+< 	}
+---
+>     //
+>     // TODO The following methods to be removed when deprecated API on ICommand
+>     // is removed. Deprecated API must be implemented to comply with deprecated
+>     // methods on the ICommand interface.
+>     // 
+209c244,247
+< 	 * {@inheritDoc}
+---
+>      * Returns the affected {@link IFile}s.
+>      * 
+>      * @deprecated Implemented for backwards compatibility. Use
+>      *             {@link #getAffectedFiles()} instead.
+211,226c249,250
+< 	public void undo() {
+< 
+< 		try {
+< 			// First check if we have access to the units to be modified.
+< 			if (getValidator().okToEdit(this)) {
+< 				setResult(doUndo());
+< 			} else {
+< 				// We are not going to do the undo/redo.
+< 				// We do not want the stack affected so we must return an appropriate result.
+< 				// This way the caller will know that the undo/redo was not sucessful and will
+< 				// not adjust the stack.
+< 				setResult(newCancelledCommandResult());
+< 			}
+< 		} catch (Exception e) {
+< 			handle(e);
+< 		}
+---
+>     public Collection getAffectedObjects() {
+>         return getAffectedFiles();
+230,232c254
+< 	 * Creates a new command result with an OK status.
+< 	 * 
+< 	 * @return A new command result with an OK status.
+---
+>      * Returns <code>null</code>.
+233a256,259
+>      * @deprecated File validation is now done through a
+>      *             {@link IOperationApprover} registered with with the
+>      *             {@link OperationHistoryFactory#getOperationHistory()}. No
+>      *             need to return a validator for backwards compatilibity.
+235,242c261,262
+< 	protected CommandResult newOKCommandResult() {
+< 		return new CommandResult(
+< 			new Status(
+< 				IStatus.OK,
+< 				getPluginId(),
+< 				CommonCoreStatusCodes.OK,
+< 				EMPTY_STRING,
+< 				null));
+---
+>     public CMValidator getValidator() {
+>         return null;
+246,250c266
+< 	 * Creates a new command result with an OK status and the specified return
+< 	 * value.
+< 	 * 
+< 	 * @return A new command result with an OK status.
+< 	 * @param returnValue The return value for the new command result.
+---
+>      * Returns <code>false</code>.
+251a268,271
+>      * @deprecated File validation is now done through a
+>      *             {@link IOperationApprover} registered with with the
+>      *             {@link OperationHistoryFactory#getOperationHistory()}. No
+>      *             need to calculate the answer for backwards compatilibity.
+253,261c273,274
+< 	protected CommandResult newOKCommandResult(Object returnValue) {
+< 		return new CommandResult(
+< 			new Status(
+< 				IStatus.OK,
+< 				getPluginId(),
+< 				CommonCoreStatusCodes.OK,
+< 				EMPTY_STRING,
+< 				null),
+< 			returnValue);
+---
+>     public boolean involvesReadOnlyNonWorkSpaceFiles() {
+>         return false;
+265,266c278
+< 	 * Creates a new command result with an ERROR status , a CANCELLED status
+< 	 * code and no return value.
+---
+>      * Delegates to {@link #canExecute()}.
+268c280,281
+< 	 * @return A new command result with an ERROR status.
+---
+>      * @deprecated Implemented for backwards compatibility. Use
+>      *             {@link #canExecute()} instead.
+270,278c283,284
+< 	protected CommandResult newCancelledCommandResult() {
+< 		return new CommandResult(
+< 			new Status(
+< 				IStatus.ERROR,
+< 				getPluginId(),
+< 				CommonCoreStatusCodes.CANCELLED,
+< 				CommonCoreMessages.AbstractCommand__INFO__cancelOperation,
+< 				null),
+< 			null);
+---
+>     public boolean isExecutable() {
+>         return canExecute();
+282,283c288
+< 	 * Creates a new command result with an ERROR status, a COMMAND_FAILURE
+< 	 * status code, and no return value.
+---
+>      * Delegates to {@link #canRedo()}.
+285,286c290,291
+< 	 * @param errorMessage error message
+< 	 * @return A new command result with an ERROR status.
+---
+>      * @deprecated Implemented for backwards compatibility. Use
+>      *             {@link #canRedo()} instead.
+288,295c293,294
+< 	protected CommandResult newErrorCommandResult(String errorMessage) {
+< 		return new CommandResult(
+< 			new Status(
+< 				IStatus.ERROR,
+< 				getPluginId(),
+< 				CommonCoreStatusCodes.COMMAND_FAILURE,
+< 				errorMessage,
+< 				null));
+---
+>     public boolean isRedoable() {
+>         return canRedo();
+299,300c298
+< 	 * Creates a new command result with an WARNING status, a OK
+< 	 * status code, and no return value.
+---
+>      * Delegates to {@link #canUndo()}.
+302,304c300,301
+< 	 * @param warningMessage the warning
+< 	 * @param returnValue the return value for the new command result
+< 	 * @return A new command result with a WARNING status.
+---
+>      * @deprecated Implemented for backwards compatibility. Use
+>      *             {@link #canUndo()} instead.
+306,309c303,304
+< 	protected CommandResult newWarningCommandResult(String warningMessage,
+< 			Object returnValue) {
+< 		return new CommandResult(new Status(IStatus.WARNING, getPluginId(),
+< 			CommonCoreStatusCodes.OK, warningMessage, null), returnValue);
+---
+>     public boolean isUndoable() {
+>         return canUndo();
+313c308,309
+< 	 * Handles the specified exception.
+---
+>      * Delegates to {@link #execute(IProgressMonitor, IAdaptable)} and logs any
+>      * {@link ExecutionException} that occurs.
+315,316c311,312
+< 	 * @param exception
+< 	 *            The exception to be handled.
+---
+>      * @deprecated Implemented for backwards compatibility. Use
+>      *             {@link #execute(IProgressMonitor, IAdaptable)} instead.
+318,319c314
+< 	protected void handle(Exception exception) {
+< 		Trace.catching(CommonCorePlugin.getDefault(), CommonCoreDebugOptions.EXCEPTIONS_CATCHING, getClass(), "handle", exception); //$NON-NLS-1$
+---
+>     public void execute(IProgressMonitor progressMonitor) {
+321,328c316,317
+< 		setResult(
+< 			new CommandResult(
+< 				new Status(
+< 					IStatus.ERROR,
+< 					getPluginId(),
+< 					CommonCoreStatusCodes.COMMAND_FAILURE,
+< 					String.valueOf(exception.getMessage()),
+< 					exception)));
+---
+>         try {
+>             execute(progressMonitor, null);
+330c319,321
+< 		Log.log(CommonCorePlugin.getDefault(), getCommandResult().getStatus());
+---
+>         } catch (ExecutionException e) {
+>             handle(e);
+>         }
+334,335c325,326
+< 	 * Performs the actual work of executing this command. Subclasses must
+< 	 * implement this method to perform some operation.
+---
+>      * Delegates to {@link #redo(IProgressMonitor, IAdaptable)} and logs any
+>      * {@link ExecutionException} that occurs.
+337,342c328,329
+< 	 * @param progressMonitor
+< 	 *            The object that monitors the progress of this command
+< 	 *            execution. May be
+< 	 *            {@link org.eclipse.core.runtime.NullProgressMonitor}if the
+< 	 *            command should be executed without monitoring its progress.
+< 	 * @return The result of executing this command.
+---
+>      * @deprecated Implemented for backwards compatibility. Use
+>      *             {@link #redo(IProgressMonitor, IAdaptable)} instead.
+344c331,338
+< 	protected abstract CommandResult doExecute(IProgressMonitor progressMonitor);
+---
+>     public void redo() {
+>         try {
+>             redo(new NullProgressMonitor(), null);
+> 
+>         } catch (ExecutionException e) {
+>             handle(e);
+>         }
+>     }
+347,348c341,342
+< 	 * Performs the actual work of redoing this command. Subclasses must
+< 	 * override this method if the command is to be redoable.
+---
+>      * Delegates to {@link #undo(IProgressMonitor, IAdaptable)} and logs any
+>      * {@link ExecutionException} that occurs.
+350,352c344,345
+< 	 * @return The result of redoing this command.
+< 	 * @exception UnsupportedOperationException
+< 	 *                If this command isn't redoable.
+---
+>      * @deprecated Implemented for backwards compatibility. Use
+>      *             {@link #undo(IProgressMonitor, IAdaptable)} instead.
+354,357c347,353
+< 	protected CommandResult doRedo() {
+< 		UnsupportedOperationException uoe = new UnsupportedOperationException();
+< 		Trace.throwing(CommonCorePlugin.getDefault(), CommonCoreDebugOptions.EXCEPTIONS_THROWING, getClass(), "doRedo", uoe); //$NON-NLS-1$
+< 		throw uoe;
+---
+>     public void undo() {
+>         try {
+>             undo(new NullProgressMonitor(), null);
+> 
+>         } catch (ExecutionException e) {
+>             handle(e);
+>         }
+361,362c357,358
+< 	 * Performs the actual work of undoing this command. Subclasses must
+< 	 * override this method if the command is to be undoable.
+---
+>      * Handles the specified exception by logging, tracing and setting the
+>      * command result to an error.
+364,366c360,362
+< 	 * @return The result of undoing this command.
+< 	 * @exception UnsupportedOperationException
+< 	 *                If this command isn't undoable.
+---
+>      * @param exception
+>      *            The exception to be handled.
+>      * @deprecated Supports deprecated implementation
+368,372c364,367
+< 	protected CommandResult doUndo() {
+< 		UnsupportedOperationException uoe = new UnsupportedOperationException();
+< 		Trace.throwing(CommonCorePlugin.getDefault(), CommonCoreDebugOptions.EXCEPTIONS_THROWING, getClass(), "doUndo", uoe); //$NON-NLS-1$
+< 		throw uoe;
+< 	}
+---
+>     protected void handle(Exception exception) {
+>         Trace.catching(CommonCorePlugin.getDefault(),
+>                 CommonCoreDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+>                 "handle", exception); //$NON-NLS-1$
+373a369,372
+>         setResult(CommandResult.newErrorCommandResult(exception));
+> 
+>         Log.log(CommonCorePlugin.getDefault(), getCommandResult().getStatus());
+>     }

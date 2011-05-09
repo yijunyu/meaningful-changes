@@ -1,0 +1,116 @@
+16,23d15
+< import org.eclipse.jface.action.IContributionItem;
+< import org.eclipse.jface.action.IContributionManager;
+< import org.eclipse.jface.action.IMenuManager;
+< import org.eclipse.jface.viewers.ISelection;
+< import org.eclipse.ui.IActionBars;
+< import org.eclipse.ui.IWorkbenchPart;
+< import org.osgi.framework.Bundle;
+< 
+33a26,27
+> import org.eclipse.gmf.runtime.common.ui.services.action.internal.contributionitem.UpdateActionBarsOperation;
+> import org.eclipse.gmf.runtime.common.ui.services.util.ActivityFilterProviderDescriptor;
+35a30,35
+> import org.eclipse.jface.action.IMenuManager;
+> import org.eclipse.jface.viewers.ISelection;
+> import org.eclipse.ui.IActionBars;
+> import org.eclipse.ui.IPluginContribution;
+> import org.eclipse.ui.IWorkbenchPart;
+> import org.osgi.framework.Bundle;
+44c44
+<  * @author melaasar
+---
+>  * @author melaasar, cmahoney
+55c55
+< 		extends Service.ProviderDescriptor {
+---
+> 		extends ActivityFilterProviderDescriptor {
+85a86,91
+> 			
+> 			// filter providers based on disabled capabilities
+> 			if (!super.provides(operation)) {
+> 				return false;
+> 			}
+> 			
+87c93
+< 			if (checkPluginLoaded && !isPluginLoaded())
+---
+> 			if (checkPluginLoaded && !isPluginLoaded()) {
+88a95
+> 			}
+91,92c98,105
+< 			if (!contributionDescriptor.hasContributions())
+< 				return super.provides(operation);
+---
+> 			if (!contributionDescriptor.hasContributions()) {
+> 				if (getPolicy() != null) {
+> 					return getPolicy().provides(operation);
+> 				}
+> 				if (getProvider() != null) {
+> 					return getProvider().provides(operation);
+> 				}
+> 			}
+96a110
+> 
+129a144,157
+> 				if (provider instanceof AbstractContributionItemProvider) {
+> 					((AbstractContributionItemProvider) provider)
+> 						.setPluginContribution(new IPluginContribution() {
+> 
+> 							public String getLocalId() {
+> 								return getElement().getDeclaringExtension()
+> 									.getSimpleIdentifier();
+> 							}
+> 
+> 							public String getPluginId() {
+> 								return getElement().getNamespace();
+> 							}
+> 						});
+> 				}
+136c164
+< 		 * Verify if the declaring pluging of the propety provider is loaded.
+---
+> 		 * Verify if the declaring plugin of the provider is loaded; if it is not loaded, add a listener that.
+147a176
+> 		
+203,205c232
+< 		execute(
+< 			new ContributeToActionBarsOperation(
+< 				actionBars,
+---
+> 		execute(new ContributeToActionBarsOperation(actionBars,
+209,210c236,240
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.ui.services.action.contributionitem.IContributionItemProvider#contributeToPopupMenu(org.eclipse.jface.action.IMenuManager, org.eclipse.ui.IWorkbenchPart)
+---
+> 	/*
+> 	 * (non-Javadoc)
+> 	 * 
+> 	 * @see org.eclipse.gmf.runtime.common.ui.services.action.contributionitem.IContributionItemProvider#contributeToPopupMenu(org.eclipse.jface.action.IMenuManager,
+> 	 *      org.eclipse.ui.IWorkbenchPart)
+224a255,263
+> 	/* (non-Javadoc)
+> 	 * @see org.eclipse.gmf.runtime.common.ui.services.action.internal.contributionitem.IContributionItemProvider#updateActionBars(org.eclipse.ui.IActionBars, org.eclipse.gmf.runtime.common.ui.util.IWorkbenchPartDescriptor)
+> 	 */
+> 	public void updateActionBars(IActionBars actionBars,
+> 			IWorkbenchPartDescriptor workbenchPartDescriptor) {
+> 		execute(new UpdateActionBarsOperation(actionBars,
+> 			workbenchPartDescriptor));
+> 	}
+> 	
+248,262d286
+< 	/**
+< 	 * Removes the disabled contributions from a contribution manager.
+< 	 * 
+< 	 * @param manager the contribution manager
+< 	 */
+< 	public void removeDisabledContributions(IContributionManager manager) {
+< 		IContributionItem[] contributions = manager.getItems();
+< 		for (int i = 0; i < contributions.length; i++) {
+< 			if (contributions[i] instanceof IContributionManager)
+< 				removeDisabledContributions(
+< 					(IContributionManager) contributions[i]);
+< 			if (!contributions[i].isEnabled())
+< 				manager.remove(contributions[i]);
+< 		}
+< 	}

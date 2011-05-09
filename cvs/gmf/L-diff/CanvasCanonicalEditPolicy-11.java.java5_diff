@@ -1,0 +1,47 @@
+69c69,71
+< import org.eclipse.gmf.runtime.diagram.ui.commands.SetViewMutabilityCommand;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.commands.DeferredLayoutCommand;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.commands.ICommandProxy;
+155,156c157,167
+<         super.refreshSemantic ();
+<         refreshConnections ();
+---
+>         List createdViews = new LinkedList ();
+>         createdViews.addAll (refreshSemanticChildren ());
+>         List createdConnectionViews = new LinkedList ();
+>         createdConnectionViews.addAll (refreshSemanticConnections ());
+>         createdConnectionViews.addAll (refreshConnections ());
+>         if (createdViews.size () > 1) {
+>             DeferredLayoutCommand layoutCmd = new DeferredLayoutCommand (host ().getEditingDomain (), createdViews, host ());
+>             executeCommand (new ICommandProxy (layoutCmd));
+>         }
+>         createdViews.addAll (createdConnectionViews);
+>         makeViewsImmutable (createdViews);
+162c173
+<     private void refreshConnections () {
+---
+>     private Collection refreshConnections () {
+183c194
+<             createConnections (myLinkDescriptors);
+---
+>             return createConnections (myLinkDescriptors);
+220c231
+<     private void createConnections (Collection linkDescriptors) {
+---
+>     private Collection createConnections (Collection linkDescriptors) {
+222c233
+<             return;
+---
+>             return Collections.EMPTY_LIST;
+223a235
+>         List adapters = new LinkedList ();
+243c255,257
+<                 SetViewMutabilityCommand.makeImmutable (viewAdapter).execute ();
+---
+>                 if (viewAdapter != null) {
+>                     adapters.add (viewAdapter);
+>                 }
+245a260
+>         return adapters;

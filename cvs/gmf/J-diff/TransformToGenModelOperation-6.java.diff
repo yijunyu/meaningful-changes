@@ -1,0 +1,152 @@
+14a15
+> import java.text.MessageFormat;
+28a30
+> import org.eclipse.emf.ecore.EObject;
+54d55
+< 	private URI myMapModelURI;
+61,62c62,63
+< 	private IStatus myLoadMapmodelStatus;
+< 	private IStatus myStaleGenmodelStatus;
+---
+> 	private IStatus myLoadMapmodelStatus = Status.CANCEL_STATUS;
+> 	private IStatus myStaleGenmodelStatus = Status.CANCEL_STATUS;
+64,66c65
+< 	public TransformToGenModelOperation(URI mapURI) {
+< 		assert mapURI != null;
+< 		this.myMapModelURI = mapURI;
+---
+> 	public TransformToGenModelOperation() {
+74,77d72
+< 	public URI getMapURI() {
+< 		return this.myMapModelURI;
+< 	}
+< 	
+82c77
+< 	void setGenURI(URI gmfGen) {
+---
+> 	public void setGenURI(URI gmfGen) {
+86c81
+< 	private GenModel getGenModel() {
+---
+> 	public GenModel getGenModel() {
+94c89
+< 	private void setMapping(Mapping m) {
+---
+> 	private void setMapping(Mapping m, IStatus loadStatus) {
+96c91,92
+< 		myGMDetector = null;
+---
+> 		this.myLoadMapmodelStatus = loadStatus;
+> 		myGMDetector = (m != null) ? new GenModelDetector(m) : null;
+100,103c96
+< 	GenModelDetector getGenModelDetector() {
+< 		if (myGMDetector == null) {
+< 			myGMDetector = new GenModelDetector(getMapping());
+< 		}
+---
+> 	public GenModelDetector getGenModelDetector() {
+107c100
+< 	IStatus getLoadMappingStatus() {
+---
+> 	public IStatus getLoadMappingStatus() {
+111c104
+< 	IStatus getStaleGenmodelStatus() {
+---
+> 	public IStatus getStaleGenmodelStatus() {
+115c108,110
+< 	Mapping loadMappingModel(ResourceSet rs, URI uri, IProgressMonitor pm) throws CoreException {
+---
+> 	public Mapping loadMappingModel(ResourceSet rs, URI uri, IProgressMonitor pm) throws CoreException {
+> 		Mapping content = null;
+> 		IStatus status = Status.CANCEL_STATUS;
+117a113,116
+> 			checkResourceSet(rs);
+> 			if (uri == null) {
+> 				throw new IllegalArgumentException(Messages.TransformToGenModelOperation_e_null_map_uri);
+> 			}
+123,125c122,124
+< 			IStatus loadStatus = loadHelper.getStatus();
+< 			if (!loadStatus.isOK()) {
+< 				throw new CoreException(loadStatus);
+---
+> 			status = loadHelper.getStatus();
+> 			if (!status.isOK()) {
+> 				throw new CoreException(status);
+128c127,133
+< 			final Mapping content = (Mapping) loadHelper.getContentsRoot();
+---
+> 			EObject root = loadHelper.getContentsRoot();
+> 			if (!(root instanceof Mapping)) {
+> 				String msg = MessageFormat.format(Messages.TransformToGenModelOperation_e_wrong_root_element, root.getClass().getName());
+> 				status = Plugin.createError(msg, null);
+> 				throw new CoreException(status);
+> 			}
+> 			content = (Mapping) loadHelper.getContentsRoot();
+131,132c136,137
+< 			IStatus mapStatus = getFirst(mapIsValid);
+< 			if (Diagnostic.CANCEL == mapStatus.getSeverity()) {
+---
+> 			status = getFirst(mapIsValid);
+> 			if (Diagnostic.CANCEL == status.getSeverity()) {
+134,135c139,140
+< 			} else if(Diagnostic.ERROR == mapStatus.getSeverity()) {
+< 				throw new CoreException(mapStatus);
+---
+> 			} else if(Diagnostic.ERROR == status.getSeverity()) {
+> 				throw new CoreException(status);
+137,138d141
+< 				setMapping(content);
+< 				this.myLoadMapmodelStatus = mapStatus;
+140a144,148
+> 		} catch (CoreException e) {
+> 			throw e;
+> 		} catch (Exception e) {
+> 			IStatus error = Plugin.createError(Messages.TransformToGenModelOperation_e_load_mapping_model, e);
+> 			throw new CoreException(error);
+141a150,151
+> 			setMapping(content, status);
+> 			if (monitor != null) {
+144a155
+> 	}
+146c157
+< 	GenModel findGenmodel(ResourceSet rs) throws CoreException {
+---
+> 	public GenModel findGenmodel(ResourceSet rs) throws CoreException {
+147a159,160
+> 			checkResourceSet(rs);
+> 			checkMapping();
+162c175
+< 	GenModel loadGenModel(ResourceSet rs, URI uri, IProgressMonitor pm) throws CoreException {
+---
+> 	public GenModel loadGenModel(ResourceSet rs, URI uri, IProgressMonitor pm) throws CoreException {
+164a178,179
+> 			checkResourceSet(rs);
+> 			checkMapping();
+209c224
+< 	IStatus executeTransformation(ResourceSet rs, IProgressMonitor pm) {
+---
+> 	public IStatus executeTransformation(ResourceSet rs, IProgressMonitor pm) {
+211a227,231
+> 			checkResourceSet(rs);
+> 			if (getGenURI() == null) {
+> 				throw new IllegalStateException(Messages.TransformToGenModelOperation_e_null_gmfgen_uri);
+> 			}
+> 			checkMapping();
+259,264c279,288
+< 	public void reset(URI uri) {
+< 		assert uri != null;
+< 		myMapModelURI = uri;
+< 		setMapping(null);
+< 		myLoadMapmodelStatus = null;
+< 		myStaleGenmodelStatus = null;
+---
+> 	private void checkResourceSet(ResourceSet rs) {
+> 		if (rs == null) {
+> 			throw new IllegalArgumentException(Messages.TransformToGenModelOperation_e_null_resource_set);
+> 		}
+> 	}
+> 
+> 	private void checkMapping() {
+> 		if (getMapping() == null) {
+> 			throw new IllegalStateException(Messages.TransformToGenModelOperation_e_null_mapping);
+> 		}

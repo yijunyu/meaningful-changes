@@ -1,0 +1,60 @@
+28a29,30
+> import org.eclipse.core.runtime.SubProgressMonitor;
+> 
+50c52
+<     private static boolean firstBuild = true;
+---
+>     private boolean firstBuild = true;
+51a54
+>     private WorkspaceModelRegistry modelRegistry;
+59,62d61
+<     private static boolean isFileOfInterest (IFile file) {
+<         return XpandResource.TEMPLATE_EXTENSION.equals (file.getFileExtension ()) || XtendResource.FILE_EXTENSION.equals (file.getFileExtension ());
+<     }
+< 
+66a66,69
+>         Activator.registerResourceManager (getProject (), resourceManager);
+>         firstBuild = true;
+>         modelRegistry = new WorkspaceModelRegistry ();
+>         Activator.registerModelSource (modelRegistry);
+73d75
+<                 System.err.println ("First build, kind:" + kind + " and is FULLBUILD:" + (kind == FULL_BUILD));
+110c112
+<             if (XpandResource.TEMPLATE_EXTENSION.equals (resource.getFileExtension ())) {
+---
+>             if (isXpand (resource)) {
+115c117
+<             } else if (XtendResource.FILE_EXTENSION.equals (resource.getFileExtension ())) {
+---
+>             } else if (isXtend (resource)) {
+137c139,142
+<         getProject ().accept (new XpandResourceVisitor (monitor));
+---
+>         monitor.beginTask (null, 2);
+>         getProject ().accept (new XpandResourceVisitor (new SubProgressMonitor (monitor, 1)));
+>         modelRegistry.build (getProject (), new SubProgressMonitor (monitor, 1));
+>         monitor.done ();
+141c146,149
+<         delta.accept (new XpandResourceVisitor (monitor));
+---
+>         monitor.beginTask (null, 2);
+>         delta.accept (new XpandResourceVisitor (new SubProgressMonitor (monitor, 1)));
+>         modelRegistry.build (getProject (), delta, new SubProgressMonitor (monitor, 1));
+>         monitor.done ();
+157a166,177
+>     private static boolean isXtend (final IFile resource) {
+>         return XtendResource.FILE_EXTENSION.equals (resource.getFileExtension ());
+>     }
+> 
+>     private static boolean isXpand (final IFile resource) {
+>         return XpandResource.TEMPLATE_EXTENSION.equals (resource.getFileExtension ());
+>     }
+> 
+>     private static boolean isFileOfInterest (IFile file) {
+>         return isXpand (file) || isXtend (file);
+>     }
+> 
+159c179
+<         private IProgressMonitor monitor;
+---
+>         private final IProgressMonitor monitor;

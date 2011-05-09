@@ -1,0 +1,49 @@
+47a48
+> 	private Map<EClass, Map<String, EStructuralFeature>> myTracedHierarchyAttributes = new HashMap<EClass, Map<String, EStructuralFeature>>();
+63c64
+< 	public void registerTracedFeatureForHierarchy(EClass eClass, Map<String, EStructuralFeature> tracedFeature) {
+---
+> 	public void registerTracedElementForHierarchy(EClass eClass, Map<String, EStructuralFeature> tracedFeature) {
+66a68,71
+> 	public void registerTracedAttributeForHierarchy(EClass eClass, Map<String, EStructuralFeature> tracedFeature) {
+> 		myTracedHierarchyAttributes.put(eClass, tracedFeature);
+> 	}
+> 	
+88a94,107
+> 		registerTracedElementForHierarchy(eClass, xmlName, tracerFeature);
+> 		registerTracedAttributeForHierarchy(eClass, xmlName, tracerFeature);
+> 	}
+> 	
+> 	public void registerTracedAttributeForHierarchy(EClass eClass, String xmlName, EStructuralFeature tracerFeature) {
+> 		Map<String, EStructuralFeature> tracedFeatures = myTracedHierarchyAttributes.get(eClass);
+> 		if (tracedFeatures == null) {
+> 			tracedFeatures = new HashMap<String, EStructuralFeature>();
+> 		}
+> 		tracedFeatures.put(xmlName, tracerFeature);
+> 		registerTracedAttributeForHierarchy(eClass, tracedFeatures);
+> 	}
+> 	
+> 	public void registerTracedElementForHierarchy(EClass eClass, String xmlName, EStructuralFeature tracerFeature) {
+94c113
+< 		registerTracedFeatureForHierarchy(eClass, tracedFeatures);
+---
+> 		registerTracedElementForHierarchy(eClass, tracedFeatures);
+125a145,154
+> 	public EStructuralFeature getTracedParentAttributeFor(EClass clazz, String name) {
+> 	    Map<String, EStructuralFeature> tracings = myTracedHierarchyAttributes.get(clazz);
+> 	    EStructuralFeature result = tracings != null ? tracings.get(name) : null;
+> 		for (Iterator<EClass> it=clazz.getEAllSuperTypes().iterator(); result == null && it.hasNext();) {
+> 			EClass nextParent = it.next();
+> 			result = getTracedParentAttributeFor(nextParent, name);
+> 		}
+> 		return result;
+> 	}
+> 	
+143c172,176
+< 		} else if ((rename = getTracedParentFeatureFor(eClass, name)) != null) {
+---
+> 		} else if (isElement && (rename = getTracedParentFeatureFor(eClass, name)) != null) {
+> 			result = rename;
+> 			// if somebody has provided a feature to trace, it is his own business to notify us of whether 
+> 			// a migration is required and has happened, cause it is not necessary that anything has been actually changed.
+> 		} else if (!isElement && (rename = getTracedParentAttributeFor(eClass, name)) != null) {

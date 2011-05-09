@@ -1,0 +1,292 @@
+package org.eclipse.gmf.runtime.diagram.core.util;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.HashMap;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.emf.common.util.EMap;
+
+import org.eclipse.emf.ecore.EAnnotation;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.emf.ecore.EcorePackage;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.core.services.ViewService;
+
+import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.gmf.runtime.notation.Edge;
+
+import org.eclipse.gmf.runtime.notation.FilteringStyle;
+
+import org.eclipse.gmf.runtime.notation.Guide;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.SortingStyle;
+
+import org.eclipse.gmf.runtime.notation.Style;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class ViewRefactorHelper {
+    private PreferencesHint preferencesHint;
+
+    public ViewRefactorHelper () {
+        this (PreferencesHint.USE_DEFAULTS);
+    }
+
+    public ViewRefactorHelper (PreferencesHint preferencesHint) {
+        this.preferencesHint = preferencesHint;
+    }
+
+    public PreferencesHint getPreferencesHint () {
+        return preferencesHint;
+    }
+
+    public void refactor (EObject oldElement, EObject newElement) {
+        Collection views = getReferencingViews (oldElement);
+        for (Iterator i = views.iterator ();
+        i.hasNext ();) {
+            View oldView = (View) i.next ();
+            if (oldView instanceof Node) {
+                refactorNode ((Node) oldView, newElement);
+            } else if (oldView instanceof Edge) {
+                refactorEdge ((Edge) oldView, newElement);
+            } else if (oldView instanceof Diagram) {
+                refactorDiagram ((Diagram) oldView, newElement);
+            }
+
+            EMFCoreUtil.destroy (oldView);
+        }
+        Collection filterStyles = EMFCoreUtil.getReferencers (oldElement, new EReference [] {NotationPackage.eINSTANCE.getFilteringStyle_FilteredObjects ()});
+        for (Iterator i = filterStyles.iterator ();
+        i.hasNext ();) {
+            List filteredObjects = ((FilteringStyle) i.next ()).getFilteredObjects ();
+            if (! filteredObjects.contains (oldElement)) filteredObjects.add (filteredObjects.indexOf (oldElement), newElement);
+
+            filteredObjects.remove (oldElement);
+        }
+        Collection sortingStyles = EMFCoreUtil.getReferencers (oldElement, new EReference [] {NotationPackage.eINSTANCE.getSortingStyle_SortedObjects ()});
+        for (Iterator i = sortingStyles.iterator ();
+        i.hasNext ();) {
+            List sortingObjects = ((SortingStyle) i.next ()).getSortedObjects ();
+            if (! sortingObjects.contains (oldElement)) sortingObjects.add (sortingObjects.indexOf (oldElement), newElement);
+
+            sortingObjects.remove (oldElement);
+        }
+    }
+
+    protected Node refactorNode (Node oldNode, EObject newElement) {
+        if (oldNode.eContainingFeature () == NotationPackage.eINSTANCE.getView_PersistedChildren ()) {
+            Node newNode = createNode (oldNode, newElement);
+            if (newNode != null) {
+                copyNodeFeatures (oldNode, newNode);
+                View container = (View) oldNode.eContainer ();
+                container.getPersistedChildren ().move (container.getPersistedChildren ().indexOf (oldNode), newNode);
+                refactorGuides (oldNode, newNode);
+                return newNode;
+            }
+        }
+        return null;
+    }
+
+    protected Edge refactorEdge (Edge oldEdge, EObject newElement) {
+        if (oldEdge.eContainingFeature () == NotationPackage.eINSTANCE.getDiagram_PersistedEdges ()) {
+            Edge newEdge = createEdge (oldEdge, newElement);
+            if (newEdge != null) {
+                copyEdgeFeatures (oldEdge, newEdge);
+                Diagram container = (Diagram) oldEdge.eContainer ();
+                container.getPersistedEdges ().move (container.getPersistedEdges ().indexOf (oldEdge), newEdge);
+                return newEdge;
+            }
+        }
+        return null;
+    }
+
+    protected Diagram refactorDiagram (Diagram oldDiagram, EObject newElement) {
+        if (oldDiagram.eContainingFeature () == EcorePackage.eINSTANCE.getEAnnotation_Contents ()) {
+            Diagram newDiagram = createDiagram (oldDiagram, newElement);
+            if (newDiagram != null) {
+                copyDiagramFeatures (oldDiagram, newDiagram);
+                EAnnotation container = (EAnnotation) oldDiagram.eContainer ();
+                container.getContents ().add (container.getContents ().indexOf (oldDiagram), newDiagram);
+                refactorDiagramLinks (oldDiagram, newDiagram);
+                return newDiagram;
+            }
+        }
+        return null;
+    }
+
+    protected void refactorDiagramLinks (Diagram oldDiagram, Diagram newDiagram) {
+        Collection links = EMFCoreUtil.getReferencers (oldDiagram, new EReference [] {NotationPackage.eINSTANCE.getView_Element ()});
+        for (Iterator i = links.iterator ();
+        i.hasNext ();) {
+            View view = (View) i.next ();
+            view.setElement (newDiagram);
+        }
+    }
+
+    protected void copyNodeFeatures (Node oldNode, Node newNode) {
+        newNode.setLayoutConstraint (oldNode.getLayoutConstraint ());
+        copyViewFeatures (oldNode, newNode);
+    }
+
+    protected void copyEdgeFeatures (Edge oldEdge, Edge newEdge) {
+        newEdge.setBendpoints (oldEdge.getBendpoints ());
+        newEdge.setSourceAnchor (oldEdge.getSourceAnchor ());
+        newEdge.setTargetAnchor (oldEdge.getTargetAnchor ());
+        copyViewFeatures (oldEdge, newEdge);
+    }
+
+    protected void copyDiagramFeatures (Diagram oldDiagram, Diagram newDiagram) {
+        newDiagram.setName (oldDiagram.getName ());
+        newDiagram.getPersistedEdges ().addAll (oldDiagram.getPersistedEdges ());
+        copyViewFeatures (oldDiagram, newDiagram);
+    }
+
+    protected void copyViewFeatures (View oldView, View newView) {
+        copyViewAppearance (oldView, newView, new ArrayList ());
+        newView.getSourceEdges ().addAll (oldView.getSourceEdges ());
+        newView.getTargetEdges ().addAll (oldView.getTargetEdges ());
+        copyViewChildren (oldView, newView);
+    }
+
+    public void copyViewAppearance (View oldView, View newView, final List excludeStyles) {
+        newView.setVisible (oldView.isVisible ());
+        copyViewStyles (oldView, newView, excludeStyles);
+        for (Iterator j = new ArrayList (oldView.getPersistedChildren ()).iterator ();
+        j.hasNext ();) {
+            Node oldChildNode = (Node) j.next ();
+            if (oldView.getElement () == oldChildNode.getElement () && oldChildNode.getType () != null) {
+                Node newChildNode = (Node) ViewUtil.getChildBySemanticHint (newView, oldChildNode.getType ());
+                if (newChildNode != null) {
+                    copyViewAppearance (oldChildNode, newChildNode, excludeStyles);
+                }
+            }
+        }
+    }
+
+    protected void copyViewStyles (View oldView, View newView) {
+        copyViewStyles (oldView, newView, new ArrayList ());
+    }
+
+    protected void copyViewStyles (View oldView, View newView, List excludeStyles) {
+        for (Iterator i = oldView.getStyles ().iterator ();
+        i.hasNext ();) {
+            Style oldStyle = (Style) i.next ();
+            copyViewStyle (oldView, newView, oldStyle, excludeStyles);
+        }
+    }
+
+    protected void copyViewStyle (View oldView, View newView, Style oldStyle, List excludeStyles) {
+        Map eClassMap = new HashMap ();
+        for (Iterator j = oldStyle.eClass ().getEAllStructuralFeatures ().iterator ();
+        j.hasNext ();) {
+            EStructuralFeature feature = (EStructuralFeature) j.next ();
+            Style newStyle;
+            EClass containingStyleEClass = feature.getEContainingClass ();
+            if (excludeStyles.contains (containingStyleEClass)) continue;
+
+            if (eClassMap.containsKey (feature.getEContainingClass ())) {
+                newStyle = (Style) eClassMap.get (feature.getEContainingClass ());
+            } else {
+                eClassMap.put (feature.getEContainingClass (), newStyle = newView.getStyle (feature.getEContainingClass ()));
+            }
+            if (newStyle != null) {
+                newStyle.eSet (feature, oldStyle.eGet (feature));
+            }
+        }
+    }
+
+    protected void copyViewChildren (View oldView, View newView) {
+        for (Iterator j = new ArrayList (oldView.getPersistedChildren ()).iterator ();
+        j.hasNext ();) {
+            Node oldChildNode = (Node) j.next ();
+            copyViewChild (oldView, newView, oldChildNode);
+        }
+    }
+
+    protected void copyViewChild (View oldView, View newView, Node oldChildNode) {
+        if (oldView.getElement () == oldChildNode.getElement () && oldChildNode.getType () != null) {
+            Node newChildNode = (Node) ViewUtil.getChildBySemanticHint (newView, oldChildNode.getType ());
+            if (newChildNode != null) {
+                copyNodeFeatures (oldChildNode, newChildNode);
+            }
+        } else newView.getPersistedChildren ().add (oldChildNode);
+
+    }
+
+    protected final void refactorGuides (Node oldNode, Node newNode) {
+        Collection guides = EMFCoreUtil.getReferencers (oldNode, new EReference [] {NotationPackage.eINSTANCE.getNodeEntry_Key ()});
+        for (Iterator i = guides.iterator ();
+        i.hasNext ();) {
+            EMap nodeMap = ((Guide) ((EObject) i.next ()).eContainer ()).getNodeMap ();
+            nodeMap.put (newNode, nodeMap.get (oldNode));
+            nodeMap.remove (oldNode);
+        }
+    }
+
+    protected Collection getReferencingViews (EObject element) {
+        Collection views = EMFCoreUtil.getReferencers (element, new EReference [] {NotationPackage.eINSTANCE.getView_Element ()});
+        for (Iterator i = views.iterator ();
+        i.hasNext ();) {
+            View view = (View) i.next ();
+            EObject parent = null;
+            while ((parent = view.eContainer ()) instanceof View) {
+                if (views.contains (parent)) {
+                    i.remove ();
+                    break;
+                }
+                view = (View) parent;
+            }
+        }
+        return views;
+    }
+
+    protected Node createNode (Node oldNode, EObject newElement) {
+        return ViewService.getInstance ().createNode (new EObjectAdapter (newElement), (View) oldNode.eContainer (), getNewViewType (oldNode, newElement), ViewUtil.APPEND, preferencesHint);
+    }
+
+    protected Edge createEdge (Edge oldEdge, EObject newElement) {
+        Edge edge = (Edge) ViewService.getInstance ().createEdge (new EObjectAdapter (newElement), oldEdge.getDiagram (), getNewViewType (oldEdge, newElement), ViewUtil.APPEND, preferencesHint);
+        if (edge != null) {
+            edge.setSource (oldEdge.getSource ());
+            edge.setTarget (oldEdge.getTarget ());
+        }
+        return edge;
+    }
+
+    protected Diagram createDiagram (Diagram oldDiagram, EObject newElement) {
+        return ViewService.getInstance ().createDiagram (new EObjectAdapter (newElement), getNewViewType (oldDiagram, newElement), preferencesHint);
+    }
+
+    protected String getNewViewType (View oldView, EObject newElement) {
+        return oldView.getType ();
+    }
+
+}
+

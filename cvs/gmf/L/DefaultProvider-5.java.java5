@@ -1,0 +1,462 @@
+package org.eclipse.gmf.runtime.diagram.ui.providers.internal;
+
+import java.security.InvalidParameterException;
+
+import java.util.ArrayList;
+
+import java.util.Enumeration;
+
+import java.util.Hashtable;
+
+import java.util.List;
+
+import java.util.ListIterator;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Insets;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.draw2d.graph.DirectedGraph;
+
+import org.eclipse.draw2d.graph.DirectedGraphLayout;
+
+import org.eclipse.draw2d.graph.Edge;
+
+import org.eclipse.draw2d.graph.EdgeList;
+
+import org.eclipse.draw2d.graph.Node;
+
+import org.eclipse.draw2d.graph.NodeList;
+
+import org.eclipse.draw2d.internal.graph.BreakCycles;
+
+import org.eclipse.gef.ConnectionEditPart;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.GraphicalEditPart;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.commands.CompoundCommand;
+
+import org.eclipse.gef.requests.ChangeBoundsRequest;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.gmf.runtime.common.core.service.IOperation;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.DiagramActionsDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ShapeEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.RequestConstants;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.SetAllBendpointRequest;
+
+import org.eclipse.gmf.runtime.diagram.ui.services.layout.AbstractLayoutProvider;
+
+import org.eclipse.gmf.runtime.diagram.ui.services.layout.LayoutNodesOperation;
+
+import org.eclipse.gmf.runtime.diagram.ui.services.layout.LayoutType;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.PointListUtilities;
+
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapMode;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public abstract class DefaultProvider extends AbstractLayoutProvider {
+    protected int minX = - 1;
+    protected int minY = - 1;
+    protected static final int LAYOUTDEFAULTMARGIN = MapMode.DPtoLP (25);
+    private static final int NODE_PADDING = 30;
+    private static final int MIN_EDGE_PADDING = 5;
+    private static final int MAX_EDGE_PADDING = NODE_PADDING * 3;
+
+    public boolean provides (IOperation operation) {
+        Assert.isNotNull (operation);
+        View cview = getContainer (operation);
+        if (cview == null) return false;
+
+        IAdaptable layoutHint = ((LayoutNodesOperation) operation).getLayoutHint ();
+        String layoutType = (String) layoutHint.getAdapter (String.class);
+        return LayoutType.DEFAULT.equals (layoutType);
+    }
+
+    public Command layoutEditParts (GraphicalEditPart containerEditPart, IAdaptable layoutHint) {
+        if (containerEditPart == null) {
+            InvalidParameterException ipe = new InvalidParameterException ();
+            Trace.throwing (DiagramProvidersPlugin.getInstance (), DiagramActionsDebugOptions.EXCEPTIONS_THROWING, getClass (), "layout()", ipe);
+            throw ipe;
+        }
+        DirectedGraph g = new DirectedGraph ();
+        build_graph (g, containerEditPart.getChildren ());
+        new DirectedGraphLayout ().visit (g);
+        return update_diagram (containerEditPart, g, false);
+    }
+
+    public Command layoutEditParts (List selectedObjects, IAdaptable layoutHint) {
+        if (selectedObjects.size () == 0) {
+            return null;
+        }
+        GraphicalEditPart editPart = (GraphicalEditPart) selectedObjects.get (0);
+        GraphicalEditPart containerEditPart = (GraphicalEditPart) editPart.getParent ();
+        DirectedGraph g = new DirectedGraph ();
+        build_graph (g, selectedObjects);
+        new DirectedGraphLayout ().visit (g);
+        return update_diagram (containerEditPart, g, true);
+    }
+
+    protected boolean layoutTopDown (ConnectionEditPart poly) {
+        return false;
+    }
+
+    private NodeList build_nodes (List selectedObjects, Map editPartToNodeDict) {
+        ListIterator li = selectedObjects.listIterator ();
+        NodeList nodes = new NodeList ();
+        while (li.hasNext ()) {
+            IGraphicalEditPart gep = (IGraphicalEditPart) li.next ();
+            if (gep instanceof ShapeEditPart) {
+                ShapeEditPart shapeEP = (ShapeEditPart) gep;
+                Point position = shapeEP.getLocation ();
+                if (minX == - 1) {
+                    minX = position.x;
+                    minY = position.y;
+                } else {
+                    minX = Math.min (minX, position.x);
+                    minY = Math.min (minY, position.y);
+                }
+                Node n = new Node (shapeEP);
+                n.setPadding (new Insets (NODE_PADDING));
+                Dimension size = shapeEP.getSize ();
+                setNodeMetrics (n, new Rectangle (position.x, position.y, size.width, size.height));
+                editPartToNodeDict.put (shapeEP, n);
+                nodes.add (n);
+            }
+        }
+        return nodes;
+    }
+
+    final protected void setNodeMetrics (Node n, Rectangle r) {
+        Rectangle rectGraph = translateToGraph (r);
+        n.x = rectGraph.x;
+        n.y = rectGraph.y;
+        n.width = rectGraph.width;
+        n.height = rectGraph.height;
+    }
+
+    final protected Rectangle getNodeMetrics (Node n) {
+        return translateFromGraph (new Rectangle (n.x, n.y, n.width, n.height));
+    }
+
+    abstract protected Rectangle translateToGraph (Rectangle r);
+
+    abstract protected Rectangle translateFromGraph (Rectangle rect);
+
+    private EdgeList build_edges (List selectedObjects, Map editPartToNodeDict) {
+        EdgeList edges = new EdgeList ();
+        ArrayList objects = new ArrayList ();
+        objects.addAll (selectedObjects);
+        ListIterator li = objects.listIterator ();
+        while (li.hasNext ()) {
+            EditPart gep = (EditPart) li.next ();
+            if (gep instanceof ConnectionEditPart) {
+                ConnectionEditPart poly = (ConnectionEditPart) gep;
+                if (layoutTopDown (poly)) {
+                    EditPart from = poly.getSource ();
+                    EditPart to = poly.getTarget ();
+                    Node fromNode = (Node) editPartToNodeDict.get (from);
+                    Node toNode = (Node) editPartToNodeDict.get (to);
+                    if (fromNode != null && toNode != null && ! fromNode.equals (toNode)) {
+                        addEdge (edges, poly, toNode, fromNode);
+                    }
+                }
+            }
+        }
+        li = objects.listIterator ();
+        while (li.hasNext ()) {
+            EditPart gep = (EditPart) li.next ();
+            if (gep instanceof ConnectionEditPart) {
+                ConnectionEditPart poly = (ConnectionEditPart) gep;
+                if (! layoutTopDown (poly)) {
+                    EditPart from = poly.getSource ();
+                    EditPart to = poly.getTarget ();
+                    Node fromNode = (Node) editPartToNodeDict.get (from);
+                    Node toNode = (Node) editPartToNodeDict.get (to);
+                    if (fromNode != null && toNode != null && ! fromNode.equals (toNode)) {
+                        addEdge (edges, poly, fromNode, toNode);
+                    }
+                }
+            }
+        }
+        return edges;
+    }
+
+    private void addEdge (EdgeList edges, ConnectionEditPart connectionEP, Node fromNode, Node toNode) {
+        Edge edge = new Edge (connectionEP, fromNode, toNode);
+        initializeEdge (connectionEP, edge);
+        edges.add (edge);
+    }
+
+    protected void initializeEdge (ConnectionEditPart connectionEP, Edge edge) {
+        List affectingChildren = getAffectingChildren (connectionEP);
+        edge.padding = Math.max (edge.padding, calculateEdgePadding (connectionEP, affectingChildren));
+        edge.delta = Math.max (edge.delta, affectingChildren.size () / 2);
+    }
+
+    private int calculateEdgePadding (ConnectionEditPart connectionEP, List affectingChildren) {
+        ListIterator li = affectingChildren.listIterator ();
+        int padding = 0;
+        while (li.hasNext ()) {
+            GraphicalEditPart gep = (GraphicalEditPart) li.next ();
+            padding = Math.max (padding, Math.max (gep.getFigure ().getBounds ().width, gep.getFigure ().getBounds ().height));
+        }
+        Rectangle.SINGLETON.x = 0;
+        Rectangle.SINGLETON.y = 0;
+        Rectangle.SINGLETON.width = padding;
+        Rectangle.SINGLETON.height = padding;
+        return Math.min (Math.max (Math.round (translateToGraph (Rectangle.SINGLETON).width * 1.5f), MIN_EDGE_PADDING), MAX_EDGE_PADDING);
+    }
+
+    private List getAffectingChildren (ConnectionEditPart conn) {
+        List children = conn.getChildren ();
+        ListIterator lli = children.listIterator ();
+        List affectingChildrenList = new ArrayList ();
+        while (lli.hasNext ()) {
+            Object obj = lli.next ();
+            if (obj instanceof GraphicalEditPart) {
+                GraphicalEditPart lep = (GraphicalEditPart) obj;
+                Rectangle lepBox = lep.getFigure ().getBounds ().getCopy ();
+                if (! lep.getFigure ().isVisible () || lepBox.width == 0 || lepBox.height == 0) continue;
+
+                affectingChildrenList.add (lep);
+            }
+        }
+        return affectingChildrenList;
+    }
+
+    private List getRelevantConnections (Hashtable editPartToNodeDict) {
+        Enumeration enumeration = editPartToNodeDict.keys ();
+        ArrayList connectionsToMove = new ArrayList ();
+        while (enumeration.hasMoreElements ()) {
+            Object e = enumeration.nextElement ();
+            ShapeEditPart shapeEP = (ShapeEditPart) e;
+            List sourceConnections = shapeEP.getSourceConnections ();
+            for (int i = 0;
+            i < sourceConnections.size (); i ++) {
+                ConnectionEditPart connectionEP = (ConnectionEditPart) sourceConnections.get (i);
+                EditPart target = connectionEP.getTarget ();
+                Object o = editPartToNodeDict.get (target);
+                if (o != null) {
+                    connectionsToMove.add (connectionEP);
+                }
+            }
+        }
+        return connectionsToMove;
+    }
+
+    private void connectNonConnectedSubgraphs (List nodes, List edges) {
+        Node ghostNode = new Node ();
+        ghostNode.width = 1;
+        ghostNode.height = 1;
+        ghostNode.setPadding (new Insets (0));
+        nodes.add (ghostNode);
+        ListIterator ni = nodes.listIterator ();
+        while (ni.hasNext ()) {
+            Node n = (Node) ni.next ();
+            if (n == ghostNode) continue;
+
+            if (n.incoming.isEmpty ()) {
+                Edge e = new Edge (ghostNode, n);
+                e.weight = 0;
+                edges.add (e);
+            }
+        }
+    }
+
+    private void build_graph (DirectedGraph g, List selectedObjects) {
+        Hashtable editPartToNodeDict = new Hashtable (500);
+        this.minX = - 1;
+        this.minY = - 1;
+        NodeList nodes = build_nodes (selectedObjects, editPartToNodeDict);
+        ArrayList objects = new ArrayList ();
+        objects.addAll (selectedObjects);
+        objects.addAll (getRelevantConnections (editPartToNodeDict));
+        EdgeList edges = build_edges (objects, editPartToNodeDict);
+        g.nodes = nodes;
+        g.edges = edges;
+        new BreakCycles ().visit (g);
+        connectNonConnectedSubgraphs (nodes, edges);
+    }
+
+    private void reverse (PointList c, PointList rc) {
+        rc.removeAllPoints ();
+        for (int i = c.size () - 1;
+        i >= 0; i --) {
+            rc.addPoint (c.getPoint (i));
+        }
+    }
+
+    Command routeThrough (Edge edge, ConnectionEditPart connectEP, Node source, Node target, PointList points, int diffX, int diffY) {
+        if (connectEP == null) return null;
+
+        PointList routePoints = points;
+        if (source.data != connectEP.getSource ()) {
+            routePoints = new PointList (points.size ());
+            reverse (points, routePoints);
+            Node tmpNode = source;
+            source = target;
+            target = tmpNode;
+        }
+        PointList allPoints = new PointList (routePoints.size ());
+        for (int i = 0;
+        i < routePoints.size (); i ++) {
+            allPoints.addPoint (routePoints.getPoint (i).x + diffX, routePoints.getPoint (i).y + diffY);
+        }
+        Rectangle sourceExt = getNodeMetrics (source);
+        Point ptSourceReference = sourceExt.getCenter ().getTranslated (diffX, diffY);
+        Rectangle targetExt = getNodeMetrics (target);
+        Point ptTargetReference = targetExt.getCenter ().getTranslated (diffX, diffY);
+        SetAllBendpointRequest request = new SetAllBendpointRequest (RequestConstants.REQ_SET_ALL_BENDPOINT, allPoints, ptSourceReference, ptTargetReference);
+        CompoundCommand cc = new CompoundCommand ("");
+        Command cmd = connectEP.getCommand (request);
+        if (cmd != null) cc.add (cmd);
+
+        List affectingChildren = getAffectingChildren (connectEP);
+        Request snapBackRequest = new Request (RequestConstants.REQ_SNAP_BACK);
+        ListIterator li = affectingChildren.listIterator ();
+        while (li.hasNext ()) {
+            EditPart ep = (EditPart) li.next ();
+            cmd = ep.getCommand (snapBackRequest);
+            if (cmd != null) cc.add (cmd);
+
+        }
+        return cc;
+    }
+
+    Command update_diagram (GraphicalEditPart diagramEP, DirectedGraph g, boolean isLayoutForSelected) {
+        CompoundCommand cc = new CompoundCommand ("");
+        Point diff = getLayoutPositionDelta (g, isLayoutForSelected);
+        Command cmd = getShapesPositionCommand (g, diff);
+        if (cmd != null) cc.add (cmd);
+
+        cmd = getConnectionPositionCommand (g, diff);
+        if (cmd != null) cc.add (cmd);
+
+        return cc;
+    }
+
+    private Command getConnectionPositionCommand (DirectedGraph g, Point diff) {
+        CompoundCommand cc = new CompoundCommand ("");
+        PointList points = new PointList (10);
+        ListIterator vi = g.edges.listIterator ();
+        while (vi.hasNext ()) {
+            Edge edge = (Edge) vi.next ();
+            if (edge.data == null) continue;
+
+            points.removeAllPoints ();
+            ConnectionEditPart cep = null;
+            Node source = null, target = null;
+            collectPoints (points, edge);
+            cep = (ConnectionEditPart) edge.data;
+            source = edge.source;
+            target = edge.target;
+            if (cep != null) {
+                PointListUtilities.normalizeSegments (points, MapMode.DPtoLP (3));
+                Command cmd = routeThrough (edge, cep, source, target, points, diff.x, diff.y);
+                if (cmd != null) cc.add (cmd);
+
+            }
+        }
+        if (cc.isEmpty ()) return null;
+
+        return cc;
+    }
+
+    private void collectPoints (PointList points, Edge edge) {
+        Rectangle start = translateFromGraph (new Rectangle (edge.start.x, edge.start.y, 0, 0));
+        points.addPoint (start.getTopLeft ());
+        NodeList vnodes = edge.vNodes;
+        if (vnodes != null) {
+            for (int i = 0;
+            i < vnodes.size (); i ++) {
+                Node vn = vnodes.getNode (i);
+                Rectangle nodeExt = getNodeMetrics (vn);
+                int x = nodeExt.x;
+                int y = nodeExt.y;
+                points.addPoint (x + nodeExt.width / 2, y + nodeExt.height / 2);
+            }
+        }
+        Rectangle end = translateFromGraph (new Rectangle (edge.end.x, edge.end.y, 0, 0));
+        points.addPoint (end.getTopLeft ());
+    }
+
+    private Command getShapesPositionCommand (DirectedGraph g, Point diff) {
+        ListIterator vi = g.nodes.listIterator ();
+        CompoundCommand cc = new CompoundCommand ("");
+        while (vi.hasNext ()) {
+            Node node = (Node) vi.next ();
+            if (node.data instanceof ShapeEditPart) {
+                IGraphicalEditPart gep = (IGraphicalEditPart) node.data;
+                ChangeBoundsRequest request = new ChangeBoundsRequest (RequestConstants.REQ_MOVE);
+                Rectangle nodeExt = getNodeMetrics (node);
+                Point ptLocation = new Point (nodeExt.x + diff.x, nodeExt.y + diff.y);
+                Point ptOldLocation = gep.getFigure ().getBounds ().getLocation ();
+                gep.getFigure ().translateToAbsolute (ptOldLocation);
+                gep.getFigure ().translateToAbsolute (ptLocation);
+                Dimension delta = ptLocation.getDifference (ptOldLocation);
+                request.setEditParts (gep);
+                request.setMoveDelta (new Point (delta.width, delta.height));
+                request.setLocation (ptLocation);
+                Command cmd = gep.getCommand (request);
+                if (cmd != null) cc.add (cmd);
+
+            }
+        }
+        if (cc.isEmpty ()) return null;
+
+        return cc;
+    }
+
+    private Point getLayoutPositionDelta (DirectedGraph g, boolean isLayoutForSelected) {
+        if (isLayoutForSelected) {
+            ListIterator vi;
+            vi = g.nodes.listIterator ();
+            Point ptLayoutMin = new Point (- 1, - 1);
+            while (vi.hasNext ()) {
+                Node node = (Node) vi.next ();
+                if (node.data != null) {
+                    Rectangle nodeExt = getNodeMetrics (node);
+                    if (ptLayoutMin.x == - 1) {
+                        ptLayoutMin.x = nodeExt.x;
+                        ptLayoutMin.y = nodeExt.y;
+                    } else {
+                        ptLayoutMin.x = Math.min (ptLayoutMin.x, nodeExt.x);
+                        ptLayoutMin.y = Math.min (ptLayoutMin.y, nodeExt.y);
+                    }
+                }
+            }
+            return new Point (this.minX - ptLayoutMin.x, this.minY - ptLayoutMin.y);
+        }
+        return new Point (LAYOUTDEFAULTMARGIN, LAYOUTDEFAULTMARGIN);
+    }
+
+}
+

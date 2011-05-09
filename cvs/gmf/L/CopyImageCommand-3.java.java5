@@ -1,0 +1,106 @@
+package org.eclipse.gmf.runtime.diagram.ui.render.internal.commands;
+
+import java.awt.Image;
+
+import java.util.ArrayList;
+
+import java.util.List;
+
+import java.util.ListIterator;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.jface.dialogs.MessageDialog;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.gmf.runtime.common.core.command.AbstractCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.ui.util.CustomData;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.commands.ClipboardCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.clipboard.AWTClipboardHelper;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.clipboard.DiagramImageGenerator;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.internal.DiagramUIRenderPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.l10n.ResourceManager;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class CopyImageCommand extends AbstractCommand {
+    private final List source;
+    private DiagramEditPart diagramEP;
+    public static final String DRAWING_SURFACE = "Drawing Surface";
+    private final View viewContext;
+
+    public CopyImageCommand (View viewContext, List source, DiagramEditPart diagramEP) {
+        this (null, viewContext, source, diagramEP);
+    }
+
+    public CopyImageCommand (String label, View viewContext, List source, DiagramEditPart diagramEP) {
+        super (label);
+        Assert.isNotNull (source);
+        Assert.isNotNull (viewContext);
+        this.source = source;
+        this.viewContext = viewContext;
+        this.diagramEP = diagramEP;
+    }
+
+    protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+        boolean imageCopyDiagram = false;
+        if (getSource () == null || getSource ().size () == 0) {
+            imageCopyDiagram = true;
+        }
+        Map epRegistry = diagramEP.getViewer ().getEditPartRegistry ();
+        ArrayList editParts = new ArrayList (getSource ().size ());
+        ListIterator li = getSource ().listIterator ();
+        while (li.hasNext ()) {
+            editParts.add (epRegistry.get (li.next ()));
+        }
+        DiagramImageGenerator imageGenerator = new DiagramImageGenerator (getDiagramEditPart ());
+        Image image = null;
+        try {
+            if (imageCopyDiagram) image = imageGenerator.createAWTImageForDiagram ();
+            else image = imageGenerator.createAWTImageForParts (editParts);
+
+        } catch (OutOfMemoryError error) {
+            String eMsg = ResourceManager.getI18NString ("CopyAction.UnableToCopyImageMessage");
+            Log.error (DiagramUIRenderPlugin.getInstance (), IStatus.ERROR, eMsg, error);
+            MessageDialog.openInformation (null, ResourceManager.getI18NString ("CopyAction.ErrorDialogTitle"), eMsg);
+        }
+        CustomData data = null;
+        if (! imageCopyDiagram) {
+            data = (getViewContext () != null) ? new CustomData (DRAWING_SURFACE, ClipboardCommand.copyViewsToString (getSource ()).getBytes ()) : null;
+        }
+        AWTClipboardHelper.getInstance ().copyToClipboard (data, image);
+        diagramEP = null;
+        return newOKCommandResult ();
+    }
+
+    private DiagramEditPart getDiagramEditPart () {
+        return diagramEP;
+    }
+
+    private List getSource () {
+        return source;
+    }
+
+    private View getViewContext () {
+        return viewContext;
+    }
+
+}
+

@@ -1,0 +1,77 @@
+8a9,10
+> import org.eclipse.core.commands.ExecutionException;
+> 
+16a19,22
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> 
+20a27,30
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+22a33,38
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypeDebugOptions;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePlugin;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePluginStatusCodes;
+> 
+32a49,52
+>     public CreateElementRequest (TransactionalEditingDomain editingDomain, EObject container, IElementType elementType) {
+>         this (editingDomain, container, elementType, null);
+>     }
+> 
+34c54
+<         this (container, elementType, null);
+---
+>         this (TransactionUtil.getEditingDomain (container), container, elementType, null);
+38c58
+<         this (null, elementType, null);
+---
+>         this (null, null, elementType, null);
+41,42c61,66
+<     public CreateElementRequest (EObject container, IElementType elementType, EReference containmentFeature) {
+<         super ();
+---
+>     public CreateElementRequest (TransactionalEditingDomain editingDomain, IElementType elementType) {
+>         this (editingDomain, null, elementType, null);
+>     }
+> 
+>     public CreateElementRequest (TransactionalEditingDomain editingDomain, EObject container, IElementType elementType, EReference containmentFeature) {
+>         super (editingDomain);
+47a72,75
+>     public CreateElementRequest (EObject container, IElementType elementType, EReference containmentFeature) {
+>         this (TransactionUtil.getEditingDomain (container), container, elementType, containmentFeature);
+>     }
+> 
+74,75c102,104
+<         if (contextCommand != null && contextCommand.isExecutable ()) {
+<             contextCommand.execute (new NullProgressMonitor ());
+---
+>         if (contextCommand != null && contextCommand.canExecute ()) {
+>             try {
+>                 contextCommand.execute (new NullProgressMonitor (), null);
+79a109,112
+>             } catch (ExecutionException e) {
+>                 Trace.catching (EMFTypePlugin.getPlugin (), EMFTypeDebugOptions.EXCEPTIONS_CATCHING, getClass (), "createContainer", e);
+>                 Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.COMMAND_FAILURE, e.getLocalizedMessage (), e);
+>             }
+96c129
+<             editContextRequest = new GetEditContextRequest (this, getElementType ());
+---
+>             editContextRequest = new GetEditContextRequest (getEditingDomain (), this, getElementType ());
+128c161
+<         if (contextCommand != null && contextCommand.isExecutable ()) {
+---
+>         if (contextCommand != null && contextCommand.canExecute ()) {
+146a180,187
+>     public TransactionalEditingDomain getEditingDomain () {
+>         TransactionalEditingDomain result = super.getEditingDomain ();
+>         if (result == null) {
+>             result = TransactionUtil.getEditingDomain (getContainer ());
+>         }
+>         return result;
+>     }
+> 

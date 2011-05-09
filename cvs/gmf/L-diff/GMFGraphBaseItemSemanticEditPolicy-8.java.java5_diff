@@ -1,0 +1,61 @@
+16a17,18
+> import org.eclipse.gmf.runtime.diagram.ui.commands.CommandProxy;
+> 
+58a61,62
+> import org.eclipse.gmf.graphdef.editor.edit.helpers.GMFGraphBaseEditHelper;
+> 
+68a73,75
+>         if (editHelperContext == null) {
+>             editHelperContext = ViewUtil.resolveSemanticElement ((View) getHost ().getModel ());
+>         }
+74,79c81,84
+<         Command semanticHelperCommand = null;
+<         if (elementType != null) {
+<             ICommand semanticCommand = elementType.getEditCommand (completedRequest);
+<             if (semanticCommand != null) {
+<                 semanticHelperCommand = new EtoolsProxyCommand (semanticCommand);
+<             }
+---
+>         Command epCommand = getSemanticCommandSwitch (completedRequest);
+>         if (epCommand != null) {
+>             ICommand command = epCommand instanceof EtoolsProxyCommand ? ((EtoolsProxyCommand) epCommand).getICommand () : new CommandProxy (epCommand);
+>             completedRequest.setParameter (GMFGraphBaseEditHelper.EDIT_POLICY_COMMAND, command);
+81,86c86,92
+<         Command semanticPolicyCommand = getSemanticCommandSwitch (completedRequest);
+<         if (semanticPolicyCommand == null) {
+<             if (semanticHelperCommand == null) {
+<                 return null;
+<             } else {
+<                 semanticPolicyCommand = semanticHelperCommand;
+---
+>         Command ehCommand = null;
+>         if (elementType != null) {
+>             ICommand command = elementType.getEditCommand (completedRequest);
+>             if (command != null) {
+>                 if (! (command instanceof CompositeTransactionalCommand)) {
+>                     TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost ()).getEditingDomain ();
+>                     command = new CompositeTransactionalCommand (editingDomain, null).compose (command);
+88,90c94
+<         } else {
+<             if (semanticHelperCommand != null) {
+<                 semanticPolicyCommand = semanticPolicyCommand.chain (semanticHelperCommand);
+---
+>                 ehCommand = new EtoolsProxyCommand (command);
+99,100c103,105
+<                 Command deleteViewCommand = new EtoolsProxyCommand (new DeleteCommand (((IGraphicalEditPart) getHost ()).getEditingDomain (), (View) getHost ().getModel ()));
+<                 semanticPolicyCommand = semanticPolicyCommand.chain (deleteViewCommand);
+---
+>                 TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost ()).getEditingDomain ();
+>                 Command deleteViewCommand = new EtoolsProxyCommand (new DeleteCommand (editingDomain, (View) getHost ().getModel ()));
+>                 ehCommand = ehCommand == null ? deleteViewCommand : ehCommand.chain (deleteViewCommand);
+102c107
+<             return semanticPolicyCommand;
+---
+>             return ehCommand;
+180,183c185
+<         TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost ()).getEditingDomain ();
+<         CompositeTransactionalCommand modelCmd = new CompositeTransactionalCommand (editingDomain, cmd.getLabel ());
+<         modelCmd.compose (cmd);
+<         return new EtoolsProxyCommand (modelCmd);
+---
+>         return new EtoolsProxyCommand (cmd);

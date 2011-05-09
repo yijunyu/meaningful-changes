@@ -1,0 +1,65 @@
+package org.eclipse.gmf.runtime.common.ui.services.internal.elementselection;
+
+import java.util.ArrayList;
+
+import java.util.List;
+
+import org.eclipse.gmf.runtime.common.ui.services.elementselection.ElementSelectionService;
+
+import org.eclipse.gmf.runtime.common.ui.services.elementselection.ElementSelectionServiceJob;
+
+import org.eclipse.gmf.runtime.common.ui.services.elementselection.IElementSelectionInput;
+
+import org.eclipse.gmf.runtime.common.ui.services.elementselection.IElementSelectionListener;
+
+import org.eclipse.gmf.runtime.common.ui.services.elementselection.IMatchingObjectEvent;
+
+import org.eclipse.gmf.runtime.common.ui.services.elementselection.MatchingObjectEventType;
+
+import org.eclipse.ui.PlatformUI;
+
+public class ElementSelectionList {
+    private List results = new ArrayList ();
+    private MatchingObjectEventType running = MatchingObjectEventType.MATCH;
+    private IElementSelectionInput elementSelectionInput;
+    class ElementSelectionListener implements IElementSelectionListener {
+
+        public void matchingObjectEvent (IMatchingObjectEvent matchingObjectEvent) {
+            if (matchingObjectEvent.getEventType () == MatchingObjectEventType.END_OF_MATCHES) {
+                synchronized (running) {
+                    running = MatchingObjectEventType.END_OF_MATCHES;
+                }
+            } else {
+                synchronized (results) {
+                    results.add (matchingObjectEvent.getMatchingObject ());
+                }
+            }
+        }
+
+    };
+
+    public List getMatchingObjects (IElementSelectionInput input) {
+        this.elementSelectionInput = input;
+        ElementSelectionServiceJob job = ElementSelectionService.getInstance ().getMatchingObjects (elementSelectionInput, new ElementSelectionListener ());
+        job.getName ();
+        while (true) {
+            synchronized (running) {
+                if (running == MatchingObjectEventType.END_OF_MATCHES) {
+                    break;
+                }
+            }
+            if (PlatformUI.getWorkbench ().getDisplay ().getThread ().equals (Thread.currentThread ())) {
+                while (PlatformUI.getWorkbench ().getDisplay ().readAndDispatch ()) {
+                }
+            }
+            try {
+                Thread.sleep (50);
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
+        return results;
+    }
+
+}
+

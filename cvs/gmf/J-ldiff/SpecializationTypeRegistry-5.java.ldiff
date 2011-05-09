@@ -1,0 +1,197 @@
+23a24,24
+> import java.util.NoSuchElementException;
+364a366,366
+> 				if (adviceMatches(eObject, adviceDescriptor)) {
+365,368d365
+< 				List matchingAdvice = getAdviceMatching(eObject, Collections
+< 					.singletonList(adviceDescriptor));
+< 
+< 				if (!matchingAdvice.isEmpty()) {
+413,413c411,411
+< 	 * Gets the list of edit helper advice descriptors that match
+---
+> 	 * Queries whether the specified edit helper advice descriptor matches an
+414,414d411
+< 	 * <code>eObject</code>, from the collection of descriptors in
+415,415c412,412
+< 	 * <code>editHelperAdviceDescriptors</code>.
+---
+> 	 * <code>eObject</code>.
+419,419c416,416
+< 	 * @param editHelperAdviceDescriptors
+---
+> 	 * @param editHelperAdviceDescriptor
+420,420d416
+< 	 *            a collection of <code>IEditHelperAdviceDescriptor</code> s
+421,421c417,417
+< 	 *            from which to find the ones that match <code>eObject</code>
+---
+> 	 *            an advice descriptor that may opr may not match <code>eObject</code>
+421a418,418
+> 	 * @return <code>true</code> if the advice matches; <code>false</code>, otherwise
+422,423d417
+< 	 * @return a list of <code>IEditHelperAdviceDescriptor</code> s that match
+< 	 *         <code>eObject</code>
+424a420,421
+> 	private boolean adviceMatches(EObject eObject,
+> 			IEditHelperAdviceDescriptor editHelperAdviceDescriptor) {
+425,428d419
+< 	private List getAdviceMatching(EObject eObject,
+< 			Collection editHelperAdviceDescriptors) {
+< 
+< 		List result = new ArrayList();
+431a425,425
+> 		IContainerDescriptor container = editHelperAdviceDescriptor
+432,435d424
+< 		for (Iterator i = editHelperAdviceDescriptors.iterator(); i.hasNext();) {
+< 			IEditHelperAdviceDescriptor nextAdviceDescriptor = (IEditHelperAdviceDescriptor) i
+< 				.next();
+< 			IContainerDescriptor container = nextAdviceDescriptor
+443,443d432
+< 					continue;
+454,454c444,444
+< 				IElementMatcher matcher = nextAdviceDescriptor.getMatcher();
+---
+> 			IElementMatcher matcher = editHelperAdviceDescriptor.getMatcher();
+456,456d445
+< 				if (matcher == null
+457,457c446,446
+< 					|| (matcher != null && matcher.matches(eObject))) {
+---
+> 			return (matcher == null) || matcher.matches(eObject);
+458,459d446
+< 					result.add(nextAdviceDescriptor);
+< 				}
+466,466c453,453
+< 						IElementMatcher matcher = nextAdviceDescriptor
+---
+> 					IElementMatcher matcher = editHelperAdviceDescriptor
+469,471d455
+< 						if (matcher == null) {
+< 							result.add(nextAdviceDescriptor);
+< 
+472,472c456,456
+< 						} else if (matcher.matches(eObject)) {
+---
+> 					return (matcher == null) || matcher.matches(eObject);
+473,475d456
+< 							result.add(nextAdviceDescriptor);
+< 						}
+< 					}
+480,480c433,433
+< 		return result;
+---
+> 				return false;
+588a570,570
+> 		LinkedHashSet result = new LinkedHashSet();
+589,589c598,598
+< 		List result = new ArrayList();
+---
+> 		return new ArrayList(result);
+617,617c461,461
+< 		return result;
+---
+> 		return false;
+680,682d664
+< 		Set adviceDescriptors = (Set) adviceBindings.get(elementTypeId);
+< 
+< 		if (adviceDescriptors != null) {
+683a666,669
+> 			if (!adviceMatches(eObject, nextAdviceDescriptor)) {
+> 				continue;
+> 			}
+> 			
+683,683c665,665
+< 			// Filter out any of the bound advice that doesn't match
+---
+> 			// Filter out any of the bound advice that doesn't match
+684,687d665
+< 			List matchingAdviceDescriptors = getAdviceMatching(eObject,
+< 				adviceDescriptors);
+< 
+< 			for (Iterator j = matchingAdviceDescriptors.iterator(); j.hasNext();) {
+702,702d680
+< 		}
+722a701,701
+> 		for (Iterator j = getAdviceBindings(elementTypeId); j.hasNext();) {
+723,726d660
+< 		Set adviceDescriptors = (Set) adviceBindings.get(elementTypeId);
+< 
+< 		if (adviceDescriptors != null) {
+< 
+727,727c661,661
+< 			for (Iterator j = adviceDescriptors.iterator(); j.hasNext();) {
+---
+> 		for (Iterator j = getAdviceBindings(elementTypeId); j.hasNext();) {
+741a716,749
+> 		return result;
+> 	}
+> 	
+> 	/**
+> 	 * Obtains an iterator over the advices bound exactly to the specified element
+> 	 * type ID and also to patterns matching the element type ID.
+> 	 * <p>
+> 	 * <b>Note</b> for now, in the interest of simplicity and performance, the
+> 	 * only pattern supported is <code>"*"</code> to match all element types.
+> 	 * </p>
+> 	 * 
+> 	 * @param elementTypeId the element type ID for which to get advice
+> 	 * 
+> 	 * @return an immutable iterator of the advice bindings (cannot
+> 	 *     {@linkplain Iterator#remove() remove} from it)
+> 	 */
+> 	private Iterator getAdviceBindings(String elementTypeId) {
+> 		class MultiIterator implements Iterator {
+> 			private Iterator current;
+> 			private Collection[] collections;
+> 			private int index = 0;
+> 			
+> 			MultiIterator(Collection[] collections) {
+> 				this.collections = collections;
+> 				current = nextIterator();
+> 			}
+> 			
+> 			public boolean hasNext() {
+> 				while (current != null) {
+> 					if (current.hasNext()) {
+> 						return true;
+> 					}
+> 					
+> 					current = nextIterator();
+742a751,778
+> 				
+> 				return false;
+> 			}
+> 
+> 			public Object next() {
+> 				if (!hasNext()) {
+> 					throw new NoSuchElementException();
+> 				}
+> 				
+> 				return current.next();
+> 			}
+> 
+> 			public void remove() {
+> 				throw new UnsupportedOperationException();
+> 			}
+> 			
+> 			private Iterator nextIterator() {
+> 				Iterator result = null;
+> 				
+> 				while ((result == null) && (index < collections.length)) {
+> 					if (collections[index] != null) {
+> 						result = collections[index].iterator();
+> 						collections[index] = null; // free memory
+> 					}
+> 					
+> 					index++;
+> 				}
+> 				
+744a781,787
+> 		}
+> 		
+> 		return new MultiIterator(new Collection[] {
+> 				(Collection) adviceBindings.get(elementTypeId),
+> 				(Collection) adviceBindings.get("*"), //$NON-NLS-1$
+> 		});
+> 	}

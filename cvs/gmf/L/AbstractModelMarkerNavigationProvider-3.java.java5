@@ -1,0 +1,96 @@
+package org.eclipse.gmf.runtime.emf.ui.providers.marker;
+
+import java.io.UnsupportedEncodingException;
+
+import java.net.URLDecoder;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.resources.IMarker;
+
+import org.eclipse.core.runtime.IPath;
+
+import org.eclipse.emf.common.util.URI;
+
+import org.eclipse.emf.common.util.WrappedException;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.ecore.resource.ResourceSet;
+
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.gmf.runtime.common.ui.services.marker.AbstractMarkerNavigationProvider;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.emf.core.util.OperationUtil;
+
+import org.eclipse.gmf.runtime.emf.core.util.ResourceUtil;
+
+public abstract class AbstractModelMarkerNavigationProvider extends AbstractMarkerNavigationProvider {
+
+    public final void gotoMarker (final IEditorPart editor, final IMarker marker) {
+        setEditor (editor);
+        OperationUtil.runAsRead (new MRunnable () {
+
+            public Object run () {
+                AbstractModelMarkerNavigationProvider.super.gotoMarker (editor, marker);
+                return null;
+            }
+
+        }
+
+        );
+    }
+
+    protected Resource getResource (IMarker marker) {
+        Resource result = null;
+        if (marker.exists ()) {
+            IPath resourcePath = marker.getResource ().getLocation ();
+            if (resourcePath != null) {
+                result = ResourceUtil.load (resourcePath.toOSString ());
+            }
+        }
+        return result;
+    }
+
+    protected List getEObjects (List ids, Resource resource) {
+        List result = new java.util.ArrayList (ids.size ());
+        URI resourceUri = resource.getURI ();
+        ResourceSet rset = resource.getResourceSet ();
+        if (rset != null) {
+            for (Iterator iter = ids.iterator ();
+            iter.hasNext ();) {
+                String nextId = (String) iter.next ();
+                URI nextUri;
+                int hashPos = nextId.indexOf ('#');
+                if (hashPos <= 0) {
+                    nextUri = resourceUri.appendFragment (nextId.substring (hashPos + 1));
+                } else {
+                    String resUriStr = nextId.substring (0, hashPos);
+                    String elemIdStr = nextId.substring (hashPos + 1);
+                    try {
+                        resUriStr = URLDecoder.decode (resUriStr, "UTF-8");
+                    } catch (UnsupportedEncodingException e) {
+                    }
+                    nextUri = URI.createURI (resUriStr).appendFragment (elemIdStr);
+                }
+                try {
+                    EObject element = rset.getEObject (nextUri, true);
+                    if (element != null) {
+                        result.add (element);
+                    }
+                } catch (WrappedException e) {
+                }
+            }
+        }
+        return result;
+    }
+
+}
+

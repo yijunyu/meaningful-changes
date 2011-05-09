@@ -1,0 +1,270 @@
+package org.eclipse.gmf.runtime.diagram.ui.internal.ruler;
+
+import java.util.ArrayList;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.commands.CompoundCommand;
+
+import org.eclipse.gef.rulers.RulerChangeListener;
+
+import org.eclipse.gef.rulers.RulerProvider;
+
+import org.eclipse.gmf.runtime.diagram.core.commands.SetPropertyCommand;
+
+import org.eclipse.gmf.runtime.diagram.core.listener.DiagramEventBroker;
+
+import org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.properties.Properties;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.ruler.commands.CreateGuideCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.ruler.commands.DeleteGuideCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.ruler.commands.MoveGuideCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.IMapMode;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+
+import org.eclipse.gmf.runtime.notation.Guide;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class DiagramRulerProvider extends RulerProvider {
+    private NotificationListener rulerListener = new NotificationListener () {
+
+        public void notifyChanged (Notification evt) {
+            handleNotificationEvent (evt);
+        }
+
+        private void handleNotificationEvent (Notification event) {
+            Object feature = event.getFeature ();
+            if ((feature == NotationPackage.eINSTANCE.getGuideStyle_HorizontalGuides () && ! theRuler.isHorizontal ()) || feature == NotationPackage.eINSTANCE.getGuideStyle_VerticalGuides () && theRuler.isHorizontal ()) {
+                Guide guide = null;
+                if (event.getNewValue () != null && event.getOldValue () == null) {
+                    guide = (Guide) event.getNewValue ();
+                    DiagramEventBroker.getInstance ().addNotificationListener (guide, guideListener);
+                }
+                if (event.getNewValue () == null && event.getOldValue () != null) {
+                    guide = (Guide) event.getOldValue ();
+                    DiagramEventBroker.getInstance ().removeNotificationListener (guide, guideListener);
+                }
+                for (int i = 0;
+                i < listeners.size (); i ++) {
+                    ((RulerChangeListener) listeners.get (i)).notifyGuideReparented (guide);
+                }
+            }
+        }
+
+    }
+
+    ;
+    private NotificationListener guideListener = new NotificationListener () {
+
+        public void notifyChanged (Notification evt) {
+            handleNotificationEvent (evt);
+        }
+
+        private void handleNotificationEvent (Notification event) {
+            Object feature = event.getFeature ();
+            if (feature == NotationPackage.eINSTANCE.getGuide_Position ()) {
+                for (int i = 0;
+                i < listeners.size (); i ++) {
+                    ((RulerChangeListener) listeners.get (i)).notifyGuideMoved (event.getNotifier ());
+                }
+            }
+            if (feature == NotationPackage.eINSTANCE.getGuide_NodeMap ()) {
+                refreshMap ();
+                for (int i = 0;
+                i < listeners.size (); i ++) {
+                    ((RulerChangeListener) listeners.get (i)).notifyPartAttachmentChanged (event.getNewValue (), event.getNotifier ());
+                }
+            }
+        }
+
+    }
+
+    ;
+    private DiagramRuler theRuler;
+    private IMapMode mm;
+
+    public DiagramRulerProvider (DiagramRuler ruler, IMapMode mm) {
+        theRuler = ruler;
+        this.mm = mm;
+    }
+
+    private IMapMode getMapMode () {
+        return mm;
+    }
+
+    public void init () {
+        theRuler.addNotificationListener (rulerListener);
+        Iterator iter = getGuides ().iterator ();
+        while (iter.hasNext ()) {
+            Guide guide = (Guide) iter.next ();
+            DiagramEventBroker.getInstance ().addNotificationListener (guide, guideListener);
+        }
+        refreshMap ();
+    }
+
+    public void uninit () {
+        theRuler.removeNotificationListener (rulerListener);
+    }
+
+    public Object getRuler () {
+        return theRuler;
+    }
+
+    public List getAttachedModelObjects (Object guide) {
+        Guide toGet = (Guide) guide;
+        if (toGet.getNodeMap ().size () == 0) return Collections.EMPTY_LIST;
+
+        List toReturn = new ArrayList ();
+        Iterator iter = toGet.getNodeMap ().keySet ().iterator ();
+        while (iter.hasNext ()) {
+            Node node = (Node) iter.next ();
+            if (node != null) toReturn.add (node);
+
+        }
+        return toReturn;
+    }
+
+    public Command getCreateGuideCommand (int position) {
+        return new EtoolsProxyCommand (new CreateGuideCommand (theRuler, position));
+    }
+
+    public Command getDeleteGuideCommand (Object guide) {
+        return new EtoolsProxyCommand (new DeleteGuideCommand ((Guide) guide));
+    }
+
+    public Command getMoveGuideCommand (Object guide, int pDelta) {
+        CompoundCommand cmd = new CompoundCommand (DiagramUIMessages.Command_moveGuide);
+        cmd.add (new EtoolsProxyCommand (new MoveGuideCommand ((Guide) guide, pDelta)));
+        Iterator iter = getAttachedModelObjects (guide).iterator ();
+        while (iter.hasNext ()) {
+            View part = (View) iter.next ();
+            int x = ((Integer) ViewUtil.getStructuralFeatureValue (part, NotationPackage.eINSTANCE.getLocation_X ())).intValue ();
+            int y = ((Integer) ViewUtil.getStructuralFeatureValue (part, NotationPackage.eINSTANCE.getLocation_Y ())).intValue ();
+            SetPropertyCommand spc;
+            if (((DiagramRuler) getRuler ()).isHorizontal ()) {
+                x += getMapMode ().DPtoLP (pDelta);
+                spc = new SetPropertyCommand (new EObjectAdapter (part), Properties.ID_POSITIONX, Properties.ID_POSITIONX, new Integer (x));
+            } else {
+                y += getMapMode ().DPtoLP (pDelta);
+                spc = new SetPropertyCommand (new EObjectAdapter (part), Properties.ID_POSITIONY, Properties.ID_POSITIONY, new Integer (y));
+            }
+            cmd.add (new EtoolsProxyCommand (spc));
+        }
+        return cmd.unwrap ();
+    }
+
+    public Object getGuideAt (int position) {
+        List guides = getGuides ();
+        for (int i = 0;
+        i < guides.size (); i ++) {
+            Object guide = guides.get (i);
+            if (position >= (getGuidePosition (guide) - 2) && position <= (getGuidePosition (guide) + 2)) {
+                return guide;
+            }
+        }
+        return null;
+    }
+
+    public int [] getGuidePositions () {
+        List guides = getGuides ();
+        int [] result = new int [guides.size ()];
+        for (int i = 0;
+        i < guides.size (); i ++) {
+            result [i] = ((Guide) guides.get (i)).getPosition ();
+        }
+        return result;
+    }
+
+    public int getUnit () {
+        return theRuler.getUnit ();
+    }
+
+    public void setUnit (int newUnit) {
+        theRuler.setUnit (newUnit);
+    }
+
+    public int getGuidePosition (Object guide) {
+        return ((Guide) guide).getPosition ();
+    }
+
+    public List getGuides () {
+        return theRuler.getGuides ();
+    }
+
+    public void refreshMap () {
+        if (theRuler.isHorizontal ()) refreshVerticalGuideMap ();
+        else refreshHorizontalGuideMap ();
+
+    }
+
+    private void refreshHorizontalGuideMap () {
+        List guideList = getGuides ();
+        List viewList = DiagramGuide.getInstance ().getViews ();
+        Iterator iter = guideList.iterator ();
+        while (iter.hasNext ()) {
+            Guide guide = (Guide) iter.next ();
+            List attachedViewsList = getAttachedModelObjects (guide);
+            Iterator viewIter = attachedViewsList.iterator ();
+            while (viewIter.hasNext ()) {
+                View view = (View) viewIter.next ();
+                if (viewList.contains (view)) viewList.remove (view);
+                else DiagramGuide.getInstance ().setHorizontalGuide (view, guide);
+
+            }
+            viewIter = viewList.iterator ();
+            while (viewIter.hasNext ()) {
+                View view = (View) viewIter.next ();
+                DiagramGuide.getInstance ().setHorizontalGuide (view, null);
+            }
+        }
+    }
+
+    private void refreshVerticalGuideMap () {
+        List guideList = getGuides ();
+        List viewList = DiagramGuide.getInstance ().getViews ();
+        Iterator iter = guideList.iterator ();
+        while (iter.hasNext ()) {
+            Guide guide = (Guide) iter.next ();
+            List attachedViewsList = getAttachedModelObjects (guide);
+            Iterator viewIter = attachedViewsList.iterator ();
+            while (viewIter.hasNext ()) {
+                View view = (View) viewIter.next ();
+                if (viewList.contains (view)) viewList.remove (view);
+                else DiagramGuide.getInstance ().setVerticalGuide (view, guide);
+
+            }
+            viewIter = viewList.iterator ();
+            while (viewIter.hasNext ()) {
+                View view = (View) viewIter.next ();
+                DiagramGuide.getInstance ().setVerticalGuide (view, null);
+            }
+        }
+    }
+
+}
+

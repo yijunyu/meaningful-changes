@@ -1,0 +1,118 @@
+108d107
+< 
+110a110,112
+> 			// Semantic hint is not specified. Can be a result of call from CanonicalEditPolicy.
+> 			// In this situation there should be NO elementType, visualID will be determined
+> 			// by VisualIDRegistry.getNodeVisualID() for domainElement.
+118,119c120,125
+< 				if (!GMFGraphElementTypes.isKnownElementType(elementType) || false == elementType instanceof IHintedType) {
+< 					return null;
+---
+> 				// Semantic hint is specified together with element type.
+> 				// Both parameters should describe exactly the same diagram element.
+> 				// In addition we check that visualID returned by VisualIDRegistry.getNodeVisualID() for
+> 				// domainElement (if specified) is the same as in element type.
+> 				if (!GMFGraphElementTypes.isKnownElementType(elementType) || (!(elementType instanceof IHintedType))) {
+> 					return null; // foreign element type
+123c129
+< 					return null;
+---
+> 					return null; // if semantic hint is specified it should be the same as in element type
+126c132
+< 					return null;
+---
+> 					return null; // visual id for node EClass should match visual id from element type
+128a135,141
+> 				// Element type is not specified. Domain element should be present (except pure design elements).
+> 				// This method is called with EObjectAdapter as parameter from:
+> 				//   - ViewService.createNode(View container, EObject eObject, String type, PreferencesHint preferencesHint) 
+> 				//   - generated ViewFactory.decorateView() for parent element
+> 				if (!CanvasEditPart.MODEL_ID.equals(GMFGraphVisualIDRegistry.getModelID(containerView))) {
+> 					return null; // foreign diagram
+> 				}
+130d142
+< 				case CanvasEditPart.VISUAL_ID:
+137d148
+< 				case Rectangle2EditPart.VISUAL_ID:
+140a152
+> 				case Rectangle2EditPart.VISUAL_ID:
+148,151c160,193
+< 				case ChildAccessEditPart.VISUAL_ID:
+< 				case CompartmentAccessorEditPart.VISUAL_ID:
+< 				case DiagramLabelAccessorEditPart.VISUAL_ID:
+< 				case DiagramElementFigureEditPart.VISUAL_ID:
+---
+> 					if (domainElement == null || visualID != GMFGraphVisualIDRegistry.getNodeVisualID(containerView, domainElement)) {
+> 						return null; // visual id in semantic hint should match visual id for domain element
+> 					}
+> 					break;
+> 				case CompartmentNameEditPart.VISUAL_ID:
+> 				case CompartmentVisualFacetsEditPart.VISUAL_ID:
+> 					if (CompartmentEditPart.VISUAL_ID != GMFGraphVisualIDRegistry.getVisualID(containerView) || containerView.getElement() != domainElement) {
+> 						return null; // wrong container
+> 					}
+> 					break;
+> 				case NodeNameEditPart.VISUAL_ID:
+> 				case NodeVisualFacetsEditPart.VISUAL_ID:
+> 					if (NodeEditPart.VISUAL_ID != GMFGraphVisualIDRegistry.getVisualID(containerView) || containerView.getElement() != domainElement) {
+> 						return null; // wrong container
+> 					}
+> 					break;
+> 				case ConnectionNameEditPart.VISUAL_ID:
+> 				case ConnectionVisualFacetsEditPart.VISUAL_ID:
+> 					if (ConnectionEditPart.VISUAL_ID != GMFGraphVisualIDRegistry.getVisualID(containerView) || containerView.getElement() != domainElement) {
+> 						return null; // wrong container
+> 					}
+> 					break;
+> 				case FigureGalleryNameEditPart.VISUAL_ID:
+> 				case FigureGalleryFiguresEditPart.VISUAL_ID:
+> 					if (FigureGalleryEditPart.VISUAL_ID != GMFGraphVisualIDRegistry.getVisualID(containerView) || containerView.getElement() != domainElement) {
+> 						return null; // wrong container
+> 					}
+> 					break;
+> 				case FigureDescriptorNameEditPart.VISUAL_ID:
+> 					if (FigureDescriptorEditPart.VISUAL_ID != GMFGraphVisualIDRegistry.getVisualID(containerView) || containerView.getElement() != domainElement) {
+> 						return null; // wrong container
+> 					}
+> 					break;
+> 				default:
+156c198,205
+< 		if (!GMFGraphVisualIDRegistry.canCreateNode(containerView, visualID)) {
+---
+> 		return getNodeViewClass(containerView, visualID);
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	protected Class getNodeViewClass(View containerView, int visualID) {
+> 		if (containerView == null || !GMFGraphVisualIDRegistry.canCreateNode(containerView, visualID)) {
+221,225c270,271
+< 		if (elementType == null) {
+< 			return null;
+< 		}
+< 		if (!GMFGraphElementTypes.isKnownElementType(elementType) || false == elementType instanceof IHintedType) {
+< 			return null;
+---
+> 		if (!GMFGraphElementTypes.isKnownElementType(elementType) || (!(elementType instanceof IHintedType))) {
+> 			return null; // foreign element type
+229c275
+< 			return null;
+---
+> 			return null; // our hint is visual id and must be specified
+232c278
+< 			return null;
+---
+> 			return null; // if semantic hint is specified it should be the same as in element type
+237c283
+< 			return null;
+---
+> 			return null; // visual id for link EClass should match visual id from element type
+238a285,291
+> 		return getEdgeViewClass(visualID);
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	protected Class getEdgeViewClass(int visualID) {

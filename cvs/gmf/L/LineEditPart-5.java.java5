@@ -1,0 +1,90 @@
+package org.eclipse.gmf.runtime.diagram.ui.geoshapes.internal.editparts;
+
+import org.eclipse.draw2d.Connection;
+
+import org.eclipse.draw2d.RotatableDecoration;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.gef.EditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ConnectionNodeEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.ViewComponentEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.editpolicies.NonSemanticEditPolicy;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.PolylineConnectionEx;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class LineEditPart extends ConnectionNodeEditPart {
+
+    public LineEditPart (View view) {
+        super (view);
+    }
+
+    protected Connection createConnectionFigure () {
+        PolylineConnectionEx conn = new PolylineConnectionEx ();
+        return conn;
+    }
+
+    protected void createDefaultEditPolicies () {
+        super.createDefaultEditPolicies ();
+        removeEditPolicy (EditPolicyRoles.SEMANTIC_ROLE);
+        installEditPolicy (EditPolicyRoles.SEMANTIC_ROLE, new NonSemanticEditPolicy ());
+        installEditPolicy (EditPolicy.COMPONENT_ROLE, new ViewComponentEditPolicy ());
+    }
+
+    protected void handleNotificationEvent (Notification notification) {
+        Object feature = notification.getFeature ();
+        if (NotationPackage.Literals.LINE_STYLE__LINE_WIDTH.equals (feature)) {
+            refreshLineWidth ();
+            refreshArrowSource ();
+            refreshArrowTarget ();
+        } else if (NotationPackage.Literals.LINE_TYPE_STYLE__LINE_TYPE.equals (feature)) {
+            refreshLineType ();
+        } else if (NotationPackage.Literals.ARROW_STYLE__ARROW_SOURCE.equals (feature)) {
+            refreshArrowSource ();
+        } else if (NotationPackage.Literals.ARROW_STYLE__ARROW_TARGET.equals (feature)) {
+            refreshArrowTarget ();
+        } else {
+            super.handleNotificationEvent (notification);
+        }
+
+    }
+
+    protected void refreshVisuals () {
+        super.refreshVisuals ();
+        refreshLineWidth ();
+        refreshLineType ();
+        refreshArrowSource ();
+        refreshArrowTarget ();
+    }
+
+    protected void setLineWidth (int width) {
+        PolylineConnectionEx conn = (PolylineConnectionEx) getFigure ();
+        conn.setLineWidth (getMapMode ().DPtoLP (width));
+    }
+
+    protected void setLineType (int lineType) {
+        PolylineConnectionEx conn = (PolylineConnectionEx) getFigure ();
+        conn.setLineStyle (lineType);
+    }
+
+    protected void setArrowSource (RotatableDecoration arrowDecoration) {
+        PolylineConnectionEx conn = (PolylineConnectionEx) getFigure ();
+        conn.setSourceDecoration (arrowDecoration);
+    }
+
+    protected void setArrowTarget (RotatableDecoration arrowDecoration) {
+        PolylineConnectionEx conn = (PolylineConnectionEx) getFigure ();
+        conn.setTargetDecoration (arrowDecoration);
+    }
+
+}
+

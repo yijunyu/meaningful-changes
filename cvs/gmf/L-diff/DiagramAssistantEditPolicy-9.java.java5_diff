@@ -1,0 +1,82 @@
+2a3,10
+> import org.eclipse.core.runtime.IProgressMonitor;
+> 
+> import org.eclipse.core.runtime.IStatus;
+> 
+> import org.eclipse.core.runtime.Status;
+> 
+> import org.eclipse.core.runtime.jobs.Job;
+> 
+27,28d34
+< import org.eclipse.swt.widgets.Display;
+< 
+36a43,44
+> import org.eclipse.ui.progress.UIJob;
+> 
+38c46
+<     private class ShowDiagramAssistantRunnable implements Runnable {
+---
+>     private class ShowDiagramAssistantJob extends UIJob {
+40a49,53
+>         protected ShowDiagramAssistantJob () {
+>             super ("Show Diagram Assistant");
+>             setSystem (true);
+>         }
+> 
+45c58
+<         public void run () {
+---
+>         public IStatus runInUIThread (IProgressMonitor monitor) {
+50a64,67
+>                     hideDiagramAssistantJob.cancel ();
+>                     if (getDiagramAssistantID () != null) {
+>                         Job.getJobManager ().wakeUp (getDiagramAssistantID ());
+>                     }
+53a71
+>             return Status.OK_STATUS;
+58c76
+<     private class HideDiagramAssistantRunnable implements Runnable {
+---
+>     private class HideDiagramAssistantJob extends UIJob {
+60c78,83
+<         public void run () {
+---
+>         protected HideDiagramAssistantJob () {
+>             super ("Hide Diagram Assistant");
+>             setSystem (true);
+>         }
+> 
+>         public IStatus runInUIThread (IProgressMonitor monitor) {
+63a87,91
+>             return Status.OK_STATUS;
+>         }
+> 
+>         public boolean belongsTo (Object family) {
+>             return family == getDiagramAssistantID ();
+86,87c114,115
+<     private ShowDiagramAssistantRunnable showDiagramAssistantRunnable = new ShowDiagramAssistantRunnable ();
+<     private HideDiagramAssistantRunnable hideDiagramAssistantRunnable = new HideDiagramAssistantRunnable ();
+---
+>     private ShowDiagramAssistantJob showDiagramAssistantJob = new ShowDiagramAssistantJob ();
+>     private HideDiagramAssistantJob hideDiagramAssistantJob = new HideDiagramAssistantJob ();
+149,150c177,181
+<         showDiagramAssistantRunnable.setOriginalMouseLocation (getMouseLocation ());
+<         Display.getCurrent ().timerExec (delay, showDiagramAssistantRunnable);
+---
+>         if (delay >= 0) {
+>             showDiagramAssistantJob.setOriginalMouseLocation (getMouseLocation ());
+>             showDiagramAssistantJob.cancel ();
+>             showDiagramAssistantJob.schedule (delay);
+>         }
+154,155c185,187
+<         if (isDiagramAssistantShowing ()) {
+<             Display.getCurrent ().timerExec (delay, hideDiagramAssistantRunnable);
+---
+>         if (isDiagramAssistantShowing () && delay >= 0) {
+>             hideDiagramAssistantJob.cancel ();
+>             hideDiagramAssistantJob.schedule (delay);
+220a253,256
+>     protected String getDiagramAssistantID () {
+>         return null;
+>     }
+> 

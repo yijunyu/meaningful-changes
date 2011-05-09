@@ -1,0 +1,204 @@
+package org.eclipse.gmf.runtime.notation.providers.internal.copypaste;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.Map;
+
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EPackage;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.emf.ecore.EcorePackage;
+
+import org.eclipse.emf.ecore.util.EcoreUtil;
+
+import org.eclipse.emf.ecore.xmi.XMLResource;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.ClipboardSupportUtil;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.CopyOperation;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.OverrideCopyOperation;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.OverridePasteChildOperation;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.PasteAction;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.PasteChildOperation;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.PasteOption;
+
+import org.eclipse.gmf.runtime.emf.core.clipboard.AbstractClipboardSupport;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.gmf.runtime.notation.Edge;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class NotationClipboardOperationHelper extends AbstractClipboardSupport {
+
+    public PasteAction getPasteCollisionAction (EClass eClass) {
+        return PasteAction.ADD;
+    }
+
+    public boolean hasPasteOption (EObject contextEObject, EStructuralFeature eStructuralFeature, PasteOption pasteOption) {
+        if (pasteOption.equals (PasteOption.NORMAL)) {
+            return true;
+        } else if (pasteOption.equals (PasteOption.PARENT)) {
+            return false;
+        } else if (pasteOption.equals (PasteOption.DISTANT)) {
+            if (eStructuralFeature == null) {
+                return false;
+            } else {
+                return NotationPackage.eINSTANCE.getView_Element ().equals (eStructuralFeature);
+            }
+        } else {
+            return false;
+        }
+
+    }
+
+    public boolean isCopyAlways (EObject context, EReference eReference, Object value) {
+        if ((eReference.isTransient ()) || (eReference.isDerived ())) {
+            return false;
+        } else if (eReference.equals (NotationPackage.eINSTANCE.getView_Element ())) {
+            return true;
+        } else {
+            return eReference.isContainment ();
+        }
+
+    }
+
+    public boolean shouldOverrideChildPasteOperation (EObject parentElement, EObject childEObject) {
+        return (childEObject.eClass ().getEPackage () == NotationPackage.eINSTANCE);
+    }
+
+    public boolean shouldOverrideCopyOperation (Collection eObjects, Map hintMap) {
+        return false;
+    }
+
+    private boolean shouldAllowPaste (PasteChildOperation overriddenChildPasteOperation) {
+        EObject eObject = overriddenChildPasteOperation.getEObject ();
+        EObject parentEObject = overriddenChildPasteOperation.getParentEObject ();
+        if ((parentEObject instanceof Diagram) && (eObject instanceof View)) {
+            EObject semanticChildElement = ((View) eObject).getElement ();
+            if (semanticChildElement == null) {
+                return true;
+            }
+            if (semanticChildElement.eIsProxy ()) {
+                semanticChildElement = ClipboardSupportUtil.resolve (semanticChildElement, overriddenChildPasteOperation.getParentPasteProcess ().getLoadedIDToEObjectMapCopy ());
+                if (semanticChildElement.eIsProxy ()) {
+                    semanticChildElement = EcoreUtil.resolve (semanticChildElement, getResource (parentEObject));
+                }
+            }
+            EPackage semanticChildEpackage = semanticChildElement.eClass ().getEPackage ();
+            EPackage diagramRootContainerEpackage = EcoreUtil.getRootContainer (parentEObject).eClass ().getEPackage ();
+            EPackage sematicDiagramRootContainerEpackage = null;
+            EObject sematicDiagramElement = ((View) parentEObject).getElement ();
+            if (sematicDiagramElement != null) {
+                sematicDiagramRootContainerEpackage = EcoreUtil.getRootContainer (sematicDiagramElement).eClass ().getEPackage ();
+            }
+            if (diagramRootContainerEpackage != NotationPackage.eINSTANCE) {
+                if (semanticChildEpackage != diagramRootContainerEpackage) {
+                    return false;
+                }
+            }
+            if ((sematicDiagramRootContainerEpackage != null) && (sematicDiagramRootContainerEpackage != NotationPackage.eINSTANCE)) {
+                if (semanticChildEpackage != sematicDiagramRootContainerEpackage) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public OverridePasteChildOperation getOverrideChildPasteOperation (PasteChildOperation overriddenChildPasteOperation) {
+        if (shouldAllowPaste (overriddenChildPasteOperation)) {
+            EObject eObject = overriddenChildPasteOperation.getEObject ();
+            if (eObject instanceof org.eclipse.gmf.runtime.notation.Node) {
+                org.eclipse.gmf.runtime.notation.Node node = (org.eclipse.gmf.runtime.notation.Node) eObject;
+                EObject element = node.getElement ();
+                if ((element != null)) {
+                    return new PositionalGeneralViewPasteOperation (overriddenChildPasteOperation, true);
+                } else {
+                    return new PositionalGeneralViewPasteOperation (overriddenChildPasteOperation, false);
+                }
+            } else if (eObject instanceof Edge) {
+                return new ConnectorViewPasteOperation (overriddenChildPasteOperation);
+            }
+
+        }
+        return null;
+    }
+
+    public OverrideCopyOperation getOverrideCopyOperation (CopyOperation overriddenCopyOperation) {
+        return null;
+    }
+
+    public Collection getExcludedCopyObjects (Set eObjects) {
+        return Collections.EMPTY_SET;
+    }
+
+    public XMLResource getResource (EObject eObject) {
+        XMLResource eResource = (XMLResource) eObject.eResource ();
+        if (eResource == null) {
+            if (eObject instanceof View) {
+                EObject element = ((View) eObject).getElement ();
+                if ((element != null)) {
+                    return (XMLResource) element.eResource ();
+                }
+            }
+        }
+        return eResource;
+    }
+
+    public boolean shouldSaveContainmentFeature (EObject eObj) {
+        if (EcorePackage.eINSTANCE.getEClassifiers ().contains (eObj.eClass ())) {
+            return false;
+        }
+        try {
+            eObj.eResource ().getURIFragment (eObj);
+        } catch (Exception ex) {
+            return false;
+        }
+        return true;
+    }
+
+    public void performPostPasteProcessing (Set pastedEObjects) {
+    }
+
+    static Diagram getContainingDiagram (View view) {
+        EObject current = view;
+        while (current != null) {
+            if (current instanceof Diagram) {
+                return (Diagram) current;
+            }
+            current = current.eContainer ();
+        }
+        return null;
+    }
+
+    static EObject getSemanticPasteTarget (View view) {
+        Diagram diagram = getContainingDiagram (view);
+        if (diagram != null) {
+            return diagram.getElement ();
+        }
+        return null;
+    }
+
+}
+

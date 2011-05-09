@@ -1,0 +1,362 @@
+5,8d4
+< import java.io.InputStream;
+< 
+< import java.lang.reflect.InvocationTargetException;
+< 
+29,29c51,51
+< import org.eclipse.emf.common.util.URI;
+---
+> import org.eclipse.emf.edit.ui.util.EditUIUtil;
+33,33c49,49
+< import org.eclipse.emf.ecore.resource.ResourceSet;
+---
+> import org.eclipse.emf.ecore.xmi.XMLResource;
+35,35c63,63
+< import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+---
+> import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+37,37c65,65
+< import org.eclipse.gmf.runtime.diagram.core.services.ViewService;
+---
+> import org.eclipse.gmf.runtime.diagram.core.services.ViewService;
+39,39c69,69
+< import org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.util.IDEEditorUtil;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+41,41c67,67
+< import org.eclipse.gmf.runtime.diagram.ui.resources.editor.util.DiagramFileCreator;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+43,43c77,77
+< import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+---
+> import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+45,45c79,79
+< import org.eclipse.gmf.runtime.emf.core.GMFEditingDomainFactory;
+---
+> import org.eclipse.gmf.runtime.emf.core.GMFEditingDomainFactory;
+46a61,61
+> import org.eclipse.gmf.graphdef.editor.edit.parts.CanvasEditPart;
+47,47c83,83
+< import org.eclipse.gmf.runtime.notation.Diagram;
+---
+> import org.eclipse.gmf.runtime.notation.Diagram;
+49,49c55,55
+< import org.eclipse.jface.operation.IRunnableContext;
+---
+> import org.eclipse.gef.EditPart;
+51,51d64
+< import org.eclipse.jface.operation.IRunnableWithProgress;
+53,53d66
+< import org.eclipse.swt.widgets.Shell;
+55,55c87,87
+< import org.eclipse.ui.IWorkbenchWindow;
+---
+> import org.eclipse.ui.PartInitException;
+56a71,71
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.IPrimaryEditPart;
+57,57c53,53
+< import org.eclipse.emf.transaction.TransactionalEditingDomain;
+---
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+58a73,73
+> import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramGraphicalViewer;
+59a10,12
+> 
+> import java.util.Iterator;
+> 
+59,59c9,9
+< import java.util.HashMap;
+---
+> import java.util.HashMap;
+60a75,75
+> import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+61,61c15,15
+< import java.util.Map;
+---
+> import java.util.Map;
+61a16,18
+> 
+> import java.util.Set;
+> 
+62a25,28
+> import org.eclipse.core.resources.IResource;
+> 
+> import org.eclipse.core.resources.ResourcesPlugin;
+> 
+63,63c29,29
+< import org.eclipse.core.runtime.CoreException;
+---
+> import org.eclipse.core.runtime.CoreException;
+63a30,30
+> 
+64a37,38
+> import org.eclipse.core.runtime.NullProgressMonitor;
+> 
+65a40,40
+> 
+65,65c39,39
+< import org.eclipse.core.runtime.Path;
+---
+> import org.eclipse.core.runtime.Path;
+66a81,81
+> import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+67,67c43,43
+< import org.eclipse.emf.ecore.EObject;
+---
+> import org.eclipse.emf.ecore.EObject;
+69,69c47,47
+< import org.eclipse.emf.ecore.xmi.XMIResource;
+---
+> import org.eclipse.emf.ecore.xmi.XMIResource;
+70a85,85
+> import org.eclipse.gmf.runtime.notation.View;
+71,71c57,57
+< import org.eclipse.gmf.gmfgraph.Canvas;
+---
+> import org.eclipse.gmf.gmfgraph.Canvas;
+73,73c59,59
+< import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+---
+> import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+75,75c89,89
+< public class GMFGraphDiagramEditorUtil extends IDEEditorUtil {
+---
+> public class GMFGraphDiagramEditorUtil {
+77,80d90
+<     public static final IFile createAndOpenDiagram (DiagramFileCreator diagramFileCreator, IPath containerPath, String fileName, InputStream initialContents, String kind, IWorkbenchWindow window, IProgressMonitor progressMonitor, boolean openEditor, boolean saveDiagram) {
+<         IFile diagramFile = GMFGraphDiagramEditorUtil.createNewDiagramFile (diagramFileCreator, containerPath, fileName, initialContents, kind, window.getShell (), progressMonitor);
+<         if (diagramFile != null && openEditor) {
+<             IDEEditorUtil.openDiagram (diagramFile, window, saveDiagram, progressMonitor);
+82,82d104
+<         return diagramFile;
+84a107,115
+>     public static IFile getFile (org.eclipse.emf.common.util.URI uri) {
+>         if (uri.toString ().startsWith ("platform:/resource")) {
+>             String path = uri.toString ().substring ("platform:/resource".length ());
+>             IResource workspaceResource = ResourcesPlugin.getWorkspace ().getRoot ().findMember (new Path (path));
+>             if (workspaceResource instanceof IFile) {
+>                 return (IFile) workspaceResource;
+>             }
+>         }
+>         return null;
+85,93d106
+<     public static final IFile createNewDiagramFile (DiagramFileCreator diagramFileCreator, IPath containerFullPath, String fileName, InputStream initialContents, String kind, Shell shell, IProgressMonitor progressMonitor) {
+<         TransactionalEditingDomain editingDomain = GMFEditingDomainFactory.INSTANCE.createEditingDomain ();
+<         ResourceSet resourceSet = editingDomain.getResourceSet ();
+<         progressMonitor.beginTask ("Creating diagram and model files", 4);
+<         final IProgressMonitor subProgressMonitor = new SubProgressMonitor (progressMonitor, 1);
+<         final IFile diagramFile = diagramFileCreator.createNewFile (containerFullPath, fileName, initialContents, shell, new IRunnableContext () {
+< 
+<             public void run (boolean fork, boolean cancelable, IRunnableWithProgress runnable) throws InvocationTargetException, InterruptedException {
+<                 runnable.run (subProgressMonitor);
+95a118,119
+>     public static boolean exists (IPath path) {
+>         return ResourcesPlugin.getWorkspace ().getRoot ().exists (path);
+97a122,128
+>     public static Resource createDiagram (org.eclipse.emf.common.util.URI diagramURI, org.eclipse.emf.common.util.URI modelURI, IProgressMonitor progressMonitor) {
+>         TransactionalEditingDomain editingDomain = GMFEditingDomainFactory.INSTANCE.createEditingDomain ();
+>         progressMonitor.beginTask ("Creating diagram and model files", 3);
+>         final Resource diagramResource = editingDomain.getResourceSet ().createResource (diagramURI);
+>         final Resource modelResource = editingDomain.getResourceSet ().createResource (modelURI);
+>         final String diagramName = diagramURI.lastSegment ();
+>         AbstractTransactionalCommand command = new AbstractTransactionalCommand (editingDomain, "Creating diagram and model", Collections.EMPTY_LIST) {
+98,107d121
+<         );
+<         final Resource diagramResource = resourceSet.createResource (URI.createPlatformResourceURI (diagramFile.getFullPath ().toString ()));
+<         List affectedFiles = new ArrayList ();
+<         affectedFiles.add (diagramFile);
+<         IPath modelFileRelativePath = diagramFile.getFullPath ().removeFileExtension ().addFileExtension ("gmfgraph");
+<         IFile modelFile = diagramFile.getParent ().getFile (new Path (modelFileRelativePath.lastSegment ()));
+<         final Resource modelResource = resourceSet.createResource (URI.createPlatformResourceURI (modelFile.getFullPath ().toString ()));
+<         affectedFiles.add (modelFile);
+<         final String kindParam = kind;
+<         AbstractTransactionalCommand command = new AbstractTransactionalCommand (editingDomain, "Creating diagram and model", affectedFiles) {
+110a132,132
+>                 attachModelToResource (model, modelResource);
+111,111d131
+<                 modelResource.getContents ().add (createInitialRoot (model));
+112,112c133,133
+<                 Diagram diagram = ViewService.createDiagram (model, kindParam, GMFGraphDiagramEditorPlugin.DIAGRAM_PREFERENCES_HINT);
+---
+>                 Diagram diagram = ViewService.createDiagram (model, CanvasEditPart.MODEL_ID, GMFGraphDiagramEditorPlugin.DIAGRAM_PREFERENCES_HINT);
+115,115c136,136
+<                     diagram.setName (diagramFile.getName ());
+---
+>                     diagram.setName (diagramName);
+122,122c143,143
+<                     diagramResource.save (Collections.EMPTY_MAP);
+---
+>                     diagramResource.save (options);
+136a91,99
+>     public static boolean openDiagram (Resource diagram) throws PartInitException {
+>         return EditUIUtil.openEditor ((EObject) diagram.getContents ().get (0));
+>     }
+> 
+>     private static void setCharset (org.eclipse.emf.common.util.URI uri) {
+>         IFile file = getFile (uri);
+>         if (file == null) {
+>             return;
+>         }
+136a158,160
+>         setCharset (modelURI);
+>         setCharset (diagramURI);
+>         return diagramResource;
+137,137c100,100
+<         try {
+---
+>         try {
+137a101,101
+>             file.setCharset ("UTF-8", new NullProgressMonitor ());
+138,138d100
+<             modelFile.setCharset ("UTF-8", new SubProgressMonitor (progressMonitor, 1));
+139,139c102,102
+<         } catch (CoreException e) {
+---
+>         } catch (CoreException e) {
+140,140c103,103
+<             GMFGraphDiagramEditorPlugin.getInstance ().logError ("Unable to set charset for model file", e);
+---
+>             GMFGraphDiagramEditorPlugin.getInstance ().logError ("Unable to set charset for file " + file.getFullPath (), e);
+141,147d103
+<         }
+<         try {
+<             diagramFile.setCharset ("UTF-8", new SubProgressMonitor (progressMonitor, 1));
+<         } catch (CoreException e) {
+<             GMFGraphDiagramEditorPlugin.getInstance ().logError ("Unable to set charset for diagram file", e);
+<         }
+<         return diagramFile;
+153a167,296
+>     private static void attachModelToResource (Canvas model, Resource resource) {
+>         resource.getContents ().add (model);
+>     }
+> 
+>     public static void selectElementsInDiagram (IDiagramWorkbenchPart diagramPart, List editParts) {
+>         diagramPart.getDiagramGraphicalViewer ().deselectAll ();
+>         EditPart firstPrimary = null;
+>         for (Iterator it = editParts.iterator ();
+>         it.hasNext ();) {
+>             EditPart nextPart = (EditPart) it.next ();
+>             diagramPart.getDiagramGraphicalViewer ().appendSelection (nextPart);
+>             if (firstPrimary == null && nextPart instanceof IPrimaryEditPart) {
+>                 firstPrimary = nextPart;
+>             }
+>         }
+>         if (! editParts.isEmpty ()) {
+>             diagramPart.getDiagramGraphicalViewer ().reveal (firstPrimary != null ? firstPrimary : (EditPart) editParts.get (0));
+>         }
+>     }
+> 
+>     private static int findElementsInDiagramByID (DiagramEditPart diagramPart, EObject element, List editPartCollector) {
+>         IDiagramGraphicalViewer viewer = (IDiagramGraphicalViewer) diagramPart.getViewer ();
+>         final int intialNumOfEditParts = editPartCollector.size ();
+>         if (element instanceof View) {
+>             EditPart editPart = (EditPart) viewer.getEditPartRegistry ().get (element);
+>             if (editPart != null) {
+>                 editPartCollector.add (editPart);
+>                 return 1;
+>             }
+>         }
+>         String elementID = EMFCoreUtil.getProxyID (element);
+>         List associatedParts = viewer.findEditPartsForElement (elementID, IGraphicalEditPart.class);
+>         for (Iterator editPartIt = associatedParts.iterator ();
+>         editPartIt.hasNext ();) {
+>             EditPart nextPart = (EditPart) editPartIt.next ();
+>             EditPart parentPart = nextPart.getParent ();
+>             while (parentPart != null && ! associatedParts.contains (parentPart)) {
+>                 parentPart = parentPart.getParent ();
+>             }
+>             if (parentPart == null) {
+>                 editPartCollector.add (nextPart);
+>             }
+>         }
+>         if (intialNumOfEditParts == editPartCollector.size ()) {
+>             if (! associatedParts.isEmpty ()) {
+>                 editPartCollector.add (associatedParts.iterator ().next ());
+>             } else {
+>                 if (element.eContainer () != null) {
+>                     return findElementsInDiagramByID (diagramPart, element.eContainer (), editPartCollector);
+>                 }
+>             }
+>         }
+>         return editPartCollector.size () - intialNumOfEditParts;
+>     }
+> 
+>     public static View findView (DiagramEditPart diagramEditPart, EObject targetElement, LazyElement2ViewMap lazyElement2ViewMap) {
+>         boolean hasStructuralURI = false;
+>         if (targetElement.eResource () instanceof XMLResource) {
+>             hasStructuralURI = ((XMLResource) targetElement.eResource ()).getID (targetElement) == null;
+>         }
+>         View view = null;
+>         if (hasStructuralURI && ! lazyElement2ViewMap.getElement2ViewMap ().isEmpty ()) {
+>             view = (View) lazyElement2ViewMap.getElement2ViewMap ().get (targetElement);
+>         } else if (findElementsInDiagramByID (diagramEditPart, targetElement, lazyElement2ViewMap.editPartTmpHolder) > 0) {
+>             EditPart editPart = (EditPart) lazyElement2ViewMap.editPartTmpHolder.get (0);
+>             lazyElement2ViewMap.editPartTmpHolder.clear ();
+>             view = editPart.getModel () instanceof View ? (View) editPart.getModel () : null;
+>         }
+> 
+>         return (view == null) ? diagramEditPart.getDiagramView () : view;
+>     }
+> 
+>     public static class LazyElement2ViewMap {
+>         private Map element2ViewMap;
+>         private View scope;
+>         private Set elementSet;
+>         public final List editPartTmpHolder = new ArrayList ();
+> 
+>         public LazyElement2ViewMap (View scope, Set elements) {
+>             this.scope = scope;
+>             this.elementSet = elements;
+>         }
+> 
+>         public final Map getElement2ViewMap () {
+>             if (element2ViewMap == null) {
+>                 element2ViewMap = new HashMap ();
+>                 for (Iterator it = elementSet.iterator ();
+>                 it.hasNext ();) {
+>                     EObject element = (EObject) it.next ();
+>                     if (element instanceof View) {
+>                         View view = (View) element;
+>                         if (view.getDiagram () == scope.getDiagram ()) {
+>                             element2ViewMap.put (element, element);
+>                         }
+>                     }
+>                 }
+>                 buildElement2ViewMap (scope, element2ViewMap, elementSet);
+>             }
+>             return element2ViewMap;
+>         }
+> 
+>         static Map buildElement2ViewMap (View parentView, Map element2ViewMap, Set elements) {
+>             if (elements.size () == element2ViewMap.size ()) return element2ViewMap;
+> 
+>             if (parentView.isSetElement () && ! element2ViewMap.containsKey (parentView.getElement ()) && elements.contains (parentView.getElement ())) {
+>                 element2ViewMap.put (parentView.getElement (), parentView);
+>                 if (elements.size () == element2ViewMap.size ()) return element2ViewMap;
+> 
+>             }
+>             for (Iterator it = parentView.getChildren ().iterator ();
+>             it.hasNext ();) {
+>                 buildElement2ViewMap ((View) it.next (), element2ViewMap, elements);
+>                 if (elements.size () == element2ViewMap.size ()) return element2ViewMap;
+> 
+>             }
+>             for (Iterator it = parentView.getSourceEdges ().iterator ();
+>             it.hasNext ();) {
+>                 buildElement2ViewMap ((View) it.next (), element2ViewMap, elements);
+>                 if (elements.size () == element2ViewMap.size ()) return element2ViewMap;
+> 
+>             }
+>             for (Iterator it = parentView.getSourceEdges ().iterator ();
+>             it.hasNext ();) {
+>                 buildElement2ViewMap ((View) it.next (), element2ViewMap, elements);
+>                 if (elements.size () == element2ViewMap.size ()) return element2ViewMap;
+> 
+>             }
+>             return element2ViewMap;
+>         }
+> 
+154,155d166
+<     private static EObject createInitialRoot (Canvas model) {
+<         return model;

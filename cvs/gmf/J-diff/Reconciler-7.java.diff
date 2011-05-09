@@ -1,0 +1,101 @@
+26,30d25
+< 	/**
+< 	 * Expected max breadth of the node in the reconciled tree
+< 	 */
+< 	private static final int PAIRS_POOL_SIZE = 100;
+< 	
+31a27
+> 
+36c32
+< 		myMatchingSession = new MatchingSession(new PairsPool(PAIRS_POOL_SIZE));
+---
+> 		myMatchingSession = new MatchingSession();
+48a45
+> 	@SuppressWarnings("unchecked")
+52a50
+> 	@SuppressWarnings("unchecked")
+68c66
+< 	private void reconcileContents(EObject currentParent, Collection allCurrents, Collection allOlds){
+---
+> 	private void reconcileContents(EObject currentParent, Collection<EObject> allCurrents, Collection<EObject> allOlds){
+80,81d77
+< 			myMatchingSession.releasePair(next);
+< 			
+99,103d94
+< 		
+< 		public void reset(){
+< 			current = null;
+< 			old = null;
+< 		}
+107,109d97
+< 		private final Collection myCurrents;
+< 		private final Collection myOlds;
+< 		private final PairsPool myPool;
+112,115c100
+< 		public MatchingSession(PairsPool pool){
+< 			myPool = pool;
+< 			myCurrents = new LinkedList();
+< 			myOlds = new LinkedHashSet();
+---
+> 		public MatchingSession(){
+118c103
+< 		public void match(Collection currents, Collection olds, Collection<Pair> output){
+---
+> 		public void match(Collection<EObject> currents, Collection<EObject> olds, Collection<Pair> output){
+120,121d104
+< 			assert myOlds.isEmpty();
+< 			assert myCurrents.isEmpty();
+126c109,110
+< 			
+---
+> 			final Collection<EObject> myOlds;
+> 			final Collection<EObject> myCurrents;
+130,131c114,115
+< 				myCurrents.addAll(currents);
+< 				myOlds.addAll(olds);
+---
+> 				myOlds = new LinkedHashSet<EObject>(olds);
+> 				myCurrents = new LinkedList<EObject>(currents);
+133,134c117,118
+< 				for (Iterator currentContents = myCurrents.iterator(); !myOlds.isEmpty() && currentContents.hasNext();){
+< 					EObject nextCurrent = (EObject) currentContents.next();
+---
+> 				for (Iterator<EObject> currentContents = myCurrents.iterator(); !myOlds.isEmpty() && currentContents.hasNext();){
+> 					EObject nextCurrent = currentContents.next();
+142c126
+< 				for (Iterator notMatchedOlds = myOlds.iterator(); notMatchedOlds.hasNext();){
+---
+> 				for (Iterator<EObject> notMatchedOlds = myOlds.iterator(); notMatchedOlds.hasNext();){
+145c129
+< 					nextPair.old = (EObject)notMatchedOlds.next();
+---
+> 					nextPair.old = notMatchedOlds.next();
+150,151d133
+< 				myCurrents.clear();
+< 				myOlds.clear();
+173,197d154
+< 			return myPool.acquire();
+< 		}
+< 		
+< 		public void releasePair(Pair pair){
+< 			myPool.release(pair);
+< 		}
+< 		
+< 	}
+< 	
+< 	private static class PairsPool extends AbstractPool {
+< 		public PairsPool(int capacity) {
+< 			super(capacity);
+< 		}
+< 		
+< 		public Pair acquire(){
+< 			return (Pair)internalAcquire();
+< 		}
+< 		
+< 		public void release(Pair pair){
+< 			pair.current = null;
+< 			pair.old = null;
+< 			internalRelease(pair);
+< 		}
+< 		
+< 		protected Object createNew() {

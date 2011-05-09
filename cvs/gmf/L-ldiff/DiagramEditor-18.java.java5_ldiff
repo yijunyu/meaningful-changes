@@ -1,0 +1,189 @@
+14a15,30
+> import java.util.Set;
+> 
+> import org.eclipse.core.commands.operations.IOperationHistory;
+> 
+> import org.eclipse.core.commands.operations.IOperationHistoryListener;
+> 
+> import org.eclipse.core.commands.operations.IUndoContext;
+> 
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> 
+> import org.eclipse.core.commands.operations.ObjectUndoContext;
+> 
+> import org.eclipse.core.commands.operations.OperationHistoryEvent;
+> 
+> import org.eclipse.core.commands.operations.OperationHistoryFactory;
+> 
+36a53,66
+> import org.eclipse.emf.ecore.resource.Resource;
+> 
+> import org.eclipse.emf.ecore.resource.ResourceSet;
+> 
+> import org.eclipse.emf.edit.domain.EditingDomain;
+> 
+> import org.eclipse.emf.edit.domain.IEditingDomainProvider;
+> 
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> 
+> import org.eclipse.emf.workspace.ResourceUndoContext;
+> 
+38a69,70
+> import org.eclipse.gef.DefaultEditDomain;
+> 
+56a89,90
+> import org.eclipse.gef.commands.CommandStack;
+> 
+76a173,173
+> import org.eclipse.gmf.runtime.emf.commands.core.command.EditingDomainUndoContext;
+77,77d172
+< import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+78,78c174,174
+< 
+---
+> 
+376a411,419
+>     private IEditingDomainProvider domainProvider = new IEditingDomainProvider () {
+> 
+>         public EditingDomain getEditingDomain () {
+>             return DiagramEditor.this.getEditingDomain ();
+>         }
+> 
+>     }
+> 
+>     ;
+379a423,424
+>     private IUndoContext undoContext;
+>     private IOperationHistoryListener historyListener;
+394a440,479
+>         historyListener = createHistoryListener ();
+>         if (historyListener != null) {
+>             getOperationHistory ().addOperationHistoryListener (historyListener);
+>         }
+>     }
+> 
+>     protected IOperationHistoryListener createHistoryListener () {
+>         return new IOperationHistoryListener () {
+> 
+>             public void historyNotification (final OperationHistoryEvent event) {
+>                 if (event.getEventType () == OperationHistoryEvent.DONE) {
+>                     IUndoableOperation operation = event.getOperation ();
+>                     if (shouldAddUndoContext (operation)) {
+>                         operation.addContext (getUndoContext ());
+>                     }
+>                 }
+>             }
+> 
+>         }
+> 
+>         ;
+>     }
+> 
+>     protected boolean shouldAddUndoContext (IUndoableOperation operation) {
+>         EditingDomain domain = getEditingDomain ();
+>         if (domain != null) {
+>             Set affectedResources = ResourceUndoContext.getAffectedResources (operation);
+>             for (Iterator i = affectedResources.iterator ();
+>             i.hasNext ();) {
+>                 Resource nextResource = (Resource) i.next ();
+>                 ResourceSet resourceSet = nextResource.getResourceSet ();
+>                 if (resourceSet != null) {
+>                     TransactionalEditingDomain editingDomain = TransactionalEditingDomain.Factory.INSTANCE.getEditingDomain (resourceSet);
+>                     if (domain.equals (editingDomain)) {
+>                         return true;
+>                     }
+>                 }
+>             }
+>         }
+>         return false;
+421a513,520
+>             return getUndoContext ();
+>         }
+>         if (type == IOperationHistory.class) {
+>             return getOperationHistory ();
+>         }
+>         if (type == IEditingDomainProvider.class) {
+>             return domainProvider;
+>         }
+421,421c512,512
+<         if (type == CommandManager.class) return getCommandManager ();
+---
+>         if (type == IUndoContext.class) {
+422,422d512
+< 
+451a544,548
+>         getEditDomain ().getCommandStack ().dispose ();
+>         if (historyListener != null) {
+>             getOperationHistory ().removeOperationHistoryListener (historyListener);
+>         }
+>         getOperationHistory ().dispose (getUndoContext (), true, true, true);
+527a625,625
+>         editDomain.setActionManager (createActionManager ());
+527,527c624,624
+<         setEditDomain (new DiagramEditDomain (this));
+---
+>         DiagramEditDomain editDomain = new DiagramEditDomain (this);
+528,528c626,626
+<         configureDiagramEditDomain ();
+---
+>         setEditDomain (editDomain);
+531a630,648
+>         DefaultEditDomain editDomain = getEditDomain ();
+>         if (editDomain != null) {
+>             CommandStack stack = editDomain.getCommandStack ();
+>             if (stack != null) {
+>                 stack.dispose ();
+>             }
+>             DiagramCommandStack diagramStack = new DiagramCommandStack (getDiagramEditDomain ());
+>             diagramStack.setOperationHistory (getOperationHistory ());
+>             diagramStack.setUndoContext (getUndoContext ());
+>             editDomain.setCommandStack (diagramStack);
+>         }
+>     }
+> 
+>     protected ActionManager createActionManager () {
+>         return new ActionManager (createOperationHistory ());
+>     }
+> 
+>     protected IOperationHistory createOperationHistory () {
+>         return OperationHistoryFactory.getOperationHistory ();
+532,532d629
+<         getEditDomain ().setCommandStack (new DiagramCommandStack (getDiagramEditDomain ()));
+541a658,658
+>         configureDiagramEditDomain ();
+580a698,719
+>     protected IOperationHistory getOperationHistory () {
+>         return getActionManager ().getOperationHistory ();
+>     }
+> 
+>     protected EditingDomain getEditingDomain () {
+>         return TransactionUtil.getEditingDomain (getDiagram ());
+>     }
+> 
+>     protected IUndoContext getUndoContext () {
+>         if (undoContext == null) {
+>             TransactionalEditingDomain domain = (TransactionalEditingDomain) getEditingDomain ();
+>             if (domain != null) {
+>                 undoContext = new EditingDomainUndoContext (domain);
+>             } else {
+>                 undoContext = new ObjectUndoContext (this);
+>             }
+>         }
+>         return undoContext;
+>     }
+> 
+>     protected void setUndoContext (IUndoContext context) {
+>         this.undoContext = context;
+581,582d697
+<     protected CommandManager getCommandManager () {
+<         return getActionManager ().getCommandManager ();
+695,695c832,832
+<             DiagramRulerProvider vertProvider = new DiagramRulerProvider (verticalRuler, root.getMapMode ());
+---
+>             DiagramRulerProvider vertProvider = new DiagramRulerProvider ((TransactionalEditingDomain) getEditingDomain (), verticalRuler, root.getMapMode ());
+701,701c838,838
+<             DiagramRulerProvider horzProvider = new DiagramRulerProvider (horizontalRuler, root.getMapMode ());
+---
+>             DiagramRulerProvider horzProvider = new DiagramRulerProvider ((TransactionalEditingDomain) getEditingDomain (), horizontalRuler, root.getMapMode ());

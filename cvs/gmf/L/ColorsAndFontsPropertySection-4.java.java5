@@ -1,0 +1,437 @@
+package org.eclipse.gmf.runtime.diagram.ui.properties.sections.appearance;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.jface.dialogs.IDialogConstants;
+
+import org.eclipse.jface.resource.CompositeImageDescriptor;
+
+import org.eclipse.jface.viewers.ISelection;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.custom.CCombo;
+
+import org.eclipse.swt.events.PaintEvent;
+
+import org.eclipse.swt.events.PaintListener;
+
+import org.eclipse.swt.events.SelectionAdapter;
+
+import org.eclipse.swt.events.SelectionEvent;
+
+import org.eclipse.swt.graphics.GC;
+
+import org.eclipse.swt.graphics.Image;
+
+import org.eclipse.swt.graphics.ImageData;
+
+import org.eclipse.swt.graphics.PaletteData;
+
+import org.eclipse.swt.graphics.Point;
+
+import org.eclipse.swt.graphics.RGB;
+
+import org.eclipse.swt.graphics.Rectangle;
+
+import org.eclipse.swt.layout.GridLayout;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.swt.widgets.CoolBar;
+
+import org.eclipse.swt.widgets.CoolItem;
+
+import org.eclipse.swt.widgets.Group;
+
+import org.eclipse.swt.widgets.ToolBar;
+
+import org.eclipse.swt.widgets.ToolItem;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.diagram.ui.IPreferenceConstants;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.util.FontHelper;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.Properties;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.internal.l10n.ResourceManager;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.sections.AbstractNotationPropertiesSection;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.FigureUtilities;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class ColorsAndFontsPropertySection extends AbstractNotationPropertiesSection {
+    protected static final String FONT_COLOR_COMMAND_NAME = ResourceManager.getI18NString ("FontColor.commandText") + StringStatics.SPACE + VALUE_CHANGED_STRING;
+    protected static final String LINE_COLOR_COMMAND_NAME = ResourceManager.getI18NString ("LineColor.commandText") + StringStatics.SPACE + VALUE_CHANGED_STRING;
+    protected static final String FONT_COMMAND_NAME = ResourceManager.getI18NString ("Font.commandText") + StringStatics.SPACE + VALUE_CHANGED_STRING;
+    static protected final String FILL_COLOR_COMMAND_NAME = ResourceManager.getI18NString ("FillColor.commandText") + StringStatics.SPACE + VALUE_CHANGED_STRING;
+    protected static final String FILL_COLOR_IMAGE_NAME = "fill_color.gif";
+    protected static final String BOLD_IMAGE_NAME = "bold.gif";
+    protected static final String ITALIC_IMAGE_NAME = "italic.gif";
+    protected static final String FONTS_AND_COLORS_LABEL = ResourceManager.getI18NString ("FontAndColor.nameLabel");
+    protected ToolItem fillColorButton;
+    protected RGB fillColor = null;
+    protected CCombo fontFamilyCombo;
+    private CCombo fontSizeCombo;
+    private ToolItem fontBoldButton;
+    private ToolItem fontItalicButton;
+    protected static class ColorOverlayImageDescriptor extends CompositeImageDescriptor {
+        private static final Point ICON_SIZE = new Point (16, 16);
+        private ImageData basicImgData;
+        private RGB rgb;
+
+        public ColorOverlayImageDescriptor (ImageData basicImgData, RGB rgb) {
+            this.basicImgData = basicImgData;
+            this.rgb = rgb;
+        }
+
+        protected void drawCompositeImage (int width, int height) {
+            if (rgb != null) {
+                ImageData colorBar = new ImageData (width, height / 5, 1, new PaletteData (new RGB [] {rgb}));
+                drawImage (colorBar, 0, height - height / 5);
+            }
+            drawImage (basicImgData, 0, 0);
+        }
+
+        protected Point getSize () {
+            return ICON_SIZE;
+        }
+
+    }
+
+    protected static final RGB DEFAULT_PREF_COLOR = new RGB (0, 0, 0);
+    private static final String FONT_COLOR_IMAGE_NAME = "font_color.gif";
+    private static final String LINE_COLOR_IMAGE_NAME = "line_color.gif";
+    protected ToolItem fontColorButton;
+    protected ToolItem lineColorButton;
+    protected RGB fontColor;
+    protected RGB lineColor;
+    private CoolBar coolBar;
+    protected Group colorsAndFontsGroup;
+
+    protected void initializeControls (Composite parent) {
+        createPaintedSectionComposite (parent);
+        createFontsAndColorsGroups (composite);
+    }
+
+    protected Group createFontsAndColorsGroups (Composite parent) {
+        colorsAndFontsGroup = getWidgetFactory ().createGroup (parent, FONTS_AND_COLORS_LABEL);
+        GridLayout layout = new GridLayout (1, false);
+        colorsAndFontsGroup.setLayout (layout);
+        ToolBar toolBar = createFontsGroup (colorsAndFontsGroup);
+        CoolItem coolItem = new CoolItem (coolBar, SWT.NULL);
+        coolItem.setControl (toolBar);
+        Point size = toolBar.computeSize (SWT.DEFAULT, SWT.DEFAULT);
+        Point coolSize = coolItem.computeSize (size.x, size.y);
+        coolItem.setSize (coolSize);
+        colorsAndFontsGroup.addPaintListener (new PaintListener () {
+
+            public void paintControl (PaintEvent e) {
+                Rectangle bounds = colorsAndFontsGroup.getClientArea ();
+                GC gc = e.gc;
+                gc.setForeground (gc.getBackground ());
+                gc.setBackground (coolBar.getBackground ());
+                gc.fillGradientRectangle (1, bounds.height / 2, bounds.width + 3, bounds.height - 14, true);
+            }
+
+        }
+
+        );
+        return colorsAndFontsGroup;
+    }
+
+    protected ToolBar createFontsGroup (Composite parent) {
+        Composite familySize = getWidgetFactory ().createComposite (parent);
+        GridLayout layout = new GridLayout (2, false);
+        layout.horizontalSpacing = 0;
+        layout.verticalSpacing = 0;
+        layout.marginHeight = 0;
+        layout.marginWidth = 0;
+        familySize.setLayout (layout);
+        fontFamilyCombo = getWidgetFactory ().createCCombo (familySize, SWT.DROP_DOWN | SWT.READ_ONLY | SWT.BORDER);
+        fontFamilyCombo.setItems (FontHelper.getFontNames ());
+        fontFamilyCombo.addSelectionListener (new SelectionAdapter () {
+
+            public void widgetSelected (SelectionEvent event) {
+                updateFontFamily ();
+            }
+
+        }
+
+        );
+        fontSizeCombo = getWidgetFactory ().createCCombo (familySize, SWT.DROP_DOWN | SWT.READ_ONLY | SWT.BORDER);
+        fontSizeCombo.setItems (FontHelper.getFontSizes ());
+        fontSizeCombo.addSelectionListener (new SelectionAdapter () {
+
+            public void widgetSelected (SelectionEvent event) {
+                updateFontSize ();
+            }
+
+        }
+
+        );
+        coolBar = new CoolBar (parent, SWT.BORDER);
+        ToolBar toolBar = new ToolBar (coolBar, SWT.FLAT);
+        fontBoldButton = new ToolItem (toolBar, SWT.CHECK);
+        fontBoldButton.setImage (ResourceManager.getInstance ().getImage (BOLD_IMAGE_NAME));
+        fontItalicButton = new ToolItem (toolBar, SWT.CHECK);
+        fontItalicButton.setImage (ResourceManager.getInstance ().getImage (ITALIC_IMAGE_NAME));
+        fontBoldButton.addSelectionListener (new SelectionAdapter () {
+
+            public void widgetSelected (SelectionEvent event) {
+                updateFontBold ();
+            }
+
+        }
+
+        );
+        fontItalicButton.addSelectionListener (new SelectionAdapter () {
+
+            public void widgetSelected (SelectionEvent event) {
+                updateFontItalic ();
+            }
+
+        }
+
+        );
+        new ToolItem (toolBar, SWT.SEPARATOR);
+        fontColorButton = new ToolItem (toolBar, SWT.DROP_DOWN);
+        fontColorButton.setImage (ResourceManager.getInstance ().getImage (FONT_COLOR_IMAGE_NAME));
+        fontColorButton.addSelectionListener (new SelectionAdapter () {
+
+            public void widgetSelected (SelectionEvent event) {
+                changeFontColor (event);
+            }
+
+        }
+
+        );
+        new ToolItem (toolBar, SWT.SEPARATOR);
+        lineColorButton = new ToolItem (toolBar, SWT.DROP_DOWN);
+        lineColorButton.setImage (ResourceManager.getInstance ().getImage (LINE_COLOR_IMAGE_NAME));
+        lineColorButton.addSelectionListener (new SelectionAdapter () {
+
+            public void widgetSelected (SelectionEvent event) {
+                changeLineColor (event);
+            }
+
+        }
+
+        );
+        fillColorButton = new ToolItem (toolBar, SWT.DROP_DOWN);
+        fillColorButton.setImage (ResourceManager.getInstance ().getImage (FILL_COLOR_IMAGE_NAME));
+        fillColorButton.setEnabled (false);
+        if (isReadOnly ()) {
+            lineColorButton.setEnabled (false);
+            fontFamilyCombo.setEnabled (false);
+            fontSizeCombo.setEditable (false);
+            fontBoldButton.setEnabled (false);
+            fontItalicButton.setEnabled (false);
+            fontColorButton.setEnabled (false);
+        }
+        return toolBar;
+    }
+
+    protected Iterator getInputIterator () {
+        return getInput ().iterator ();
+    }
+
+    protected void changeLineColor (SelectionEvent event) {
+        lineColor = changeColor (event, lineColorButton, IPreferenceConstants.PREF_LINE_COLOR, Properties.ID_LINECOLOR, LINE_COLOR_COMMAND_NAME, LINE_COLOR_IMAGE_NAME);
+    }
+
+    protected void changeFontColor (SelectionEvent event) {
+        fontColor = changeColor (event, fontColorButton, IPreferenceConstants.PREF_FONT_COLOR, Properties.ID_FONTCOLOR, FONT_COLOR_COMMAND_NAME, FONT_COLOR_IMAGE_NAME);
+    }
+
+    protected RGB changeColor (SelectionEvent event, ToolItem button, String preferenceId, final String propertyId, String commandName, String imageName) {
+        ColorPalettePopup popup = new ColorPalettePopup (button.getParent ().getShell (), preferenceId, IDialogConstants.BUTTON_BAR_HEIGHT);
+        Rectangle r = button.getBounds ();
+        Point location = button.getParent ().toDisplay (r.x, r.y);
+        popup.open (new Point (location.x, location.y + r.height));
+        if (popup.getSelectedColor () != null) {
+            final RGB color = popup.getSelectedColor ();
+            if (color != null) {
+                List commands = new ArrayList ();
+                Iterator it = getInputIterator ();
+                while (it.hasNext ()) {
+                    final IGraphicalEditPart ep = (IGraphicalEditPart) it.next ();
+                    commands.add (createCommand (commandName, ((View) ep.getModel ()).eResource (), new Runnable () {
+
+                        public void run () {
+                            ep.setPropertyValue (propertyId, FigureUtilities.RGBToInteger (color));
+                        }
+
+                    }
+
+                    ));
+                }
+                executeAsCompositeCommand (commandName, commands);
+                Image overlyedImage = new ColorOverlayImageDescriptor (ResourceManager.getInstance ().getImage (imageName).getImageData (), color).createImage ();
+                button.setImage (overlyedImage);
+            }
+            return color;
+        }
+        return null;
+    }
+
+    protected void updateFontBold () {
+        List commands = new ArrayList ();
+        Iterator it = getInputIterator ();
+        while (it.hasNext ()) {
+            final IGraphicalEditPart ep = (IGraphicalEditPart) it.next ();
+            commands.add (createCommand (FONT_COMMAND_NAME, ((View) ep.getModel ()).eResource (), new Runnable () {
+
+                public void run () {
+                    ep.setPropertyValue (Properties.ID_FONTBOLD, new Boolean (fontBoldButton.getSelection ()));
+                }
+
+            }
+
+            ));
+        }
+        executeAsCompositeCommand (FONT_COMMAND_NAME, commands);
+    }
+
+    protected void updateFontItalic () {
+        List commands = new ArrayList ();
+        Iterator it = getInputIterator ();
+        while (it.hasNext ()) {
+            final IGraphicalEditPart ep = (IGraphicalEditPart) it.next ();
+            commands.add (createCommand (FONT_COMMAND_NAME, ((View) ep.getModel ()).eResource (), new Runnable () {
+
+                public void run () {
+                    ep.setPropertyValue (Properties.ID_FONTITALIC, new Boolean (fontItalicButton.getSelection ()));
+                }
+
+            }
+
+            ));
+        }
+        executeAsCompositeCommand (FONT_COMMAND_NAME, commands);
+        getSingleInput ().refresh ();
+    }
+
+    protected void updateFontFamily () {
+        if (fontFamilyCombo.getText () != null || ! fontFamilyCombo.getText ().equals ("")) {
+            List commands = new ArrayList ();
+            Iterator it = getInputIterator ();
+            while (it.hasNext ()) {
+                final IGraphicalEditPart ep = (IGraphicalEditPart) it.next ();
+                commands.add (createCommand (FONT_COMMAND_NAME, ((View) ep.getModel ()).eResource (), new Runnable () {
+
+                    public void run () {
+                        ep.setPropertyValue (Properties.ID_FONTNAME, fontFamilyCombo.getText ());
+                    }
+
+                }
+
+                ));
+            }
+            executeAsCompositeCommand (FONT_COMMAND_NAME, commands);
+        }
+    }
+
+    protected void updateFontSize () {
+        if (fontSizeCombo.getText () != null || ! fontSizeCombo.getText ().equals ("")) {
+            List commands = new ArrayList ();
+            Iterator it = getInputIterator ();
+            while (it.hasNext ()) {
+                final IGraphicalEditPart ep = (IGraphicalEditPart) it.next ();
+                commands.add (createCommand (FONT_COMMAND_NAME, ((View) ep.getModel ()).eResource (), new Runnable () {
+
+                    public void run () {
+                        ep.setPropertyValue (Properties.ID_FONTSIZE, new Integer (fontSizeCombo.getText ()));
+                    }
+
+                }
+
+                ));
+            }
+            executeAsCompositeCommand (FONT_COMMAND_NAME, commands);
+        }
+    }
+
+    public void refresh () {
+        if (! isDisposed ()) {
+            Image overlyedImage = new ColorOverlayImageDescriptor (ResourceManager.getInstance ().getImage (FONT_COLOR_IMAGE_NAME).getImageData (), fontColor).createImage ();
+            fontColorButton.setImage (overlyedImage);
+            overlyedImage = new ColorOverlayImageDescriptor (ResourceManager.getInstance ().getImage (LINE_COLOR_IMAGE_NAME).getImageData (), lineColor).createImage ();
+            lineColorButton.setImage (overlyedImage);
+            executeAsReadAction (new MRunnable () {
+
+                public Object run () {
+                    IGraphicalEditPart ep = getSingleInput ();
+                    if (ep != null) {
+                        fontFamilyCombo.setText ((String) getSingleInput ().getPropertyValue (Properties.ID_FONTNAME));
+                        fontSizeCombo.setText (Integer.toString (((Integer) getSingleInput ().getPropertyValue (Properties.ID_FONTSIZE)).intValue ()));
+                        fontBoldButton.setSelection (((Boolean) getSingleInput ().getPropertyValue (Properties.ID_FONTBOLD)).booleanValue ());
+                        fontItalicButton.setSelection (((Boolean) getSingleInput ().getPropertyValue (Properties.ID_FONTITALIC)).booleanValue ());
+                    }
+                    return null;
+                }
+
+            }
+
+            );
+        }
+    }
+
+    public void update (final Notification notification, final EObject element) {
+        if (! isDisposed () && isCurrentSelection (notification, element)) {
+            postUpdateRequest (new Runnable () {
+
+                public void run () {
+                    if (! isDisposed () && isCurrentSelection (notification, element) && ! isNotifierDeleted (notification)) updateColorCache ();
+
+                    refresh ();
+                }
+
+            }
+
+            );
+        }
+    }
+
+    protected void updateColorCache () {
+        executeAsReadAction (new MRunnable () {
+
+            public Object run () {
+                IGraphicalEditPart ep = getSingleInput ();
+                if (ep != null) {
+                    fontColor = FigureUtilities.integerToRGB ((Integer) ep.getPropertyValue (Properties.ID_FONTCOLOR));
+                    lineColor = FigureUtilities.integerToRGB ((Integer) ep.getPropertyValue (Properties.ID_LINECOLOR));
+                }
+                return null;
+            }
+
+        }
+
+        );
+    }
+
+    public void setInput (IWorkbenchPart part, ISelection selection) {
+        super.setInput (part, selection);
+        updateColorCache ();
+    }
+
+}
+

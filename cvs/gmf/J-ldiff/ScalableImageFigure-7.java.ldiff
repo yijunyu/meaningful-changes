@@ -1,0 +1,149 @@
+44a45,49
+> 	private static final int
+> 		FLAG_USE_DEFAULT_IMAGESIZE = MAX_FLAG << 1,
+> 		FLAG_MAINTAIN_ASPECT_RATIO = MAX_FLAG << 2,
+> 		FLAG_ANTI_ALIAS = MAX_FLAG << 3,
+> 		FLAG_USE_ORIGINAL_COLORS = MAX_FLAG << 4;
+45,46d44
+<     /** The cached SVGImage */
+<     private RenderedImage renderedImage = null;
+47a51,52
+> 	/** The original <code>RenderedImage</code> at 100% device coordinate size */
+>     private RenderedImage origRenderedImage = null;
+48,48d50
+<     private boolean useDefaultImageSize = false;
+49a54,55
+>     /** The cached <code>RenderedImage</code> that was last painted to the graphics context */
+>     private RenderedImage lastRenderedImage = null;
+50,54d53
+<     private boolean maintainAspectRatio = true;
+<     
+<     private boolean antiAlias = true;
+<     
+<     private boolean useOriginalColors = false;
+61a63,63
+> 		return getFlag(FLAG_ANTI_ALIAS);
+62,62c229,229
+< 		return antiAlias;
+---
+> 		return newRenderedImage;
+71a73,73
+> 		setFlag(FLAG_ANTI_ALIAS, antiAlias);
+72,72d72
+< 		this.antiAlias = antiAlias;
+82a84,84
+> 		return getFlag(FLAG_MAINTAIN_ASPECT_RATIO);
+83,83c279,279
+< 		return maintainAspectRatio;
+---
+> 		return origRenderedImage;
+93a95,95
+> 		setFlag(FLAG_MAINTAIN_ASPECT_RATIO, maintainAspectRatio);
+94,94d94
+< 		this.maintainAspectRatio = maintainAspectRatio;
+107a109,114
+> 		this.origRenderedImage = RenderedImageFactory.getInstance(byteOS.toByteArray());
+> 		
+> 		setFlag(FLAG_USE_DEFAULT_IMAGESIZE, false);
+> 		setFlag(FLAG_USE_ORIGINAL_COLORS, false);
+> 		setFlag(FLAG_MAINTAIN_ASPECT_RATIO, true);
+> 		setFlag(FLAG_ANTI_ALIAS, true);
+108,108d108
+< 		this.renderedImage = RenderedImageFactory.getInstance(byteOS.toByteArray());
+115,115c288,288
+< 		this.renderedImage = renderedImage;
+---
+> 		this.origRenderedImage = renderedImage;
+124,124c130,130
+< 		this.renderedImage = renderedImage;
+---
+> 		this(renderedImage, false, false, antiAlias);
+125,125d130
+< 		setAntiAlias(antiAlias);
+138a144,148
+> 		origRenderedImage = renderedImage;
+> 		setFlag(FLAG_USE_DEFAULT_IMAGESIZE, useDefaultImageSize);
+> 		setFlag(FLAG_USE_ORIGINAL_COLORS, useOriginalColors);
+> 		setFlag(FLAG_MAINTAIN_ASPECT_RATIO, true);
+> 		setFlag(FLAG_ANTI_ALIAS, antiAlias);
+139,141d143
+< 		this(renderedImage, antiAlias);
+< 		this.useDefaultImageSize = useDefaultImageSize;
+< 		this.useOriginalColors = useOriginalColors;
+165a173,173
+> 			if (getFlag(FLAG_USE_DEFAULT_IMAGESIZE)) {
+166,166d172
+< 			if (useDefaultImageSize) {
+168,168c175,175
+< 					RenderedImage rndImage = getRenderedImage(new Dimension(0, 0));
+---
+> 					setRenderedImage( getRenderedImage(new Dimension(0, 0)));
+170,171d176
+< 					if (rndImage != null)
+< 						swtImage = rndImage.getSWTImage();
+183a191,201
+> 	/* (non-Javadoc)
+> 	 * @see org.eclipse.draw2d.Figure#setBounds(org.eclipse.draw2d.geometry.Rectangle)
+> 	 */
+> 	public void setBounds(Rectangle rect) {
+> 		Dimension devDim = new Dimension(rect.getSize());
+> 		MapModeUtil.getMapMode(this).LPtoDP(devDim);
+> 		setRenderedImage( getRenderedImage(devDim) );
+> 		
+> 		super.setBounds(rect);
+> 	}
+> 
+190a209,209
+> 		return getRenderedImage().getSWTImage();
+191,199d208
+< 		Dimension absDim = new Dimension(getBounds().getSize());
+< 		translateToAbsolute(absDim);
+< 		
+< 		RenderedImage rndImage = getRenderedImage(absDim);
+< 		
+< 		if (rndImage != null)
+< 			return rndImage.getSWTImage();
+< 		
+< 		return null;
+219,219c177,177
+< 		if (getRenderedImage() != null) {
+---
+> 					if (getRenderedImage() != null)
+220,220d177
+< 			if (getRenderedImage().equals(newRenderedImage)) {
+221,221c178,178
+< 				newRenderedImage = getRenderedImage();
+---
+> 						swtImage = getRenderedImage().getSWTImage();
+222,227d178
+< 			}
+< 		}
+< 		
+< 		setRenderedImage(newRenderedImage);
+< 		
+< 		return getRenderedImage();
+235a238,238
+> 		return getFlag(FLAG_USE_ORIGINAL_COLORS);
+236,236d237
+< 		return useOriginalColors;
+251,251c253,253
+<            	((DrawableRenderedImage) graphics).drawRenderedImage(getRenderedImage(new Dimension(getBounds().width, getBounds().height)),
+---
+>            	lastRenderedImage = ((DrawableRenderedImage) graphics).drawRenderedImage(getRenderedImage(new Dimension(getBounds().width, getBounds().height)),
+252a255,255
+>            	assert lastRenderedImage != null;
+253a257,257
+> 			graphics.drawImage(getRenderedImage().getSWTImage(), x, y); 
+254,259d256
+< 		   // translate to device coordinates for rendering
+< 		   area = (Rectangle)MapModeUtil.getMapMode(this).LPtoDP(area);
+<            RenderedImage rndImage = getRenderedImage(new Dimension(area.width, area.height));
+<            if (rndImage != null && renderedImage.getSWTImage()!=null)
+<            		graphics.drawImage(renderedImage.getSWTImage(), x, y); 
+<            	// no need to dispose img since it is managed by the SVGImage object lifetime
+281,281d278
+< 		return renderedImage;
+290,290c121,121
+< 		this.renderedImage = renderedImage;
+---
+> 		this(renderedImage, false, false, true);

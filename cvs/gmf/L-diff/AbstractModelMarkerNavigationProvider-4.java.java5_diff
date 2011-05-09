@@ -1,0 +1,59 @@
+25c25,33
+< import org.eclipse.ui.IEditorPart;
+---
+> import org.eclipse.emf.edit.domain.EditingDomain;
+> 
+> import org.eclipse.emf.edit.domain.IEditingDomainProvider;
+> 
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+29c37,39
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+---
+> import org.eclipse.gmf.runtime.emf.ui.internal.MslUIDebugOptions;
+> 
+> import org.eclipse.gmf.runtime.emf.ui.internal.MslUIPlugin;
+31c41
+< import org.eclipse.gmf.runtime.emf.core.util.OperationUtil;
+---
+> import org.eclipse.gmf.runtime.emf.ui.internal.MslUIStatusCodes;
+33c43
+< import org.eclipse.gmf.runtime.emf.core.util.ResourceUtil;
+---
+> import org.eclipse.ui.IEditorPart;
+35a46
+>     private TransactionalEditingDomain editingDomain;
+39c50,59
+<         OperationUtil.runAsRead (new MRunnable () {
+---
+>         IEditingDomainProvider domainProvider = (IEditingDomainProvider) getEditor ().getAdapter (IEditingDomainProvider.class);
+>         if (domainProvider != null) {
+>             EditingDomain domain = domainProvider.getEditingDomain ();
+>             if (domain instanceof TransactionalEditingDomain) {
+>                 editingDomain = (TransactionalEditingDomain) domain;
+>             }
+>         }
+>         if (editingDomain != null) {
+>             try {
+>                 editingDomain.runExclusive (new Runnable () {
+41c61
+<             public Object run () {
+---
+>                     public void run () {
+43d62
+<                 return null;
+48a68,72
+>             } catch (InterruptedException e) {
+>                 Trace.catching (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "gotoMarker", e);
+>                 Log.error (MslUIPlugin.getDefault (), MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getLocalizedMessage (), e);
+>             }
+>         }
+56c80,82
+<                 result = ResourceUtil.load (resourcePath.toOSString ());
+---
+>                 ResourceSet resourceSet = editingDomain.getResourceSet ();
+>                 URI uri = URI.createFileURI (resourcePath.toOSString ());
+>                 result = resourceSet.getResource (uri, true);

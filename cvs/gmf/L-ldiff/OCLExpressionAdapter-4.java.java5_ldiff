@@ -1,0 +1,91 @@
+14a15,20
+> import org.eclipse.emf.ocl.expressions.CollectionItem;
+> 
+> import org.eclipse.emf.ocl.expressions.CollectionLiteralExp;
+> 
+> import org.eclipse.emf.ocl.expressions.CollectionLiteralPart;
+> 
+18a25,26
+> import org.eclipse.emf.ocl.expressions.TypeExp;
+> 
+32a41,42
+> import org.eclipse.emf.ocl.parser.SemanticException;
+> 
+36a47,52
+> import org.eclipse.emf.ocl.types.CollectionType;
+> 
+> import org.eclipse.emf.ocl.types.TypeType;
+> 
+> import org.eclipse.emf.ocl.types.impl.TypeUtil;
+> 
+134,134c150,150
+<     boolean isOclConformantTo (EClassifier oclType) {
+---
+>     boolean isOclConformantTo (EClassifier anotherOclType) {
+135a152,174
+>         boolean isTargetCollection = anotherOclType instanceof CollectionType;
+>         if (isTargetCollection) {
+>             CollectionType oclCollectionType = (CollectionType) anotherOclType;
+>             if (oclCollectionType.getElementType () != null) {
+>                 anotherOclType = oclCollectionType.getElementType ();
+>             }
+>         }
+>         if (thisOclType instanceof CollectionType) {
+>             if (! isTargetCollection) {
+>                 return false;
+>             }
+>             CollectionType thisOclCollectionType = (CollectionType) thisOclType;
+>             if (thisOclCollectionType.getElementType () != null) {
+>                 thisOclType = thisOclCollectionType.getElementType ();
+>             }
+>         }
+>         if (thisOclType instanceof TypeType) {
+>             EClassifier thisRefferedClassifier = getReferredType (query.getExpression ());
+>             if (thisRefferedClassifier != null) {
+>                 return DefUtils.getCanonicalEClassifier (anotherOclType).isInstance (thisRefferedClassifier);
+>             }
+>         }
+>         if ((thisOclType.getInstanceClass () == Integer.class || thisOclType.getInstanceClass () == int.class) && (anotherOclType.getInstanceClass () == Double.class || anotherOclType.getInstanceClass () == double.class)) {
+136,136d151
+<         if ((oclType.getInstanceClass () == Integer.class || oclType.getInstanceClass () == int.class) && (thisOclType.getInstanceClass () == Double.class || thisOclType.getInstanceClass () == double.class)) {
+138a177,177
+>         if (thisOclType instanceof EDataType && anotherOclType instanceof EDataType) {
+139,139d176
+<         if (thisOclType instanceof EDataType && oclType instanceof EDataType) {
+140,140c178,178
+<             if (EDataTypeConversion.isConvertable ((EDataType) oclType, (EDataType) thisOclType)) {
+---
+>             if (EDataTypeConversion.isConvertable ((EDataType) anotherOclType, (EDataType) thisOclType)) {
+143a182,211
+>         return DefUtils.checkTypeAssignmentCompatibility (anotherOclType, thisOclType);
+>     }
+> 
+>     static EClassifier getReferredType (OCLExpression oclExpression) {
+>         EClassifier referredType = null;
+>         if (oclExpression instanceof TypeExp) {
+>             referredType = ((TypeExp) oclExpression).getReferredType ();
+>         } else if (oclExpression instanceof CollectionLiteralExp) {
+>             for (Iterator it = ((CollectionLiteralExp) oclExpression).getPart ().iterator ();
+>             it.hasNext ();) {
+>                 CollectionLiteralPart nextPart = (CollectionLiteralPart) it.next ();
+>                 if (nextPart.getType () instanceof TypeType && nextPart instanceof CollectionItem) {
+>                     EClassifier nextType = getReferredType (((CollectionItem) nextPart).getItem ());
+>                     if (referredType == null) {
+>                         referredType = nextType;
+>                     } else {
+>                         try {
+>                             if (nextType != null) {
+>                                 referredType = TypeUtil.commonSuperType (referredType, nextType);
+>                             }
+>                         } catch (SemanticException e) {
+>                             assert false;
+>                             return null;
+>                         }
+>                     }
+>                 }
+>             }
+>         }
+> 
+>         return referredType;
+144,144d181
+<         return DefUtils.checkTypeAssignmentCompatibility (oclType, thisOclType);

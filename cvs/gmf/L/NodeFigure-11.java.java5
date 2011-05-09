@@ -1,0 +1,173 @@
+package org.eclipse.gmf.runtime.gef.ui.figures;
+
+import java.util.Hashtable;
+
+import java.util.Iterator;
+
+import org.eclipse.draw2d.ConnectionAnchor;
+
+import org.eclipse.draw2d.Figure;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.geometry.Insets;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.PrecisionPoint;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gef.handles.HandleBounds;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.BaseSlidableAnchor;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.IAnchorableFigure;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.IPolygonAnchorableFigure;
+
+import org.eclipse.gmf.runtime.draw2d.ui.internal.figures.TransparentBorder;
+
+public class NodeFigure extends Figure implements HandleBounds, IAnchorableFigure, IPolygonAnchorableFigure {
+    private Hashtable connectionAnchors;
+    private int lineWidth = 1;
+    private int lineStyle = Graphics.LINE_SOLID;
+    static public final String szAnchor = "";
+
+    public NodeFigure () {
+    }
+
+    public Rectangle getHandleBounds () {
+        Insets insets = new Insets (0, 0, 0, 0);
+        if (getBorder () instanceof TransparentBorder) {
+            insets = ((TransparentBorder) getBorder ()).getTransparentInsets (this);
+        }
+        return new Rectangle (getBounds ().x + insets.left, getBounds ().y + insets.top, getBounds ().width - (insets.right + insets.left), getBounds ().height - (insets.bottom + insets.top));
+    }
+
+    public ConnectionAnchor getConnectionAnchor (String terminal) {
+        ConnectionAnchor connectAnchor = (ConnectionAnchor) getConnectionAnchors ().get (terminal);
+        if (connectAnchor == null) {
+            if (terminal.equals (szAnchor)) {
+                connectAnchor = createDefaultAnchor ();
+                getConnectionAnchors ().put (terminal, connectAnchor);
+            } else {
+                connectAnchor = createAnchor (SlidableAnchor.parseTerminalString (terminal));
+            }
+        }
+        return connectAnchor;
+    }
+
+    public String getConnectionAnchorTerminal (ConnectionAnchor c) {
+        if (c instanceof SlidableAnchor) {
+            return ((SlidableAnchor) c).getTerminal ();
+        }
+        if (getConnectionAnchors ().containsValue (c)) {
+            Iterator iter = getConnectionAnchors ().keySet ().iterator ();
+            String key;
+            while (iter.hasNext ()) {
+                key = (String) iter.next ();
+                if (getConnectionAnchors ().get (key).equals (c)) return key;
+
+            }
+        }
+        getConnectionAnchor (szAnchor);
+        return szAnchor;
+    }
+
+    public ConnectionAnchor getSourceConnectionAnchorAt (Point p) {
+        return createConnectionAnchor (p);
+    }
+
+    public ConnectionAnchor getTargetConnectionAnchorAt (Point p) {
+        return createConnectionAnchor (p);
+    }
+
+    protected ConnectionAnchor createConnectionAnchor (Point p) {
+        if (p == null) {
+            return getConnectionAnchor (szAnchor);
+        } else {
+            Point temp = p.getCopy ();
+            translateToRelative (temp);
+            PrecisionPoint pt = BaseSlidableAnchor.getAnchorRelativeLocation (temp, getBounds ());
+            if (isDefaultAnchorArea (pt)) return getConnectionAnchor (szAnchor);
+
+            return createAnchor (pt);
+        }
+    }
+
+    protected boolean isDefaultAnchorArea (PrecisionPoint p) {
+        return p.preciseX >= getSlidableAnchorArea () / 2 && p.preciseX <= 1 - getSlidableAnchorArea () / 2 && p.preciseY >= getSlidableAnchorArea () / 2 && p.preciseY <= 1 - getSlidableAnchorArea () / 2;
+    }
+
+    protected void paintFigure (Graphics graphics) {
+        if (isOpaque () && getBorder () != null) {
+            Rectangle tempRect = new Rectangle (getBounds ());
+            tempRect.crop (getBorder ().getInsets (this));
+            graphics.fillRectangle (tempRect);
+            return;
+        }
+        super.paintFigure (graphics);
+    }
+
+    protected Hashtable getConnectionAnchors () {
+        if (connectionAnchors == null) connectionAnchors = new Hashtable (1);
+
+        return connectionAnchors;
+    }
+
+    protected double getSlidableAnchorArea () {
+        return 0.5;
+    }
+
+    protected ConnectionAnchor createDefaultAnchor () {
+        return new SlidableAnchor (this);
+    }
+
+    protected ConnectionAnchor createAnchor (PrecisionPoint p) {
+        if (p == null) return createDefaultAnchor ();
+
+        return new SlidableAnchor (this, p);
+    }
+
+    public static String getDefaultAnchorID () {
+        return szAnchor;
+    }
+
+    public PointList getPolygonPoints () {
+        PointList points = new PointList (5);
+        Rectangle anchorableRectangle = getHandleBounds ();
+        points.addPoint (anchorableRectangle.x, anchorableRectangle.y);
+        points.addPoint (anchorableRectangle.x + anchorableRectangle.width, anchorableRectangle.y);
+        points.addPoint (anchorableRectangle.x + anchorableRectangle.width, anchorableRectangle.y + anchorableRectangle.height);
+        points.addPoint (anchorableRectangle.x, anchorableRectangle.y + anchorableRectangle.height);
+        points.addPoint (anchorableRectangle.x, anchorableRectangle.y);
+        return points;
+    }
+
+    public int getLineStyle () {
+        return lineStyle;
+    }
+
+    public int getLineWidth () {
+        return lineWidth;
+    }
+
+    public void setLineWidth (int w) {
+        if ((lineWidth == w) || (w < 0)) return;
+
+        lineWidth = w;
+        repaint ();
+    }
+
+    public void setLineStyle (int s) {
+        if (lineStyle == s) return;
+
+        lineStyle = s;
+        repaint ();
+    }
+
+}
+

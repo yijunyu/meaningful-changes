@@ -1,0 +1,86 @@
+16a17,18
+> import java.util.Set;
+> 
+76a79,80
+> import org.eclipse.gmf.runtime.notation.Node;
+> 
+89,93d92
+<     private List getDiagramConnections () {
+<         Diagram dView = ((View) host ().getModel ()).getDiagram ();
+<         return dView == null ? Collections.EMPTY_LIST : new ArrayList (dView.getEdges ());
+<     }
+< 
+314a314,321
+>         Collection children = getViewChildren ();
+>         Set connections = new HashSet ();
+>         if (getHost () instanceof IGraphicalEditPart) {
+>             IGraphicalEditPart gep = (IGraphicalEditPart) getHost ();
+>             Node node = (Node) gep.getNotationView ();
+>             getConnectionViews (connections, node, children);
+>         }
+>         return connections;
+314a337,342
+>         Iterator targetIter = node.getTargetEdges ().listIterator ();
+>         while (targetIter.hasNext ()) {
+>             Edge targetEdge = (Edge) targetIter.next ();
+>             if (shouldIncludeConnection (targetEdge, (List) viewChildren)) connections.add (targetEdge);
+> 
+>         }
+315,315d336
+<         Collection retval = new HashSet ();
+316a344,344
+>         Iterator iter = children.listIterator ();
+316,316c343,343
+<         List children = getViewChildren ();
+---
+>         List children = node.getChildren ();
+317,317d343
+<         Iterator connections = getDiagramConnections ().iterator ();
+318,318c345,345
+<         while (connections.hasNext ()) {
+---
+>         while (iter.hasNext ()) {
+319,319c346,346
+<             Edge connection = (Edge) connections.next ();
+---
+>             View viewChild = (View) iter.next ();
+319a347,357
+>             if (viewChild instanceof Node) {
+>                 getConnectionViews (connections, (Node) viewChild, viewChildren);
+>             }
+>         }
+>     }
+> 
+>     protected boolean shouldCheckForConnections (View view, Collection viewChildren) {
+>         return (view != null && (viewChildren.contains (view) || viewChildren.contains (view.eContainer ())));
+>     }
+> 
+>     protected boolean shouldIncludeConnection (Edge connection, Collection children) {
+320,320c358,358
+<             if (connection.getSource () != null && connection.getTarget () != null && shouldIncludeConnection (connection, children)) {
+---
+>         return shouldCheckForConnections (connection.getSource (), children) || shouldCheckForConnections (connection.getTarget (), children);
+321,321d358
+<                 retval.add (connection);
+322a323,335
+> 
+>     private void getConnectionViews (Set connections, Node node, Collection viewChildren) {
+>         IGraphicalEditPart gep = (IGraphicalEditPart) getHost ();
+>         View hostView = gep.getNotationView ();
+>         if (hostView != node) {
+>             if (! shouldCheckForConnections (node, viewChildren)) return;
+> 
+>         }
+>         Iterator sourceIter = node.getSourceEdges ().listIterator ();
+>         while (sourceIter.hasNext ()) {
+>             Edge sourceEdge = (Edge) sourceIter.next ();
+>             if (shouldIncludeConnection (sourceEdge, (List) viewChildren)) connections.add (sourceEdge);
+> 
+324,324d336
+<         return retval;
+327a362,362
+>         return shouldIncludeConnection (connection, (Collection) children);
+328,330d361
+<         View src = connection.getSource ();
+<         View target = connection.getTarget ();
+<         return ((src != null && target != null) && (children.contains (src) || children.contains (src.eContainer ()) || children.contains (target) || children.contains (target.eContainer ())));

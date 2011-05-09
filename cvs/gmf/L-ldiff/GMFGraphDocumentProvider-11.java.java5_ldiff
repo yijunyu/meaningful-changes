@@ -1,0 +1,60 @@
+8a9,10
+> import java.util.Collections;
+> 
+16a19,20
+> import org.eclipse.core.commands.ExecutionException;
+> 
+26a31,32
+> import org.eclipse.core.runtime.IAdaptable;
+> 
+56a63,64
+> import org.eclipse.emf.ecore.util.EcoreUtil;
+> 
+62a71,72
+> import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+> 
+78a89,90
+> import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+> 
+476a489,529
+>         } else {
+>             URI newResoruceURI;
+>             List affectedFiles = null;
+>             if (element instanceof FileEditorInput) {
+>                 IFile newFile = ((FileEditorInput) element).getFile ();
+>                 affectedFiles = Collections.singletonList (newFile);
+>                 newResoruceURI = URI.createPlatformResourceURI (newFile.getFullPath ().toString (), true);
+>             } else if (element instanceof URIEditorInput) {
+>                 newResoruceURI = ((URIEditorInput) element).getURI ();
+>             } else {
+>                 fireElementStateChangeFailed (element);
+>                 throw new CoreException (new Status (IStatus.ERROR, GMFGraphDiagramEditorPlugin.ID, 0, NLS.bind (Messages.GMFGraphDocumentProvider_IncorrectInputError, new Object [] {element, "org.eclipse.ui.part.FileEditorInput", "org.eclipse.emf.common.ui.URIEditorInput"}), null));
+>             }
+> 
+>             if (false == document instanceof IDiagramDocument) {
+>                 fireElementStateChangeFailed (element);
+>                 throw new CoreException (new Status (IStatus.ERROR, GMFGraphDiagramEditorPlugin.ID, 0, "Incorrect document used: " + document + " instead of org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDiagramDocument", null));
+>             }
+>             IDiagramDocument diagramDocument = (IDiagramDocument) document;
+>             final Resource newResource = diagramDocument.getEditingDomain ().getResourceSet ().createResource (newResoruceURI);
+>             final Diagram diagramCopy = (Diagram) EcoreUtil.copy (diagramDocument.getDiagram ());
+>             try {
+>                 new AbstractTransactionalCommand (diagramDocument.getEditingDomain (), NLS.bind (Messages.GMFGraphDocumentProvider_SaveAsOperation, diagramCopy.getName ()), affectedFiles) {
+> 
+>                     protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+>                         newResource.getContents ().add (diagramCopy);
+>                         return CommandResult.newOKCommandResult ();
+>                     }
+> 
+>                 }
+> 
+>                 .execute (monitor, null);
+>                 newResource.save (GMFGraphDiagramEditorUtil.getSaveOptions ());
+>             } catch (ExecutionException e) {
+>                 fireElementStateChangeFailed (element);
+>                 throw new CoreException (new Status (IStatus.ERROR, GMFGraphDiagramEditorPlugin.ID, 0, e.getLocalizedMessage (), null));
+>             } catch (IOException e) {
+>                 fireElementStateChangeFailed (element);
+>                 throw new CoreException (new Status (IStatus.ERROR, GMFGraphDiagramEditorPlugin.ID, 0, e.getLocalizedMessage (), null));
+>             }
+>             newResource.unload ();

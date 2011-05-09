@@ -1,0 +1,179 @@
+4c4
+<  * Copyright (c) 2005-2006 Sven Efftinge and others.
+---
+>  * Copyright (c) 2005-2007 Sven Efftinge and others.
+16a17,18
+> import java.util.ArrayList;
+> import java.util.Collection;
+30a33
+> import org.eclipse.core.runtime.OperationCanceledException;
+32a36
+> import org.eclipse.gmf.internal.xpand.RootManager;
+43c47,48
+< public class OawBuilder extends IncrementalProjectBuilder {
+---
+> public class OawBuilder extends IncrementalProjectBuilder implements RootManager.IRootChangeListener {
+> 	private RootManager myRootManager;
+45,46d49
+< 	private boolean firstBuild = true; // XXX odd
+< 	private WorkspaceResourceManager resourceManager;
+48a52,53
+> 	private boolean myRootsChanged = true;
+> 
+60,63c65,66
+< 		resourceManager = new WorkspaceResourceManager(getProject());
+< 		// FIXME if codesense has been activated, there's already manager instance and we fail with exception here
+< 		Activator.registerResourceManager(getProject(), resourceManager);
+< 		firstBuild = true;
+---
+> 		myRootManager = Activator.getRootManager(getProject());
+> 		myRootManager.addRootChangeListener(this);
+71,80c74
+< 			if (firstBuild || (kind == FULL_BUILD)) {
+< 				fullBuild(monitor);
+< 			} else {
+< 				final IResourceDelta delta = getDelta(getProject());
+< 				if (delta == null) {
+< 					fullBuild(monitor);
+< 				} else {
+< 					incrementalBuild(delta, monitor);
+< 				}
+< 			}
+---
+> 			doBuild(kind, args, monitor);
+84d77
+< 		firstBuild = false;
+86d78
+< 		
+88c80
+< 	        final ExecutionContext ctx = ContextFactory.createXtendContext(getResourceManager());
+---
+> 	        final ExecutionContext ctx = ContextFactory.createXtendContext(getResourceManager(xtendResourcesToAnalyze.get(r)));
+94c86
+< 	        final XpandExecutionContext ctx = ContextFactory.createXpandContext(getResourceManager());
+---
+> 	        final XpandExecutionContext ctx = ContextFactory.createXpandContext(getResourceManager(xpandResourcesToAnalyze.get(r)));
+99d90
+< 		// XXX is builder's instance shared for several projects - if yes, we may get ConcurrentModificationEx here 
+102c93,129
+< 		return null;
+---
+> 
+> 		myRootsChanged = false;
+> 		Set<IProject> referencedProjects = myRootManager.getReferencedProjects();
+> 		referencedProjects.remove(getProject());
+> 		return referencedProjects.toArray(new IProject[referencedProjects.size()]);
+> 	}
+> 
+> 	private void doBuild(int kind, Map<?, ?> args, IProgressMonitor monitor) throws CoreException {
+> 		if ((kind == FULL_BUILD) || haveRootsChangedSinceLastBuild()) {
+> 			fullBuild(monitor);
+> 		} else {
+> 			Set<IProject> referencedProjects = myRootManager.getReferencedProjects();
+> 			referencedProjects.remove(getProject());
+> 			Collection<IResourceDelta> deltas = new ArrayList<IResourceDelta>(referencedProjects.size());
+> 			IResourceDelta projectDelta = getDelta(getProject());
+> 			if (projectDelta == null) {
+> 				fullBuild(monitor);
+> 				return;
+> 			}
+> 			for (IProject next : referencedProjects) {
+> 				final IResourceDelta delta = getDelta(next);
+> 				if (delta == null) {
+> 					fullBuild(monitor);
+> 					return;
+> 				}
+> 				deltas.add(delta);
+> 			}
+> 			incrementalBuild(projectDelta, deltas, monitor);
+> 		}
+> 	}
+> 
+> 	public void rootsChanged(RootManager rootManager) {
+> 		myRootsChanged = true;
+> 	}
+> 
+> 	private boolean haveRootsChangedSinceLastBuild() {
+> 		return myRootsChanged;
+105a133
+> 		getResourceManager(resource).forget(resource);
+109d136
+< 		getResourceManager().forget(resource);
+112c139
+< 				XpandResource r = getResourceManager().loadXpandResource(resource);
+---
+> 				XpandResource r = getResourceManager(resource).loadXpandResource(resource);
+117c144
+< 				XtendResource r = getResourceManager().loadXtendResource(resource);
+---
+> 				XtendResource r = getResourceManager(resource).loadXtendResource(resource);
+134c161,167
+< 		getResourceManager().forget(resource);
+---
+> 		getResourceManager(resource).forget(resource);
+> 	}
+> 
+> 	private WorkspaceResourceManager getResourceManager(IFile file) {
+> 		WorkspaceResourceManager result = myRootManager.getResourceManager(file);
+> 		assert result != null;
+> 		return result;
+138,139c171,180
+< 		monitor.beginTask(null, 2);
+< 		getProject().accept(new XpandResourceVisitor(new SubProgressMonitor(monitor, 1)));
+---
+> 		Set<IProject> referencedProjects = myRootManager.getReferencedProjects();
+> 		referencedProjects.add(getProject());
+> 		OawMarkerManager.deleteMarkers(getProject());	//to delete markers from obsolete roots.
+> 		monitor.beginTask(null, 1 + referencedProjects.size());
+> 		try {
+> 			for (IProject next : referencedProjects) {
+> 				checkCanceled(monitor);
+> 				next.accept(new XpandResourceVisitor(new SubProgressMonitor(monitor, 1)));
+> 			}
+> 			checkCanceled(monitor);
+140a182
+> 		} finally {
+142a185
+> 	}
+144,145c187,191
+< 	protected void incrementalBuild(final IResourceDelta delta, final IProgressMonitor monitor) throws CoreException {
+< 		monitor.beginTask(null, 2);
+---
+> 	protected void incrementalBuild(final IResourceDelta projectDelta, final Collection<IResourceDelta> referencedProjectDeltas, final IProgressMonitor monitor) throws CoreException {
+> 		monitor.beginTask(null, 2 + referencedProjectDeltas.size());
+> 		try {
+> 			for (IResourceDelta delta : referencedProjectDeltas) {
+> 				checkCanceled(monitor);
+147c193,198
+< 		modelRegistry.build(getProject(), delta, new SubProgressMonitor(monitor, 1));
+---
+> 			}
+> 			checkCanceled(monitor);
+> 			projectDelta.accept(new XpandResourceVisitor(new SubProgressMonitor(monitor, 1)));
+> 			checkCanceled(monitor);
+> 			modelRegistry.build(getProject(), projectDelta, new SubProgressMonitor(monitor, 1));
+> 		} finally {
+149a201
+> 	}
+151,152c203,206
+< 	private WorkspaceResourceManager getResourceManager() {
+< 		return resourceManager;
+---
+> 	private void checkCanceled(final IProgressMonitor monitor) {
+> 		if (monitor.isCanceled()) {
+> 			throw new OperationCanceledException();
+> 		}
+173,174c227,234
+< 	private static boolean isFileOfInterest(IFile file) {
+< 		return isXpand(file) || isXtend(file);
+---
+> 	private boolean isFileOfInterest(IFile file) {
+> 		if (!isXpand(file) && !isXtend(file)) {
+> 			return false;
+> 		}
+> 		if (getResourceManager(file) == null) {
+> 			return false;
+> 		}
+> 		return true;
+225a286
+> 

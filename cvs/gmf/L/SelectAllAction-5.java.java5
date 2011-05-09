@@ -1,0 +1,230 @@
+package org.eclipse.gmf.runtime.diagram.ui.actions.internal;
+
+import java.util.ArrayList;
+
+import java.util.Collections;
+
+import java.util.HashSet;
+
+import java.util.Iterator;
+
+import java.util.LinkedList;
+
+import java.util.List;
+
+import java.util.ListIterator;
+
+import java.util.Set;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.gef.ConnectionEditPart;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.EditPartViewer;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.DiagramAction;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.l10n.DiagramActionsResourceManager;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.BorderItemEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ListCompartmentEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ShapeCompartmentEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.requests.ActionIds;
+
+import org.eclipse.jface.viewers.StructuredSelection;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.ui.actions.ActionFactory;
+
+public class SelectAllAction extends DiagramAction {
+    private boolean selectShapes;
+    private boolean selectConnections;
+
+    private SelectAllAction (IWorkbenchPage partService, boolean selectShapes, boolean selectConnections) {
+        super (partService);
+        this.selectShapes = selectShapes;
+        this.selectConnections = selectConnections;
+    }
+
+    protected Request createTargetRequest () {
+        return null;
+    }
+
+    protected List createOperationSet () {
+        List selection = getSelectedObjects ();
+        if (selection.isEmpty () || ! (selection.get (0) instanceof IGraphicalEditPart)) return Collections.EMPTY_LIST;
+
+        List selectables = new ArrayList ();
+        EditPart primaryEP = (EditPart) selection.get (selection.size () - 1);
+        List nodeEditParts = new ArrayList ();
+        nodeEditParts.addAll (getSelectableNodes (primaryEP));
+        if (selectShapes) selectables.addAll (nodeEditParts);
+
+        if (selectConnections) selectables.addAll (addSelectableConnections (nodeEditParts));
+
+        return filterEditPartsMatching (selectables, getSelectionConditional ());
+    }
+
+    private List getBorderItemEditParts (EditPart parent) {
+        List list = new LinkedList ();
+        Iterator iter = parent.getChildren ().iterator ();
+        while (iter.hasNext ()) {
+            EditPart child = (EditPart) iter.next ();
+            if (child instanceof BorderItemEditPart) {
+                list.add (child);
+                list.addAll (child.getChildren ());
+            }
+            list.addAll (getBorderItemEditParts (child));
+        }
+        if (list.isEmpty ()) return Collections.EMPTY_LIST;
+
+        return list;
+    }
+
+    protected List getSelectableNodes (EditPart editpart) {
+        if (editpart == null) {
+            return Collections.EMPTY_LIST;
+        }
+        if (editpart instanceof DiagramEditPart || editpart instanceof ShapeCompartmentEditPart || editpart instanceof ListCompartmentEditPart) {
+            List list = new LinkedList ();
+            Iterator iter = editpart.getChildren ().iterator ();
+            while (iter.hasNext ()) {
+                EditPart child = (EditPart) iter.next ();
+                list.add (child);
+                if (! (editpart instanceof DiagramEditPart)) list.addAll (getBorderItemEditParts (child));
+
+            }
+            return list;
+        }
+        if (editpart instanceof ConnectionEditPart) {
+            ConnectionEditPart connection = (ConnectionEditPart) editpart;
+            EditPart source = connection.getSource ();
+            EditPart target = connection.getTarget ();
+            if (source != null && target != null) {
+                List list = new ArrayList ();
+                list.addAll (getSelectableNodes (source));
+                if (target.getParent () != source.getParent ()) list.addAll (getSelectableNodes (target));
+
+                return list;
+            }
+        }
+        return getSelectableNodes (editpart.getParent ());
+    }
+
+    protected List addSelectableConnections (List editparts) {
+        List selectableConnections = new ArrayList ();
+        DiagramEditPart diagramEditPart = getDiagramEditPart ();
+        Set connnectableEditParts = new HashSet (editparts);
+        ListIterator li = editparts.listIterator ();
+        while (li.hasNext ()) {
+            connnectableEditParts.addAll (getBorderItemEditParts ((EditPart) li.next ()));
+        }
+        if (diagramEditPart != null) {
+            Iterator connections = diagramEditPart.getConnections ().iterator ();
+            while (connections.hasNext ()) {
+                ConnectionEditPart connection = (ConnectionEditPart) connections.next ();
+                if (connnectableEditParts.contains (connection.getSource ()) || connnectableEditParts.contains (connection.getTarget ())) selectableConnections.add (connection);
+
+            }
+        }
+        return selectableConnections;
+    }
+
+    protected EditPartViewer.Conditional getSelectionConditional () {
+        return new EditPartViewer.Conditional () {
+
+            public boolean evaluate (EditPart editpart) {
+                return editpart.isSelectable ();
+            }
+
+        }
+
+        ;
+    }
+
+    protected boolean calculateEnabled () {
+        return ! getOperationSet ().isEmpty ();
+    }
+
+    protected void doRun (IProgressMonitor progressMonitor) {
+        getDiagramGraphicalViewer ().setSelection (new StructuredSelection (getOperationSet ()));
+    }
+
+    protected boolean isSelectionListener () {
+        return true;
+    }
+
+    public static SelectAllAction createSelectAllAction (IWorkbenchPage partService) {
+        SelectAllAction action = new SelectAllAction (partService, true, true);
+        action.setId (ActionFactory.SELECT_ALL.getId ());
+        action.setText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.SelectAll"));
+        action.setToolTipText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.SelectAll"));
+        action.setImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTALL));
+        action.setDisabledImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTALL_DISABLED));
+        return action;
+    }
+
+    public static SelectAllAction createToolbarSelectAllAction (IWorkbenchPage partService) {
+        SelectAllAction action = new SelectAllAction (partService, true, true);
+        action.setId (ActionIds.ACTION_TOOLBAR_SELECT_ALL);
+        action.setText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.toolbar.SelectAll"));
+        action.setToolTipText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.toolbar.SelectAll"));
+        action.setImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTALL));
+        action.setDisabledImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTALL_DISABLED));
+        return action;
+    }
+
+    public static SelectAllAction createSelectAllShapesAction (IWorkbenchPage partService) {
+        SelectAllAction action = new SelectAllAction (partService, true, false);
+        action.setId (ActionIds.ACTION_SELECT_ALL_SHAPES);
+        action.setText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.SelectShapes"));
+        action.setToolTipText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.SelectShapes"));
+        action.setImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTSHAPES));
+        action.setDisabledImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTSHAPES_DISABLED));
+        return action;
+    }
+
+    public static SelectAllAction createToolbarSelectAllShapesAction (IWorkbenchPage partService) {
+        SelectAllAction action = new SelectAllAction (partService, true, false);
+        action.setId (ActionIds.ACTION_TOOLBAR_SELECT_ALL_SHAPES);
+        action.setText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.toolbar.SelectShapes"));
+        action.setToolTipText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.toolbar.SelectShapes"));
+        action.setImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTSHAPES));
+        action.setDisabledImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTSHAPES_DISABLED));
+        return action;
+    }
+
+    public static SelectAllAction createSelectAllConnectionsAction (IWorkbenchPage partService) {
+        SelectAllAction action = new SelectAllAction (partService, false, true);
+        action.setId (ActionIds.ACTION_SELECT_ALL_CONNECTIONS);
+        action.setText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.SelectConnections"));
+        action.setToolTipText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.SelectConnections"));
+        action.setImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTCONNECTIONS));
+        action.setDisabledImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTCONNECTIONS_DISABLED));
+        return action;
+    }
+
+    public static SelectAllAction createToolbarSelectAllConnectionsAction (IWorkbenchPage partService) {
+        SelectAllAction action = new SelectAllAction (partService, false, true);
+        action.setId (ActionIds.ACTION_TOOLBAR_SELECT_ALL_CONNECTIONS);
+        action.setText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.toolbar.SelectConnections"));
+        action.setToolTipText (DiagramActionsResourceManager.getI18NString ("SelectAllAction.toolbar.SelectConnections"));
+        action.setImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTCONNECTIONS));
+        action.setDisabledImageDescriptor (DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SELECTCONNECTIONS_DISABLED));
+        return action;
+    }
+
+}
+

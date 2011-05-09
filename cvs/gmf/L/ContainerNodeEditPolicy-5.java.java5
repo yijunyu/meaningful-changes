@@ -1,0 +1,69 @@
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.commands.CompoundCommand;
+
+import org.eclipse.gef.requests.CreateConnectionRequest;
+
+import org.eclipse.gef.requests.CreateRequest;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.CreateViewAndOptionallyElementCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.DeferredCreateConnectionViewAndElementCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.PromptForConnectionAndEndCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramResourceManager;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.CreateUnspecifiedTypeConnectionRequest;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.RequestConstants;
+
+public class ContainerNodeEditPolicy extends GraphicalNodeEditPolicy {
+
+    public Command getCommand (Request request) {
+        if (RequestConstants.REQ_CONNECTION_END.equals (request.getType ()) && request instanceof CreateConnectionRequest) {
+            return getConnectionAndEndCommands ((CreateConnectionRequest) request);
+        }
+        return null;
+    }
+
+    protected Command getConnectionAndEndCommands (CreateConnectionRequest request) {
+        CompoundCommand cc = new CompoundCommand (DiagramResourceManager.getI18NString ("Command.CreateRelationship.Label"));
+        boolean isDirectionReversed = request instanceof CreateUnspecifiedTypeConnectionRequest && ((CreateUnspecifiedTypeConnectionRequest) request).isDirectionReversed ();
+        PromptForConnectionAndEndCommand menuCmd = getPromptForConnectionAndEndCommand (request);
+        cc.add (new EtoolsProxyCommand (menuCmd));
+        CreateViewAndOptionallyElementCommand createOtherEndCmd = getCreateOtherEndCommand (menuCmd.getEndAdapter (), request.getLocation ());
+        cc.add (new EtoolsProxyCommand (createOtherEndCmd));
+        ICommand connectionCmd = isDirectionReversed ? getCreateConnectionCommand (request, menuCmd.getConnectionAdapter (), createOtherEndCmd.getResult (), request.getSourceEditPart ()) : getCreateConnectionCommand (request, menuCmd.getConnectionAdapter (), request.getSourceEditPart (), createOtherEndCmd.getResult ());
+        cc.add (new EtoolsProxyCommand (connectionCmd));
+        return cc;
+    }
+
+    protected PromptForConnectionAndEndCommand getPromptForConnectionAndEndCommand (CreateConnectionRequest request) {
+        return new PromptForConnectionAndEndCommand (request, (IGraphicalEditPart) getHost ());
+    }
+
+    protected CreateViewAndOptionallyElementCommand getCreateOtherEndCommand (IAdaptable endAdapter, Point location) {
+        return new CreateViewAndOptionallyElementCommand (endAdapter, (IGraphicalEditPart) getHost (), location, ((IGraphicalEditPart) getHost ()).getDiagramPreferencesHint ());
+    }
+
+    protected ICommand getCreateConnectionCommand (CreateRequest request, IAdaptable typeInfoAdapter, IAdaptable sourceViewAdapter, IAdaptable targetViewAdapter) {
+        return new DeferredCreateConnectionViewAndElementCommand (request, typeInfoAdapter, sourceViewAdapter, targetViewAdapter, getHost ().getViewer ());
+    }
+
+}
+

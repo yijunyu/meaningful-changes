@@ -1,0 +1,237 @@
+20,20c23,23
+< import org.eclipse.core.resources.IContainer;
+---
+> import org.eclipse.core.runtime.IPath;
+30,33d29
+< import org.eclipse.emf.ecore.util.FeatureMap;
+< import org.eclipse.emf.edit.provider.IWrapperItemProvider;
+< import org.eclipse.emf.edit.ui.provider.AdapterFactoryContentProvider;
+< import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider;
+42,44d37
+< import org.eclipse.jface.viewers.ISelectionChangedListener;
+< import org.eclipse.jface.viewers.IStructuredSelection;
+< import org.eclipse.jface.viewers.SelectionChangedEvent;
+46,46d38
+< import org.eclipse.jface.viewers.TreeViewer;
+48,54d39
+< import org.eclipse.jface.wizard.WizardPage;
+< import org.eclipse.swt.SWT;
+< import org.eclipse.swt.layout.GridData;
+< import org.eclipse.swt.layout.GridLayout;
+< import org.eclipse.swt.widgets.Composite;
+< import org.eclipse.swt.widgets.Label;
+< import org.eclipse.ui.IWorkbenchPage;
+66,66c61,61
+< 	private TransactionalEditingDomain myEditingDomain;
+---
+> 	private TransactionalEditingDomain myEditingDomain;
+67,70d61
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+75a56,56
+> 	private ModelElementSelectionPage diagramRootElementSelectionPage;
+76,76d55
+< 	private IFile mySelectedModelFile;
+81,86d60
+< 	private IWorkbenchPage myWorkbenchPage;
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	private IStructuredSelection mySelection;
+91,91d65
+< 	private EObject myDiagramRoot;
+92a71,90
+> 		myFileCreationPage = new WizardNewFileCreationPage("Initialize new diagram file", StructuredSelection.EMPTY);
+> 		myFileCreationPage.setTitle("Diagram file");
+> 		myFileCreationPage.setDescription("Create new diagram based on " + CanvasEditPart.MODEL_ID + " model content");
+> 		IPath filePath;
+> 		String fileName = domainModelURI.trimFileExtension().lastSegment();
+> 		if (domainModelURI.isPlatformResource()) {
+> 			filePath = new Path(domainModelURI.trimSegments(1).toPlatformString(true));
+> 		} else if (domainModelURI.isFile()) {
+> 			filePath = new Path(domainModelURI.trimSegments(1).toFileString());
+> 		} else {
+> 			// TODO : use some default path
+> 			throw new IllegalArgumentException("Unsupported URI: " + domainModelURI);
+> 		}
+> 		myFileCreationPage.setContainerFullPath(filePath);
+> 		myFileCreationPage.setFileName(GMFGraphDiagramEditorUtil.getUniqueFileName(filePath, fileName, "gmfgraph_diagram")); //$NON-NLS-1$
+> 
+> 		diagramRootElementSelectionPage = new DiagramRootElementSelectionPage("Select diagram root element");
+> 		diagramRootElementSelectionPage.setTitle("Diagram root element");
+> 		diagramRootElementSelectionPage.setDescription("Select semantic model element to be depicted on diagram");
+> 		diagramRootElementSelectionPage.setModelElement(diagramRoot);
+93,95d65
+< 	/**
+< 	 * @generated
+< 	 */
+96a67,68
+> 		assert domainModelURI != null : "Domain model uri must be specified"; //$NON-NLS-1$
+> 		assert diagramRoot != null : "Doagram root element must be specified"; //$NON-NLS-1$
+96,96c66,66
+< 	public GMFGraphNewDiagramFileWizard(IFile selectedModelFile, IWorkbenchPage workbenchPage, IStructuredSelection selection, EObject diagramRoot, TransactionalEditingDomain editingDomain) {
+---
+> 	public GMFGraphNewDiagramFileWizard(org.eclipse.emf.common.util.URI domainModelURI, EObject diagramRoot, TransactionalEditingDomain editingDomain) {
+97,100d66
+< 		assert selectedModelFile != null : "Null selectedModelFile in GMFGraphNewDiagramFileWizard constructor"; //$NON-NLS-1$
+< 		assert workbenchPage != null : "Null workbenchPage in GMFGraphNewDiagramFileWizard constructor"; //$NON-NLS-1$
+< 		assert selection != null : "Null selection in GMFGraphNewDiagramFileWizard constructor"; //$NON-NLS-1$
+< 		assert diagramRoot != null : "Null diagramRoot in GMFGraphNewDiagramFileWizard constructor"; //$NON-NLS-1$
+101,101c69,69
+< 		assert editingDomain != null : "Null editingDomain in GMFGraphNewDiagramFileWizard constructor"; //$NON-NLS-1$
+---
+> 		assert editingDomain != null : "Editing domain must be specified"; //$NON-NLS-1$
+103,106d91
+< 		mySelectedModelFile = selectedModelFile;
+< 		myWorkbenchPage = workbenchPage;
+< 		mySelection = selection;
+< 		myDiagramRoot = diagramRoot;
+114,129d98
+< 		myFileCreationPage = new WizardNewFileCreationPage("Initialize new Ecore diagram file", mySelection) {
+< 
+< 			public void createControl(Composite parent) {
+< 				super.createControl(parent);
+< 				IContainer parentContainer = mySelectedModelFile.getParent();
+< 				String originalFileName = mySelectedModelFile.getProjectRelativePath().removeFileExtension().lastSegment();
+< 				String fileExtension = ".gmfgraph_diagram"; //$NON-NLS-1$
+< 				String fileName = originalFileName + fileExtension;
+< 				for (int i = 1; parentContainer.getFile(new Path(fileName)).exists(); i++) {
+< 					fileName = originalFileName + i + fileExtension;
+< 				}
+< 				setFileName(fileName);
+< 			}
+< 		};
+< 		myFileCreationPage.setTitle("Diagram file");
+< 		myFileCreationPage.setDescription("Create new diagram based on " + CanvasEditPart.MODEL_ID + " model content");
+130a100,100
+> 		addPage(diagramRootElementSelectionPage);
+131,131d99
+< 		addPage(new RootElementSelectorPage());
+137a107,107
+> 		List affectedFiles = new LinkedList();
+143a115,115
+> 		org.eclipse.emf.common.util.URI diagramModelURI = org.eclipse.emf.common.util.URI.createPlatformResourceURI(diagramFile.getFullPath().toString(), true);
+144,144c116,116
+< 		ResourceSet resourceSet = myEditingDomain.getResourceSet();
+---
+> 		ResourceSet resourceSet = myEditingDomain.getResourceSet();
+145,145c117,117
+< 		final Resource diagramResource = resourceSet.createResource(org.eclipse.emf.common.util.URI.createPlatformResourceURI(diagramFile.getFullPath().toString(), true));
+---
+> 		final Resource diagramResource = resourceSet.createResource(diagramModelURI);
+146,147d117
+< 		List affectedFiles = new LinkedList();
+< 		affectedFiles.add(mySelectedModelFile);
+152,152c121,121
+< 				int diagramVID = GMFGraphVisualIDRegistry.getDiagramVisualID(myDiagramRoot);
+---
+> 				int diagramVID = GMFGraphVisualIDRegistry.getDiagramVisualID(diagramRootElementSelectionPage.getModelElement());
+156,156c125,125
+< 				Diagram diagram = ViewService.createDiagram(myDiagramRoot, CanvasEditPart.MODEL_ID, GMFGraphDiagramEditorPlugin.DIAGRAM_PREFERENCES_HINT);
+---
+> 				Diagram diagram = ViewService.createDiagram(diagramRootElementSelectionPage.getModelElement(), CanvasEditPart.MODEL_ID, GMFGraphDiagramEditorPlugin.DIAGRAM_PREFERENCES_HINT);
+158,158d126
+< 
+169,169c137,137
+< 			GMFGraphDiagramEditorPlugin.getInstance().logError("Save operation failed for: " + diagramFile.getFullPath().toString(), ex); //$NON-NLS-1$
+---
+> 			GMFGraphDiagramEditorPlugin.getInstance().logError("Save operation failed for: " + diagramModelURI, ex); //$NON-NLS-1$
+178a147,147
+> 	private static class DiagramRootElementSelectionPage extends ModelElementSelectionPage {
+179,202d146
+< 	private class RootElementSelectorPage extends WizardPage implements ISelectionChangedListener {
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		protected RootElementSelectorPage() {
+< 			super("Select diagram root element");
+< 			setTitle("Diagram root element");
+< 			setDescription("Select semantic model element to be depicted on diagram");
+< 		}
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		public void createControl(Composite parent) {
+< 			initializeDialogUnits(parent);
+< 			Composite topLevel = new Composite(parent, SWT.NONE);
+< 			topLevel.setLayout(new GridLayout());
+< 			topLevel.setLayoutData(new GridData(GridData.VERTICAL_ALIGN_FILL | GridData.HORIZONTAL_ALIGN_FILL));
+< 			topLevel.setFont(parent.getFont());
+< 			setControl(topLevel);
+< 			createModelBrowser(topLevel);
+< 			setPageComplete(validatePage());
+< 		}
+206a152,153
+> 		protected DiagramRootElementSelectionPage(String pageName) {
+> 			super(pageName);
+207,227d151
+< 		private void createModelBrowser(Composite parent) {
+< 			Composite panel = new Composite(parent, SWT.NONE);
+< 			panel.setLayoutData(new GridData(GridData.FILL_BOTH));
+< 			GridLayout layout = new GridLayout();
+< 			layout.marginWidth = 0;
+< 			panel.setLayout(layout);
+< 
+< 			Label label = new Label(panel, SWT.NONE);
+< 			label.setText("Select diagram root element:");
+< 			label.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
+< 
+< 			TreeViewer treeViewer = new TreeViewer(panel, SWT.SINGLE | SWT.H_SCROLL | SWT.V_SCROLL | SWT.BORDER);
+< 			GridData layoutData = new GridData(GridData.FILL_BOTH);
+< 			layoutData.heightHint = 300;
+< 			layoutData.widthHint = 300;
+< 			treeViewer.getTree().setLayoutData(layoutData);
+< 			treeViewer.setContentProvider(new AdapterFactoryContentProvider(GMFGraphDiagramEditorPlugin.getInstance().getItemProvidersAdapterFactory()));
+< 			treeViewer.setLabelProvider(new AdapterFactoryLabelProvider(GMFGraphDiagramEditorPlugin.getInstance().getItemProvidersAdapterFactory()));
+< 			treeViewer.setInput(myDiagramRoot.eResource());
+< 			treeViewer.setSelection(new StructuredSelection(myDiagramRoot));
+< 			treeViewer.addSelectionChangedListener(this);
+232a159,160
+> 		protected String getSelectionTitle() {
+> 			return "Select diagram root element:";
+233,250d158
+< 		public void selectionChanged(SelectionChangedEvent event) {
+< 			myDiagramRoot = null;
+< 			if (event.getSelection() instanceof IStructuredSelection) {
+< 				IStructuredSelection selection = (IStructuredSelection) event.getSelection();
+< 				if (selection.size() == 1) {
+< 					Object selectedElement = selection.getFirstElement();
+< 					if (selectedElement instanceof IWrapperItemProvider) {
+< 						selectedElement = ((IWrapperItemProvider) selectedElement).getValue();
+< 					}
+< 					if (selectedElement instanceof FeatureMap.Entry) {
+< 						selectedElement = ((FeatureMap.Entry) selectedElement).getValue();
+< 					}
+< 					if (selectedElement instanceof EObject) {
+< 						myDiagramRoot = (EObject) selectedElement;
+< 					}
+< 				}
+< 			}
+< 			setPageComplete(validatePage());
+256a167,167
+> 			if (selectedModelElement == null) {
+256,256c166,166
+< 		private boolean validatePage() {
+---
+> 		protected boolean validatePage() {
+257,257d166
+< 			if (myDiagramRoot == null) {
+258,258c168,168
+< 				setErrorMessage("No diagram root element selected");
+---
+> 				setErrorMessage("Diagram root element is not selected");
+261a172,172
+> 					new CreateDiagramViewOperation(new EObjectAdapter(selectedModelElement), CanvasEditPart.MODEL_ID, GMFGraphDiagramEditorPlugin.DIAGRAM_PREFERENCES_HINT));
+262,262d171
+< 					new CreateDiagramViewOperation(new EObjectAdapter(myDiagramRoot), CanvasEditPart.MODEL_ID, GMFGraphDiagramEditorPlugin.DIAGRAM_PREFERENCES_HINT));
+263,263c173,173
+< 			setErrorMessage(result ? null : "Invalid diagram root element was selected");
+---
+> 			setErrorMessage(result ? null : "Invalid diagram root element is selected");
+266,266d175
+< 

@@ -1,0 +1,241 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2006 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2008 IBM Corporation and others.
+13a14,21
+> import java.io.File;
+> import java.sql.Timestamp;
+> import java.util.HashMap;
+> import java.util.HashSet;
+> import java.util.Iterator;
+> import java.util.Map;
+> import java.util.Set;
+> 
+16a27,27
+> import org.eclipse.core.runtime.IPath;
+22a24,24
+> import org.eclipse.core.resources.IResource;
+23,23c25,25
+< import org.eclipse.swt.widgets.Display;
+---
+> import org.eclipse.core.resources.IWorkspace;
+90a101,101
+> 			final String modificationReason, final Shell shell) {
+90,90c100,100
+<     public boolean okToEdit(final IFile[] files, final String modificationReason, Shell shell) {
+---
+>     public boolean okToEdit(final IFile[] files,
+91,94d100
+< 		if (PlatformUI.getWorkbench().getActiveWorkbenchWindow() != null && Display.getCurrent() != null) {
+< 			shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow()
+< 				.getShell();
+< 		}
+95a103,103
+> 		final IStatus fileStatus = validateEdit(files, shell);
+96,101d102
+< 		final IStatus status = ResourcesPlugin.getWorkspace().validateEdit(
+< 			files, shell);
+< 		if (status.isOK()) {
+< 			return true;
+< 		} else {
+< 			PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+102a105,109
+> 		if (!fileStatus.isOK()) {
+> 			// Similar to the DefaultUIFileModificationValidator we check if the shell is not null before 
+> 			// displaying messages.
+> 			if(shell != null){
+> 				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+105a113,113
+> 										shell,
+106,109d112
+< 							PlatformUI.getWorkbench()
+< 								.getActiveWorkbenchWindow().getShell(),
+< 							NLS
+< 								.bind(
+110,110c114,114
+< 									CommonUIMessages.FileModificationValidator_EditProblemDialogTitle,
+---
+> 										NLS.bind(CommonUIMessages.FileModificationValidator_EditProblemDialogTitle,
+112,113d115
+< 							NLS
+< 								.bind(
+114a117,117
+> 												modificationReason,
+114,114c116,116
+< 									CommonUIMessages.FileModificationValidator_EditProblemDialogMessage,
+---
+> 										NLS.bind(CommonUIMessages.FileModificationValidator_EditProblemDialogMessage,
+115,115c118,118
+< 									modificationReason, status.getMessage()));
+---
+> 												fileStatus.getMessage()));
+117a121,121
+> 			}
+119a124,124
+> 		return true;
+185a191,355
+> 
+> 	/**
+> 	 * Validates changes to the specified array of IFiles using the specified shell as a UI context.
+> 	 * This code delegates the bulk of its processing to the {@link IWorkspace#validateEdit(IFile[], Object)
+> 	 * method, but additionally checks to see if the specified IFiles are out of synchronization with
+> 	 * the filesystem, and if so, returns an error status.
+> 	 * 
+> 	 * @param files the array of files for which edit validation is requested
+> 	 * @param shell a UI context (SWT shell) for the validation.  Typed as object to avoid SWT dependency.
+> 	 * @return IStatus, {@link IStatus#OK} if edit of the specified files may proceed, {@link IStatus#ERROR}
+> 	 * or {@link IStatus#CANCEL} otherwise.
+> 	 */
+> 	public IStatus validateEdit(IFile[] files, Object shell) {
+> 		IStatus status = Status.OK_STATUS;
+> 		if (files == null || files.length == 0) {
+> 			return status;
+> 		}
+> 		Set<IFile> unsynchedFiles = new HashSet<IFile>();
+> 		Map<IFile, ModificationStamp> filesToModificationStamps = new HashMap<IFile, ModificationStamp>();
+> 
+> 		for (int i = 0; i < files.length; i++) {
+> 			IFile file = files[i];
+> 			filesToModificationStamps.put(file, new ModificationStamp(file));
+> 			boolean inSync = file.isSynchronized(IResource.DEPTH_ZERO);
+> 			if (!inSync) {
+> 				unsynchedFiles.add(file);
+> 			}
+> 		}
+> 		if (!unsynchedFiles.isEmpty()) {
+> 			status = buildOutOfSyncStatus(unsynchedFiles);
+> 		}
+> 
+> 		if (status.isOK()) {
+> 			status = ResourcesPlugin.getWorkspace().validateEdit(files, shell);
+> 
+> 			for (Map.Entry<IFile, ModificationStamp> entry : filesToModificationStamps.entrySet()) {
+> 				IFile file = entry.getKey();
+> 				ModificationStamp stamp = entry.getValue();
+> 				if (stamp.hasFileChanged()) {
+> 					unsynchedFiles.add(file);
+> 				}
+> 			}
+> 			if (!unsynchedFiles.isEmpty()) {
+> 				status = buildOutOfSyncStatus(unsynchedFiles);
+> 			}
+> 
+> 		}
+> 		return status;
+> 	}
+> 
+> 	/**
+> 	 *  Helper method to create a status for out of sync files.
+> 	 *  
+> 	 * @param unsynchedFiles Files that may be out of sync.
+> 	 * @return A status for out of sync files.
+> 	 */
+> 	private IStatus buildOutOfSyncStatus(Set<IFile> unsynchedFiles) {
+> 		StringBuffer buf = new StringBuffer(
+> 				CommonUIMessages.FileModificationValidator_OutOfSyncMessage);
+> 		buf.append("\n"); //$NON-NLS-1$
+> 		for (Iterator<IFile> unsynched = unsynchedFiles.iterator(); unsynched
+> 				.hasNext();) {
+> 			IFile file = unsynched.next();
+> 			buf.append(file.getFullPath().toString());
+> 			buf.append("\n"); //$NON-NLS-1$
+> 		}
+> 		return new Status(IStatus.ERROR, CommonUIPlugin.getPluginId(), 0, buf
+> 				.toString(), null);
+> 	}
+> 
+> 	private static class ModificationStamp {
+> 
+> 		/**
+> 		 * The file that the modification stamp applies to.
+> 		 */
+> 		private IFile file;
+> 		/**
+> 		 * Last modified date and time of the file
+> 		 */
+> 		private Timestamp lastModified = null;
+> 		/**
+> 		 * The file's length.
+> 		 */
+> 		private long fileLength = 0L;
+> 
+> 		public ModificationStamp(IFile file) {
+> 			assert file != null;
+> 			this.file = file;
+> 			IPath path = file.getLocation();
+> 			if (path != null) {
+> 				File ioFile = path.toFile();
+> 				if (ioFile != null) {
+> 					// new timestamp
+> 					lastModified = new Timestamp(ioFile.lastModified());
+> 					lastModified.setNanos(0);
+> 					fileLength = ioFile.length();
+> 				} else {
+> 					lastModified = new Timestamp(file.getModificationStamp());
+> 					lastModified.setNanos(0);
+> 				}
+> 			} else {
+> 				lastModified = new Timestamp(file.getModificationStamp());
+> 				lastModified.setNanos(0);
+> 			}
+> 
+> 		}
+> 
+> 		public Timestamp getLastModified() {
+> 			return lastModified;
+> 		}
+> 
+> 		public long getFileLength() {
+> 			return fileLength;
+> 		}
+> 
+> 		public IFile getFile() {
+> 			return file;
+> 		}
+> 
+> 		/**
+> 		 * Used in determining if two timestamps are equivalent 
+> 		 */
+> 		public boolean equals(Object obj) {
+> 			if (this == obj) {
+> 				return true;
+> 			} else if (obj instanceof ModificationStamp) {
+> 				ModificationStamp stamp = (ModificationStamp) obj;
+> 				return file.equals(stamp.getFile())
+> 						&& fileLength == stamp.getFileLength()
+> 						&& lastModified.equals(stamp.getLastModified());
+> 			}
+> 
+> 			return false;
+> 		}
+> 
+> 		public int hashCode() {
+> 			return file.hashCode() + lastModified.hashCode()
+> 					+ (int) (fileLength ^ (fileLength >>> 32));
+> 
+> 		}
+> 
+> 		/**
+> 		 * Determines if the file has changed.
+> 		 * 
+> 		 * @return true if the file has changed.
+> 		 */
+> 		public boolean hasFileChanged() {
+> 			IPath path = file.getLocation();
+> 			if (path == null) {
+> 				return false;
+> 			}
+> 			File ioFile = path.toFile();
+> 			if (ioFile == null) {
+> 				return false;
+> 			}
+> 
+> 			// new timestamp
+> 			Timestamp newTimestamp = new Timestamp(ioFile.lastModified());
+> 			newTimestamp.setNanos(0);
+> 
+> 			return !(lastModified.getTime() == newTimestamp.getTime() && fileLength == ioFile
+> 					.length());
+> 		}
+> 	}
+> 	    

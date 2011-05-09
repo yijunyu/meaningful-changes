@@ -1,0 +1,107 @@
+package org.eclipse.gmf.graphdef.editor.edit.commands;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gmf.gmfgraph.DiagramElement;
+
+import org.eclipse.gmf.gmfgraph.FigureDescriptor;
+
+import org.eclipse.gmf.graphdef.editor.edit.policies.GMFGraphBaseItemSemanticEditPolicy;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.emf.type.core.commands.EditElementCommand;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.ReorientReferenceRelationshipRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.ReorientRelationshipRequest;
+
+public class DiagramElementFigureReorientCommand extends EditElementCommand {
+    private final int reorientDirection;
+    private final EObject referenceOwner;
+    private final EObject oldEnd;
+    private final EObject newEnd;
+
+    public DiagramElementFigureReorientCommand (ReorientReferenceRelationshipRequest request) {
+        super (request.getLabel (), null, request);
+        reorientDirection = request.getDirection ();
+        referenceOwner = request.getReferenceOwner ();
+        oldEnd = request.getOldRelationshipEnd ();
+        newEnd = request.getNewRelationshipEnd ();
+    }
+
+    public boolean canExecute () {
+        if (! (referenceOwner instanceof DiagramElement)) {
+            return false;
+        }
+        if (reorientDirection == ReorientRelationshipRequest.REORIENT_SOURCE) {
+            return canReorientSource ();
+        }
+        if (reorientDirection == ReorientRelationshipRequest.REORIENT_TARGET) {
+            return canReorientTarget ();
+        }
+        return false;
+    }
+
+    protected boolean canReorientSource () {
+        if (! (oldEnd instanceof FigureDescriptor && newEnd instanceof DiagramElement)) {
+            return false;
+        }
+        return GMFGraphBaseItemSemanticEditPolicy.LinkConstraints.canExistDiagramElementFigure_4005 (getNewSource (), getOldTarget ());
+    }
+
+    protected boolean canReorientTarget () {
+        if (! (oldEnd instanceof FigureDescriptor && newEnd instanceof FigureDescriptor)) {
+            return false;
+        }
+        return GMFGraphBaseItemSemanticEditPolicy.LinkConstraints.canExistDiagramElementFigure_4005 (getOldSource (), getNewTarget ());
+    }
+
+    protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+        if (! canExecute ()) {
+            throw new ExecutionException ("Invalid arguments in reorient link command");
+        }
+        if (reorientDirection == ReorientRelationshipRequest.REORIENT_SOURCE) {
+            return reorientSource ();
+        }
+        if (reorientDirection == ReorientRelationshipRequest.REORIENT_TARGET) {
+            return reorientTarget ();
+        }
+        throw new IllegalStateException ();
+    }
+
+    protected CommandResult reorientSource () throws ExecutionException {
+        getOldSource ().setFigure (null);
+        getNewSource ().setFigure (getOldTarget ());
+        return CommandResult.newOKCommandResult (referenceOwner);
+    }
+
+    protected CommandResult reorientTarget () throws ExecutionException {
+        getOldSource ().setFigure (getNewTarget ());
+        return CommandResult.newOKCommandResult (referenceOwner);
+    }
+
+    protected DiagramElement getOldSource () {
+        return (DiagramElement) referenceOwner;
+    }
+
+    protected DiagramElement getNewSource () {
+        return (DiagramElement) newEnd;
+    }
+
+    protected FigureDescriptor getOldTarget () {
+        return (FigureDescriptor) oldEnd;
+    }
+
+    protected FigureDescriptor getNewTarget () {
+        return (FigureDescriptor) newEnd;
+    }
+
+}
+

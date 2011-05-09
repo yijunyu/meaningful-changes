@@ -1,0 +1,107 @@
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import org.eclipse.draw2d.FigureListener;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.Polyline;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gef.editparts.AbstractConnectionEditPart;
+
+import org.eclipse.gef.editparts.AbstractGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.GraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.PolylineConnectionEx;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.PointListUtilities;
+
+import org.eclipse.gmf.runtime.gef.ui.internal.editpolicies.GraphicalEditPolicyEx;
+
+public class TetherConnectionEditPolicy extends GraphicalEditPolicyEx {
+    private Polyline tether;
+    private OwnerMovedListener ownerMovedListener = new OwnerMovedListener ();
+
+    private Polyline getConnection () {
+        if (tether == null) {
+            tether = new PolylineConnectionEx ();
+            tether.setLineStyle (Graphics.LINE_DASH);
+        }
+        return tether;
+    }
+
+    private class OwnerMovedListener implements FigureListener {
+
+        public void figureMoved (IFigure source) {
+            refresh ();
+        }
+
+    }
+
+    public void activate () {
+        super.activate ();
+        addConnection ();
+        ((IGraphicalEditPart) getHost ()).getFigure ().addFigureListener (ownerMovedListener);
+    }
+
+    public void deactivate () {
+        ((IGraphicalEditPart) getHost ()).getFigure ().removeFigureListener (ownerMovedListener);
+        removeConnection ();
+        super.deactivate ();
+    }
+
+    private void removeConnection () {
+        if (getParentFigure ().getChildren ().contains (getConnection ())) getParentFigure ().remove (getConnection ());
+
+    }
+
+    private void addConnection () {
+        if (! getParentFigure ().getChildren ().contains (getConnection ())) getParentFigure ().add (getConnection ());
+
+    }
+
+    public void refresh () {
+        IFigure figure = ((GraphicalEditPart) getHost ()).getFigure ();
+        Rectangle r = figure.getBounds ().getCopy ();
+        PointList pl = new PointList ();
+        Point refPoint = new Point ();
+        if (getHost ().getParent () instanceof AbstractConnectionEditPart) {
+            AbstractConnectionEditPart connectionClassEP = (AbstractConnectionEditPart) getHost ().getParent ();
+            pl = connectionClassEP.getConnectionFigure ().getPoints ();
+            refPoint = PointListUtilities.calculatePointRelativeToLine (pl, 0, 50, true);
+        } else {
+            refPoint = ((AbstractGraphicalEditPart) getHost ().getParent ()).getFigure ().getBounds ().getLocation ();
+        }
+        Point midTop = new Point (r.x + r.width / 2, r.y);
+        Point midBottom = new Point (r.x + r.width / 2, r.y + r.height);
+        Point midLeft = new Point (r.x, r.y + r.height / 2);
+        Point midRight = new Point (r.x + r.width, r.y + r.height / 2);
+        Point startPoint = midTop;
+        int x = r.x + r.width / 2 - refPoint.x;
+        int y = r.y + r.height / 2 - refPoint.y;
+        if (y > 0 && y > x && y > - x) startPoint = midTop;
+        else if (y < 0 && y < x && y < - x) startPoint = midBottom;
+        else if (x < 0 && y > x && y < - x) startPoint = midRight;
+        else startPoint = midLeft;
+
+        getConnection ().setStart (startPoint);
+        getConnection ().setEnd (refPoint);
+        getConnection ().setForegroundColor (((AbstractGraphicalEditPart) getHost ().getParent ()).getFigure ().getForegroundColor ());
+    }
+
+    private IFigure getParentFigure () {
+        return getHostFigure ().getParent ();
+    }
+
+}
+

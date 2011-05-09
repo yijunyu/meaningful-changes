@@ -1,0 +1,106 @@
+package org.eclipse.gmf.runtime.emf.type.core.requests;
+
+import java.util.Collections;
+
+import java.util.HashMap;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.l10n.EMFTypeCoreMessages;
+
+public class MoveRequest extends AbstractEditCommandRequest {
+    private final Map elementsToMove;
+    private EObject targetContainer;
+
+    public MoveRequest (TransactionalEditingDomain editingDomain, EObject targetContainer, EReference targetFeature, EObject elementToMove) {
+        super (editingDomain);
+        this.targetContainer = targetContainer;
+        this.elementsToMove = new HashMap ();
+        elementsToMove.put (elementToMove, targetFeature);
+    }
+
+    public MoveRequest (TransactionalEditingDomain editingDomain, EObject targetContainer, EObject elementToMove) {
+        this (editingDomain, targetContainer, null, elementToMove);
+    }
+
+    public MoveRequest (TransactionalEditingDomain editingDomain, EObject targetContainer, List elementsToMove) {
+        super (editingDomain);
+        this.targetContainer = targetContainer;
+        this.elementsToMove = new HashMap ();
+        for (Iterator i = elementsToMove.iterator ();
+        i.hasNext ();) {
+            this.elementsToMove.put (i.next (), null);
+        }
+    }
+
+    public MoveRequest (TransactionalEditingDomain editingDomain, EObject targetContainer, Map elementsToMove) {
+        super (editingDomain);
+        this.targetContainer = targetContainer;
+        this.elementsToMove = elementsToMove;
+    }
+
+    public MoveRequest (EObject targetContainer, EReference targetFeature, EObject elementToMove) {
+        this (TransactionUtil.getEditingDomain (targetContainer), targetContainer, targetFeature, elementToMove);
+    }
+
+    public MoveRequest (EObject targetContainer, EObject elementToMove) {
+        this (TransactionUtil.getEditingDomain (targetContainer), targetContainer, null, elementToMove);
+    }
+
+    public MoveRequest (EObject targetContainer, List elementsToMove) {
+        this (TransactionUtil.getEditingDomain (targetContainer), targetContainer, elementsToMove);
+    }
+
+    public MoveRequest (EObject targetContainer, Map elementsToMove) {
+        this (TransactionUtil.getEditingDomain (targetContainer), targetContainer, elementsToMove);
+    }
+
+    public Map getElementsToMove () {
+        return elementsToMove;
+    }
+
+    public void setTargetContainer (EObject targetContainer) {
+        this.targetContainer = targetContainer;
+    }
+
+    public EObject getTargetContainer () {
+        return targetContainer;
+    }
+
+    public void setTargetFeature (EObject element, EReference targetFeature) {
+        getElementsToMove ().put (element, targetFeature);
+    }
+
+    public EReference getTargetFeature (EObject element) {
+        return (EReference) getElementsToMove ().get (element);
+    }
+
+    public List getElementsToEdit () {
+        if (targetContainer != null) {
+            return Collections.singletonList (targetContainer);
+        }
+        return super.getElementsToEdit ();
+    }
+
+    protected String getDefaultLabel () {
+        return EMFTypeCoreMessages.Request_Label_Move;
+    }
+
+    public Object getEditHelperContext () {
+        return targetContainer;
+    }
+
+}
+

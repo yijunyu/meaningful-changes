@@ -1,0 +1,72 @@
+2c2
+<  * Copyright (c) 2006 Borland Software Corporation and others.
+---
+>  *  Copyright (c) 2006, 2007 Borland Software Corporation and others.
+12a13,20
+> import java.util.ArrayList;
+> import java.util.Collection;
+> import java.util.Collections;
+> import java.util.Iterator;
+> 
+> import org.eclipse.emf.ecore.EAnnotation;
+> import org.eclipse.emf.ecore.EObject;
+> import org.eclipse.gef.EditPart;
+13a22,27
+> import org.eclipse.gef.commands.CompoundCommand;
+> import org.eclipse.gef.commands.UnexecutableCommand;
+> import org.eclipse.gmf.gmfgraph.DiagramElement;
+> import org.eclipse.gmf.graphdef.editor.edit.parts.CompartmentEditPart;
+> import org.eclipse.gmf.graphdef.editor.providers.GMFGraphElementTypes;
+> import org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper;
+17,18c31
+< import org.eclipse.emf.ecore.EObject;
+< import org.eclipse.emf.ecore.EAnnotation;
+---
+> import org.eclipse.gmf.runtime.notation.Edge;
+20,24d32
+< import org.eclipse.gef.commands.UnexecutableCommand;
+< 
+< import org.eclipse.gmf.gmfgraph.DiagramElement;
+< 
+< import org.eclipse.gmf.graphdef.editor.providers.GMFGraphElementTypes;
+35c43,55
+< 		return getMSLWrapper(new DestroyElementCommand(req) {
+---
+> 		CompoundCommand cc = new CompoundCommand();
+> 		Collection allEdges = new ArrayList();
+> 		View view = (View) getHost().getModel();
+> 		allEdges.addAll(view.getSourceEdges());
+> 		allEdges.addAll(view.getTargetEdges());
+> 		for (Iterator it = allEdges.iterator(); it.hasNext();) {
+> 			Edge nextEdge = (Edge) it.next();
+> 			EditPart nextEditPart = (EditPart) getHost().getViewer().getEditPartRegistry().get(nextEdge);
+> 			EditCommandRequestWrapper editCommandRequest = new EditCommandRequestWrapper(new DestroyElementRequest(((CompartmentEditPart) getHost()).getEditingDomain(), req.isConfirmationRequired()),
+> 					Collections.EMPTY_MAP);
+> 			cc.add(nextEditPart.getCommand(editCommandRequest));
+> 		}
+> 		cc.add(getMSLWrapper(new DestroyElementCommand(req) {
+46c66,67
+< 		});
+---
+> 		}));
+> 		return cc;
+54c75
+< 			return req.getTarget() == null ? getCreateStartOutgoingDiagramElement_Figure4001Command(req) : null;
+---
+> 			return req.getTarget() == null ? getCreateStartOutgoingDiagramElementFigure_4001Command(req) : null;
+62,64c83,89
+< 	protected Command getCreateStartOutgoingDiagramElement_Figure4001Command(CreateRelationshipRequest req) {
+< 		DiagramElement element = (DiagramElement) getSemanticElement();
+< 		if (element.getFigure() != null) {
+---
+> 	protected Command getCreateStartOutgoingDiagramElementFigure_4001Command(CreateRelationshipRequest req) {
+> 		EObject sourceEObject = req.getSource();
+> 		if (false == sourceEObject instanceof DiagramElement) {
+> 			return UnexecutableCommand.INSTANCE;
+> 		}
+> 		DiagramElement source = (DiagramElement) sourceEObject;
+> 		if (!GMFGraphBaseItemSemanticEditPolicy.LinkConstraints.canCreateDiagramElementFigure_4001(source, null)) {
+67d91
+< 
+70a95
+> 

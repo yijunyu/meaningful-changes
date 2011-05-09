@@ -1,0 +1,757 @@
+5,5c5,5
+< import org.eclipse.draw2d.ConnectionAnchor;
+---
+> import org.eclipse.draw2d.PositionConstants;
+6,7d5
+< 
+< import org.eclipse.draw2d.IFigure;
+14a13,14
+> import org.eclipse.draw2d.geometry.PrecisionPoint;
+> 
+20a21,24
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.BaseSlidableAnchor;
+> 
+21,21c25,25
+< import org.eclipse.gmf.runtime.draw2d.ui.geometry.LineSeg;
+---
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.FigureUtilities;
+21a26,27
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.OrthogonalConnectionAnchor;
+27a34,34
+>     private static int maxNestedRoutingDepth = 1;
+28a122,123
+>         if (! (conn.getTargetAnchor ().getOwner () instanceof Connection) && newLine.size () != 0 && target.contains (new PrecisionPoint (newLine.getLastPoint ()))) {
+>             lastRemovedFromTarget = newLine.removePoint (newLine.size () - 1);
+29,32d121
+<     protected boolean removeSegmentsInViews (Connection conn, PointList newLine) {
+<         PointList newPoints = new PointList (newLine.size ());
+<         Point ptStart = new Point (newLine.getFirstPoint ());
+<         Point ptEnd = new Point (newLine.getLastPoint ());
+33,33c124,124
+<         for (int i = 0;
+---
+>             for (int i = newLine.size ();
+34,34d124
+<         i < newLine.size (); i ++) {
+35a126,126
+>                 lastRemovedFromTarget = newLine.removePoint (i - 1);
+35,35c125,125
+<             if (i != 0 && i != newLine.size () - 1) newPoints.addPoint (new Point (newLine.getPoint (i)));
+---
+>             i > 0 && target.contains (new PrecisionPoint (newLine.getPoint (i - 1))); i --) {
+36,36d125
+< 
+38,56d41
+<         if (newPoints.size () < 3) return false;
+< 
+<         int lastIntersect = 0;
+<         int count = 0;
+<         boolean found = false;
+<         boolean bChanged = false;
+<         IFigure sourceFigure = conn.getSourceAnchor ().getOwner ();
+<         if (sourceFigure == null) return false;
+< 
+<         PointList startPolygon = getFigurePolygon (sourceFigure, conn);
+<         for (int i = 0;
+<         i < newPoints.size () - 1; i ++) {
+<             boolean in1 = PointListUtilities.containsPoint (startPolygon, newPoints.getPoint (i));
+<             boolean in2 = PointListUtilities.containsPoint (startPolygon, newPoints.getPoint (i + 1));
+<             if (in1 != in2) {
+<                 lastIntersect = count;
+<                 found = true;
+<             } else if (! (in1 || in2)) {
+<                 break;
+57a47,50
+>         Point lastStartAnchor = newLine.removePoint (0);
+>         Point lastEndAnchor = newLine.removePoint (newLine.size () - 1);
+>         if (! OrthogonalRouterUtilities.isRectilinear (newLine)) {
+>             OrthogonalRouterUtilities.transformToOrthogonalPointList (newLine, PositionConstants.NONE, PositionConstants.NONE);
+58,59d46
+< 
+<             ++ count;
+61,98d51
+<         if (found) {
+<             for (int i = 0;
+<             i <= lastIntersect; ++ i) {
+<                 newPoints.removePoint (0);
+<                 bChanged = true;
+<             }
+<         }
+<         lastIntersect = count = newLine.size () - 1;
+<         found = false;
+<         IFigure targetFigure = conn.getTargetAnchor ().getOwner ();
+<         if (targetFigure == null) return false;
+< 
+<         PointList endPolygon = getFigurePolygon (targetFigure, conn);
+<         for (int i = newPoints.size () - 1;
+<         i > 0; i --) {
+<             boolean in1 = PointListUtilities.containsPoint (endPolygon, newPoints.getPoint (i));
+<             boolean in2 = PointListUtilities.containsPoint (endPolygon, newPoints.getPoint (i - 1));
+<             if (in1 != in2) {
+<                 lastIntersect = count;
+<                 found = true;
+<             } else if (! (in1 || in2)) {
+<                 break;
+<             }
+< 
+<             -- count;
+<         }
+<         if (found) {
+<             for (int i = newPoints.size () - 1;
+<             i >= lastIntersect; -- i) {
+<                 newPoints.removePoint (newPoints.size () - 1);
+<                 bChanged = true;
+<             }
+<         }
+<         if (newPoints.size () != newLine.size ()) {
+<             newLine.removeAllPoints ();
+<             newLine.addPoint (ptStart);
+<             for (int i = 0;
+<             i < newPoints.size (); i ++) newLine.addPoint (new Point (newPoints.getPoint (i)));
+100,100d56
+<             newLine.addPoint (ptEnd);
+102,102c194,194
+<         return bChanged;
+---
+>         return position;
+104,106d61
+< 
+<     protected boolean updateToBiTerminal (Connection conn, PointList newLine) {
+<         boolean retVal = false;
+108,140d62
+<             Point ptOrig = new Point (newLine.getPoint (0));
+<             Point ptTerm = new Point (newLine.getPoint (1));
+<             Dimension offsets = new Dimension (10, 10);
+<             conn.translateToRelative (offsets);
+<             Rectangle bBoxF, bBoxT;
+<             if (conn.getSourceAnchor ().getOwner () != null) {
+<                 bBoxF = getBounds (conn.getSourceAnchor ().getOwner ());
+<                 conn.getSourceAnchor ().getOwner ().translateToAbsolute (bBoxF);
+<                 conn.translateToRelative (bBoxF);
+<             } else bBoxF = new Rectangle (ptOrig.x - offsets.width / 2, ptOrig.y - offsets.height / 2, offsets.width, offsets.height);
+< 
+<             if (conn.getTargetAnchor ().getOwner () != null) {
+<                 bBoxT = getBounds (conn.getTargetAnchor ().getOwner ());
+<                 conn.getTargetAnchor ().getOwner ().translateToAbsolute (bBoxT);
+<                 conn.translateToRelative (bBoxT);
+<             } else bBoxT = new Rectangle (ptTerm.x - offsets.width / 2, ptTerm.y - offsets.height / 2, offsets.width, offsets.height);
+< 
+<             int ix1 = Math.max (bBoxF.getLeft ().x, bBoxT.getLeft ().x);
+<             int ix2 = Math.min (bBoxF.getRight ().x, bBoxT.getRight ().x);
+<             Point posF = bBoxF.getCenter ();
+<             Point posT = bBoxT.getCenter ();
+<             Ray origSeg = new Ray (ptOrig, ptTerm);
+<             boolean isOblique = (origSeg.y != 0 && origSeg.x != 0);
+<             if (ix1 <= ix2) {
+<                 if (isOblique || ptOrig.x < ix1 || ptOrig.x > ix2) {
+<                     if (isOblique && ptOrig.x > ix1 && ptOrig.x < ix2) posF.x = ptOrig.x;
+<                     else posF.x = ix1 + (ix2 - ix1) / 2;
+< 
+<                     posT.x = posF.x;
+<                     newLine.removeAllPoints ();
+<                     newLine.addPoint (posF);
+<                     newLine.addPoint (posT);
+<                     retVal = true;
+142,148d72
+<             } else {
+<                 int iy1 = Math.max (bBoxF.getTop ().y, bBoxT.getTop ().y);
+<                 int iy2 = Math.min (bBoxF.getBottom ().y, bBoxT.getBottom ().y);
+<                 if (iy1 <= iy2) {
+<                     if (isOblique || ptOrig.y < iy1 || ptOrig.y > iy2) {
+<                         if (isOblique && ptOrig.y > iy1 && ptOrig.y < iy2) posF.y = ptOrig.y;
+<                         else posF.y = iy1 + (iy2 - iy1) / 2;
+150,154d73
+<                         posT.y = posF.y;
+<                         newLine.removeAllPoints ();
+<                         newLine.addPoint (posF);
+<                         newLine.addPoint (posT);
+<                         retVal = true;
+155a82,84
+>             int firstSegmentOrientation = line.getFirstPoint ().x == line.getPoint (1).x ? PositionConstants.VERTICAL : PositionConstants.HORIZONTAL;
+>             if (getOutisePointOffRectanglePosition (line.getPoint (1), source) != getAnchorLocationBasedOnSegmentOrientation (line.getFirstPoint (), source, firstSegmentOrientation)) {
+>                 return false;
+157a87,92
+>         if (! (conn.getTargetAnchor ().getOwner () instanceof Connection)) {
+>             Rectangle target = new PrecisionRectangle (FigureUtilities.getAnchorableFigureBounds (conn.getTargetAnchor ().getOwner ()));
+>             conn.getTargetAnchor ().getOwner ().translateToAbsolute (target);
+>             conn.translateToRelative (target);
+>             if (target.contains (line.getPoint (line.size () - 2))) {
+>                 return false;
+158a94,96
+>             int lastSegmentOrientation = line.getLastPoint ().x == line.getPoint (line.size () - 2).x ? PositionConstants.VERTICAL : PositionConstants.HORIZONTAL;
+>             if (getOutisePointOffRectanglePosition (line.getPoint (line.size () - 2), target) != getAnchorLocationBasedOnSegmentOrientation (line.getLastPoint (), target, lastSegmentOrientation)) {
+>                 return false;
+159,159c209,209
+<         return retVal;
+---
+>         return translationDimension;
+160a222,222
+>     protected void resetEndPointsToEdge (Connection conn, PointList line) {
+161,162d221
+< 
+<     protected void resetEndPointsToEdge (Connection conn, PointList newLine) {
+163,163c223,223
+<         if (isReorienting (conn)) {
+---
+>         if (isReorienting (conn)) {
+163a224,224
+>             super.resetEndPointsToEdge (conn, line);
+164,164d223
+<             super.resetEndPointsToEdge (conn, newLine);
+165,165c225,225
+<             return;
+---
+>             return;
+166a99,107
+>         return true;
+>     }
+> 
+>     private void removePointsInViews (Connection conn, PointList newLine, Point start, Point end) {
+>         PrecisionRectangle source = conn.getSourceAnchor ().getOwner () != null ? new PrecisionRectangle (FigureUtilities.getAnchorableFigureBounds (conn.getSourceAnchor ().getOwner ())) : null;
+>         PrecisionRectangle target = conn.getTargetAnchor ().getOwner () != null ? new PrecisionRectangle (FigureUtilities.getAnchorableFigureBounds (conn.getTargetAnchor ().getOwner ())) : null;
+>         if (source != null) {
+>             conn.getSourceAnchor ().getOwner ().translateToAbsolute (source);
+>             conn.translateToRelative (source);
+167,169d98
+<         Point origin = null;
+<         if (conn.getSourceAnchor ().getOwner () instanceof Connection) {
+<             origin = getIntersectionPoint ((Connection) conn.getSourceAnchor ().getOwner (), new LineSeg (newLine.getPoint (1), newLine.getPoint (0)));
+170a109,111
+>         if (target != null) {
+>             conn.getTargetAnchor ().getOwner ().translateToAbsolute (target);
+>             conn.translateToRelative (target);
+170,170c108,108
+<         }
+---
+>         }
+171,173d108
+<         if (origin == null) {
+<             LineSeg edgeLine1 = OrthogonalRouterUtilities.getOrthogonalLineSegToAnchorLoc (conn, conn.getSourceAnchor (), newLine.getPoint (1));
+<             origin = edgeLine1.getOrigin ();
+174,174c112,112
+<         }
+---
+>         }
+175a114,115
+>         Point lastRemovedFromTarget = null;
+>         if (! (conn.getSourceAnchor ().getOwner () instanceof Connection) && newLine.size () != 0 && source.contains (new PrecisionPoint (newLine.getFirstPoint ()))) {
+175,175c113,113
+<         Point terminus = null;
+---
+>         Point lastRemovedFromSource = null;
+176,176d113
+<         if (conn.getTargetAnchor ().getOwner () instanceof Connection) {
+177,177c116,116
+<             int numPoints = newLine.size ();
+---
+>             lastRemovedFromSource = newLine.removePoint (0);
+178,186d116
+<             terminus = getIntersectionPoint ((Connection) conn.getTargetAnchor ().getOwner (), new LineSeg (newLine.getPoint (numPoints - 2), newLine.getPoint (numPoints - 1)));
+<         }
+<         if (terminus == null) {
+<             LineSeg edgeLine2 = OrthogonalRouterUtilities.getOrthogonalLineSegToAnchorLoc (conn, conn.getTargetAnchor (), newLine.getPoint (newLine.size () - 2));
+<             terminus = edgeLine2.getOrigin ();
+<         }
+<         if (origin != null && terminus != null) {
+<             newLine.setPoint (origin, 0);
+<             if (newLine.size () > 2) {
+188,192d117
+<                 i < 2; i ++) {
+<                     Point ptCurrent = newLine.getPoint (i);
+<                     Point ptNext = newLine.getPoint (i + 1);
+<                     makeOrthogonal (ptCurrent, ptNext);
+<                     newLine.setPoint (ptNext, i + 1);
+195,202d121
+<             newLine.setPoint (terminus, newLine.size () - 1);
+<             if (newLine.size () > 2) {
+<                 for (int i = newLine.size () - 1;
+<                 i >= newLine.size () - 2; i --) {
+<                     Point ptCurrent = newLine.getPoint (i);
+<                     Point ptNext = newLine.getPoint (i - 1);
+<                     makeOrthogonal (ptCurrent, ptNext);
+<                     newLine.setPoint (ptNext, i - 1);
+204a129,131
+>         if (newLine.size () == 0) {
+>             Dimension tolerance = new Dimension (1, 0);
+>             if (! RouterHelper.getInstance ().isFeedback (conn)) tolerance = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (tolerance);
+205,205d128
+<         } else super.resetEndPointsToEdge (conn, newLine);
+206a133,144
+>             int toleranceValue = tolerance.width;
+>             if (lastRemovedFromSource == null) {
+>                 lastRemovedFromSource = start;
+>             }
+>             if (lastRemovedFromTarget == null) {
+>                 lastRemovedFromTarget = end;
+>             }
+>             if (Math.abs (lastRemovedFromSource.x - lastRemovedFromTarget.x) < toleranceValue) {
+>                 if (source.preciseY < target.preciseY) {
+>                     newLine.addPoint (lastRemovedFromSource.x, (source.getBottom ().y + target.getTop ().y) / 2);
+>                 } else {
+>                     newLine.addPoint (lastRemovedFromSource.x, (source.getTop ().y + target.getBottom ().y) / 2);
+207a146,148
+>             } else if (Math.abs (lastRemovedFromSource.y - lastRemovedFromTarget.y) < toleranceValue) {
+>                 if (source.preciseX < target.preciseX) {
+>                     newLine.addPoint ((source.getRight ().x + target.getLeft ().x) / 2, lastRemovedFromSource.y);
+208,211d145
+< 
+<     private void makeOrthogonal (Point ptCurrent, Point ptNext) {
+<         if (Math.abs (ptNext.x - ptCurrent.x) < Math.abs (ptNext.y - ptCurrent.y)) {
+<             ptNext.x = ptCurrent.x;
+212a150,167
+>                     newLine.addPoint ((source.getLeft ().x + target.getRight ().x) / 2, lastRemovedFromSource.y);
+>                 }
+>             } else if ((conn.getSourceAnchor () instanceof BaseSlidableAnchor && StringStatics.BLANK.equals (((BaseSlidableAnchor) conn.getSourceAnchor ()).getTerminal ()) && (conn.getTargetAnchor () instanceof BaseSlidableAnchor && StringStatics.BLANK.equals (((BaseSlidableAnchor) conn.getTargetAnchor ()).getTerminal ())))) {
+>                 double startX = Math.max (source.preciseX, target.preciseX);
+>                 double endX = Math.min (source.preciseX + source.preciseWidth, target.preciseX + target.preciseWidth);
+>                 double startY = Math.max (source.preciseY, target.preciseY);
+>                 double endY = Math.min (source.preciseY + source.preciseHeight, target.preciseY + target.preciseHeight);
+>                 if (startX < endX) {
+>                     if (source.preciseY < target.preciseY) {
+>                         newLine.addPoint ((int) Math.round ((startX + endX) / 2.0), (source.getBottom ().y + target.getTop ().y) / 2);
+>                     } else {
+>                         newLine.addPoint ((int) Math.round ((startX + endX) / 2.0), (source.getTop ().y + target.getBottom ().y) / 2);
+>                     }
+>                 } else if (startY < endY) {
+>                     if (source.preciseX < target.preciseX) {
+>                         newLine.addPoint ((source.getRight ().x + target.getLeft ().x) / 2, (int) Math.round ((startY + endY) / 2.0));
+>                     } else {
+>                         newLine.addPoint ((source.getLeft ().x + target.getRight ().x) / 2, (int) Math.round ((startY + endY) / 2.0));
+213,213d149
+<             ptNext.y = ptCurrent.y;
+217,226d170
+<     private static int CONNECTION_OFFSET = 26;
+< 
+<     protected void updateIfNotRectilinear (Connection conn, PointList newLine) {
+<         boolean isRectilinear = true;
+<         for (int i = 0;
+<         i < newLine.size () - 1; i ++) {
+<             Ray segVector = new Ray (newLine.getPoint (i), newLine.getPoint (i + 1));
+<             if (segVector.x != 0 && segVector.y != 0) {
+<                 isRectilinear = false;
+<                 break;
+227a172,172
+> 
+229,230d173
+<         if (isRectilinear && areEndsInBounds (conn, newLine)) {
+<             return;
+231a175,182
+> 
+>     private int getAnchorOffRectangleDirection (Point anchorPoint, Rectangle rect) {
+>         int position = PositionConstants.NORTH;
+>         int criteriaValue = Math.abs (anchorPoint.y - rect.y);
+>         int tempCriteria = Math.abs (anchorPoint.y - rect.y - rect.height);
+>         if (tempCriteria < criteriaValue) {
+>             criteriaValue = tempCriteria;
+>             position = PositionConstants.SOUTH;
+232,233d174
+<         if (updateToBiTerminal (conn, newLine) && areEndsInBounds (conn, newLine)) {
+<             return;
+234a341,353
+>     private boolean removeRedundantPoints (PointList line) {
+>         int initialNumberOfPoints = line.size ();
+>         if (line.size () > 2) {
+>             PointList newLine = new PointList (line.size ());
+>             newLine.addPoint (line.removePoint (0));
+>             while (line.size () >= 2) {
+>                 Point p0 = newLine.getLastPoint ();
+>                 Point p1 = line.getPoint (0);
+>                 Point p2 = line.getPoint (1);
+>                 if (p0.x == p1.x && p0.x == p2.x) {
+>                     line.removePoint (0);
+>                 } else if (p0.y == p1.y && p0.y == p2.y) {
+>                     line.removePoint (0);
+234a184,187
+>         tempCriteria = Math.abs (anchorPoint.x - rect.x);
+>         if (tempCriteria < criteriaValue) {
+>             criteriaValue = tempCriteria;
+>             position = PositionConstants.WEST;
+235,246d340
+<         OrthogonalRouterUtilities.resetEndPointsToCenter (conn, newLine);
+<         PointList oldPoints = PointListUtilities.copyPoints (newLine);
+<         PointList newPoints = new PointList ();
+<         newPoints.addPoint (oldPoints.removePoint (0));
+<         while (oldPoints.size () > 0) {
+<             if (oldPoints.size () >= 2) {
+<                 Point p0 = newPoints.getLastPoint ();
+<                 Point p1 = oldPoints.removePoint (0);
+<                 Point p2 = oldPoints.removePoint (0);
+<                 if (Math.abs (p2.y - p0.y) > Math.abs (p2.x - p0.x)) {
+<                     newPoints.addPoint (new Point (p1.x, p0.y));
+<                     newPoints.addPoint (new Point (p1.x, p2.y));
+247,247c354,354
+<                 } else {
+---
+>                 } else {
+248,248c355,355
+<                     newPoints.addPoint (new Point (p0.x, p1.y));
+---
+>                     newLine.addPoint (line.removePoint (0));
+249,249d355
+<                     newPoints.addPoint (new Point (p2.x, p1.y));
+250a189,192
+>         tempCriteria = Math.abs (anchorPoint.x - rect.x - rect.width);
+>         if (tempCriteria < criteriaValue) {
+>             criteriaValue = tempCriteria;
+>             position = PositionConstants.EAST;
+251,258d188
+<                 newPoints.addPoint (p2);
+<             } else if (oldPoints.size () == 1) {
+<                 Point p0 = newPoints.getLastPoint ();
+<                 Point p1 = oldPoints.removePoint (0);
+<                 if (Math.abs (p1.y - p0.y) > Math.abs (p1.x - p0.x)) {
+<                     newPoints.addPoint (new Point (p1.x, p0.y));
+<                 } else {
+<                     newPoints.addPoint (new Point (p0.x, p1.y));
+260,260d193
+<                 newPoints.addPoint (p1);
+262a197,206
+>     private Dimension getTranslationValue (int position, int xFactorValue, int yFactorValue) {
+>         Dimension translationDimension = new Dimension ();
+>         if (position == PositionConstants.EAST) {
+>             translationDimension.width = xFactorValue;
+>         } else if (position == PositionConstants.SOUTH) {
+>             translationDimension.height = yFactorValue;
+>         } else if (position == PositionConstants.WEST) {
+>             translationDimension.width = - xFactorValue;
+>         } else if (position == PositionConstants.NORTH) {
+>             translationDimension.height = - yFactorValue;
+263,275d196
+<         }
+<         oldPoints.removeAllPoints ();
+<         oldPoints.addPoint (newPoints.removePoint (0));
+<         while (newPoints.size () >= 2) {
+<             Point p0 = oldPoints.getLastPoint ();
+<             Point p1 = newPoints.getPoint (0);
+<             Point p2 = newPoints.getPoint (1);
+<             if (p0.x == p1.x && p0.x == p2.x) {
+<                 newPoints.removePoint (0);
+<             } else if (p0.y == p1.y && p0.y == p2.y) {
+<                 newPoints.removePoint (0);
+<             } else {
+<                 oldPoints.addPoint (newPoints.removePoint (0));
+278a211,216
+> 
+>     private int getOffShapeDirection (int anchorRelativeLocation) {
+>         if (anchorRelativeLocation == PositionConstants.EAST || anchorRelativeLocation == PositionConstants.WEST) {
+>             return PositionConstants.HORIZONTAL;
+>         } else if (anchorRelativeLocation == PositionConstants.NORTH || anchorRelativeLocation == PositionConstants.SOUTH) {
+>             return PositionConstants.VERTICAL;
+279,280d210
+<         while (newPoints.size () > 0) {
+<             oldPoints.addPoint (newPoints.removePoint (0));
+282,283d117
+<         newLine.removeAllPoints ();
+<         for (int i = 0;
+284,284c118,118
+<         i < oldPoints.size (); i ++) newLine.addPoint (oldPoints.getPoint (i));
+---
+>             i < newLine.size () && source.contains (new PrecisionPoint (newLine.getPoint (i))); i ++) {
+284a119,119
+>                 lastRemovedFromSource = newLine.removePoint (i --);
+285a219,219
+>         return PositionConstants.NONE;
+288,299d221
+<     protected boolean checkEndSegments (Connection conn, PointList newLine) {
+<         boolean bOk = true;
+<         Dimension connection_offset = new Dimension (CONNECTION_OFFSET, 0);
+<         conn.translateToRelative (connection_offset);
+<         if (newLine.size () > 2) {
+<             Point ptFix = new Point (newLine.getPoint (1));
+<             if (! checkEndSegment (conn, conn.getSourceAnchor (), ptFix, connection_offset.width / 2)) {
+<                 newLine.setPoint (ptFix, 1);
+<                 Point ptNext = newLine.getPoint (2);
+<                 makeOrthogonal (ptFix, ptNext);
+<                 newLine.setPoint (ptNext, 2);
+<                 bOk = false;
+300a227,258
+>         PrecisionRectangle source = sourceBoundsRelativeToConnection (conn);
+>         PrecisionRectangle target = targetBoundsRelativeToConnection (conn);
+>         int offSourceDirection = PositionConstants.NONE;
+>         int offTargetDirection = PositionConstants.NONE;
+>         int sourceAnchorRelativeLocation = PositionConstants.NONE;
+>         int targetAnchorRelativeLocation = PositionConstants.NONE;
+>         if (line.size () == 0) {
+>             line.addPoint (new Point ());
+>             line.addPoint (new Point ());
+>             super.resetEndPointsToEdge (conn, line);
+>             sourceAnchorRelativeLocation = getAnchorOffRectangleDirection (line.getFirstPoint (), source);
+>             targetAnchorRelativeLocation = getAnchorOffRectangleDirection (line.getLastPoint (), target);
+>             Point offStart = line.getFirstPoint ();
+>             Point offEnd = line.getLastPoint ();
+>             Dimension offsetDim = offStart.getDifference (offEnd).scale (0.3);
+>             offStart.translate (getTranslationValue (sourceAnchorRelativeLocation, Math.abs (offsetDim.width), Math.abs (offsetDim.height)));
+>             offEnd.translate (getTranslationValue (targetAnchorRelativeLocation, Math.abs (offsetDim.width), Math.abs (offsetDim.height)));
+>             line.insertPoint (offStart, 1);
+>             line.insertPoint (offEnd, 2);
+>             offSourceDirection = getOffShapeDirection (sourceAnchorRelativeLocation);
+>             offTargetDirection = getOffShapeDirection (targetAnchorRelativeLocation);
+>         } else {
+>             Point start = line.getFirstPoint ();
+>             Point end = line.getLastPoint ();
+>             if (conn.getSourceAnchor () instanceof OrthogonalConnectionAnchor) {
+>                 line.insertPoint (OrthogonalRouterUtilities.getOrthogonalLineSegToAnchorLoc (conn, conn.getSourceAnchor (), start).getOrigin (), 0);
+>             } else {
+>                 PrecisionPoint reference = new PrecisionPoint (start);
+>                 conn.getSourceAnchor ().getOwner ().translateToAbsolute (reference);
+>                 PrecisionPoint anchorLocation = new PrecisionPoint (conn.getSourceAnchor ().getLocation (reference));
+>                 conn.translateToRelative (anchorLocation);
+>                 line.insertPoint (anchorLocation, 0);
+301,307d226
+<             ptFix = new Point (newLine.getPoint (newLine.size () - 2));
+<             if (! checkEndSegment (conn, conn.getTargetAnchor (), ptFix, connection_offset.width / 2)) {
+<                 newLine.setPoint (ptFix, newLine.size () - 2);
+<                 Point ptNext = newLine.getPoint (newLine.size () - 3);
+<                 makeOrthogonal (ptFix, ptNext);
+<                 newLine.setPoint (ptNext, newLine.size () - 3);
+<                 bOk = false;
+308a260,272
+>             if (conn.getTargetAnchor () instanceof OrthogonalConnectionAnchor) {
+>                 line.addPoint (OrthogonalRouterUtilities.getOrthogonalLineSegToAnchorLoc (conn, conn.getTargetAnchor (), end).getOrigin ());
+>             } else {
+>                 PrecisionPoint reference = new PrecisionPoint (end);
+>                 conn.getSourceAnchor ().getOwner ().translateToAbsolute (reference);
+>                 PrecisionPoint anchorLocation = new PrecisionPoint (conn.getTargetAnchor ().getLocation (reference));
+>                 conn.translateToRelative (anchorLocation);
+>                 line.addPoint (anchorLocation);
+>             }
+>             sourceAnchorRelativeLocation = getAnchorOffRectangleDirection (line.getFirstPoint (), source);
+>             offSourceDirection = getOffShapeDirection (sourceAnchorRelativeLocation);
+>             targetAnchorRelativeLocation = getAnchorOffRectangleDirection (line.getLastPoint (), target);
+>             offTargetDirection = getOffShapeDirection (targetAnchorRelativeLocation);
+309a274,275
+>         OrthogonalRouterUtilities.transformToOrthogonalPointList (line, offSourceDirection, offTargetDirection);
+>         removeRedundantPoints (line);
+310,310c320,320
+<         return bOk;
+---
+>         return position;
+312a278,278
+>     private void normalizeToStraightLineTolerance (PointList line, int tolerance) {
+313,313d277
+<     protected void straightenPoints (PointList newLine) {
+314a280,286
+>         i < line.size () - 1; i ++) {
+>             Point pt1 = line.getPoint (i);
+>             Point pt2 = line.getPoint (i + 1);
+>             if (Math.abs (pt1.x - pt2.x) < tolerance) {
+>                 line.setPoint (new Point (pt1.x, pt2.y), i + 1);
+>             } else if (Math.abs (pt1.y - pt2.y) < tolerance) {
+>                 line.setPoint (new Point (pt2.x, pt1.y), i + 1);
+315,320d279
+<         i < newLine.size () - 1; i ++) {
+<             Point ptCurrent = newLine.getPoint (i);
+<             Point ptNext = newLine.getPoint (i + 1);
+<             makeOrthogonal (ptCurrent, ptNext);
+<             newLine.setPoint (ptNext, i + 1);
+<         }
+323,328d288
+<     protected boolean checkEndSegment (Connection conn, ConnectionAnchor anchor, Point ptNext, int offset) {
+<         LineSeg seg = OrthogonalRouterUtilities.getOrthogonalLineSegToAnchorLoc (conn, anchor, ptNext);
+<         if (seg != null) {
+<             if (seg.length () < offset) {
+<                 seg.pointOn (offset, LineSeg.KeyPoint.ORIGIN, ptNext);
+<                 return false;
+331,334d290
+<         return true;
+<     }
+< 
+<     private static final int maxRoutingDepth = 10;
+335a292,296
+>     private PrecisionRectangle sourceBoundsRelativeToConnection (Connection conn) {
+>         PrecisionRectangle source = new PrecisionRectangle (conn.getSourceAnchor ().getOwner ().getBounds ());
+>         conn.getSourceAnchor ().getOwner ().translateToAbsolute (source);
+>         conn.translateToRelative (source);
+>         return source;
+336,336c36,36
+<     public void routeLine (Connection conn, int nestedRoutingDepth, PointList newLine) {
+---
+>     public void routeLine (Connection conn, int nestedRoutingDepth, PointList newLine) {
+337,337c37,37
+<         boolean skipNormalization = (routerFlags & ROUTER_FLAG_SKIPNORMALIZATION) != 0;
+---
+>         boolean skipNormalization = (routerFlags & ROUTER_FLAG_SKIPNORMALIZATION) != 0;
+338,338d37
+<         int nStartSize = newLine.size ();
+339,339c38,38
+<         if (isReorienting (conn)) {
+---
+>         if (isReorienting (conn)) {
+340,340c39,39
+<             super.routeLine (conn, nestedRoutingDepth, newLine);
+---
+>             super.routeLine (conn, nestedRoutingDepth, newLine);
+341,341d39
+<             resetEndPointsToEdge (conn, newLine);
+342,342c40,40
+<             return;
+---
+>             return;
+343a298,303
+> 
+>     private PrecisionRectangle targetBoundsRelativeToConnection (Connection conn) {
+>         PrecisionRectangle target = new PrecisionRectangle (conn.getTargetAnchor ().getOwner ().getBounds ());
+>         conn.getTargetAnchor ().getOwner ().translateToAbsolute (target);
+>         conn.translateToRelative (target);
+>         return target;
+343a42,44
+>         if (checkSelfRelConnection (conn, newLine) || checkShapesIntersect (conn, newLine)) {
+>             super.resetEndPointsToEdge (conn, newLine);
+>             OrthogonalRouterUtilities.transformToOrthogonalPointList (newLine, getOffShapeDirection (getAnchorOffRectangleDirection (newLine.getFirstPoint (), sourceBoundsRelativeToConnection (conn))), getOffShapeDirection (getAnchorOffRectangleDirection (newLine.getLastPoint (), targetBoundsRelativeToConnection (conn))));
+344,346d41
+<         if (checkSelfRelConnection (conn, newLine)) {
+<             checkEndSegments (conn, newLine);
+<             resetEndPointsToEdge (conn, newLine);
+347,347c45,45
+<             return;
+---
+>             return;
+348a305,311
+> 
+>     private int getOutisePointOffRectanglePosition (Point p, Rectangle r) {
+>         int position = PositionConstants.NONE;
+>         if (r.x > p.x) {
+>             position |= PositionConstants.WEST;
+>         } else if (r.x + r.width < p.x) {
+>             position |= PositionConstants.EAST;
+349,352d304
+<         if (checkShapesIntersect (conn, newLine)) {
+<             checkEndSegments (conn, newLine);
+<             resetEndPointsToEdge (conn, newLine);
+<             return;
+353a52,54
+>         removeRedundantPoints (newLine);
+>         removePointsInViews (conn, newLine, lastStartAnchor, lastEndAnchor);
+>         Dimension tolerance = new Dimension (3, 0);
+354,359d51
+<         updateIfNotRectilinear (conn, newLine);
+<         boolean normalizationChangedLine = false;
+<         if (! skipNormalization) {
+<             normalizationChangedLine = removeSegmentsInViews (conn, newLine);
+<             normalizationChangedLine |= removePointsInViews (conn, newLine);
+<             Dimension tolerance = new Dimension (3, 0);
+360,360c55,55
+<             if (! RouterHelper.getInstance ().isFeedback (conn)) tolerance = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (tolerance);
+---
+>         if (! RouterHelper.getInstance ().isFeedback (conn)) tolerance = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (tolerance);
+361a314,317
+>         if (r.y > p.y) {
+>             position |= PositionConstants.NORTH;
+>         } else if (r.y + r.height < p.y) {
+>             position |= PositionConstants.SOUTH;
+361a57,57
+>         if (! skipNormalization) {
+362a59,59
+>                 normalizeToStraightLineTolerance (newLine, tolerance.width);
+362,362c58,58
+<             normalizationChangedLine |= PointListUtilities.normalizeSegments (newLine, tolerance.width);
+---
+>             if (PointListUtilities.normalizeSegments (newLine, tolerance.width)) {
+363a63,67
+>             Ray middleSeg = new Ray (newLine.getFirstPoint (), newLine.getLastPoint ());
+>             if (middleSeg.length () <= tolerance.width) {
+>                 newLine.removePoint (0);
+>             }
+>         }
+364,364d62
+<         checkEndSegments (conn, newLine);
+365a69,69
+>         if (nestedRoutingDepth < maxNestedRoutingDepth && ! isValidRectilinearLine (conn, newLine)) {
+365,365c68,68
+<         resetEndPointsToEdge (conn, newLine);
+---
+>         resetEndPointsToEdge (conn, newLine);
+366,369d68
+<         straightenPoints (newLine);
+<         if (normalizationChangedLine) {
+<             if (nestedRoutingDepth < maxRoutingDepth) {
+<                 nestedRoutingDepth ++;
+370,370c70,70
+<                 routeLine (conn, nestedRoutingDepth, newLine);
+---
+>             routeLine (conn, ++ nestedRoutingDepth, newLine);
+370a71,71
+>         }
+371,371d70
+<                 if (nestedRoutingDepth != 0) nestedRoutingDepth --;
+373a322,326
+> 
+>     private int getAnchorLocationBasedOnSegmentOrientation (Point anchorPoint, Rectangle rectangle, int segmentOrientation) {
+>         if (segmentOrientation == PositionConstants.VERTICAL) {
+>             if (Math.abs (anchorPoint.y - rectangle.y) < Math.abs (anchorPoint.y - rectangle.y - rectangle.height)) {
+>                 return PositionConstants.NORTH;
+374a328,328
+>                 return PositionConstants.SOUTH;
+375,394d327
+<             Rectangle startRect = getBounds (conn.getSourceAnchor ().getOwner ());
+<             conn.getSourceAnchor ().getOwner ().translateToAbsolute (startRect);
+<             conn.translateToRelative (startRect);
+<             Dimension buffer = new Dimension (2, 2);
+<             conn.translateToRelative (buffer);
+<             startRect.expand (buffer.width, buffer.height);
+<             Rectangle endRect = getBounds (conn.getTargetAnchor ().getOwner ());
+<             conn.getTargetAnchor ().getOwner ().translateToAbsolute (endRect);
+<             conn.translateToRelative (endRect);
+<             endRect.expand (buffer.width, buffer.height);
+<             if (! startRect.contains (newLine.getPoint (0)) || ! endRect.contains (newLine.getPoint (newLine.size () - 1)) || newLine.size () - nStartSize >= 2) {
+<                 newLine.removeAllPoints ();
+<                 Point r1 = conn.getSourceAnchor ().getReferencePoint ();
+<                 conn.translateToRelative (r1);
+<                 newLine.addPoint (r1);
+<                 Point r2 = conn.getTargetAnchor ().getReferencePoint ();
+<                 conn.translateToRelative (r2);
+<                 newLine.addPoint (r2);
+<                 updateIfNotRectilinear (conn, newLine);
+<                 resetEndPointsToEdge (conn, newLine);
+395a330,334
+>         } else if (segmentOrientation == PositionConstants.HORIZONTAL) {
+>             if (Math.abs (anchorPoint.x - rectangle.x) < Math.abs (anchorPoint.x - rectangle.x - rectangle.width)) {
+>                 return PositionConstants.WEST;
+>             } else {
+>                 return PositionConstants.EAST;
+398a74,79
+>     private boolean isValidRectilinearLine (Connection conn, PointList line) {
+>         if (! (conn.getSourceAnchor ().getOwner () instanceof Connection)) {
+>             Rectangle source = new PrecisionRectangle (FigureUtilities.getAnchorableFigureBounds (conn.getSourceAnchor ().getOwner ()));
+>             conn.getSourceAnchor ().getOwner ().translateToAbsolute (source);
+>             conn.translateToRelative (source);
+>             if (source.contains (line.getPoint (1))) {
+398a338,338
+>         return PositionConstants.NONE;
+399,406d73
+<     private boolean areEndsInBounds (Connection connection, PointList line) {
+<         Rectangle startRect = new PrecisionRectangle (getBounds (connection.getSourceAnchor ().getOwner ()));
+<         connection.getSourceAnchor ().getOwner ().translateToAbsolute (startRect);
+<         connection.translateToRelative (startRect);
+<         Rectangle endRect = new PrecisionRectangle (getBounds (connection.getTargetAnchor ().getOwner ()));
+<         connection.getTargetAnchor ().getOwner ().translateToAbsolute (endRect);
+<         connection.translateToRelative (endRect);
+<         if (! startRect.contains (line.getPoint (0)) || ! endRect.contains (line.getPoint (line.size () - 1))) {
+407,407c80,80
+<             return false;
+---
+>                 return false;
+408,409d80
+<         }
+<         return true;
+412,413d340
+<     private Rectangle getBounds (IFigure figure) {
+<         return figure instanceof Connection ? ((Connection) figure).getPoints ().getBounds ().getCopy () : figure.getBounds ().getCopy ();
+416,419d357
+<     private Point getIntersectionPoint (Connection connection, LineSeg lineSeg) {
+<         PointList intersections = lineSeg.getLineIntersectionsWithLineSegs (connection.getPoints ());
+<         if (intersections.size () > 0) {
+<             return PointListUtilities.pickClosestPoint (intersections, lineSeg.getOrigin ());
+420a359,365
+>             while (line.size () > 0) {
+>                 newLine.addPoint (line.removePoint (0));
+>             }
+>             line.removeAllPoints ();
+>             line.addAll (newLine);
+>         }
+>         return line.size () != initialNumberOfPoints;
+421,421d358
+<         return null;

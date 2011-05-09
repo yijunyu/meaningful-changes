@@ -1,0 +1,274 @@
+package org.eclipse.gmf.runtime.emf.clipboard.core.internal;
+
+import java.io.IOException;
+
+import java.io.InputStream;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.HashMap;
+
+import java.util.HashSet;
+
+import java.util.Iterator;
+
+import java.util.LinkedHashSet;
+
+import java.util.List;
+
+import java.util.Map;
+
+import java.util.Set;
+
+import org.eclipse.emf.common.util.EList;
+
+import org.eclipse.emf.common.util.TreeIterator;
+
+import org.eclipse.emf.common.util.URI;
+
+import org.eclipse.emf.ecore.EAnnotation;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.emf.ecore.EcoreFactory;
+
+import org.eclipse.emf.ecore.InternalEObject;
+
+import org.eclipse.emf.ecore.util.EcoreEList;
+
+import org.eclipse.emf.ecore.util.InternalEList;
+
+import org.eclipse.emf.ecore.xmi.XMLResource;
+
+import org.eclipse.emf.ecore.xmi.XMLSave;
+
+import org.eclipse.emf.ecore.xmi.impl.XMISaveImpl;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.IClipboardSupport;
+
+public class SavingEMFResource extends SerializationEMFResource {
+    private Map copy2ObjectMap;
+    private EList contentList;
+    private Set contentSet;
+    private CopyObjects copyObjects;
+    private Collection excludedObjects;
+
+    public SavingEMFResource (URI uri, String encoding, Map defaultSaveOptions, Map copy2ObjectMap, CopyObjects copyObjects, IClipboardSupport clipboardOperationHelper) {
+        super (encoding, uri, clipboardOperationHelper);
+        this.defaultSaveOptions = defaultSaveOptions;
+        this.eObjectToIDMap = new HashMap ();
+        this.idToEObjectMap = new HashMap ();
+        this.copy2ObjectMap = copy2ObjectMap;
+        this.contentSet = new HashSet (copyObjects.totalCopyObjects);
+        this.copyObjects = copyObjects;
+        this.excludedObjects = clipboardOperationHelper.getExcludedCopyObjects (copyObjects.totalCopyObjects);
+        setMissingResource ();
+        setContainmentFeatures ();
+        setLoaded (true);
+        sortContentSetOnOriginalStorageOrder ();
+    }
+
+    private void sortContentSetOnOriginalStorageOrder () {
+        Map parentObjectMap = new HashMap ();
+        List roots = new ArrayList ();
+        Iterator it = contentSet.iterator ();
+        while (it.hasNext ()) {
+            EObject eObj = (EObject) it.next ();
+            EObject eParent = eObj.eContainer ();
+            if (eParent == null) {
+                roots.add (eObj);
+            } else {
+                List children = (List) parentObjectMap.get (eParent);
+                if (children == null) {
+                    children = new ArrayList ();
+                    parentObjectMap.put (eParent, children);
+                }
+                children.add (eObj);
+            }
+        }
+        List list = new ArrayList (roots);
+        Iterator entryIt = parentObjectMap.entrySet ().iterator ();
+        while (entryIt.hasNext ()) {
+            Map.Entry entry = (Map.Entry) entryIt.next ();
+            Collections.sort ((List) entry.getValue (), new ListIndexComparator (((EObject) entry.getKey ()).eContents ()));
+            list.addAll ((List) entry.getValue ());
+        }
+        contentSet = new LinkedHashSet (list);
+    }
+
+    private void setContainmentFeatures () {
+        EAnnotation containmentAnnotations = EcoreFactory.eINSTANCE.createEAnnotation ();
+        EAnnotation eAnnotation = EcoreFactory.eINSTANCE.createEAnnotation ();
+        eAnnotation.setSource (SERIALIZATION_ANNOTATIONS);
+        containmentAnnotations.getEAnnotations ().add (eAnnotation);
+        Set set = new HashSet (contentSet);
+        set.addAll (copyObjects.originalObjects);
+        Iterator it = set.iterator ();
+        while (it.hasNext ()) {
+            EObject eObj = (EObject) it.next ();
+            addToSerializationAnnotation (eAnnotation, eObj);
+            TreeIterator contentIt = eObj.eAllContents ();
+            while (contentIt.hasNext ()) {
+                EObject childEObj = (EObject) contentIt.next ();
+                if (getClipboardOperationHelper ().shouldSaveContainmentFeature (childEObj) == false) {
+                    contentIt.prune ();
+                    continue;
+                }
+                addToSerializationAnnotation (eAnnotation, childEObj);
+            }
+        }
+        super.getContents ().add (containmentAnnotations);
+        contentSet.add (containmentAnnotations);
+    }
+
+    private void addToSerializationAnnotation (EAnnotation eAnnotation, EObject eObj) {
+        EObject eObjectWithValidContainer = (eObj.eContainer () == null) ? getOriginalEObject (eObj) : eObj;
+        EAnnotation ref_obj_Annotation = EcoreFactory.eINSTANCE.createEAnnotation ();
+        ref_obj_Annotation.getReferences ().add (eObj);
+        if (eObjectWithValidContainer != null) {
+            ref_obj_Annotation.getReferences ().add (eObjectWithValidContainer.eContainmentFeature ());
+        } else {
+            ref_obj_Annotation.getReferences ().add (EcoreFactory.eINSTANCE.createEReference ());
+        }
+        eAnnotation.getEAnnotations ().add (ref_obj_Annotation);
+    }
+
+    private void setMissingResource () {
+        Iterator it = contentSet.iterator ();
+        EObject eObject = null;
+        while (it.hasNext ()) {
+            eObject = (EObject) it.next ();
+            if (eObject.eResource () == null) {
+                while (eObject.eContainer () != null) {
+                    eObject = eObject.eContainer ();
+                }
+                super.getContents ().add (eObject);
+            }
+        }
+        it = contentSet.iterator ();
+        while (it.hasNext ()) {
+            eObject = (EObject) it.next ();
+            if (eObject.eResource () == null) {
+                RuntimeException e = new IllegalArgumentException ();
+                ClipboardPlugin.throwing (getClass (), "setMissingResource", e);
+                throw e;
+            }
+        }
+    }
+
+    public void doLoad (InputStream inputStream, Map options) throws IOException {
+        throwUnsupportedOperationException ("doLoad", new UnsupportedOperationException ("Can't call load on serializing resource"));
+    }
+
+    protected XMLSave createXMLSave () {
+        return new XMISaveImpl (createXMLHelper ()) {
+
+            protected void saveElement (EObject o, EStructuralFeature f) {
+                if (excludedObjects.contains (o)) {
+                    return;
+                }
+                super.saveElement (o, f);
+            }
+
+            protected int sameDocMany (EObject o, EStructuralFeature f) {
+                InternalEList values = (InternalEList) helper.getValue (o, f);
+                if (values.isEmpty ()) {
+                    return SKIP;
+                }
+                for (Iterator i = values.basicIterator ();
+                i.hasNext ();) {
+                    InternalEObject value = (InternalEObject) i.next ();
+                    if (value.eIsProxy () || (isInSavingResource (value) == false)) {
+                        return CROSS_DOC;
+                    }
+                }
+                return SAME_DOC;
+            }
+
+            protected int sameDocSingle (EObject o, EStructuralFeature f) {
+                InternalEObject value = (InternalEObject) helper.getValue (o, f);
+                if (value == null) {
+                    return SKIP;
+                } else if (value.eIsProxy ()) {
+                    return CROSS_DOC;
+                } else {
+                    return (isInSavingResource (value)) ? SAME_DOC : CROSS_DOC;
+                }
+
+            }
+
+        }
+
+        ;
+    }
+
+    boolean isInSavingResource (EObject eObject) {
+        if (eObject.eResource () == this) {
+            return true;
+        } else if ((copyObjects.originalObjects.contains (eObject)) || (copyObjects.copyParent2CopyMap.values ().contains (eObject)) || (copyObjects.combinedCopyAlwaysSet.contains (eObject))) {
+            return true;
+        }
+
+        EObject eContainer = eObject.eContainer ();
+        while (eContainer != null) {
+            if ((copyObjects.originalObjects.contains (eContainer)) || (copyObjects.copyParent2CopyMap.values ().contains (eObject)) || (copyObjects.combinedCopyAlwaysSet.contains (eObject))) {
+                return true;
+            }
+            eContainer = eContainer.eContainer ();
+        }
+        return false;
+    }
+
+    EObject getOriginalEObject (EObject copiedEObject) {
+        return (EObject) copy2ObjectMap.get (copiedEObject);
+    }
+
+    private String getOriginalID (EObject eObject) {
+        if (eObject.eResource () != this) {
+            return ((XMLResource) eObject.eResource ()).getID (eObject);
+        }
+        return null;
+    }
+
+    public String getID (EObject eObject) {
+        String id = getOriginalID (eObject);
+        if (id == null) {
+            EObject original = (EObject) copy2ObjectMap.get (eObject);
+            if (original != null) {
+                id = getOriginalID (original);
+            } else {
+                assert eObject.eResource () == this : "eObject.eResource not same as self";
+                id = super.getID (eObject);
+            }
+        }
+        return id;
+    }
+
+    private static class ContentBasicEList extends EcoreEList.UnmodifiableEList implements InternalEList {
+
+        ContentBasicEList (Set contentSet) {
+            super (null, null, contentSet.size (), contentSet.toArray ());
+        }
+
+    }
+
+    public EList getContents () {
+        if (contentList == null) {
+            contentList = new ContentBasicEList (contentSet);
+        }
+        return contentList;
+    }
+
+    protected void doUnload () {
+        contentList = super.getContents ();
+        super.getContents ().clear ();
+    }
+
+}
+

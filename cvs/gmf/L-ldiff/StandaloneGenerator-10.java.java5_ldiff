@@ -1,0 +1,140 @@
+5,18d4
+< import java.util.Arrays;
+< 
+< import java.util.Collections;
+< 
+< import java.util.Enumeration;
+< 
+< import java.util.HashSet;
+< 
+< import java.util.IdentityHashMap;
+< 
+< import java.util.Iterator;
+< 
+< import java.util.Map;
+< 
+29,30d14
+< import org.eclipse.gmf.gmfgraph.FigureGallery;
+< 
+41,41d24
+<     private final FigureGallery [] myInput;
+46a30,30
+>     private Processor myProcessor;
+47,57d29
+<     private final GenerationInfoImpl myGenerationInfo;
+<     public interface GenerationInfo {
+< 
+<         public Config getConfig ();
+< 
+<         public Enumeration getProcessedFigures ();
+< 
+<         public String getGeneratedClassFQN (Figure figure);
+< 
+<     }
+< 
+132a106,119
+>     public static abstract class Processor {
+> 
+>         public abstract void go (ProcessorCallback callback) throws InterruptedException;
+> 
+>         public String [] getRequiredBundles (FigureQualifiedNameSwitch fqnSwitch) {
+>             return new String [0];
+>         }
+> 
+>     }
+> 
+>     public interface ProcessorCallback {
+> 
+>         public String visitFigure (Figure f) throws InterruptedException;
+> 
+133,134d105
+<     public StandaloneGenerator (FigureGallery input, Config config, FigureQualifiedNameSwitch fqnSwitch) {
+<         this (new FigureGallery [] {input}, config, fqnSwitch);
+137,137c122,122
+<     public StandaloneGenerator (FigureGallery [] input, Config config, FigureQualifiedNameSwitch fqnSwitch) {
+---
+>     public StandaloneGenerator (Processor p, Config config, FigureQualifiedNameSwitch fqnSwitch) {
+138,138c123,123
+<         assert input != null && config != null && fqnSwitch != null && ! Arrays.asList (input).contains (null);
+---
+>         assert p != null && config != null && fqnSwitch != null;
+139a125,125
+>         myProcessor = p;
+140,140d124
+<         myInput = input;
+152,156d136
+<         myGenerationInfo = new GenerationInfoImpl (myArgs);
+<     }
+< 
+<     public GenerationInfo getGenerationInfo () {
+<         return myGenerationInfo;
+190,190c170,170
+<         doGenerateFile (myAuxiliaryGenerators.getManifestMFEmitter (), new Path ("META-INF/MANIFEST.MF"), new Object [] {new Object [] {myArgs, getRequiredBundles ()}});
+---
+>         doGenerateFile (myAuxiliaryGenerators.getManifestMFEmitter (), new Path ("META-INF/MANIFEST.MF"), new Object [] {new Object [] {myArgs, myProcessor.getRequiredBundles (myFigureNameSwitch)}});
+194,206d173
+<     private String [] getRequiredBundles () {
+<         HashSet rv = new HashSet ();
+<         for (int i = 0;
+<         i < myInput.length; i ++) {
+<             if (myInput [i].getImplementationBundle () != null && myInput [i].getImplementationBundle ().trim ().length () > 0) {
+<                 rv.add (myInput [i].getImplementationBundle ());
+<             }
+<             String [] additional = myFigureNameSwitch.getDependencies (myInput [i]);
+<             rv.addAll (Arrays.asList (additional));
+<         }
+<         return (String []) rv.toArray (new String [rv.size ()]);
+<     }
+< 
+207a175,178
+>         myProcessor.go (new ProcessorCallback () {
+> 
+>             public String visitFigure (Figure f) throws InterruptedException {
+>                 return StandaloneGenerator.this.visitFigure (f);
+208,213d174
+<         for (int i = 0;
+<         i < myInput.length; i ++) {
+<             for (Iterator it = myInput [i].getFigures ().iterator ();
+<             it.hasNext ();) {
+<                 Figure next = (Figure) it.next ();
+<                 visitFigure (next);
+214a180,180
+> 
+215a182,183
+> 
+>         );
+218,218c186,186
+<     private void visitFigure (Figure figure) throws InterruptedException {
+---
+>     private String visitFigure (Figure figure) throws InterruptedException {
+225,225c193,193
+<         myGenerationInfo.registerFQN (figure, composeFQN (getPackageName (), importAssistant.getCompilationUnitName ()));
+---
+>         return composeFQN (getPackageName (), importAssistant.getCompilationUnitName ());
+242,267d209
+<     private static class GenerationInfoImpl implements GenerationInfo {
+<         private final Map myFigure2FQN = new IdentityHashMap ();
+<         private final Config myConfig;
+< 
+<         public GenerationInfoImpl (Config config) {
+<             myConfig = config;
+<         }
+< 
+<         public Config getConfig () {
+<             return myConfig;
+<         }
+< 
+<         public void registerFQN (Figure figure, String fqn) {
+<             myFigure2FQN.put (figure, fqn);
+<         }
+< 
+<         public String getGeneratedClassFQN (Figure figure) {
+<             return (String) myFigure2FQN.get (figure);
+<         }
+< 
+<         public Enumeration getProcessedFigures () {
+<             return Collections.enumeration (myFigure2FQN.keySet ());
+<         }
+< 
+<     }
+< 

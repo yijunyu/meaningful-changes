@@ -1,0 +1,445 @@
+package org.eclipse.gmf.runtime.draw2d.ui.geometry;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.Ray;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.draw2d.geometry.Translatable;
+
+public class LineSeg implements Cloneable, java.io.Serializable, Translatable {
+    final private static int DEFAULT_INTERSECTION_TOLERANCE = 1;
+    private Point origin;
+    private Point terminus;
+    static final long serialVersionUID = 1;
+    static public class KeyPoint {
+        private final String name;
+
+        private KeyPoint (String name) {
+            this.name = name;
+        }
+
+        public String toString () {
+            return name;
+        }
+
+        public static final KeyPoint ORIGIN = new KeyPoint ("origin");
+        public static final KeyPoint MIDPOINT = new KeyPoint ("midpoint");
+        public static final KeyPoint TERMINUS = new KeyPoint ("terminus");
+    }
+
+    static public class Sign {
+        private final String name;
+
+        private Sign (String name) {
+            this.name = name;
+        }
+
+        public String toString () {
+            return name;
+        }
+
+        public static final Sign POSITIVE = new Sign ("positive");
+        public static final Sign NEGATIVE = new Sign ("negative");
+    }
+
+    public LineSeg (Point ptStart, Point ptEnd) {
+        origin = new Point (ptStart);
+        terminus = new Point (ptEnd);
+    }
+
+    public LineSeg (final KeyPoint start, final int fromX, final int fromY, final float slope, final long len, final int xdir) {
+        super ();
+        origin = new Point ();
+        terminus = new Point ();
+        int dx, dy;
+        float dx_float;
+        double len_squared;
+        if (start == KeyPoint.ORIGIN) {
+            len_squared = (float) len * (float) len;
+        } else {
+            len_squared = len / 2.0 * len / 2.0;
+        }
+        double slope_squared = slope * slope;
+        dx_float = (float) Math.sqrt (len_squared / (slope_squared + 1.0));
+        dx_float *= xdir;
+        dx = (int) (dx_float + 0.5);
+        dy = (int) ((slope * dx_float) + 0.5);
+        if (start == KeyPoint.ORIGIN) {
+            origin.x = fromX;
+            origin.y = fromY;
+        } else {
+            origin.x = fromX - dx;
+            origin.y = fromY - dy;
+        }
+        terminus.x = fromX + dx;
+        terminus.y = fromY + dy;
+    }
+
+    public boolean equals (Object seg) {
+        if (! (seg instanceof LineSeg)) return false;
+
+        LineSeg ls = (LineSeg) seg;
+        return getOrigin ().equals (ls.getOrigin ()) && getTerminus ().equals (ls.getTerminus ());
+    }
+
+    public int hashCode () {
+        return getOrigin ().hashCode () ^ getTerminus ().hashCode ();
+    }
+
+    public Point getOrigin () {
+        return new Point (origin);
+    }
+
+    public Point getTerminus () {
+        return new Point (terminus);
+    }
+
+    public void setOrigin (Point origin) {
+        this.origin = new Point (origin);
+    }
+
+    public void setTerminus (Point terminus) {
+        this.terminus = new Point (terminus);
+    }
+
+    public final Point getSupremum () {
+        return new Point (Math.max (origin.x, terminus.x), Math.max (origin.y, terminus.y));
+    }
+
+    public final Point getInfimum () {
+        return new Point (Math.min (origin.x, terminus.x), Math.min (origin.y, terminus.y));
+    }
+
+    public final boolean isHorizontal () {
+        return (origin.y == terminus.y);
+    }
+
+    public final boolean isVertical () {
+        return (origin.x == terminus.x);
+    }
+
+    private static final float BIGSLOPE = 9999;
+
+    public final float slope () {
+        if (isVertical ()) return BIGSLOPE;
+
+        return (float) (terminus.y - origin.y) / (float) (terminus.x - origin.x);
+    }
+
+    public final float perpSlope () {
+        float m = slope ();
+        if (m == 0.0) return BIGSLOPE;
+        else return - (1.0F / m);
+
+    }
+
+    public final double length () {
+        return getOrigin ().getDistance (getTerminus ());
+    }
+
+    public Point intersect (final LineSeg line, final int nTolerance) {
+        PointList intersections = getLinesIntersections (line);
+        if (intersections.size () > 1) {
+            intersections.addPoint (getOrigin ().getCopy ());
+            intersections.addPoint (getTerminus ().getCopy ());
+        }
+        for (int i = 0;
+        i < intersections.size (); i ++) {
+            Point result = intersections.getPoint (i).getCopy ();
+            if (containsPoint (result, nTolerance) && line.containsPoint (result, nTolerance)) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    public final boolean containsPoint (final Point aPoint, final int tolerance) {
+        Point theOrigin = getOrigin ();
+        Point theTerminus = getTerminus ();
+        return (theOrigin.getDistance (aPoint) + aPoint.getDistance (theTerminus) <= length () + tolerance);
+    }
+
+    public final float distanceAlong (Point coord) {
+        int xCoord = coord.x;
+        int yCoord = coord.y;
+        long dirx = (long) terminus.x - (long) origin.x;
+        long diry = (long) terminus.y - (long) origin.y;
+        long qpx = (long) xCoord - (long) origin.x;
+        long qpy = (long) yCoord - (long) origin.y;
+        long dotprod = qpx * dirx + qpy * diry;
+        if (dirx == 0 && diry == 0) return - 1;
+
+        return ((float) dotprod / (float) (dirx * dirx + diry * diry));
+    }
+
+    public final long distanceToPoint (final int xCoord, final int yCoord) {
+        double proj = projection (xCoord, yCoord);
+        if (proj > 0 && proj < 1) {
+            Point pt = perpIntersect (xCoord, yCoord);
+            return Math.round (pt.getDistance (new Point (xCoord, yCoord)));
+        }
+        long d1 = Math.round (getOrigin ().getDistance (new Point (xCoord, yCoord)));
+        long d2 = Math.round (getTerminus ().getDistance (new Point (xCoord, yCoord)));
+        return (d1 < d2 ? d1 : d2);
+    }
+
+    public final Point perpIntersect (final int startX, final int startY) {
+        float fx;
+        Point ptResult = new Point ();
+        float m = slope ();
+        fx = (m * startY - m * getOrigin ().y + m * m * getOrigin ().x + startX) / (float) (m * m + 1.0);
+        if (m == 0) {
+            ptResult.y = getOrigin ().y;
+        } else {
+            ptResult.y = (int) (startY + ((startX - fx) / m) + 0.5);
+        }
+        ptResult.x = Math.round (fx);
+        return ptResult;
+    }
+
+    public final double projection (final int xCoord, final int yCoord) {
+        long dirx = (long) getTerminus ().x - (long) getOrigin ().x;
+        long diry = (long) getTerminus ().y - (long) getOrigin ().y;
+        long qpx = (long) xCoord - (long) getOrigin ().x;
+        long qpy = (long) yCoord - (long) getOrigin ().y;
+        long dotprod = qpx * dirx + qpy * diry;
+        if (dirx == 0 && diry == 0) return - 1.0F;
+
+        return ((double) dotprod / (double) (dirx * dirx + diry * diry));
+    }
+
+    public final Sign positionRelativeTo (Point rel) {
+        Ray ptRelRay = new Ray (getOrigin (), rel);
+        TrigValues val = getTrigValues (ptRelRay);
+        double dNewAngle = Math.atan2 (- val.sinTheta, - val.cosTheta);
+        if (dNewAngle > 0) return Sign.POSITIVE;
+
+        return Sign.NEGATIVE;
+    }
+
+    public final Point locatePoint (final double pctDist, final long theHeight, final Sign asOriented) {
+        int xdir;
+        int dist = (int) (pctDist * length ());
+        Point pt = new Point ();
+        pointOn (dist, KeyPoint.ORIGIN, pt);
+        if (getOrigin ().y > getTerminus ().y || (getOrigin ().y == getTerminus ().y && getOrigin ().x < getTerminus ().x)) {
+            xdir = (asOriented == Sign.POSITIVE ? - 1 : 1);
+        } else {
+            xdir = (asOriented == Sign.POSITIVE ? 1 : - 1);
+        }
+        LineSeg linesegAB = new LineSeg (KeyPoint.ORIGIN, pt.x, pt.y, perpSlope (), theHeight, xdir);
+        return (new Point (linesegAB.getTerminus ().x, linesegAB.getTerminus ().y));
+    }
+
+    public final boolean pointOn (final long theDistance, final KeyPoint fromKeyPoint, Point ptResult) {
+        float m, dx_float;
+        int dx, dy, startX = 0, startY = 0, otherX = 0, otherY = 0;
+        if (fromKeyPoint == KeyPoint.ORIGIN) {
+            startX = getOrigin ().x;
+            startY = getOrigin ().y;
+            otherX = getTerminus ().x;
+            otherY = getTerminus ().y;
+        } else if (fromKeyPoint == KeyPoint.TERMINUS) {
+            startX = getTerminus ().x;
+            startY = getTerminus ().y;
+            otherX = getOrigin ().x;
+            otherY = getOrigin ().y;
+        } else if (fromKeyPoint == KeyPoint.MIDPOINT) {
+            startX = (getOrigin ().x + getTerminus ().x) / 2;
+            startY = (getOrigin ().y + getTerminus ().y) / 2;
+            otherX = getTerminus ().x;
+            otherY = getTerminus ().y;
+        } else {
+            return false;
+        }
+
+        m = slope ();
+        double d_squared = (float) theDistance * (float) theDistance;
+        double m_squared = m * m;
+        dx_float = (float) Math.sqrt (d_squared / (m_squared + 1.0));
+        dx = (int) (dx_float + 0.5);
+        dy = (int) (Math.sqrt (d_squared * m_squared / (m_squared + 1.0)) + 0.5);
+        if (theDistance < 0) {
+            dx = - dx;
+            dy = - dy;
+        }
+        ptResult.x = ((startX > otherX) ? startX - dx : startX + dx);
+        ptResult.y = ((startY > otherY) ? startY - dy : startY + dy);
+        boolean in_line;
+        if (startX > otherX) in_line = ptResult.x >= otherX;
+        else in_line = ptResult.x <= otherX;
+
+        if (in_line) {
+            if (startY > otherY) in_line = ptResult.y >= otherY;
+            else in_line = ptResult.y <= otherY;
+
+        }
+        return in_line;
+    }
+
+    static public class TrigValues {
+        public double sinTheta;
+        public double cosTheta;
+    }
+
+    public TrigValues getTrigValues (final Ray ptToVector) {
+        double dFromLength = length ();
+        double dToLength = ptToVector.length ();
+        Ray ptFromVector = new Ray (getOrigin (), getTerminus ());
+        if (dFromLength <= 0 || dToLength <= 0) {
+            return null;
+        }
+        double dAlpha;
+        double dCosAlpha, dSinAlpha;
+        dCosAlpha = ptFromVector.x / dFromLength;
+        dSinAlpha = ptFromVector.y / dFromLength;
+        dAlpha = Math.atan2 (dSinAlpha, dCosAlpha);
+        dCosAlpha = Math.cos (- dAlpha);
+        dSinAlpha = Math.sin (- dAlpha);
+        double dRotateX = (ptToVector.x * dCosAlpha) - (ptToVector.y * dSinAlpha);
+        double dRotateY = (ptToVector.x * dSinAlpha) + (ptToVector.y * dCosAlpha);
+        TrigValues val = new TrigValues ();
+        val.cosTheta = dRotateX / dToLength;
+        val.sinTheta = dRotateY / dToLength;
+        return val;
+    }
+
+    public final LineSeg getParallelLineSegThroughPoint (Point ptLoc) {
+        if (isHorizontal ()) {
+            return new LineSeg (new Point (getOrigin ().x, ptLoc.y), new Point (getTerminus ().x, ptLoc.y));
+        } else if (isVertical ()) {
+            return new LineSeg (new Point (ptLoc.x, getOrigin ().y), new Point (ptLoc.x, getTerminus ().y));
+        } else {
+            Point ptProj = perpIntersect (ptLoc.x, ptLoc.y);
+            long nHeight = Math.round (ptProj.getDistance (ptLoc));
+            Sign position = positionRelativeTo (ptLoc);
+            return new LineSeg (locatePoint (0.0, nHeight, position), locatePoint (1.0, nHeight, position));
+        }
+
+    }
+
+    public static double [] getLineEquation (double x1, double y1, double x2, double y2) {
+        double equation [] = new double [3];
+        for (int i = 0;
+        i < 3; i ++) equation [i] = 0;
+
+        if (x1 == x2 && y1 == y2) return equation;
+
+        if (x1 == x2) {
+            equation [0] = 1;
+            equation [1] = 0;
+            equation [2] = x1;
+            return equation;
+        }
+        equation [0] = (y1 - y2) / (x2 - x1);
+        equation [1] = 1.0;
+        equation [2] = y2 + equation [0] * x2;
+        return equation;
+    }
+
+    public double [] getEquation () {
+        return getLineEquation (origin.x, origin.y, terminus.x, terminus.y);
+    }
+
+    public PointList getLinesIntersections (LineSeg line) {
+        PointList intersections = new PointList ();
+        double temp [] = getEquation ();
+        double a1 = temp [0];
+        double b1 = temp [1];
+        double c1 = temp [2];
+        temp = line.getEquation ();
+        double a2 = temp [0];
+        double b2 = temp [1];
+        double c2 = temp [2];
+        double det = a1 * b2 - b1 * a2;
+        if (det == 0) {
+            if (a1 == a2 && b1 == b2 && c1 == c2) {
+                intersections.addPoint (new Point (line.getOrigin ().getCopy ()));
+                intersections.addPoint (new Point (line.getTerminus ().getCopy ()));
+            }
+        } else {
+            intersections.addPoint (new Point (Math.round ((c1 * b2 - b1 * c2) / det), Math.round ((a1 * c2 - c1 * a2) / det)));
+        }
+        return intersections;
+    }
+
+    public PointList getLineIntersectionsWithEllipse (Rectangle ellipseBounds) {
+        PointList intersections = new PointList ();
+        if (ellipseBounds.width == 0 || ellipseBounds.height == 0) return intersections;
+
+        double xl1 = getOrigin ().x - ellipseBounds.getCenter ().x;
+        double xl2 = getTerminus ().x - ellipseBounds.getCenter ().x;
+        double yl1 = getOrigin ().y - ellipseBounds.getCenter ().y;
+        double yl2 = getTerminus ().y - ellipseBounds.getCenter ().y;
+        double [] equation = getLineEquation (xl1, yl1, xl2, yl2);
+        if (equation.length < 3 || (equation [0] == 0 && equation [1] == 0)) return intersections;
+
+        double a = equation [0];
+        double b = equation [1];
+        double c = equation [2];
+        double w = ellipseBounds.width;
+        double h = ellipseBounds.height;
+        if (b == 0) {
+            double x = c / a;
+            double y = Math.pow (h / 2, 2) - Math.pow ((h * c) / (a * w), 2);
+            if (y < 0) return intersections;
+
+            intersections.addPoint (new Point (Math.round (x + ellipseBounds.getCenter ().x), Math.round (Math.sqrt (y) + ellipseBounds.getCenter ().y)));
+            intersections.addPoint (new Point (Math.round (x + ellipseBounds.getCenter ().x), Math.round (- Math.sqrt (y) + ellipseBounds.getCenter ().y)));
+        } else {
+            double xA = Math.pow (h, 2) + Math.pow ((w * a) / b, 2);
+            double xB = (- 2) * Math.pow (w, 2) * a * c / Math.pow (b, 2);
+            double xC = Math.pow (w * c / b, 2) - Math.pow (h * w / 2, 2);
+            double xD = Math.pow (xB, 2) - 4 * xA * xC;
+            if (xD < 0) return intersections;
+
+            double x1 = (- xB + Math.sqrt (xD)) / (2 * xA);
+            double x2 = (- xB - Math.sqrt (xD)) / (2 * xA);
+            intersections.addPoint (new Point (Math.round (x1 + ellipseBounds.getCenter ().x), Math.round ((c - a * x1) / b + ellipseBounds.getCenter ().y)));
+            intersections.addPoint (new Point (Math.round (x2 + ellipseBounds.getCenter ().x), Math.round ((c - a * x2) / b + ellipseBounds.getCenter ().y)));
+        }
+        return intersections;
+    }
+
+    public PointList getLineIntersectionsWithLineSegs (final PointList points) {
+        double temp [] = getEquation ();
+        double a = temp [0];
+        double b = temp [1];
+        double c = temp [2];
+        PointList intersections = new PointList ();
+        if (points.size () < 2) {
+            if (a * points.getPoint (0).x + b * points.getPoint (0).y == c) {
+                intersections.addPoint (points.getPoint (0).getCopy ());
+            }
+            return intersections;
+        }
+        for (int i = 0;
+        i < points.size () - 1; i ++) {
+            LineSeg line = new LineSeg (points.getPoint (i).getCopy (), points.getPoint (i + 1).getCopy ());
+            PointList currentIntersections = getLinesIntersections (line);
+            for (int j = 0;
+            j < currentIntersections.size (); j ++) {
+                Point intersection = currentIntersections.getPoint (j);
+                if (line.containsPoint (intersection, DEFAULT_INTERSECTION_TOLERANCE)) intersections.addPoint (currentIntersections.getPoint (j));
+
+            }
+        }
+        return intersections;
+    }
+
+    public void performScale (double factor) {
+        setOrigin (getOrigin ().scale (factor));
+        setTerminus (getTerminus ().scale (factor));
+    }
+
+    public void performTranslate (int dx, int dy) {
+        setOrigin (getOrigin ().translate (dx, dy));
+        setTerminus (getTerminus ().translate (dx, dy));
+    }
+
+}
+

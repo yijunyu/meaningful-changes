@@ -1,0 +1,145 @@
+4a5,6
+> import java.util.Collections;
+> 
+8a11,16
+> import org.eclipse.core.commands.ExecutionException;
+> 
+> import org.eclipse.core.commands.operations.IOperationHistory;
+> 
+> import org.eclipse.core.commands.operations.OperationHistoryFactory;
+> 
+20a33,33
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+21,21c81,81
+< import org.eclipse.jface.viewers.ISelection;
+---
+> import org.eclipse.jface.viewers.ISelection;
+22,22c82,82
+< 
+---
+> 
+23,23c83,83
+< import org.eclipse.jface.viewers.IStructuredSelection;
+---
+> import org.eclipse.jface.viewers.IStructuredSelection;
+24,24c84,84
+< 
+---
+> 
+25,25c85,85
+< import org.eclipse.swt.graphics.GC;
+---
+> import org.eclipse.swt.graphics.GC;
+26,26c86,86
+< 
+---
+> 
+27,27c87,87
+< import org.eclipse.swt.widgets.Composite;
+---
+> import org.eclipse.swt.widgets.Composite;
+28,28c88,88
+< 
+---
+> 
+29,29c89,89
+< import org.eclipse.ui.IWorkbenchPart;
+---
+> import org.eclipse.ui.IWorkbenchPart;
+30,30c90,90
+< 
+---
+> 
+31,31c91,91
+< import org.eclipse.ui.views.properties.tabbed.AbstractPropertySection;
+---
+> import org.eclipse.ui.views.properties.tabbed.AbstractPropertySection;
+32,32c92,92
+< 
+---
+> 
+33,33c93,93
+< import org.eclipse.ui.views.properties.tabbed.ITabbedPropertySheetPageContributor;
+---
+> import org.eclipse.ui.views.properties.tabbed.ITabbedPropertySheetPageContributor;
+33a94,96
+> 
+> import org.eclipse.ui.views.properties.tabbed.TabbedPropertySheetPage;
+> 
+34a35,35
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+35,35d34
+< import org.eclipse.ui.views.properties.tabbed.TabbedPropertySheetPage;
+36a37,37
+> import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+36a21,22
+> import org.eclipse.core.runtime.IStatus;
+> 
+37a24,24
+> 
+37,37c23,23
+< import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+---
+> import org.eclipse.core.runtime.NullProgressMonitor;
+53,53c57,57
+< import org.eclipse.gmf.runtime.diagram.ui.properties.internal.DiagramPropertiesStatusCodes;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.properties.internal.DiagramPropertiesStatusCodes;
+54,54c58,58
+< 
+---
+> 
+65,65c65,65
+< import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractModelCommand;
+---
+> import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+179a196,206
+>         CompositeCommand command = new CompositeCommand (actionName, commands);
+>         IOperationHistory history = OperationHistoryFactory.getOperationHistory ();
+>         try {
+>             IStatus status = history.execute (command, new NullProgressMonitor (), null);
+>             if (status.getCode () == DiagramPropertiesStatusCodes.CANCELLED) {
+>                 refresh ();
+>             }
+>         } catch (ExecutionException e) {
+>             Trace.catching (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass (), "executeAsCompositeCommand", e);
+>             Log.error (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesStatusCodes.IGNORED_EXCEPTION_WARNING, e.getLocalizedMessage (), e);
+>         }
+180,183d195
+<         CompositeCommand compCmd = new CompositeCommand (actionName, commands);
+<         CommandResult result = CommandManager.getDefault ().execute (compCmd);
+<         if (result.getStatus ().getCode () == DiagramPropertiesStatusCodes.CANCELLED) refresh ();
+< 
+184a208,208
+>         return command.getCommandResult ();
+185,185d207
+<         return result;
+306,306c329,329
+<         return createCommandInternal (name, res, runnable);
+---
+>         return createCommandInternal (name, res.eResource (), runnable);
+309,309c332,332
+<     private ICommand createCommandInternal (String name, Object res, final Runnable runnable) {
+---
+>     private ICommand createCommandInternal (String name, Resource res, final Runnable runnable) {
+310,310c333,333
+<         ICommand command = new AbstractModelCommand (name, res) {
+---
+>         ICommand command = new AbstractTransactionalCommand (getEditingDomain (), name, Collections.singletonList (WorkspaceSynchronizer.getFile (res))) {
+311a335,335
+>             protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+312,312d334
+<             protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+314,314c337,337
+<                 return newOKCommandResult ();
+---
+>                 return CommandResult.newOKCommandResult ();
+322a346,353
+>     protected TransactionalEditingDomain getEditingDomain () {
+>         EObject eObjectInput = getEObject ();
+>         if (eObjectInput != null) {
+>             return TransactionUtil.getEditingDomain (eObjectInput);
+>         }
+>         return null;
+>     }
+> 

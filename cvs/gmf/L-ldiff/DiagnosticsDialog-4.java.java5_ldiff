@@ -1,0 +1,60 @@
+28a29,30
+> import org.eclipse.emf.ecore.EValidator;
+> 
+94a97,98
+> import org.eclipse.ui.IEditorDescriptor;
+> 
+112a117,120
+> import org.eclipse.ui.internal.ide.IDEWorkbenchPlugin;
+> 
+> import org.eclipse.ui.part.FileEditorInput;
+> 
+514a523,523
+>         IMarker marker = null;
+515,516d522
+<         IMarker marker = (markerMap != null) ? markerMap.getMap ().get (diagnostic) : null;
+<         IFile file = ValidationHelper.getFileFromDiagnostic (diagnostic);
+517a525,529
+>             if (! markerMap.getMap ().containsKey (diagnostic) && diagnostic == rootDiagnotic && ! diagnostic.getChildren ().isEmpty ()) {
+>                 diagnostic = (Diagnostic) diagnostic.getChildren ().get (0);
+>             }
+>             marker = markerMap.getMap ().get (diagnostic);
+>         }
+517,517c524,524
+<         if (file != null) {
+---
+>         if (markerMap != null) {
+524a557,557
+>                 }
+524a537,555
+>             page.showView ("org.eclipse.ui.views.ProblemView");
+>         } catch (PartInitException e) {
+>             CodeGenUIPlugin.getDefault ().getLog ().log (e.getStatus ());
+>         }
+>         IFile file = ValidationHelper.getFileFromDiagnostic (diagnostic);
+>         if (file != null) {
+>             try {
+>                 String editorId = "org.eclipse.ui.DefaultTextEditor";
+>                 IEditorPart editorPart = null;
+>                 if (marker == null || marker.getAttribute (EValidator.URI_ATTRIBUTE, null) != null) {
+>                     IEditorDescriptor [] editorDescriptors = PlatformUI.getWorkbench ().getEditorRegistry ().getEditors (file.getName ());
+>                     if (editorDescriptors.length > 0) {
+>                         editorId = editorDescriptors [0].getId ();
+>                     }
+>                 }
+>                 editorPart = page.openEditor (new FileEditorInput (file), editorId, true, IWorkbenchPage.MATCH_INPUT | IWorkbenchPage.MATCH_ID);
+>                 IGotoMarker gotoMarkerSupport = null;
+>                 if (editorPart != null) {
+>                     gotoMarkerSupport = (IGotoMarker) editorPart.getAdapter (IGotoMarker.class);
+525,526d556
+<                 IEditorPart editorPart = IDE.openEditor (page, file, true);
+<                 IGotoMarker gotoMarkerSupport = (editorPart != null) ? (IGotoMarker) editorPart.getAdapter (IGotoMarker.class) : null;
+527,527c558,558
+<                 if (gotoMarkerSupport != null && marker != null) {
+---
+>                 if (gotoMarkerSupport != null && marker != null) {
+530,531d559
+<                 } else {
+<                     return;
+533,533d560
+<                 PlatformUI.getWorkbench ().getActiveWorkbenchWindow ().getActivePage ().showView ("org.eclipse.ui.views.ProblemView");

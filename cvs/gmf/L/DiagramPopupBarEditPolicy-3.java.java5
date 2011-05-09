@@ -1,0 +1,133 @@
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.gef.Tool;
+
+import org.eclipse.gef.palette.PaletteContainer;
+
+import org.eclipse.gef.palette.PaletteDrawer;
+
+import org.eclipse.gef.palette.PaletteEntry;
+
+import org.eclipse.gef.palette.PaletteListener;
+
+import org.eclipse.gef.palette.SelectionToolEntry;
+
+import org.eclipse.gef.palette.ToolEntry;
+
+import org.eclipse.gef.ui.palette.PaletteViewer;
+
+import org.eclipse.gmf.runtime.common.ui.services.icon.IconService;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.services.palette.PaletteToolEntry;
+
+import org.eclipse.gmf.runtime.diagram.ui.tools.CreationTool;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+import org.eclipse.gmf.runtime.gef.ui.internal.palette.PaletteStack;
+
+public class DiagramPopupBarEditPolicy extends PopupBarEditPolicy implements PaletteListener {
+    private ToolEntry theLastTool = null;
+
+    public void activate () {
+        super.activate ();
+        addPaletteListener ();
+    }
+
+    public void deactivate () {
+        removePaletteListener ();
+        super.deactivate ();
+    }
+
+    protected void fillPopupBarDescriptors () {
+        fillBasedOnLastActivePaletteTool ();
+        if (getPopupBarDescriptors ().isEmpty ()) {
+            fillBasedOnOpenPaletteDrawer ();
+            if (getPopupBarDescriptors ().isEmpty ()) {
+                fillWithDefaults ();
+            }
+        }
+    }
+
+    public void activeToolChanged (PaletteViewer palette, ToolEntry tool) {
+        if (! (tool instanceof SelectionToolEntry)) {
+            theLastTool = tool;
+        }
+    }
+
+    private void addPaletteListener () {
+        PaletteViewer paletteViewer = getHost ().getViewer ().getEditDomain ().getPaletteViewer ();
+        if (paletteViewer != null) {
+            paletteViewer.addPaletteListener (this);
+        }
+    }
+
+    private void removePaletteListener () {
+        PaletteViewer paletteViewer = getHost ().getViewer ().getEditDomain ().getPaletteViewer ();
+        if (paletteViewer != null) {
+            paletteViewer.removePaletteListener (this);
+        }
+        theLastTool = null;
+    }
+
+    private void fillBasedOnLastActivePaletteTool () {
+        if (theLastTool == null) return;
+
+        PaletteContainer palContainer = theLastTool.getParent ();
+        fillWithPaletteToolsInContainer (palContainer);
+    }
+
+    private void fillWithPaletteToolsInContainer (PaletteContainer palContainer) {
+        if (palContainer != null) {
+            List theEntries = palContainer.getChildren ();
+            int isz = theEntries.size ();
+            for (int i = 0;
+            i < isz; i ++) {
+                PaletteEntry theEntry = (PaletteEntry) theEntries.get (i);
+                if (theEntry != null) {
+                    if (theEntry instanceof PaletteToolEntry) {
+                        PaletteToolEntry theXtoolsEntry = (PaletteToolEntry) theEntry;
+                        Tool tempTool = theXtoolsEntry.createTool ();
+                        if ((tempTool != null) && (tempTool instanceof CreationTool)) {
+                            CreationTool theXtoolsTool = (CreationTool) tempTool;
+                            IElementType theToolType = theXtoolsTool.getElementType ();
+                            if ((theToolType != null)) {
+                                addPopupBarDescriptor (theToolType, IconService.getInstance ().getIcon (theToolType));
+                            }
+                        }
+                    } else if (theEntry instanceof PaletteStack) {
+                        PaletteStack theStack = (PaletteStack) theEntry;
+                        fillWithPaletteToolsInContainer (theStack);
+                    }
+
+                }
+            }
+        }
+    }
+
+    private void fillBasedOnOpenPaletteDrawer () {
+        PaletteViewer paletteViewer = getHost ().getViewer ().getEditDomain ().getPaletteViewer ();
+        if (paletteViewer != null) {
+            for (Iterator iter = paletteViewer.getPaletteRoot ().getChildren ().iterator ();
+            iter.hasNext ();) {
+                Object child = iter.next ();
+                if (child instanceof PaletteDrawer) {
+                    PaletteDrawer drawer = (PaletteDrawer) child;
+                    if (drawer.isInitiallyOpen ()) {
+                        fillWithPaletteToolsInContainer (drawer);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    protected void fillWithDefaults () {
+    }
+
+}
+

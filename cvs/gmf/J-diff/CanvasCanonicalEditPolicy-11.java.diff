@@ -1,0 +1,53 @@
+2c2
+<  * Copyright (c) 2006 Borland Software Corporation and others.
+---
+>  * Copyright (c) 2006, 2007 Borland Software Corporation and others.
+56c56,57
+< import org.eclipse.gmf.runtime.diagram.ui.commands.SetViewMutabilityCommand;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.commands.DeferredLayoutCommand;
+> import org.eclipse.gmf.runtime.diagram.ui.commands.ICommandProxy;
+163,164c164,177
+< 		super.refreshSemantic();
+< 		refreshConnections();
+---
+> 		List createdViews = new LinkedList();
+> 		createdViews.addAll(refreshSemanticChildren());
+> 		List createdConnectionViews = new LinkedList();
+> 		createdConnectionViews.addAll(refreshSemanticConnections());
+> 		createdConnectionViews.addAll(refreshConnections());
+> 
+> 		if (createdViews.size() > 1) {
+> 			// perform a layout of the container
+> 			DeferredLayoutCommand layoutCmd = new DeferredLayoutCommand(host().getEditingDomain(), createdViews, host());
+> 			executeCommand(new ICommandProxy(layoutCmd));
+> 		}
+> 
+> 		createdViews.addAll(createdConnectionViews);
+> 		makeViewsImmutable(createdViews);
+180c193
+< 	private void refreshConnections() {
+---
+> 	private Collection refreshConnections() {
+200c213
+< 			createConnections(myLinkDescriptors);
+---
+> 			return createConnections(myLinkDescriptors);
+242c255
+< 	private void createConnections(Collection linkDescriptors) {
+---
+> 	private Collection createConnections(Collection linkDescriptors) {
+244c257
+< 			return;
+---
+> 			return Collections.EMPTY_LIST;
+245a259
+> 		List adapters = new LinkedList();
+265c279,281
+< 				SetViewMutabilityCommand.makeImmutable(viewAdapter).execute();
+---
+> 				if (viewAdapter != null) {
+> 					adapters.add(viewAdapter);
+> 				}
+267a284
+> 		return adapters;

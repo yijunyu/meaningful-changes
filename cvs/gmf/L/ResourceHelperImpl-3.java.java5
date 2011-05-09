@@ -1,0 +1,43 @@
+package org.eclipse.gmf.runtime.emf.core.resources;
+
+import org.eclipse.emf.common.notify.impl.AdapterImpl;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.impl.InternalTransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.gmf.runtime.emf.core.internal.util.Util;
+
+public class ResourceHelperImpl extends AdapterImpl implements IResourceHelper {
+
+    protected Resource getResource () {
+        return (Resource) getTarget ();
+    }
+
+    public boolean isAdapterForType (Object type) {
+        return type == IResourceHelper.class;
+    }
+
+    public EObject create (EClass eClass) {
+        EObject eObject = eClass.getEPackage ().getEFactoryInstance ().create (eClass);
+        TransactionalEditingDomain domain = TransactionUtil.getEditingDomain (getResource ());
+        if (domain != null) {
+            eObject.eAdapters ().add (((InternalTransactionalEditingDomain) domain).getChangeRecorder ());
+        }
+        return eObject;
+    }
+
+    public void destroy (EObject eObject) {
+        Util.destroy (eObject);
+    }
+
+}
+

@@ -1,0 +1,145 @@
+15a16,17
+> import java.util.HashMap;
+> import java.util.HashSet;
+17a20,20
+> import java.util.Map;
+19a23,23
+> import org.eclipse.emf.common.util.TreeIterator;
+29a34,34
+> import org.eclipse.gmf.runtime.emf.type.core.internal.requests.RequestCacheEntries;
+53a59,59
+> 	private EObject ctorElementToDestroy;
+58a65,65
+> 	private Set immutableViewOfDependents;
+58,58c64,64
+< 	private final Set dependentElementsToDestroy = new java.util.HashSet();
+---
+> 	private Set dependentElementsToDestroy;
+59,59d64
+< 	private final Set immutableViewOfDependents = Collections.unmodifiableSet(dependentElementsToDestroy);
+75a105,105
+> 		if (elementToDestroy != null) {
+76a107,107
+> 		}
+76,76c106,106
+< 		dependentElementsToDestroy.add(elementToDestroy);
+---
+> 			internalGetDependentElementsToDestroy().add(elementToDestroy);
+77a83,85
+> 		// keep it until we populate the set, beacuse someone might construct us with some element but later call
+> 		// setElementToDestroy(...) with a different element and the original behaviour would have added them both to the set
+> 		ctorElementToDestroy = elementToDestroy;
+150a162,164
+>             if (result != null) {
+> 				setEditingDomain(result);
+> 			}
+159a174,174
+>     
+160a176,198
+> 		if (dependentElementsToDestroy == null) {
+> 			Map cacheMaps = (Map) getParameter(RequestCacheEntries.Cache_Maps);
+> 			if (cacheMaps != null) {
+> 				dependentElementsToDestroy = (Set) cacheMaps
+> 					.get(RequestCacheEntries.Dependent_Elements);
+> 			} else {
+> 				dependentElementsToDestroy = new HashSet();
+> 			}
+> 			
+> 			immutableViewOfDependents = Collections.unmodifiableSet(dependentElementsToDestroy);
+> 			
+> 			if (ctorElementToDestroy != null) {
+> 				dependentElementsToDestroy.add(ctorElementToDestroy);
+> 				populateCacheMap(null, ctorElementToDestroy);				
+> 			}
+> 
+> 			if (elementToDestroy != null
+> 				&& (elementToDestroy != ctorElementToDestroy)) {
+> 				dependentElementsToDestroy.add(elementToDestroy);
+> 				populateCacheMap(null, ctorElementToDestroy);	
+> 			}
+> 			ctorElementToDestroy = null;
+> 		}
+169a208,210
+> 		if (immutableViewOfDependents == null) {
+> 			internalGetDependentElementsToDestroy();//this should ensure we are initialized
+> 		}
+203,204d243
+< 						getEditingDomain(),
+< 						dependent,
+205,205c244,244
+< 						isConfirmationRequired());
+---
+> 					getEditingDomain(), dependent, isConfirmationRequired());
+215a255,259
+> 				Object eHelperContext = destroy.getEditHelperContext();
+> 				
+> 				IElementType context = populateCacheMap(eHelperContext, dependent);				
+> 
+> 				if (context == null) {
+216,216c260,260
+< 				IElementType context = ElementTypeRegistry.getInstance().getElementType(
+---
+> 					context = ElementTypeRegistry.getInstance().getElementType(
+217,217c261,261
+< 						destroy.getEditHelperContext());
+---
+> 						eHelperContext);
+217a262,262
+> 				}
+230a276,321
+> 	private IElementType populateCacheMap(Object eHelperContext, EObject dependent) {
+> 		IElementType context = null;
+> 		Map cacheMaps = (Map) getParameter(RequestCacheEntries.Cache_Maps);
+> 		if (cacheMaps != null) {
+> 			//beacareful, this one here call populateCacheMap(...) if the set was null and cacheMaps exist,
+> 			//so before that you should instantiate the DependentElementsToDestroy set
+> 			Set dependents = internalGetDependentElementsToDestroy(); 
+> 			//May be this guy was a context-of-a-dependent, and we had populated its cache map already
+> 			if (cacheMaps.get(dependent) == null) {
+> 				Map parentMap = new HashMap();
+> 				cacheMaps.put(dependent, parentMap);
+> 				RequestCacheEntries.initializeEObjCache(dependent, parentMap);
+> 			}
+> 
+> 			TreeIterator it = dependent.eAllContents();
+> 			while (it.hasNext()) {
+> 				EObject eObj = (EObject) it.next();
+> 				dependents.add(eObj);
+> 				if (cacheMaps.get(eObj) == null) {
+> 					Map map = new HashMap();
+> 					cacheMaps.put(eObj, map);
+> 					RequestCacheEntries.initializeEObjCache(eObj, map);
+> 				}
+> 			}
+> 			
+> 			if (eHelperContext != null) {
+> 				Map eHelperMap = (Map) cacheMaps.get(eHelperContext);
+> 				if (eHelperMap == null && (eHelperContext instanceof EObject)) {
+> 					eHelperMap = new HashMap();
+> 					cacheMaps.put(eHelperContext, eHelperMap);
+> 					RequestCacheEntries.initializeEObjCache(
+> 						(EObject) eHelperContext, eHelperMap);
+> 				}
+> 
+> 				if (eHelperMap != null) {
+> 					context = (IElementType) eHelperMap
+> 						.get(RequestCacheEntries.Element_Type);
+> 				}
+> 			}
+> 		}//if (cacheMaps != null)
+> 
+> 		return context;
+> 	}
+> 	
+> 
+> 	
+315a407,408
+>     	EObject eObj = getElementToDestroy();
+>     	Set set = internalGetDependentElementsToDestroy();
+318,318c411,411
+<     		result = (eObject == getElementToDestroy())
+---
+> 			result = (eObject == eObj) || set.contains(eObject);
+319,320d411
+<     			|| internalGetDependentElementsToDestroy().contains(eObject);
+<     		

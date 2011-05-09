@@ -1,0 +1,127 @@
+23,32d22
+< import org.apache.batik.transcoder.Transcoder;
+< 
+< import org.apache.batik.transcoder.TranscoderException;
+< 
+< import org.apache.batik.transcoder.TranscoderInput;
+< 
+< import org.apache.batik.transcoder.TranscoderOutput;
+< 
+< import org.apache.batik.transcoder.image.ImageTranscoder;
+< 
+43,43c35,35
+< import org.eclipse.gmf.internal.runtime.lite.svg.SimpleImageTranscoder;
+---
+> import org.eclipse.gmf.internal.runtime.lite.svg.SimpleImageTranscoder;
+44,44c36,36
+< 
+---
+> 
+67,67d56
+<     private Document document;
+68,68c57,57
+<     private boolean failedToLoadDocument;
+---
+>     private boolean failedToLoadDocument, specifyCanvasWidth = true, specifyCanvasHeight = true;
+70,70d58
+<     private Rectangle2D aoi;
+82,82c70,70
+<         document = null;
+---
+>         transcoder = null;
+98a87,87
+>             transcoder = new SimpleImageTranscoder (document);
+98,98c86,86
+<             document = factory.createDocument (uri);
+---
+>             Document document = factory.createDocument (uri);
+100,100d88
+<             transcoder = new SimpleImageTranscoder ();
+110,110d97
+<         if (document == null) {
+113,113d100
+<         return document;
+138a127,127
+>         if (getDocument () == null || getDocument () != element.getOwnerDocument ()) {
+139,139d97
+<         Document document = getDocument ();
+140,140c98,98
+<         if (document == null || transcoder == null) {
+---
+>         if (transcoder == null) {
+144,144c131,131
+<         BridgeContext ctx = transcoder.initCSSEngine (document);
+---
+>         BridgeContext ctx = transcoder.initCSSEngine ();
+155,168d141
+<     private void renderDocument (Transcoder transcoder, Document document) {
+<         try {
+<             Rectangle r = getClientArea ();
+<             transcoder.addTranscodingHint (ImageTranscoder.KEY_WIDTH, new Float (r.width));
+<             transcoder.addTranscodingHint (ImageTranscoder.KEY_HEIGHT, new Float (r.height));
+<             if (aoi != null) {
+<                 transcoder.addTranscodingHint (ImageTranscoder.KEY_AOI, aoi);
+<             }
+<             transcoder.transcode (new TranscoderInput (document), new TranscoderOutput ());
+<         } catch (TranscoderException e) {
+<             Activator.logError ("Error rendering SVG image", e);
+<         }
+<     }
+< 
+178,178d150
+<             renderDocument (transcoder, document);
+182,182c151,151
+<                 Rectangle r = getClientArea ();
+---
+>             Rectangle r = getClientArea ();
+182a152,152
+>             transcoder.setCanvasSize (specifyCanvasWidth ? r.width : - 1, specifyCanvasHeight ? r.height : - 1);
+214a188,189
+>         getDocument ();
+>         return transcoder == null ? null : transcoder.getCanvasAreaOfInterest ();
+215,220d187
+<         if (aoi == null) {
+<             return null;
+<         }
+<         Rectangle2D result = new Rectangle2D.Float ();
+<         result.setRect (aoi);
+<         return result;
+223a193,221
+>         getDocument ();
+>         if (transcoder != null) {
+>             transcoder.setCanvasAreaOfInterest (value);
+>         }
+>         repaint ();
+>     }
+> 
+>     public final boolean isSpecifyCanvasWidth () {
+>         return specifyCanvasWidth;
+>     }
+> 
+>     public void setSpecifyCanvasWidth (boolean specifyCanvasWidth) {
+>         this.specifyCanvasWidth = specifyCanvasWidth;
+>         contentChanged ();
+>     }
+> 
+>     public final boolean isSpecifyCanvasHeight () {
+>         return specifyCanvasHeight;
+>     }
+> 
+>     public void setSpecifyCanvasHeight (boolean specifyCanvasHeight) {
+>         this.specifyCanvasHeight = specifyCanvasHeight;
+>         contentChanged ();
+>     }
+> 
+>     public void contentChanged () {
+>         getDocument ();
+>         if (transcoder != null) {
+>             transcoder.contentChanged ();
+223a101,101
+>         return transcoder == null ? null : transcoder.getDocument ();
+224,226d100
+<         if (value == null) {
+<             aoi = null;
+<             return;
+228,229d222
+<         aoi = new Rectangle2D.Float ();
+<         aoi.setRect (value);

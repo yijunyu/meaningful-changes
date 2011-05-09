@@ -1,0 +1,98 @@
+21,22d20
+< import org.eclipse.core.runtime.IProgressMonitor;
+< 
+25,25c23,23
+< import org.eclipse.emf.codegen.jet.JETException;
+---
+> import org.eclipse.emf.codegen.util.CodeGenUtil;
+28a35,35
+> import org.eclipse.gmf.internal.common.codegen.DelegateImportManager;
+29,29d34
+< import org.eclipse.gmf.common.codegen.GeneratorBase;
+30,30c36,36
+< 
+---
+> 
+30a37,40
+> import org.eclipse.gmf.internal.common.codegen.GeneratorBase;
+> 
+> import org.eclipse.gmf.internal.common.codegen.ImportUtil;
+> 
+33,34d28
+< import org.eclipse.gmf.common.codegen.ImportUtil;
+< 
+44,44c44,44
+<     private final Emitter myFigureGenerator;
+---
+>     private final FigureGenerator myFigureGenerator;
+44a45,45
+>     private DelegateImportManager myMapModeImportHack;
+91,91c92,92
+<             this (pluginId, mainPackageName, pluginId, "", "PluginActivator", mainPackageName + ".activator", useMapMode);
+---
+>             this (pluginId, mainPackageName, pluginId, "", "PluginActivator", (mainPackageName == null ? "" : mainPackageName + ".") + "activator", useMapMode);
+96,96c97,97
+<             myMainPackageName = mainPackageName;
+---
+>             myMainPackageName = mainPackageName == null ? "" : mainPackageName;
+143a226,231
+>         Object [] args = new Object [] {figure, importAssistant};
+>         if (myMapModeImportHack != null) {
+>             myMapModeImportHack.setDelegate (importAssistant);
+>         }
+>         doGenerateJavaClass (myFigureGenerator, getPackageName (), importAssistant.getCompilationUnitName (), args);
+>         myGenerationInfo.registerFQN (figure, composeFQN (getPackageName (), importAssistant.getCompilationUnitName ()));
+143,143c225,225
+<         ImportAssistant importAssistant = new ImportUtil (getPackageName ());
+---
+>         final ImportAssistant importAssistant = new ImportUtil (getPackageName (), CodeGenUtil.validJavaIdentifier (figure.getName ()));
+146a147,147
+>             myMapModeImportHack = new DelegateImportManager ();
+147,147c148,148
+<             strategy = new MapModeCodeGenStrategy.RuntimeMapModeFromPluginClass (importAssistant, pluginActivatorFQN);
+---
+>             strategy = new MapModeCodeGenStrategy.RuntimeMapModeFromPluginClass (myMapModeImportHack, pluginActivatorFQN);
+151,151c152,152
+<         myFigureGenerator = new FigureGeneratorAdapter (new FigureGenerator (getPackageName (), importAssistant, fqnSwitch, strategy));
+---
+>         myFigureGenerator = new FigureGenerator (fqnSwitch, strategy);
+188a190,190
+>         Object [] args = new Object [] {myArgs, new ImportUtil (myArgs.getPluginActivatorPackageName (), myArgs.getPluginActivatorClassName ())};
+189,189c191,191
+<         doGenerateJavaClass (myAuxiliaryGenerators.getPluginActivatorEmitter (), myArgs.getPluginActivatorPackageName (), myArgs.getPluginActivatorClassName (), myArgs);
+---
+>         doGenerateJavaClass (myAuxiliaryGenerators.getPluginActivatorEmitter (), myArgs.getPluginActivatorPackageName (), myArgs.getPluginActivatorClassName (), new Object [] {args});
+192a195,195
+>         doGenerateFile (myAuxiliaryGenerators.getBuildPropertiesEmitter (), new Path ("build.properties"), new Object [] {myArgs});
+193,193d194
+<         doGenerateFile (myAuxiliaryGenerators.getBuildPropertiesEmitter (), new Path ("build.properties"), myArgs);
+194,194c196,196
+<         doGenerateFile (myAuxiliaryGenerators.getManifestMFEmitter (), new Path ("META-INF/MANIFEST.MF"), new Object [] {myArgs, getRequiredBundles ()});
+---
+>         doGenerateFile (myAuxiliaryGenerators.getManifestMFEmitter (), new Path ("META-INF/MANIFEST.MF"), new Object [] {new Object [] {myArgs, getRequiredBundles ()}});
+195,195c197,197
+<         doGenerateFile (myAuxiliaryGenerators.getPluginPropertiesEmitter (), new Path ("plugin.properties"), myArgs);
+---
+>         doGenerateFile (myAuxiliaryGenerators.getPluginPropertiesEmitter (), new Path ("plugin.properties"), new Object [] {myArgs});
+223,226d224
+<         String packageName = getPackageName ();
+<         String className = figure.getName ();
+<         doGenerateJavaClass (myFigureGenerator, packageName, className, figure);
+<         myGenerationInfo.registerFQN (figure, composeFQN (packageName, className));
+243,258d247
+<     private static class FigureGeneratorAdapter implements GeneratorBase.Emitter {
+<         private final FigureGenerator myDelegate;
+< 
+<         public FigureGeneratorAdapter (FigureGenerator delegate) {
+<             myDelegate = delegate;
+<         }
+< 
+<         public String generate (IProgressMonitor monitor, Object param) throws JETException {
+<             if (false == param instanceof Figure) {
+<                 throw new IllegalStateException ("Figure expected: " + param);
+<             }
+<             return myDelegate.go ((Figure) param);
+<         }
+< 
+<     }
+< 

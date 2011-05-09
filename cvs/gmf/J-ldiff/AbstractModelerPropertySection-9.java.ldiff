@@ -1,0 +1,193 @@
+39,39d40
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+47,47c30,30
+< import org.eclipse.gmf.runtime.emf.core.edit.DemuxingMListener;
+---
+> import org.eclipse.emf.transaction.DemultiplexingListener;
+48,48d30
+< import org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener;
+49,49c31,31
+< import org.eclipse.gmf.runtime.emf.core.edit.MFilter;
+---
+> import org.eclipse.emf.transaction.NotificationFilter;
+50,52d31
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+< import org.eclipse.gmf.runtime.emf.core.edit.MUndoInterval;
+< import org.eclipse.gmf.runtime.emf.core.exceptions.MSLActionAbandonedException;
+71,71c66,66
+< 	extends AbstractPropertySection
+---
+> 	extends AbstractPropertySection {
+72,72d66
+< 	implements IDemuxedMListener {
+78a73,79
+> 	protected DemultiplexingListener eventListener = new DemultiplexingListener(getFilter()) {
+> 
+> 		protected void handleNotification(TransactionalEditingDomain domain,
+> 				Notification notification) {
+> 			update(notification, (EObject) notification.getNotifier());
+> 		}
+> 	};
+79,79d72
+< 	protected DemuxingMListener eventListener = new DemuxingMListener(this);
+101a102,102
+>     private TransactionalEditingDomain editingDomain = null;
+238a240,245
+> 		try {
+> 			getEditingDomain().runExclusive(code);
+> 		} catch (InterruptedException e) {
+> 			Trace.catching(DiagramPropertiesPlugin.getDefault(),
+> 				DiagramPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+> 				"executeAsReadAction", e); //$NON-NLS-1$
+239,245d239
+< 		executeAsReadAction(new MRunnable() {
+< 
+< 			public Object run() {
+< 				code.run();
+< 				return null;
+< 			}
+< 		});
+247,256d246
+< 	
+< 	/**
+< 	 * A utility method allows execute a piece of code wrapping it in the read
+< 	 * call to the model.
+< 	 * 
+< 	 * @param code -
+< 	 *            MRunnable code to execute
+< 	 */
+< 	protected Object executeAsReadAction(MRunnable code) {		
+< 		return MEditingDomainGetter.getMEditingDomain(getEObjectList()).runAsRead(code);
+313a304,306
+>         if (editingDomain != null) {
+>             editingDomain.removeResourceSetListener(getEventListener());
+>         }
+314,314d303
+< 		eventListener.stopListening();
+321a314,317
+>         editingDomain = getEditingDomain();
+>         if (editingDomain != null) {
+>             editingDomain.addResourceSetListener(getEventListener());
+>         }
+322,322d313
+< 		eventListener.startListening();
+366a362,364
+> 	public NotificationFilter getFilter() {
+> 		return NotificationFilter.createEventTypeFilter(Notification.SET).and(
+>             NotificationFilter.createNotifierTypeFilter(EObject.class));
+367,400d361
+< 	public MFilter getFilter() {
+< 		return MFilter.ELEMENT_MODIFIED_FILTER;
+< 	}
+< 
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleResourceLoadedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.emf.ecore.resource.Resource)
+< 	 */
+< 	public void handleResourceLoadedEvent(Notification notification,
+< 			Resource resource) {
+< 		/* not implemented */
+< 	}
+< 
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleResourceUnloadedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.emf.ecore.resource.Resource, org.eclipse.emf.ecore.EObject)
+< 	 */
+< 	public void handleResourceUnloadedEvent(Notification notification,
+< 			Resource resource, EObject modelRoot) {
+< 		/* not implemented */
+< 	}
+< 
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleResourceDirtiedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.emf.ecore.resource.Resource)
+< 	 */
+< 	public void handleResourceDirtiedEvent(Notification notification,
+< 			Resource resource) {
+< 		/* not implemented */
+< 	}
+< 
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleResourceSavedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.emf.ecore.resource.Resource)
+< 	 */
+< 	public void handleResourceSavedEvent(Notification notification,
+< 			Resource resource) {
+< 		/* not implemented */
+403,433d366
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleResourceImportedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.emf.ecore.resource.Resource)
+< 	 */
+< 	public void handleResourceImportedEvent(Notification notification,
+< 			Resource resource) {
+< 		/* not implemented */
+< 	}
+< 
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleResourceExportedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.emf.ecore.resource.Resource)
+< 	 */
+< 	public void handleResourceExportedEvent(Notification notification,
+< 			Resource resource) {
+< 		/* not implemented */
+< 	}
+< 
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleElementCreatedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.emf.ecore.EObject, org.eclipse.emf.ecore.EObject)
+< 	 */
+< 	public void handleElementCreatedEvent(Notification notification,
+< 			EObject owner, EObject newElement) {
+< 		/* not implemented */
+< 	}
+< 
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleElementDeletedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.emf.ecore.EObject, org.eclipse.emf.ecore.EObject)
+< 	 */
+< 	public void handleElementDeletedEvent(Notification notification,
+< 			EObject owner, EObject oldElement) {
+< 		/* not implemented */
+< 	}
+514,544d446
+< 	 * Handle the action abandoned exception
+< 	 * 
+< 	 * @param exception
+< 	 *            the action abandoned exception
+< 	 */
+< 	protected void handleException(MSLActionAbandonedException exception) {
+< 		Trace.catching(DiagramPropertiesPlugin.getDefault(),
+< 			DiagramPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+< 			exception.getMessage(), exception);
+< 		Log.warning(DiagramPropertiesPlugin.getDefault(),
+< 			DiagramPropertiesStatusCodes.IGNORED_EXCEPTION_WARNING,
+< 			exception.getMessage(), exception);
+< 	}
+< 
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleUndoIntervalClosedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.gmf.runtime.emf.core.edit.MUndoInterval)
+< 	 */
+< 	public void handleUndoIntervalClosedEvent(Notification notification,
+< 			MUndoInterval undoInterval) {
+< 		/* not implemented */
+< 	}
+< 
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener#handleUndoIntervalsFlushedEvent(org.eclipse.emf.common.notify.Notification, org.eclipse.gmf.runtime.emf.core.edit.MUndoInterval)
+< 	 */
+< 	public void handleUndoIntervalsFlushedEvent(Notification notification,
+< 			MUndoInterval undoInterval) {
+< 		/* not implemented */
+< 	}
+< 
+< 	/**
+561,561c463,463
+< 	protected DemuxingMListener getEventListener() {
+---
+> 	protected DemultiplexingListener getEventListener() {
+611,611c584,584
+< 
+---
+> 	
+613,613d513
+< 
+615a516,517
+>         } else if (!getEObjectList().isEmpty()) {
+>             return TransactionUtil.getEditingDomain(getEObjectList().get(0));
+617,617d518
+< 
+621,621d521
+< 	

@@ -1,0 +1,92 @@
+49a50,54
+> import org.eclipse.ui.IPluginContribution;
+> import org.eclipse.ui.PlatformUI;
+> import org.eclipse.ui.activities.IIdentifier;
+> import org.eclipse.ui.activities.IWorkbenchActivitySupport;
+> import org.eclipse.ui.activities.WorkbenchActivityHelper;
+148,148c153,153
+<         public void contribute(Object content, PaletteRoot root, Map predefinedEntries) {
+---
+>         public void contribute(Object content, PaletteRoot root, Map predefinedEntries, String pluginID) {
+150a156,158
+>                 IEntryDescriptor descriptor = (IEntryDescriptor) iter.next();
+>                 if (areActivitiesEnabled(descriptor.getID(), pluginID)) {
+>                     descriptor.contribute(content, root, paletteFactory,
+151,153d155
+<                 ((IEntryDescriptor) iter.next()).contribute(
+<                     content,
+<                     root,
+154,154c159,159
+<                     paletteFactory, predefinedEntries);
+---
+>                         predefinedEntries);
+154a160,160
+>                 }
+178a185,191
+>         
+>         /**
+>          * Gets the ID of this entry descriptor.
+>          * 
+>          * @return the id
+>          */
+>         public String getID();
+340a354,357
+>         public String getID() {
+>             return id;
+>         }
+> 
+425a443,446
+> 
+>         public String getID() {
+>             return id;
+>         }
+651a673,677
+>      * The pluginID of the XML contributions
+>      */
+>     private String pluginID;
+> 
+>     /**
+658a685,686
+>         
+>         pluginID = configElement.getContributor().getName();
+676,676c704,704
+<             ((ContributionDescriptor) iter.next()).contribute(content, root, predefinedEntries);
+---
+>             ((ContributionDescriptor) iter.next()).contribute(content, root, predefinedEntries, pluginID);
+686a715,750
+>     /**
+>      * Checks if there are activities that have been matched to the plug-in in
+>      * which the provider has been contributed and if those activities are
+>      * enabled.  
+>      * 
+>      * @return true if matching activities are enabled
+>      */
+>     private static boolean areActivitiesEnabled(final String paletteEntryID, final String pluginID) {
+>         // Note: This is a duplicate of the areActivitiesEnabled() method in
+>         // org.eclipse.gmf.runtime.common.ui.services.util.ActivityFilterProviderDescriptor.
+>         
+>         if (!WorkbenchActivityHelper.isFiltering())
+>             return true;
+> 
+>         IWorkbenchActivitySupport workbenchActivitySupport = PlatformUI
+>             .getWorkbench().getActivitySupport();
+>         IIdentifier id = workbenchActivitySupport.getActivityManager()
+>             .getIdentifier(
+>                 WorkbenchActivityHelper
+>                     .createUnifiedId(new IPluginContribution() {
+> 
+>                         public String getLocalId() {
+>                             return paletteEntryID;
+>                         }
+> 
+>                         public String getPluginId() {
+>                             return pluginID;
+>                         }
+>                     }));
+>         if (id != null && !id.isEnabled()) {
+>             return false;
+>         }
+> 
+>         return true;
+>     }
+>     

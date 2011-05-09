@@ -1,0 +1,226 @@
+package org.eclipse.gmf.runtime.diagram.core.services;
+
+import java.util.HashMap;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IConfigurationElement;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gmf.runtime.common.core.service.ExecutionStrategy;
+
+import org.eclipse.gmf.runtime.common.core.service.IOperation;
+
+import org.eclipse.gmf.runtime.common.core.service.Service;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.DiagramPlugin;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.services.semantic.CreateElementRequest;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.services.view.CreateChildViewOperation;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.services.view.CreateDiagramViewOperation;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.services.view.CreateEdgeViewOperation;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.services.view.CreateNodeViewOperation;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.services.view.CreateViewForKindOperation;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.services.view.CreateViewOperation;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.core.providers.IViewProvider;
+
+import org.eclipse.gmf.runtime.diagram.core.providers.ViewProviderConfiguration;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.gmf.runtime.notation.Edge;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+final public class ViewService extends Service implements IViewProvider {
+    protected static class ProviderDescriptor extends Service.ProviderDescriptor {
+        private ViewProviderConfiguration providerConfiguration;
+
+        public ProviderDescriptor (IConfigurationElement element) {
+            super (element);
+            this.providerConfiguration = ViewProviderConfiguration.parse (element);
+            assert null != providerConfiguration : "Null providerConfiguration in ProviderDescriptor";
+        }
+
+        public boolean provides (IOperation operation) {
+            if (! policyInitialized) {
+                policy = getPolicy ();
+                policyInitialized = true;
+            }
+            if (policy != null) return policy.provides (operation);
+
+            if (provider == null) {
+                if (isSupportedInExtention (operation)) {
+                    providerConfiguration = null;
+                    return getProvider ().provides (operation);
+                }
+                return false;
+            }
+            return getProvider ().provides (operation);
+        }
+
+        private boolean isSupportedInExtention (IOperation operation) {
+            if (operation instanceof CreateViewOperation) {
+                CreateViewOperation o = (CreateViewOperation) operation;
+                Class viewKind = o.getViewKind ();
+                IAdaptable semanticAdapter = o.getSemanticAdapter ();
+                String semanticHint = o.getSemanticHint ();
+                View containerView = null;
+                if (o instanceof CreateChildViewOperation) {
+                    CreateChildViewOperation cvo = (CreateChildViewOperation) o;
+                    containerView = cvo.getContainerView ();
+                }
+                return providerConfiguration.supports (viewKind, semanticAdapter, containerView, semanticHint);
+            }
+            return false;
+        }
+
+        public String toString () {
+            return getElement ().getAttribute ("class");
+        }
+
+    }
+
+    private final static ViewService instance = new ViewService ();
+
+    static {
+        instance.configureProviders (DiagramPlugin.getPluginId (), "viewProviders");
+    }
+
+    public static ViewService getInstance () {
+        return instance;
+    }
+
+    protected ViewService () {
+        super (true, false);
+    }
+
+    protected Service.ProviderDescriptor newProviderDescriptor (IConfigurationElement element) {
+        return new ProviderDescriptor (element);
+    }
+
+    protected Map createPriorityCache () {
+        return new HashMap ();
+    }
+
+    protected Object getCachingKey (IOperation operation) {
+        return ((CreateViewOperation) operation).getCachingKey ();
+    }
+
+    private Object execute (IOperation operation) {
+        List results = execute (ExecutionStrategy.FIRST, operation);
+        return results.isEmpty () ? null : results.get (0);
+    }
+
+    public final boolean provides (Class viewKind, IAdaptable semanticAdapter, View containerView, String semanticHint, int index, boolean persisted, PreferencesHint preferencesHint) {
+        assert (viewKind == Diagram.class || viewKind == Edge.class || viewKind == Node.class) : "The default View service does not support " + viewKind.getName () + " as a view kind";
+        if (semanticAdapter != null) {
+            if (semanticAdapter.getAdapter (CreateElementRequest.class) != null) {
+                return providerExistsFor (new CreateViewForKindOperation (viewKind, semanticAdapter, containerView, semanticHint, index, preferencesHint));
+            }
+        }
+        if (viewKind == Diagram.class) return providerExistsFor (new CreateDiagramViewOperation (semanticAdapter, semanticHint, preferencesHint));
+        else if (viewKind == Edge.class) return providerExistsFor (new CreateEdgeViewOperation (semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint));
+        else if (viewKind == Node.class) return providerExistsFor (new CreateNodeViewOperation (semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint));
+
+        return false;
+    }
+
+    private boolean providerExistsFor (IOperation operation) {
+        return provides (operation);
+    }
+
+    public final View createView (Class viewKind, IAdaptable semanticAdapter, View containerView, String semanticHint, int index, boolean persisted, PreferencesHint preferencesHint) {
+        assert (viewKind == Diagram.class || viewKind == Edge.class || viewKind == Node.class) : "The default View service does not support " + viewKind.getName () + " as a view kind";
+        if (viewKind == Diagram.class) return createDiagram (semanticAdapter, semanticHint, preferencesHint);
+        else if (viewKind == Edge.class) return createEdge (semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint);
+        else if (viewKind == Node.class) return createNode (semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint);
+
+        return null;
+    }
+
+    public final Diagram createDiagram (IAdaptable semanticAdapter, String diagramKindType, PreferencesHint preferencesHint) {
+        Diagram view = (Diagram) execute (new CreateDiagramViewOperation (semanticAdapter, diagramKindType, preferencesHint));
+        return view;
+    }
+
+    public static Diagram createDiagram (EObject context, String kind, PreferencesHint preferencesHint) {
+        IAdaptable viewModel = (context != null) ? new EObjectAdapter (context) : null;
+        String viewType = (kind != null) ? kind : "";
+        return ViewService.getInstance ().createDiagram (viewModel, viewType, preferencesHint);
+    }
+
+    public static Diagram createDiagram (String kind, PreferencesHint preferencesHint) {
+        return ViewService.createDiagram ((EObject) null, kind, preferencesHint);
+    }
+
+    public static Node createNode (View container, EObject eObject, String type, PreferencesHint preferencesHint) {
+        assert null != container : "The container is null";
+        IAdaptable viewModel = (eObject != null) ? new EObjectAdapter (eObject) : null;
+        String viewType = (type != null) ? type : "";
+        View view = ViewService.getInstance ().createNode (viewModel, container, viewType, ViewUtil.APPEND, preferencesHint);
+        return (view != null) ? (Node) view : null;
+    }
+
+    public static Node createNode (View container, String type, PreferencesHint preferencesHint) {
+        return ViewService.createNode (container, (EObject) null, type, preferencesHint);
+    }
+
+    public static Edge createEdge (View source, View target, EObject eObject, String type, PreferencesHint preferencesHint) {
+        assert source != null : "The source is null";
+        assert target != null : "The target is null";
+        assert source.getDiagram () != null : "The source is detached";
+        assert target.getDiagram () != null : "The target is detached";
+        IAdaptable viewModel = (eObject != null) ? new EObjectAdapter (eObject) : null;
+        Edge edge = (Edge) ViewService.getInstance ().createEdge (viewModel, source.getDiagram (), type, ViewUtil.APPEND, preferencesHint);
+        if (edge != null) {
+            edge.setSource (source);
+            edge.setTarget (target);
+        }
+        return edge;
+    }
+
+    public static Edge createEdge (View source, View target, String type, PreferencesHint preferencesHint) {
+        return ViewService.createEdge (source, target, (EObject) null, type, preferencesHint);
+    }
+
+    public final Edge createEdge (IAdaptable semanticAdapter, View containerView, String semanticHint, int index, boolean persisted, PreferencesHint preferencesHint) {
+        Edge edge = (Edge) execute (new CreateEdgeViewOperation (semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint));
+        return edge;
+    }
+
+    public final View createEdge (IAdaptable semanticAdapter, View containerView, String semanticHint, int index, PreferencesHint preferencesHint) {
+        return createEdge (semanticAdapter, containerView, semanticHint, index, true, preferencesHint);
+    }
+
+    public final Node createNode (IAdaptable semanticElement, View containerView, String semanticHint, int index, PreferencesHint preferencesHint) {
+        return createNode (semanticElement, containerView, semanticHint, index, true, preferencesHint);
+    }
+
+    public Node createNode (IAdaptable semanticAdapter, View containerView, String semanticHint, int index, boolean persisted, PreferencesHint preferencesHint) {
+        Node node = (Node) execute (new CreateNodeViewOperation (semanticAdapter, containerView, semanticHint, index, persisted, preferencesHint));
+        return node;
+    }
+
+}
+

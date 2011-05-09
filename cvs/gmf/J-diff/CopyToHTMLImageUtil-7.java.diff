@@ -1,0 +1,223 @@
+52a53
+> import org.eclipse.gmf.runtime.draw2d.ui.mapmode.IMapMode;
+123,125c124
+< 		createHTMLFileForTiledImage(destination, exportInfo.commonTileFileName,
+< 				format.getName().toLowerCase(), exportInfo.tiles.y,
+< 				exportInfo.tiles.x);
+---
+> 		createHTMLFileForTiledImage(destination, exportInfo);
+148,150c147,183
+< 		createHTMLFileForTiledImage(destination, exportInfo.commonTileFileName,
+< 				format.getName().toLowerCase(), exportInfo.tiles.y,
+< 				exportInfo.tiles.x);
+---
+> 		createHTMLFileForTiledImage(destination, exportInfo);
+> 	}
+> 	
+> 	/**
+> 	 * Generates image files and returns the HTML content as a String
+> 	 * 
+> 	 * @param diagram diagram model
+> 	 * @param destination a path to image files with common image file name
+> 	 * @param format image format
+> 	 * @param monitor progress monitor
+> 	 * @return HTML content as a string
+> 	 * @throws CoreException
+> 	 */
+> 	public String generateHTMLImage(Diagram diagram, IPath destination, ImageFileFormat format, IProgressMonitor monitor) throws CoreException {
+> 		ExportInfo exportInfo = null;
+> 		DiagramEditor openedDiagramEditor = DiagramEditorUtil
+> 				.findOpenedDiagramEditorForID(ViewUtil.getIdStr(diagram));
+> 		if (openedDiagramEditor != null) {
+> 			DiagramEditPart diagramEditPart = openedDiagramEditor
+> 					.getDiagramEditPart();
+> 			exportInfo = copyToImageAndReturnInfo(diagramEditPart,
+> 					diagramEditPart.getPrimaryEditParts(), destination, format,
+> 					monitor);
+> 		} else {
+> 			Shell shell = new Shell();
+> 			try {
+> 				DiagramEditPart diagramEditPart = createDiagramEditPart(
+> 						diagram, shell, null);
+> 				Assert.isNotNull(diagramEditPart);
+> 				exportInfo = copyToImageAndReturnInfo(diagramEditPart,
+> 						diagramEditPart.getPrimaryEditParts(), destination,
+> 						format, monitor);
+> 			} finally {
+> 				shell.dispose();
+> 			}
+> 		}
+> 		return createHTMLString(exportInfo);
+181c214
+< 	private Point exportImage(DiagramGenerator gen, List editParts,
+---
+> 	private ExportInfo exportImage(DiagramGenerator gen, List editParts,
+183c216
+< 			ImageFileFormat imageFormat, int logTileWidth, int logTileHeight,
+---
+> 			ImageFileFormat imageFormat, Dimension logTileSize,
+187a221,222
+> 		int logTileWidth = logTileSize.width;
+> 		int logTileHeight = logTileSize.height;
+225c260
+< 		return new Point(columns, rows);
+---
+> 		return new ExportInfo(gen, new Point(columns, rows), fileName, destinationFolder, imageFormat, new Dimension(logTileWidth, logTileHeight));
+244c279
+< 			String fileName, String fileExtension, int numRows, int numColumns) {
+---
+> 			ExportInfo info) {
+249,261c284
+< 					.write("<html>\n<body>\n<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" align=\"RIGHT\">\n");//$NON-NLS-1$
+< 			for (int i = 0; i < numRows; i++) {
+< 				out.write("<tr>\n");//$NON-NLS-1$
+< 				for (int j = 0; j < numColumns; j++) {
+< 					out.write("\t<td><img src=\"");//$NON-NLS-1$
+< 					out.write(fileName + getTileImageFileNameIndexDelimiter()
+< 							+ i + getTileImageFileNameIndexDelimiter() + j
+< 							+ StringStatics.PERIOD + fileExtension);
+< 					out.write("\"></td>\n");//$NON-NLS-1$
+< 				}
+< 				out.write("</tr>\n");//$NON-NLS-1$
+< 			}
+< 			out.write("</table>\n</body>\n</html>");//$NON-NLS-1$
+---
+> 					.write(createHTMLString(info));
+277a301,340
+> 	private String createHTMLString(ExportInfo info) {
+> 		Assert.isNotNull(info);
+> 		StringBuffer buffer = new StringBuffer(
+> 				"<html>\n<body>\n<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" align=\"CENTER\">\n");//$NON-NLS-1$
+> 		String commonFileNamePath = new Path("file://", info.directory.toString()).append(info.commonTileFileName).makeAbsolute().toString(); 
+> 		for (int i = 0; i < info.tiles.y; i++) {
+> 			buffer.append("<tr>\n");//$NON-NLS-1$
+> 			for (int j = 0; j < info.tiles.x; j++) {
+> 				String fileName = commonFileNamePath
+> 						+ getTileImageFileNameIndexDelimiter() + i
+> 						+ getTileImageFileNameIndexDelimiter() + j
+> 						+ StringStatics.PERIOD
+> 						+ info.imageFormat.getName().toLowerCase();
+> 				if (ImageFileFormat.SVG.equals(info.imageFormat)) {
+> 					buffer.append("\t<td>\n\t\t<object data=\"");//$NON-NLS-1$
+> 					buffer.append(fileName);
+> 					buffer.append("\" type=\"image/svg+xml\" width=\"");//$NON-NLS-1$
+> 					buffer.append(info.tileSize.width);//$NON-NLS-1$
+> 					buffer.append("\" height=\"");
+> 					buffer.append(info.tileSize.height);
+> 					buffer.append("\">\n");//$NON-NLS-1$
+> 					buffer.append("\t\t<embed src=\"");//$NON-NLS-1$
+> 					buffer.append(fileName);
+> 					buffer.append("\" type=\"image/svg+xml\" width=\"");//$NON-NLS-1$
+> 					buffer.append(info.tileSize.width);
+> 					buffer.append("\" height=\"");//$NON-NLS-1$
+> 					buffer.append(info.tileSize.height);
+> 					buffer.append("\"/></td>\n");
+> 				} else {
+> 					buffer.append("\t<td><img src=\"");//$NON-NLS-1$
+> 					buffer.append(fileName);
+> 					buffer.append("\"/></td>\n");//$NON-NLS-1$
+> 				}
+> 			}
+> 			buffer.append("</tr>\n");//$NON-NLS-1$
+> 		}
+> 		buffer.append("</table>\n</body>\n</html>");//$NON-NLS-1$
+> 		return buffer.toString();
+> 	}
+> 
+317,320c380,386
+< 	private class ExportInfo {
+< 		DiagramGenerator diagramGenerator;
+< 		Point tiles;
+< 		String commonTileFileName;
+---
+> 	public class ExportInfo {
+> 		final public DiagramGenerator diagramGenerator;
+> 		final public Point tiles;
+> 		final public String commonTileFileName;
+> 		final public IPath directory;
+> 		final public ImageFileFormat imageFormat;
+> 		final public Dimension tileSize;
+323c389
+< 				String commonTileFileName) {
+---
+> 				String commonTileFileName, IPath directory, ImageFileFormat imageFormat, Dimension tileSize) {
+326a393,395
+> 			this.directory = directory;
+> 			this.imageFormat = imageFormat;
+> 			this.tileSize = tileSize;
+348c417
+< 	private ExportInfo copyToImageAndReturnInfo(DiagramEditPart diagramEP,
+---
+> 	public ExportInfo copyToImageAndReturnInfo(DiagramEditPart diagramEP,
+353,354c422,425
+< 		Dimension dimension = (Dimension) MapModeUtil.getMapMode(
+< 				diagramEP.getFigure()).DPtoLP(
+---
+> 		IMapMode mm = MapModeUtil.getMapMode(
+> 				diagramEP.getFigure()); 
+> 
+> 		Dimension dimension = (Dimension) mm.DPtoLP(
+368,369c439,447
+< 		Point tiles = exportImage(gen, selection, destinationFolder, fileName,
+< 				format, dimension.width, dimension.height, monitor);
+---
+> 		ExportInfo info  = exportImage(gen, selection, destinationFolder, fileName,
+> 				format, dimension, monitor);
+> 		
+> 		/*
+> 		 * The tile dimension returned with the ExportInfo object is in logical units. We need to translate it
+> 		 * to the device units - pixels. We can't simply use the pixel tile size from the imageFormatToTilesSizeMap
+> 		 * since tile size (x,y), where x<=0 and y<=0 will use the diagram width and/or height 
+> 		 */
+> 		mm.LPtoDP(info.tileSize);
+371c449
+< 		return new ExportInfo(gen, tiles, fileName);
+---
+> 		return info;
+423c501
+< 		return createTilesPartsInfoList(exportInfo, partsInfo, format);
+---
+> 		return createTilesPartsInfoList(exportInfo);
+441,442c519,521
+< 	private List<List<List<PartPositionInfo>>> createTilesPartsInfoList(
+< 			ExportInfo exportInfo, List partsInfo, ImageFileFormat format) {
+---
+> 	public static List<List<List<PartPositionInfo>>> createTilesPartsInfoList(
+> 			ExportInfo exportInfo) {
+> 		List partsInfo = exportInfo.diagramGenerator.getDiagramPartInfo();
+458c537
+< 				Dimension tileSize = imageFormatToTileSizeMap.get(format);
+---
+> 				Dimension tileSize = exportInfo.tileSize;
+607c686
+< 	private List<List<List<PartPositionInfo>>> initializeTilesPartsInfoList(
+---
+> 	private static List<List<List<PartPositionInfo>>> initializeTilesPartsInfoList(
+629c708
+< 	private class LineSegmentPointsComparator implements Comparator<Point> {
+---
+> 	private static class LineSegmentPointsComparator implements Comparator<Point> {
+667c746
+< 	private HashMap<Point, LineSeg> getMapOfLineSegments(Point startPoint,
+---
+> 	private static HashMap<Point, LineSeg> getMapOfLineSegments(Point startPoint,
+721c800
+< 			Collections.sort(linePoints, new LineSegmentPointsComparator(
+---
+> 			Collections.sort(linePoints, new CopyToHTMLImageUtil.LineSegmentPointsComparator(
+780c859
+< 	private List<Point> createCellPolyline(Dimension cellSize,
+---
+> 	private static List<Point> createCellPolyline(Dimension cellSize,
+817c896
+< 	private List<Point> connectLineSegmentsEndsViaCellEdges(Dimension cellSize,
+---
+> 	private static List<Point> connectLineSegmentsEndsViaCellEdges(Dimension cellSize,
+839c918
+< 	private List<Point> createClockwiseListOfCellVertices(Dimension cellSize) {
+---
+> 	private static List<Point> createClockwiseListOfCellVertices(Dimension cellSize) {
+858c937
+< 	private int indexOfCellEdgePointClockwise(Dimension cellSize, Point pt) {
+---
+> 	private static int indexOfCellEdgePointClockwise(Dimension cellSize, Point pt) {

@@ -1,0 +1,130 @@
+20a21,22
+> import org.eclipse.emf.ecore.EcorePackage;
+> 
+28a31,32
+> import org.eclipse.gmf.codegen.gmfgen.GenAuditContext;
+> 
+32a37,38
+> import org.eclipse.gmf.codegen.gmfgen.GenAuditable;
+> 
+51a58,59
+>     private EAttribute myGenAuditRule_ContextSelectorLocalClassName;
+>     private Map < GenAuditRule, String > myAuditContexts;
+86a95,96
+>         } myGenAuditRule_ContextSelectorLocalClassName = createNewAttribute ("contextSelectorLocalClassName", EcorePackage.eINSTANCE.getEString (), false);
+>         registerRenamedAttribute (GMFGenPackage.eINSTANCE.getGenAuditRule (), myGenAuditRule_ContextSelectorLocalClassName.getName (), myGenAuditRule_ContextSelectorLocalClassName);
+87,87c97,97
+<         } registerNarrowedAbstractType ("GenFeatureInitializer", GMFGenPackage.eINSTANCE.getGenFeatureValueSpec ());
+---
+>         registerNarrowedAbstractType ("GenFeatureInitializer", GMFGenPackage.eINSTANCE.getGenFeatureValueSpec ());
+90a101,101
+>         myAuditContexts = null;
+144a156,159
+>         } else if (myGenAuditRule_ContextSelectorLocalClassName.equals (feature)) {
+>             GenAuditRule rule = (GenAuditRule) object;
+>             String className = (String) value;
+>             saveAuditContext (rule, className);
+151a167,177
+>     private void saveAuditContext (GenAuditRule rule, String className) {
+>         if (myAuditContexts == null) {
+>             myAuditContexts = new LinkedHashMap < GenAuditRule, String > ();
+>         }
+>         myAuditContexts.put (rule, className);
+>     }
+> 
+>     private Map < GenAuditRule, String > getSavedAuditContexts () {
+>         return myAuditContexts;
+>     }
+> 
+170,170c196,196
+<         if (getSavedRequiredPlugins () == null) {
+---
+>         if (getSavedRequiredPlugins () != null) {
+171,172d196
+<             return;
+<         }
+194a219,270
+>         if (getSavedAuditContexts () != null) {
+>             for (GenAuditRule rule : getSavedAuditContexts ().keySet ()) {
+>                 GenAuditRoot root = getOrCreateRoot (rule);
+>                 String className = getSavedAuditContexts ().get (rule);
+>                 GenAuditContext context = getOrCreateContext (root, className);
+>                 GenAuditable target = rule.getTarget ();
+>                 if (target != null) {
+>                     target.setContextSelector (context);
+>                     fireMigrationApplied (true);
+>                 }
+>             }
+>             getSavedAuditContexts ().clear ();
+>         }
+>     }
+> 
+>     private GenAuditContext getOrCreateContext (GenAuditRoot root, String className) {
+>         GenAuditContext context = null;
+>         for (GenAuditContext next : root.getClientContexts ()) {
+>             String explicit = next.getClassName ();
+>             if (className.equals (explicit) || (explicit == null && className.equals (next.getId ()))) {
+>                 context = next;
+>                 break;
+>             }
+>         }
+>         if (context == null) {
+>             context = GMFGenFactory.eINSTANCE.createGenAuditContext ();
+>             String id = generateUnique (root, className);
+>             context.setId (id);
+>             if (! id.equals (className)) {
+>                 context.setClassName (className);
+>             }
+>             root.getClientContexts ().add (context);
+>         }
+>         return context;
+>     }
+> 
+>     private String generateUnique (GenAuditRoot root, String defaultId) {
+>         String id = defaultId;
+>         int i = 0;
+>         boolean haveSuchId = false;
+>         do {
+>             haveSuchId = false;
+>             for (GenAuditContext next : root.getClientContexts ()) {
+>                 if (id.equals (next.getId ())) {
+>                     haveSuchId = true;
+>                     id = defaultId + (++ i);
+>                     break;
+>                 }
+>             }
+>         } while (haveSuchId);
+>         return id;
+>     }
+214a297,309
+>     private GenAuditRoot getOrCreateRoot (GenAuditRule auditRule) {
+>         GenAuditRoot result = auditRule.getRoot ();
+>         if (result == null) {
+>             result = createRoot (auditRule);
+>             result.getRules ().add (auditRule);
+>         }
+>         return result;
+>     }
+> 
+>     private GenAuditRoot createRoot (EObject child) {
+>         GenAuditRoot result = GMFGenFactory.eINSTANCE.createGenAuditRoot ();
+>         if (child.eContainer () == null) {
+>             child.eResource ().getContents ().add (result);
+214a291,291
+>             result = createRoot (auditContainer);
+215,217d296
+<             result = GMFGenFactory.eINSTANCE.createGenAuditRoot ();
+<             if (auditContainer.eContainer () == null) {
+<                 auditContainer.eResource ().getContents ().add (result);
+218,218c310,310
+<                 fireMigrationApplied (true);
+---
+>             fireMigrationApplied (true);
+219,219c311,311
+<             }
+---
+>         }
+219a312,314
+>         return result;
+>     }
+> 

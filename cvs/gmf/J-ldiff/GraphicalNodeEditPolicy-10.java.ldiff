@@ -1,0 +1,352 @@
+15,15d14
+< import java.util.HashMap;
+18,18d16
+< import java.util.Map;
+35,35c71,71
+< import org.eclipse.jface.preference.IPreferenceStore;
+---
+> import org.eclipse.jface.preference.IPreferenceStore;
+36,36c72,72
+< import org.eclipse.jface.util.Assert;
+---
+> import org.eclipse.jface.util.Assert;
+37,37c73,73
+< import org.eclipse.swt.widgets.Display;
+---
+> import org.eclipse.swt.widgets.Display;
+38,38d73
+< 
+56a52,52
+> import org.eclipse.gmf.runtime.diagram.ui.internal.requests.CreateViewRequestFactory;
+65,65c41,41
+< import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+---
+> import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+68,68c65,65
+< import org.eclipse.gmf.runtime.emf.ui.services.modelingassistant.ModelingAssistantService;
+---
+> import org.eclipse.gmf.runtime.emf.ui.services.modelingassistant.ModelingAssistantService;
+84,84c82,82
+<  * @author mmostafa
+---
+>  * @author mmostafa, cmahoney
+88a87,87
+> 	
+97a97,179
+> 	/**
+> 	 * Gets a command that pops up a menu which allows the user to select which
+> 	 * type of connection to be created and then creates the connection. This
+> 	 * command uses
+> 	 * {@link #getCommandForMenuSelection(Object, CreateConnectionRequest)} on
+> 	 * the connection chosen to get the creation command.
+> 	 * 
+> 	 * @author cmahoney
+> 	 */
+> 	protected class PromptAndCreateConnectionCommand
+> 		extends CreateOrSelectElementCommand {
+> 
+> 		/**
+> 		 * Cache the request because it needs to be passed to
+> 		 * {@link #getCommandForMenuSelection(Object, CreateConnectionRequest)}.
+> 		 */
+> 		private CreateConnectionRequest request;
+> 
+> 		/**
+> 		 * Creates a new instance.
+> 		 * 
+> 		 * @param content
+> 		 *            The list of items making up the content of the popup menu.
+> 		 * @param request
+> 		 *            The relevant create connection request.
+> 		 */
+> 		public PromptAndCreateConnectionCommand(List content,
+> 				CreateConnectionRequest request) {
+> 			super(CREATE_CONNECTION_COMMAND_LABEL, Display.getCurrent()
+> 				.getActiveShell(), content);
+> 			this.request = request;
+> 		}
+> 
+> 		/**
+> 		 * The command to create the connection that may need to be
+> 		 * undone/redone.
+> 		 */
+> 		private Command createCommand;
+> 
+> 		/**
+> 		 * Pops up the dialog with the content provided, gets the command to be
+> 		 * executed based on the user selection, and then executes the command.
+> 		 */
+> 		protected CommandResult doExecute(IProgressMonitor progressMonitor) {
+> 			CommandResult cmdResult = super.doExecute(progressMonitor);
+> 			if (!cmdResult.getStatus().isOK()) {
+> 				return cmdResult;
+> 			}
+> 
+> 			Command cmd = getConnectionCompleteCommand(
+> 				cmdResult.getReturnValue(), getRequest());
+> 			Assert.isTrue(cmd != null && cmd.canExecute());
+> 			cmd.execute();
+> 			createCommand = cmd;
+> 
+> 			return newOKCommandResult();
+> 		}
+> 
+> 		protected CommandResult doUndo() {
+> 			if (createCommand != null) {
+> 				createCommand.undo();
+> 			}
+> 			return super.doUndo();
+> 		}
+> 
+> 		protected CommandResult doRedo() {
+> 			if (createCommand != null) {
+> 				createCommand.redo();
+> 			}
+> 			return super.doRedo();
+> 		}
+> 
+> 		/**
+> 		 * Gets the request.
+> 		 * 
+> 		 * @return Returns the request.
+> 		 */
+> 		private CreateConnectionRequest getRequest() {
+> 			return request;
+> 		}
+> 
+> 	}
+> 	
+606,606c688,688
+< 	 * relationship (if applicable) for a unspecified type request. This command
+---
+> 	 * relationship (if applicable) for an unspecified type request. This command
+608,608c690,690
+< 	 * relationship to be created.
+---
+> 	 * connection to be created.
+620a703,703
+> 		List menuContent = getConnectionMenuContent(request);
+621,624d779
+< 		List allRequests = request.getAllRequests();
+< 		if (allRequests.isEmpty()) {
+< 			return null;
+< 		}
+625,625c780,780
+< 		IGraphicalEditPart sourceEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests
+---
+> 			IGraphicalEditPart sourceEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests
+625a781,781
+> 				.get(0)).getSourceEditPart();
+626,626d780
+< 			.get(0)).getSourceEditPart();
+627,627c782,782
+< 		IGraphicalEditPart targetEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests
+---
+> 			IGraphicalEditPart targetEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests
+628,628c783,783
+< 			.get(0)).getTargetEditPart();
+---
+> 				.get(0)).getTargetEditPart();
+630,643d825
+< 		List relTypes = request.useModelingAssistantService() ? ModelingAssistantService
+< 			.getInstance().getRelTypesOnSourceAndTarget(sourceEP, targetEP)
+< 			: request.getElementTypes();
+< 
+< 		final Map connectionCmds = new HashMap();
+< 		List validRelTypes = new ArrayList();
+< 		for (Iterator iter = relTypes.iterator(); iter.hasNext();) {
+< 			IElementType type = (IElementType) iter.next();
+< 			Request createConnectionRequest = request
+< 				.getRequestForType(type);
+< 			if (createConnectionRequest != null) {
+< 				Command individualCmd = getHost().getCommand(
+< 					createConnectionRequest);
+< 
+644,644c826,826
+< 				if (individualCmd != null && individualCmd.canExecute()) {
+---
+> 				if (individualCmd != null && individualCmd.canExecute()) {
+645,645d826
+< 					connectionCmds.put(type, individualCmd);
+646,646c827,827
+< 					validRelTypes.add(type);
+---
+> 					validRelTypes.add(type);
+647,647d827
+< 				}
+650a715,728
+> 	/**
+> 	 * Gets a command that pops up a menu which allows the user to select which
+> 	 * type of connection to be created and then creates the connection.
+> 	 * 
+> 	 * @param content
+> 	 *            The list of items making up the content of the popup menu.
+> 	 * @param request
+> 	 *            The relevant create connection request.
+> 	 * @return the command to popup up the menu and create the connection
+> 	 */
+> 	protected ICommand getPromptAndCreateConnectionCommand(List content,
+> 			CreateConnectionRequest request) {
+> 		return new PromptAndCreateConnectionCommand(content, request);
+> 	}
+650a705,705
+> 		if (menuContent.isEmpty()) {
+651,651d704
+< 		if (connectionCmds.isEmpty()) {
+652a707,708
+> 		} else if (menuContent.size() == 1) {
+> 			return getConnectionCompleteCommand(menuContent.get(0), request);
+652,652c706,706
+< 			return null;
+---
+> 			return null;
+653,654d706
+< 		} else if (connectionCmds.size() == 1) {
+< 			return (Command) connectionCmds.values().toArray()[0];
+655,655c709,709
+< 		} else {
+---
+> 		} else {
+656,656c710,710
+< 			CreateOrSelectElementCommand selectAndCreateConnectionCmd = new CreateOrSelectElementCommand(
+---
+> 			return new EtoolsProxyCommand(getPromptAndCreateConnectionCommand(
+656a711,711
+> 				menuContent, request));
+657,657d710
+< 				CREATE_CONNECTION_COMMAND_LABEL, Display.getCurrent().getActiveShell(), validRelTypes) {
+659a731,741
+> 	 * Gets the command to create a connection based on the request and the
+> 	 * connection identifier. This method is called after the user has selected
+> 	 * the connection to be created when presented with a popup.
+> 	 * @see #getPromptAndCreateConnectionCommand(List, CreateConnectionRequest)
+> 	 * 
+> 	 * @param connectionType
+> 	 *            the connection type as specified in
+> 	 *            {@link #getConnectionMenuContent(CreateConnectionRequest)}
+> 	 * @param request
+> 	 *            the request, identifying the source and target
+> 	 * @return the command to create the connection
+660,660d730
+< 				 * My command to undo/redo.
+661a743,753
+> 	protected Command getConnectionCompleteCommand(Object connectionType,
+> 			CreateConnectionRequest request) {
+> 		if (connectionType instanceof IElementType) {
+> 			if (request instanceof CreateUnspecifiedTypeConnectionRequest) {
+> 				return getHost().getCommand(
+> 					((CreateUnspecifiedTypeConnectionRequest) request)
+> 						.getRequestForType((IElementType) connectionType));
+> 			}
+> 		}
+> 		return null;
+> 	}
+662,662d742
+< 				private Command undoCommand;
+664a756,768
+> 	 * Gets a list of all the connector items that will represent the connector
+> 	 * choices and will appear in the popup menu. This method will get the
+> 	 * connector content if the given request is a
+> 	 * <code>CreateUnspecifiedTypeConnectionRequest</code> using the types it
+> 	 * holds or the types retrieved from the Modeling Assistant Service.
+> 	 * 
+> 	 * <p>
+> 	 * If a subclass wishes to provide additional element types they should
+> 	 * consider providing these in a Modeling Assistant Provider. If a subclass
+> 	 * wishes to provide connector choices that are not elements types they may
+> 	 * provide them here, in this case, the label provider for
+> 	 * {@link PromptAndCreateConnectionCommand} may need to customized.
+> 	 * </p>
+665,667d755
+< 				 * Execute the command that prompts the user with the popup
+< 				 * menu, then executes the command prepared for the relationship
+< 				 * type that the user selected.
+668a770,770
+> 	 * @return the list of connector items to appear in the popup menu
+669,669d769
+< 				 * @see org.eclipse.gmf.runtime.common.core.command.AbstractCommand#doExecute(org.eclipse.core.runtime.IProgressMonitor)
+670a772,778
+> 	protected List getConnectionMenuContent(CreateConnectionRequest request) {
+> 		List validRelTypes = new ArrayList();
+> 		if (request instanceof CreateUnspecifiedTypeConnectionRequest) {
+> 			CreateUnspecifiedTypeConnectionRequest unspecifiedRequest = (CreateUnspecifiedTypeConnectionRequest) request;
+> 			List allRequests = unspecifiedRequest.getAllRequests();
+> 			if (allRequests.isEmpty()) {
+> 				return null;
+671,675d771
+< 				protected CommandResult doExecute(
+< 						IProgressMonitor progressMonitor) {
+< 					CommandResult cmdResult = super.doExecute(progressMonitor);
+< 					if (!cmdResult.getStatus().isOK()) {
+< 						return cmdResult;
+677a785,787
+> 			List allRelTypes = unspecifiedRequest.useModelingAssistantService() ? ModelingAssistantService
+> 				.getInstance().getRelTypesOnSourceAndTarget(sourceEP, targetEP)
+> 				: unspecifiedRequest.getElementTypes();
+678,679d784
+< 					IElementType relationshipType = (IElementType) cmdResult
+< 						.getReturnValue();
+680a789,790
+> 			for (Iterator iter = allRelTypes.iterator(); iter.hasNext();) {
+> 				IElementType type = (IElementType) iter.next();
+681,684d788
+< 					Command cmd = (Command) connectionCmds.get(relationshipType);
+< 					Assert.isTrue(cmd != null && cmd.canExecute());
+< 					cmd.execute();
+< 					undoCommand = cmd;
+685a792,792
+> 				Command individualCmd = null;
+686,686c832,832
+< 					return newOKCommandResult();
+---
+> 		return validRelTypes;
+687,687d832
+< 				}
+688a794,823
+> 				Request createConnectionRequest = unspecifiedRequest
+> 					.getRequestForType(type);
+> 				if (createConnectionRequest != null) {
+> 					individualCmd = getHost().getCommand(
+> 						createConnectionRequest);
+> 				} else {
+> 					// This type may not have been given when the connection
+> 					// creation occurred. In this case, use the deferred
+> 					// connection creation mechanism.
+> 
+> 					// First, setup the request to initialize the connection
+> 					// start command.
+> 					CreateConnectionViewRequest connectionRequest = CreateViewRequestFactory
+> 						.getCreateConnectionRequest(type,
+> 							((IGraphicalEditPart) getHost())
+> 								.getDiagramPreferencesHint());
+> 					connectionRequest.setSourceEditPart(null);
+> 					connectionRequest.setTargetEditPart(sourceEP);
+> 					connectionRequest
+> 						.setType(RequestConstants.REQ_CONNECTION_START);
+> 					sourceEP.getCommand(connectionRequest);
+> 
+> 					// Now, setup the request in preparation to get the
+> 					// connection end
+> 					// command.
+> 					connectionRequest.setSourceEditPart(sourceEP);
+> 					connectionRequest.setTargetEditPart(targetEP);
+> 					connectionRequest
+> 						.setType(RequestConstants.REQ_CONNECTION_END);
+> 					individualCmd = targetEP.getCommand(connectionRequest);
+689,693d793
+< 				protected CommandResult doUndo() {
+< 					if (undoCommand != null) {
+< 						undoCommand.undo();
+< 					}
+< 					return super.doUndo();
+696,698d825
+< 				protected CommandResult doRedo() {
+< 					if (undoCommand != null) {
+< 						undoCommand.redo();
+700,700d828
+< 					return super.doRedo();
+703,706d830
+< 			};
+< 			
+< 
+< 			return new EtoolsProxyCommand(selectAndCreateConnectionCmd);

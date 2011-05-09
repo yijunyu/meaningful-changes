@@ -1,0 +1,42 @@
+package org.eclipse.gmf.runtime.emf.type.core.commands;
+
+import java.util.Collection;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest;
+
+public class DestroyElementCommand extends EditElementCommand {
+    private final EObject elementToDestroy;
+
+    public DestroyElementCommand (DestroyElementRequest request) {
+        super (request.getLabel (), request.getContainer (), request);
+        this.elementToDestroy = request.getElementToDestroy ();
+    }
+
+    protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+        EReference reference = getElementToDestroy ().eContainmentFeature ();
+        if (reference.isMany ()) {
+            ((Collection) getElementToEdit ().eGet (reference)).remove (getElementToDestroy ());
+        } else {
+            getElementToEdit ().eSet (reference, null);
+        }
+        return newOKCommandResult ();
+    }
+
+    protected EObject getElementToDestroy () {
+        return elementToDestroy;
+    }
+
+    public boolean isExecutable () {
+        return elementToDestroy != null;
+    }
+
+}
+

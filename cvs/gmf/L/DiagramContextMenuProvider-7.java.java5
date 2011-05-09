@@ -1,0 +1,84 @@
+package org.eclipse.gmf.runtime.diagram.ui.providers;
+
+import java.util.HashSet;
+
+import java.util.Set;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.gef.ContextMenuProvider;
+
+import org.eclipse.gef.EditPartViewer;
+
+import org.eclipse.gef.ui.actions.ActionRegistry;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.contributionitem.ContributionItemService;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+
+import org.eclipse.jface.action.IContributionItem;
+
+import org.eclipse.jface.action.IMenuManager;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+public class DiagramContextMenuProvider extends ContextMenuProvider {
+    private IWorkbenchPart part;
+    private Set exclusionSet = new HashSet ();
+    private String [] defaultExclusionList = {"replaceWithMenu", "compareWithMenu", "ValidationAction", "team.main", "org.eclipse.jst.ws.atk.ui.webservice.category.popupMenu", "org.eclipse.tptp.platform.analysis.core.ui.internal.actions.MultiAnalysisActionDelegate", "org.eclipse.debug.ui.contextualLaunch.run.submenu", "org.eclipse.debug.ui.contextualLaunch.debug.submenu", "org.eclipse.debug.ui.contextualLaunch.profile.submenu"};
+
+    public DiagramContextMenuProvider (IWorkbenchPart part, EditPartViewer viewer) {
+        super (viewer);
+        this.part = part;
+        addDefaultExclusions ();
+    }
+
+    public ActionRegistry getActionRegistry () {
+        return (ActionRegistry) part.getAdapter (ActionRegistry.class);
+    }
+
+    public void buildContextMenu (IMenuManager menu) {
+        getViewer ().flush ();
+        try {
+            TransactionUtil.getEditingDomain ((EObject) getViewer ().getContents ().getModel ()).runExclusive (new Runnable () {
+
+                public void run () {
+                    ContributionItemService.getInstance ().contributeToPopupMenu (DiagramContextMenuProvider.this, part);
+                }
+
+            }
+
+            );
+        } catch (Exception e) {
+            Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "buildContextMenu()", e);
+        }
+    }
+
+    public Set getExclusionSet () {
+        return exclusionSet;
+    }
+
+    public void setExclusionSet (Set exclusionSet) {
+        this.exclusionSet = exclusionSet;
+    }
+
+    protected boolean allowItem (IContributionItem itemToAdd) {
+        if (itemToAdd.getId () != null && exclusionSet.contains (itemToAdd.getId ())) itemToAdd.setVisible (false);
+
+        return super.allowItem (itemToAdd);
+    }
+
+    protected void addDefaultExclusions () {
+        for (int i = 0;
+        i < defaultExclusionList.length; i ++) exclusionSet.add (defaultExclusionList [i]);
+
+    }
+
+}
+

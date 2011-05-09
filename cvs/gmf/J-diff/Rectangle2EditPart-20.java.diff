@@ -1,0 +1,424 @@
+23d22
+< import org.eclipse.draw2d.Figure;
+26d24
+< import org.eclipse.draw2d.LayoutManager;
+29d26
+< import org.eclipse.draw2d.geometry.Point;
+33d29
+< import org.eclipse.emf.common.notify.impl.AdapterImpl;
+36d31
+< import org.eclipse.gef.EditPart;
+39d33
+< import org.eclipse.gmf.gmfgraph.AbstractFigure;
+42d35
+< import org.eclipse.gmf.gmfgraph.Dimension;
+45d37
+< import org.eclipse.gmf.gmfgraph.Layoutable;
+47c39
+< import org.eclipse.gmf.gmfgraph.XYLayoutData;
+---
+> import org.eclipse.gmf.gmfgraph.Shape;
+49a42
+> import org.eclipse.gmf.graphdef.editor.edit.polocies.DomainBasedXYLayoutEditPolicy;
+55d47
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.GraphicalEditPart;
+59,60d50
+< import org.eclipse.gmf.runtime.diagram.ui.editpolicies.ResizableShapeEditPolicy;
+< import org.eclipse.gmf.runtime.diagram.ui.editpolicies.XYLayoutEditPolicy;
+63d52
+< import org.eclipse.gmf.runtime.notation.Bounds;
+66d54
+< import org.eclipse.gmf.runtime.notation.Node;
+115,139c103
+< 		XYLayoutEditPolicy lep = new XYLayoutEditPolicy() {
+< 
+< 			protected EditPolicy createChildEditPolicy(EditPart child) {
+< 				EditPolicy result = super.createChildEditPolicy(child);
+< 				if (result == null) {
+< 					return new ResizableShapeEditPolicy();
+< 				}
+< 				return result;
+< 			}
+< 
+< 			protected Point getLayoutOrigin() {
+< 				return ((GraphicalEditPart) getHost()).getContentPane().getClientArea().getLocation();
+< 			}
+< 
+< 			protected Rectangle getCurrentConstraintFor(org.eclipse.gef.GraphicalEditPart child) {
+< 				Rectangle result = super.getCurrentConstraintFor(child);
+< 				if (result == null) {
+< 					IFigure fig = child.getFigure();
+< 					result = fig.getBounds().getCopy();
+< 				}
+< 				return result;
+< 			}
+< 
+< 		};
+< 		return lep;
+---
+> 		return new DomainBasedXYLayoutEditPolicy(getMapMode());
+149,175d112
+< 		org.eclipse.gmf.gmfgraph.Rectangle modelElement = (org.eclipse.gmf.gmfgraph.Rectangle) ((View) getModel()).getElement();
+< 		if (modelElement != null) {
+< 			{
+< 				layoutDataChanged(modelElement.getLayoutData());
+< 			}
+< 			{
+< 				layoutChanged(modelElement.getLayout());
+< 			}
+< 			{
+< 				myFigure.setOutline(modelElement.isOutline());
+< 			}
+< 			{
+< 				myFigure.setFill(modelElement.isFill());
+< 			}
+< 			{
+< 				myFigure.setLineWidth(modelElement.getLineWidth());
+< 			}
+< 			{
+< 				myFigure.setLineStyle(getLineStyle(modelElement.getLineKind()));
+< 			}
+< 			{
+< 				myFigure.setFillXOR(modelElement.isXorFill());
+< 			}
+< 			{
+< 				myFigure.setOutlineXOR(modelElement.isXorOutline());
+< 			}
+< 		}
+191d127
+< 		myNodeFigure = result;
+246a183,194
+> 	protected void handleNotificationEvent(Notification notification) {
+> 		Object feature = notification.getFeature();
+> 		if (NotationPackage.eINSTANCE.getSize_Width().equals(feature) || NotationPackage.eINSTANCE.getSize_Height().equals(feature) || NotationPackage.eINSTANCE.getLocation_X().equals(feature)
+> 				|| NotationPackage.eINSTANCE.getLocation_Y().equals(feature)) {
+> 			return;
+> 		}
+> 		super.handleNotificationEvent(notification);
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+283d230
+< 	// TODO: use myFigure?
+287c234
+< 	protected Figure myNodeFigure;
+---
+> 	private Collection<Adapter> myDomainElementAdapters = new ArrayList<Adapter>();
+292c239,246
+< 	private Collection<Adapter> myDomainElementAdapters = new ArrayList<Adapter>();
+---
+> 	private org.eclipse.gmf.gmfgraph.Rectangle getModelFigureElement() {
+> 		Shape shape = getShape();
+> 		if (shape instanceof org.eclipse.gmf.gmfgraph.Rectangle) {
+> 			org.eclipse.gmf.gmfgraph.Rectangle modelFigureElement = (org.eclipse.gmf.gmfgraph.Rectangle) shape;
+> 			return modelFigureElement;
+> 		}
+> 		return null;
+> 	}
+298,300c252,253
+< 		View view = (View) getModel();
+< 		if (view.getElement() != null) {
+< 			org.eclipse.gmf.gmfgraph.Rectangle modelElement = (org.eclipse.gmf.gmfgraph.Rectangle) view.getElement();
+---
+> 		org.eclipse.gmf.gmfgraph.Rectangle modelElement = (org.eclipse.gmf.gmfgraph.Rectangle) getModelFigureElement();
+> 		if (modelElement != null) {
+309a263,281
+> 	protected void setFigure(IFigure figure) {
+> 		super.setFigure(figure);
+> 		org.eclipse.gmf.gmfgraph.Rectangle modelElement = (org.eclipse.gmf.gmfgraph.Rectangle) getModelFigureElement();
+> 		if (modelElement != null) {
+> 			refreshBounds();
+> 			refreshLayoutData();
+> 			myFigure.setOutline(modelElement.isOutline());
+> 			myFigure.setFill(modelElement.isFill());
+> 			myFigure.setLineWidth(modelElement.getLineWidth());
+> 			myFigure.setLineStyle(getLineStyle(modelElement.getLineKind()));
+> 			myFigure.setFillXOR(modelElement.isXorFill());
+> 			myFigure.setOutlineXOR(modelElement.isXorOutline());
+> 			myFigure.setLayoutManager(getLayoutManager(modelElement.getLayout()));
+> 		}
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+314,315c286,287
+< 		View view = (View) getModel();
+< 		if (view.getElement() == null) {
+---
+> 		final org.eclipse.gmf.gmfgraph.Rectangle modelElement = (org.eclipse.gmf.gmfgraph.Rectangle) getModelFigureElement();
+> 		if (modelElement == null) {
+320,321c292
+< 		final org.eclipse.gmf.gmfgraph.Rectangle modelElement = (org.eclipse.gmf.gmfgraph.Rectangle) view.getElement();
+< 		myDomainElementAdapters.add(new AttachAdapter(GMFGraphPackage.eINSTANCE.getLayoutable_LayoutData(), new AdapterImpl() {
+---
+> 		ChangeTracker refreshBoundsTracker = new ChangeTracker() {
+323,327c294,295
+< 			public void notifyChanged(Notification msg) {
+< 				if (msg.isTouch()) {
+< 					return;
+< 				}
+< 				layoutDataChanged(modelElement.getLayoutData());
+---
+> 			public void modelChanged(Notification msg) {
+> 				refreshBounds();
+329,330c297,301
+< 		}));
+< 		myDomainElementAdapters.add(new AttachAdapter(GMFGraphPackage.eINSTANCE.getLayoutable_Layout(), new AdapterImpl() {
+---
+> 		};
+> 		myDomainElementAdapters.add(new AttachAdapter(GMFGraphPackage.eINSTANCE.getFigure_Location(), refreshBoundsTracker, new FeatureTracker(refreshBoundsTracker, GMFGraphPackage.eINSTANCE
+> 				.getPoint_X()), new FeatureTracker(refreshBoundsTracker, GMFGraphPackage.eINSTANCE.getPoint_Y())));
+> 		myDomainElementAdapters.add(new AttachAdapter(GMFGraphPackage.eINSTANCE.getFigure_PreferredSize(), refreshBoundsTracker, new FeatureTracker(refreshBoundsTracker, GMFGraphPackage.eINSTANCE
+> 				.getDimension_Dx()), new FeatureTracker(refreshBoundsTracker, GMFGraphPackage.eINSTANCE.getDimension_Dy())));
+332,336c303,306
+< 			public void notifyChanged(Notification msg) {
+< 				if (msg.isTouch()) {
+< 					return;
+< 				}
+< 				layoutChanged(modelElement.getLayout());
+---
+> 		ChangeTracker refreshLayoutDataTracker = new ChangeTracker() {
+> 
+> 			public void modelChanged(Notification msg) {
+> 				refreshLayoutData();
+338,339c308,322
+< 		}));
+< 		myDomainElementAdapters.add(new FeatureTracker(new ChangeTracker() {
+---
+> 		};
+> 		myDomainElementAdapters.add(new AttachAdapter(GMFGraphPackage.eINSTANCE.getLayoutable_LayoutData(), refreshLayoutDataTracker, new AttachAdapter(GMFGraphPackage.eINSTANCE
+> 				.getXYLayoutData_TopLeft(), refreshLayoutDataTracker, new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getPoint_X()), new FeatureTracker(
+> 				refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getPoint_Y())), new AttachAdapter(GMFGraphPackage.eINSTANCE.getXYLayoutData_Size(), refreshLayoutDataTracker, new FeatureTracker(
+> 				refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getDimension_Dx()), new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getDimension_Dy())), new FeatureTracker(
+> 				refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getBorderLayoutData_Alignment()), new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE
+> 				.getBorderLayoutData_Vertical()), new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getGridLayoutData_GrabExcessHorizontalSpace()), new FeatureTracker(
+> 				refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getGridLayoutData_GrabExcessVerticalSpace()), new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE
+> 				.getGridLayoutData_VerticalAlignment()), new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getGridLayoutData_HorizontalAlignment()), new FeatureTracker(
+> 				refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getGridLayoutData_VerticalSpan()), new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE
+> 				.getGridLayoutData_HorizontalSpan()), new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getGridLayoutData_HorizontalIndent()), new AttachAdapter(
+> 				GMFGraphPackage.eINSTANCE.getGridLayoutData_SizeHint(), refreshLayoutDataTracker, new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getDimension_Dx()),
+> 				new FeatureTracker(refreshLayoutDataTracker, GMFGraphPackage.eINSTANCE.getDimension_Dy()))));
+> 
+> 		ChangeTracker outlineTracker = new ChangeTracker() {
+344,345c327,330
+< 		}, GMFGraphPackage.eINSTANCE.getShape_Outline()));
+< 		myDomainElementAdapters.add(new FeatureTracker(new ChangeTracker() {
+---
+> 		};
+> 		myDomainElementAdapters.add(new FeatureTracker(outlineTracker, GMFGraphPackage.eINSTANCE.getShape_Outline()));
+> 
+> 		ChangeTracker fillTracker = new ChangeTracker() {
+350,351c335,338
+< 		}, GMFGraphPackage.eINSTANCE.getShape_Fill()));
+< 		myDomainElementAdapters.add(new FeatureTracker(new ChangeTracker() {
+---
+> 		};
+> 		myDomainElementAdapters.add(new FeatureTracker(fillTracker, GMFGraphPackage.eINSTANCE.getShape_Fill()));
+> 
+> 		ChangeTracker lineWidthTracker = new ChangeTracker() {
+356,357c343,346
+< 		}, GMFGraphPackage.eINSTANCE.getShape_LineWidth()));
+< 		myDomainElementAdapters.add(new FeatureTracker(new ChangeTracker() {
+---
+> 		};
+> 		myDomainElementAdapters.add(new FeatureTracker(lineWidthTracker, GMFGraphPackage.eINSTANCE.getShape_LineWidth()));
+> 
+> 		ChangeTracker lineStyleTracker = new ChangeTracker() {
+362,363c351,354
+< 		}, GMFGraphPackage.eINSTANCE.getShape_LineKind()));
+< 		myDomainElementAdapters.add(new FeatureTracker(new ChangeTracker() {
+---
+> 		};
+> 		myDomainElementAdapters.add(new FeatureTracker(lineStyleTracker, GMFGraphPackage.eINSTANCE.getShape_LineKind()));
+> 
+> 		ChangeTracker fillXORTracker = new ChangeTracker() {
+368,369c359,362
+< 		}, GMFGraphPackage.eINSTANCE.getShape_XorFill()));
+< 		myDomainElementAdapters.add(new FeatureTracker(new ChangeTracker() {
+---
+> 		};
+> 		myDomainElementAdapters.add(new FeatureTracker(fillXORTracker, GMFGraphPackage.eINSTANCE.getShape_XorFill()));
+> 
+> 		ChangeTracker outlineXORTracker = new ChangeTracker() {
+374,412c367,368
+< 		}, GMFGraphPackage.eINSTANCE.getShape_XorOutline()));
+< 		modelElement.eAdapters().addAll(myDomainElementAdapters);
+< 
+< 		final Bounds bounds = (Bounds) ((Node) view).getLayoutConstraint();
+< 		final int sizeX;
+< 		final int sizeY;
+< 		if (modelElement.getPreferredSize() != null) {
+< 			sizeX = getMapMode().DPtoLP(modelElement.getPreferredSize().getDx());
+< 			sizeY = getMapMode().DPtoLP(modelElement.getPreferredSize().getDy());
+< 		} else {
+< 			sizeX = getMapMode().DPtoLP(20);
+< 			sizeY = getMapMode().DPtoLP(20);
+< 		}
+< 		final int locationX;
+< 		final int locationY;
+< 		if (modelElement.getLocation() != null) {
+< 			locationX = getMapMode().DPtoLP(modelElement.getLocation().getX());
+< 			locationY = getMapMode().DPtoLP(modelElement.getLocation().getY());
+< 		} else {
+< 			locationX = bounds.getX();
+< 			locationY = bounds.getY();
+< 		}
+< 		if (sizeX != bounds.getWidth() || sizeY != bounds.getHeight() || locationX != bounds.getX() || locationY != bounds.getY()) {
+< 			try {
+< 				new AbstractEMFOperation(getEditingDomain(), "Synchronizing view size with the model", Collections.singletonMap(Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) { //$NON-NLS-1$
+< 
+< 					protected IStatus doExecute(IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+< 						bounds.setX(locationX);
+< 						bounds.setY(locationY);
+< 						bounds.setWidth(sizeX);
+< 						bounds.setHeight(sizeY);
+< 						return Status.OK_STATUS;
+< 					}
+< 				}.execute(new NullProgressMonitor(), null);
+< 			} catch (ExecutionException e) {
+< 				GMFGraphDiagramEditorPlugin.getInstance().logError("Unable to synchronize view size with the model", e); //$NON-NLS-1$			
+< 			}
+< 		}
+< 		addListenerFilter("BoundsListener", new NotificationListener() {
+---
+> 		};
+> 		myDomainElementAdapters.add(new FeatureTracker(outlineXORTracker, GMFGraphPackage.eINSTANCE.getShape_XorOutline()));
+414,416c370
+< 			public void notifyChanged(final Notification notification) {
+< 				try {
+< 					new AbstractEMFOperation(getEditingDomain(), "Synchronizing model size with the view", Collections.singletonMap(Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) { //$NON-NLS-1$
+---
+> 		ChangeTracker layoutManagerTracker = new ChangeTracker() {
+418,492c372,373
+< 						protected IStatus doExecute(IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+< 							Bounds bounds = (Bounds) notification.getNotifier();
+< 							Dimension dim = modelElement.getPreferredSize();
+< 							if (dim == null) {
+< 								dim = GMFGraphFactory.eINSTANCE.createDimension();
+< 								modelElement.setPreferredSize(dim);
+< 							}
+< 							org.eclipse.gmf.gmfgraph.Point location = modelElement.getLocation();
+< 							if (location == null) {
+< 								location = GMFGraphFactory.eINSTANCE.createPoint();
+< 								modelElement.setLocation(location);
+< 							}
+< 
+< 							int x = getMapMode().LPtoDP(bounds.getX());
+< 							int y = getMapMode().LPtoDP(bounds.getY());
+< 							int width = getMapMode().LPtoDP(bounds.getWidth());
+< 							int height = getMapMode().LPtoDP(bounds.getHeight());
+< 							if (location.getX() != x || location.getY() != y) {
+< 								location.setX(x);
+< 								location.setY(y);
+< 							}
+< 							if (dim.getDx() != width || dim.getDy() != height) {
+< 								dim.setDx(width);
+< 								dim.setDy(height);
+< 							}
+< 
+< 							myNodeFigure.setPreferredSize(bounds.getWidth(), bounds.getHeight());
+< 							myNodeFigure.setLocation(new Point(bounds.getX(), bounds.getY()));
+< 
+< 							if (modelElement.getLayoutData() instanceof XYLayoutData
+< 									|| (modelElement.eContainer() instanceof Layoutable && ((Layoutable) modelElement.eContainer()).getLayout() instanceof org.eclipse.gmf.gmfgraph.XYLayout)) {
+< 								XYLayoutData xyLayoutData = (XYLayoutData) modelElement.getLayoutData();
+< 								if (xyLayoutData == null) {
+< 									xyLayoutData = GMFGraphFactory.eINSTANCE.createXYLayoutData();
+< 									modelElement.setLayoutData(xyLayoutData);
+< 									xyLayoutData.setTopLeft(GMFGraphFactory.eINSTANCE.createPoint());
+< 									xyLayoutData.getTopLeft().setX(0);
+< 									xyLayoutData.getTopLeft().setY(0);
+< 									xyLayoutData.setSize(GMFGraphFactory.eINSTANCE.createDimension());
+< 									xyLayoutData.getSize().setDx(40);
+< 									xyLayoutData.getSize().setDy(40);
+< 								}
+< 								org.eclipse.gmf.gmfgraph.Point topLeft;
+< 								if (xyLayoutData.getTopLeft() != null) {
+< 									topLeft = xyLayoutData.getTopLeft();
+< 								} else {
+< 									topLeft = GMFGraphFactory.eINSTANCE.createPoint();
+< 									xyLayoutData.setTopLeft(topLeft);
+< 								}
+< 								if (topLeft.getX() != location.getX() || topLeft.getY() != location.getY()) {
+< 									topLeft.setX(location.getX());
+< 									topLeft.setY(location.getY());
+< 								}
+< 
+< 								Dimension size;
+< 								if (xyLayoutData.getSize() != null) {
+< 									size = xyLayoutData.getSize();
+< 								} else {
+< 									size = GMFGraphFactory.eINSTANCE.createDimension();
+< 									xyLayoutData.setSize(size);
+< 								}
+< 								if (size.getDx() != dim.getDx() || size.getDy() != dim.getDy()) {
+< 									size.setDx(dim.getDx());
+< 									size.setDy(dim.getDy());
+< 								}
+< 							}
+< 							return Status.OK_STATUS;
+< 						}
+< 					}.execute(new NullProgressMonitor(), null);
+< 				} catch (ExecutionException e) {
+< 					GMFGraphDiagramEditorPlugin.getInstance().logError("Unable to synchronize model size with the view", e); //$NON-NLS-1$			
+< 				}
+< 				if (getRoot() != null) {
+< 					handleMajorSemanticChange();
+< 				}
+---
+> 			public void modelChanged(Notification msg) {
+> 				myFigure.setLayoutManager(getLayoutManager(modelElement.getLayout()));
+494c375,387
+< 		}, bounds);
+---
+> 		};
+> 		myDomainElementAdapters.add(new AttachAdapter(GMFGraphPackage.eINSTANCE.getLayoutable_Layout(), layoutManagerTracker, new AttachAdapter(GMFGraphPackage.eINSTANCE.getBorderLayout_Spacing(),
+> 				layoutManagerTracker, new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE.getDimension_Dx()), new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE
+> 						.getDimension_Dy())), new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE.getFlowLayout_Vertical()), new FeatureTracker(layoutManagerTracker,
+> 				GMFGraphPackage.eINSTANCE.getFlowLayout_MatchMinorSize()), new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE.getFlowLayout_ForceSingleLine()), new FeatureTracker(
+> 				layoutManagerTracker, GMFGraphPackage.eINSTANCE.getFlowLayout_MajorAlignment()), new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE.getFlowLayout_MinorAlignment()),
+> 				new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE.getFlowLayout_MajorSpacing()), new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE
+> 						.getFlowLayout_MinorSpacing()), new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE.getGridLayout_NumColumns()), new FeatureTracker(layoutManagerTracker,
+> 						GMFGraphPackage.eINSTANCE.getGridLayout_EqualWidth()), new AttachAdapter(GMFGraphPackage.eINSTANCE.getGridLayout_Margins(), layoutManagerTracker, new FeatureTracker(
+> 						layoutManagerTracker, GMFGraphPackage.eINSTANCE.getDimension_Dx()), new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE.getDimension_Dy())), new AttachAdapter(
+> 						GMFGraphPackage.eINSTANCE.getGridLayout_Spacing(), layoutManagerTracker, new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE.getDimension_Dx()),
+> 						new FeatureTracker(layoutManagerTracker, GMFGraphPackage.eINSTANCE.getDimension_Dy()))));
+> 		modelElement.eAdapters().addAll(myDomainElementAdapters);
+495a389
+> 		View view = getNotationView();
+620,621c514,517
+< 	protected LayoutManager getFigureLayoutManager() {
+< 		return myFigure.getLayoutManager();
+---
+> 	protected void refreshBounds() {
+> 		org.eclipse.gmf.gmfgraph.Rectangle modelElement = (org.eclipse.gmf.gmfgraph.Rectangle) getModelFigureElement();
+> 		if (modelElement == null) {
+> 			return;
+623,628c519,520
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected void setFigureLayoutManager(LayoutManager layoutManager) {
+< 		myFigure.setLayoutManager(layoutManager);
+---
+> 		if (modelElement.getPreferredSize() != null) {
+> 			getFigure().setPreferredSize(getDraw2dDimension(modelElement.getPreferredSize()));
+630,640c522,523
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected void refreshBounds() {
+< 		if (((View) getParent().getModel()).getElement() instanceof AbstractFigure) {
+< 			int width = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Width())).intValue();
+< 			int height = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Height())).intValue();
+< 			myNodeFigure.setPreferredSize(new org.eclipse.draw2d.geometry.Dimension(width, height));
+< 		} else {
+< 			super.refreshBounds();
+---
+> 		if (modelElement.getLocation() != null) {
+> 			getFigure().setLocation(getDraw2DPoint(modelElement.getLocation()));

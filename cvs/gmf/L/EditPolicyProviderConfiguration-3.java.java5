@@ -1,0 +1,80 @@
+package org.eclipse.gmf.runtime.diagram.ui.internal.services.editpolicy;
+
+import java.util.ArrayList;
+
+import java.util.HashMap;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.IConfigurationElement;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.gmf.runtime.common.core.service.AbstractProviderConfiguration;
+
+public class EditPolicyProviderConfiguration extends AbstractProviderConfiguration {
+    private static final String CONTEXT = "context";
+    private static final String EDITPARTS = "editparts";
+    private List contextDescriptors = new ArrayList ();
+
+    public static EditPolicyProviderConfiguration parse (IConfigurationElement configElement) {
+        Assert.isNotNull (configElement, "null provider configuration element");
+        return new EditPolicyProviderConfiguration (configElement);
+    }
+
+    private EditPolicyProviderConfiguration (IConfigurationElement configElement) {
+        IConfigurationElement configChildren [];
+        Map objects = new HashMap ();
+        configChildren = configElement.getChildren (OBJECT);
+        for (int i = 0;
+        i < configChildren.length; i ++) {
+            String id = configChildren [i].getAttribute (ID);
+            if (id != null) objects.put (id, new ObjectDescriptor (configChildren [i]));
+
+        }
+        configChildren = configElement.getChildren (CONTEXT);
+        for (int i = 0;
+        i < configChildren.length; i ++) {
+            List editParts = getObjectList (configChildren [i].getAttribute (EDITPARTS), objects, configElement);
+            if (editParts != null) contextDescriptors.add (new ContextDescriptor (editParts));
+
+        }
+    }
+
+    public boolean supports (EditPart editPart) {
+        if (contextDescriptors.isEmpty ()) return true;
+
+        Iterator iter = contextDescriptors.iterator ();
+        while (iter.hasNext ()) {
+            ContextDescriptor descriptor = (ContextDescriptor) iter.next ();
+            if (descriptor.matches (editPart)) return true;
+
+        }
+        return false;
+    }
+
+    private static class ContextDescriptor {
+        private final List editParts;
+
+        public ContextDescriptor (List editParts) {
+            this.editParts = editParts;
+        }
+
+        public boolean matches (EditPart editPart) {
+            if (editParts != null) {
+                if (! objectMatches (editPart, editParts)) return false;
+
+            }
+            return true;
+        }
+
+    }
+
+}
+

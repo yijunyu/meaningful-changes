@@ -1,0 +1,131 @@
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.draw2d.ColorConstants;
+
+import org.eclipse.draw2d.FigureUtilities;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.RectangleFigure;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.gef.AccessibleHandleProvider;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.commands.IPropertyValueDeferred;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.SetBoundsCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.requests.ChangeBoundsDeferredRequest;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.RequestConstants;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class ResizableShapeEditPolicy extends ResizableEditPolicyEx {
+
+    protected Command getAutoSizeCommand (Request request) {
+        TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost ()).getEditingDomain ();
+        ICommand resizeCommand = new SetBoundsCommand (editingDomain, DiagramUIMessages.SetAutoSizeCommand_Label, new EObjectAdapter ((View) getHost ().getModel ()), new Dimension (- 1, - 1));
+        return new EtoolsProxyCommand (resizeCommand);
+    }
+
+    protected Command getMoveDeferredCommand (ChangeBoundsDeferredRequest request) {
+        final class SetDeferredPropertyCommand extends AbstractTransactionalCommand {
+            private IAdaptable newValue;
+            private IAdaptable viewAdapter;
+
+            public SetDeferredPropertyCommand (TransactionalEditingDomain editingDomain, String label, IAdaptable viewAdapter, IAdaptable newValue) {
+                super (editingDomain, label, null);
+                this.viewAdapter = viewAdapter;
+                this.newValue = newValue;
+            }
+
+            protected CommandResult doExecuteWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException {
+                if (null == viewAdapter || null == newValue) return CommandResult.newCancelledCommandResult ();
+
+                View view = (View) viewAdapter.getAdapter (View.class);
+                Point p = (Point) newValue.getAdapter (IPropertyValueDeferred.class);
+                ViewUtil.setStructuralFeatureValue (view, NotationPackage.eINSTANCE.getLocation_X (), new Integer (p.x));
+                ViewUtil.setStructuralFeatureValue (view, NotationPackage.eINSTANCE.getLocation_Y (), new Integer (p.y));
+                viewAdapter = null;
+                newValue = null;
+                return CommandResult.newOKCommandResult ();
+            }
+
+        }
+
+        View view = (View) getHost ().getModel ();
+        TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost ()).getEditingDomain ();
+        SetDeferredPropertyCommand cmd = new SetDeferredPropertyCommand (editingDomain, DiagramUIMessages.ResizableShapeEditPolicy_MoveDeferredCommand_label, new EObjectAdapter (view), request.getLocationAdapter ());
+        return new EtoolsProxyCommand (cmd);
+    }
+
+    public Command getCommand (Request request) {
+        if (RequestConstants.REQ_AUTOSIZE.equals (request.getType ())) return getAutoSizeCommand (request);
+
+        if (RequestConstants.REQ_MOVE_DEFERRED.equals (request.getType ())) return getMoveDeferredCommand ((ChangeBoundsDeferredRequest) request);
+
+        return super.getCommand (request);
+    }
+
+    public boolean understandsRequest (Request request) {
+        if (RequestConstants.REQ_AUTOSIZE.equals (request.getType ()) || RequestConstants.REQ_MOVE_DEFERRED.equals (request.getType ())) return true;
+
+        return super.understandsRequest (request);
+    }
+
+    protected IFigure createDragSourceFeedbackFigure () {
+        RectangleFigure r = new RectangleFigure ();
+        FigureUtilities.makeGhostShape (r);
+        r.setLineStyle (Graphics.LINE_DOT);
+        r.setForegroundColor (ColorConstants.white);
+        r.setBounds (getInitialFeedbackBounds ());
+        addFeedback (r);
+        return r;
+    }
+
+    public Object getAdapter (Class key) {
+        if (key == AccessibleHandleProvider.class) if (handles == null) {
+            return null;
+        }
+
+        return super.getAdapter (key);
+    }
+
+}
+

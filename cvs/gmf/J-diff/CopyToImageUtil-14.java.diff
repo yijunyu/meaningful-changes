@@ -1,0 +1,124 @@
+25a26
+> import org.eclipse.core.runtime.Assert;
+45d45
+< import org.eclipse.jface.util.Assert;
+147,184c147,149
+<         boolean found = false;
+<         DiagramGenerator gen = null;
+<         if (format.equals(ImageFileFormat.SVG)) {
+< 
+<             gen = new DiagramSVGGenerator(diagramEP);
+<             gen.createSWTImageDescriptorForDiagram();
+< 
+<             monitor.worked(1);
+< 
+<             saveSVGToFile(destination, (DiagramSVGGenerator) gen, monitor);
+<             return gen;
+<         } else if (format.equals(ImageFileFormat.JPEG)
+<                 || format.equals(ImageFileFormat.PNG)) {
+< 
+<             String exportFormat = ImageExporter.JPEG_FILE;
+<             if (format.equals(ImageFileFormat.PNG))
+<                 exportFormat = ImageExporter.PNG_FILE;
+< 
+<             gen = new DiagramImageGenerator(diagramEP);
+<             java.awt.Image image = gen.createAWTImageForDiagram();
+<             if (image instanceof BufferedImage) {
+<                 ImageExporter.exportToFile(destination, (BufferedImage) image,
+<                     exportFormat, monitor);
+<                 found = true;
+<             }
+<         }
+< 
+<         if (!found) {
+<             gen = new DiagramImageGenerator(diagramEP);
+<             Image image = gen.createSWTImageDescriptorForDiagram()
+<                 .createImage();
+< 
+<             monitor.worked(1);
+< 
+<             saveToFile(destination, image, format, monitor);
+<             image.dispose();
+<         }
+< 
+---
+>         DiagramGenerator gen = getDiagramGenerator(diagramEP, format);
+>         List editParts = diagramEP.getPrimaryEditParts();
+>         copyToImage(gen, editParts, gen.calculateImageRectangle(editParts), destination, format, monitor);
+209,210c174,177
+<         boolean found = false;
+<         if (format.equals(ImageFileFormat.SVG)) {
+---
+>     	DiagramGenerator gen = getDiagramGenerator(diagramEP, format);
+>     	copyToImage(gen, selection, gen.calculateImageRectangle(selection), destination, format, monitor);
+>         monitor.worked(1);
+>     }
+212,213c179,193
+<             DiagramSVGGenerator gen = new DiagramSVGGenerator(diagramEP);
+<             gen.createSWTImageDescriptorForParts(selection);
+---
+>     /**
+>      * Creates the appropriate <code>DiagramGenerator</code> from <code>DiagramEditPart</code>
+>      * based on the supplied <code>ImageFileFormat</code>
+>      * 
+>      * @param diagramEP diagram editpart
+>      * @param format image file format
+>      * @return appropriate diagram generator
+>      */
+>     protected DiagramGenerator getDiagramGenerator(DiagramEditPart diagramEP, ImageFileFormat format) {
+>         if (format.equals(ImageFileFormat.SVG)) {
+>             return new DiagramSVGGenerator(diagramEP);
+>         } else {
+>         	return new DiagramImageGenerator(diagramEP);
+>         }
+>     }
+214a195,220
+>     /**
+> 	 * Generates image of editparts with on a given image rectangle and creates
+> 	 * the specified image file containing this image. The image rectangle may
+> 	 * be the limitation for the editparts displayed on the image
+> 	 * 
+> 	 * @param gen
+> 	 *            diagram generator
+> 	 * @param editParts
+> 	 *            editparts to be present on the image
+> 	 * @param imageRect
+> 	 *            clipping rectangle for the image
+> 	 * @param destination
+> 	 *            image file path
+> 	 * @param format
+> 	 *            image file format
+> 	 * @param monitor
+> 	 *            progress monitor
+> 	 * @throws CoreException
+> 	 */
+>     protected void copyToImage(DiagramGenerator gen, List editParts,
+> 			org.eclipse.swt.graphics.Rectangle imageRect, IPath destination,
+> 			ImageFileFormat format, IProgressMonitor monitor)
+> 			throws CoreException {
+> 		boolean found = false;
+> 		if (format.equals(ImageFileFormat.SVG)) {
+> 			gen.createSWTImageDescriptorForParts(editParts, imageRect);
+216,217c222
+< 
+<             saveSVGToFile(destination, gen, monitor);
+---
+> 			saveSVGToFile(destination, (DiagramSVGGenerator) gen, monitor);
+226,227c231,233
+<             java.awt.Image image = new DiagramImageGenerator(diagramEP)
+<                 .createAWTImageForParts(selection);
+---
+> 			java.awt.Image image = gen.createAWTImageForParts(editParts,
+> 					imageRect);
+> 			monitor.worked(1);
+236,238c242,243
+<             Image image = new DiagramImageGenerator(diagramEP)
+<                 .createSWTImageDescriptorForParts(selection).createImage();
+< 
+---
+> 			Image image = gen.createSWTImageDescriptorForParts(editParts,
+> 					imageRect).createImage();
+240d244
+< 
+244d247
+< 

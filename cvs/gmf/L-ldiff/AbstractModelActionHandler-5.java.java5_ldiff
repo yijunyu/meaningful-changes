@@ -1,0 +1,95 @@
+4a9,9
+> import org.eclipse.core.runtime.IStatus;
+4a31,32
+> import org.eclipse.gmf.runtime.emf.ui.internal.MslUIStatusCodes;
+> 
+5a34,36
+> 
+> import org.eclipse.ui.IWorkbenchPart;
+> 
+5,5c33,33
+< import org.eclipse.ui.IWorkbenchPage;
+---
+> import org.eclipse.ui.IWorkbenchPage;
+6a3,4
+> import org.eclipse.core.commands.ExecutionException;
+> 
+7,7c5,5
+< import org.eclipse.ui.IWorkbenchPart;
+---
+> import org.eclipse.core.runtime.IAdaptable;
+7a6,6
+> 
+14a11,11
+> import org.eclipse.core.runtime.NullProgressMonitor;
+15,15d10
+< import org.eclipse.gmf.runtime.emf.core.exceptions.MSLActionAbandonedException;
+16,16c12,12
+< 
+---
+> 
+16a13,13
+> import org.eclipse.core.runtime.Status;
+17,17d12
+< import org.eclipse.gmf.runtime.emf.core.util.OperationUtil;
+18,18c14,14
+< 
+---
+> 
+18a15,19
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+> import org.eclipse.emf.workspace.AbstractEMFOperation;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+23a38,38
+>     private IStatus status;
+37a53,53
+>         if (isReadOnly ()) {
+39,39c55,55
+<             OperationUtil.runAsRead (new Runnable () {
+---
+>                 getEditingDomain ().runExclusive (new Runnable () {
+47a64,84
+>             } catch (InterruptedException e) {
+>                 Trace.catching (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", e);
+>             }
+>         } else {
+>             AbstractEMFOperation operation = new AbstractEMFOperation (getEditingDomain (), getLabel ()) {
+> 
+>                 protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+>                     AbstractModelActionHandler.super.run (progressMonitor);
+>                     return getStatus ();
+>                 }
+> 
+>                 ;
+>             }
+> 
+>             ;
+>             try {
+>                 getActionManager ().getOperationHistory ().execute (operation, new NullProgressMonitor (), null);
+>             } catch (ExecutionException e) {
+>                 Trace.catching (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", e);
+>                 Log.error (MslUIPlugin.getDefault (), MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getLocalizedMessage (), e);
+>             }
+48,49d63
+<         } catch (MSLActionAbandonedException e) {
+<             Trace.trace (MslUIPlugin.getDefault (), MslUIDebugOptions.MODEL_OPERATIONS, "MSLActionAbandonedException");
+52a88,104
+>     protected abstract TransactionalEditingDomain getEditingDomain ();
+> 
+>     protected boolean isReadOnly () {
+>         return false;
+>     }
+> 
+>     protected IStatus getStatus () {
+>         if (status == null) {
+>             return Status.OK_STATUS;
+>         }
+>         return status;
+>     }
+> 
+>     protected void setStatus (IStatus status) {
+>         this.status = status;
+>     }
+> 

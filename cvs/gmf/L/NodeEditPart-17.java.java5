@@ -1,0 +1,205 @@
+package org.eclipse.gmf.graphdef.editor.edit.parts;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.RectangleFigure;
+
+import org.eclipse.draw2d.StackLayout;
+
+import org.eclipse.draw2d.ToolbarLayout;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.ecore.EcorePackage;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.EditPolicy;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.editpolicies.LayoutEditPolicy;
+
+import org.eclipse.gef.editpolicies.NonResizableEditPolicy;
+
+import org.eclipse.gef.requests.CreateRequest;
+
+import org.eclipse.gmf.graphdef.editor.edit.policies.GMFGraphTextSelectionEditPolicy;
+
+import org.eclipse.gmf.graphdef.editor.edit.policies.NodeItemSemanticEditPolicy;
+
+import org.eclipse.gmf.graphdef.editor.part.GMFGraphVisualIDRegistry;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ITextAwareEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ShapeNodeEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.ConstrainedToolbarLayoutEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.ConstrainedToolbarLayout;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.WrappingLabel;
+
+import org.eclipse.gmf.runtime.gef.ui.figures.DefaultSizeNodeFigure;
+
+import org.eclipse.gmf.runtime.gef.ui.figures.NodeFigure;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class NodeEditPart extends ShapeNodeEditPart {
+    public static final int VISUAL_ID = 2006;
+    protected IFigure contentPane;
+    protected IFigure primaryShape;
+
+    public NodeEditPart (View view) {
+        super (view);
+    }
+
+    protected void createDefaultEditPolicies () {
+        super.createDefaultEditPolicies ();
+        installEditPolicy (EditPolicyRoles.SEMANTIC_ROLE, new NodeItemSemanticEditPolicy ());
+        installEditPolicy (EditPolicy.LAYOUT_ROLE, createLayoutEditPolicy ());
+    }
+
+    protected LayoutEditPolicy createLayoutEditPolicy () {
+        ConstrainedToolbarLayoutEditPolicy lep = new ConstrainedToolbarLayoutEditPolicy () {
+
+            protected EditPolicy createChildEditPolicy (EditPart child) {
+                if (child.getEditPolicy (EditPolicy.PRIMARY_DRAG_ROLE) == null) {
+                    if (child instanceof ITextAwareEditPart) {
+                        return new GMFGraphTextSelectionEditPolicy ();
+                    }
+                }
+                return super.createChildEditPolicy (child);
+            }
+
+        }
+
+        ;
+        return lep;
+    }
+
+    protected IFigure createNodeShape () {
+        DiagramElementFigure figure = new DiagramElementFigure ();
+        return primaryShape = figure;
+    }
+
+    public DiagramElementFigure getPrimaryShape () {
+        return (DiagramElementFigure) primaryShape;
+    }
+
+    protected boolean addFixedChild (EditPart childEditPart) {
+        if (childEditPart instanceof NodeNameEditPart) {
+            ((NodeNameEditPart) childEditPart).setLabel (getPrimaryShape ().getFigureDiagramElementFigure_NameLabel ());
+            return true;
+        }
+        return false;
+    }
+
+    protected boolean removeFixedChild (EditPart childEditPart) {
+        return false;
+    }
+
+    protected void addChildVisual (EditPart childEditPart, int index) {
+        if (addFixedChild (childEditPart)) {
+            return;
+        }
+        super.addChildVisual (childEditPart, - 1);
+    }
+
+    protected void removeChildVisual (EditPart childEditPart) {
+        if (removeFixedChild (childEditPart)) {
+            return;
+        }
+        super.removeChildVisual (childEditPart);
+    }
+
+    protected IFigure getContentPaneFor (IGraphicalEditPart editPart) {
+        return super.getContentPaneFor (editPart);
+    }
+
+    protected NodeFigure createNodePlate () {
+        DefaultSizeNodeFigure result = new DefaultSizeNodeFigure (getMapMode ().DPtoLP (40), getMapMode ().DPtoLP (40));
+        return result;
+    }
+
+    protected NodeFigure createNodeFigure () {
+        NodeFigure figure = createNodePlate ();
+        figure.setLayoutManager (new StackLayout ());
+        IFigure shape = createNodeShape ();
+        figure.add (shape);
+        contentPane = setupContentPane (shape);
+        return figure;
+    }
+
+    protected IFigure setupContentPane (IFigure nodeShape) {
+        if (nodeShape.getLayoutManager () == null) {
+            ConstrainedToolbarLayout layout = new ConstrainedToolbarLayout ();
+            layout.setSpacing (getMapMode ().DPtoLP (5));
+            nodeShape.setLayoutManager (layout);
+        }
+        return nodeShape;
+    }
+
+    public IFigure getContentPane () {
+        if (contentPane != null) {
+            return contentPane;
+        }
+        return super.getContentPane ();
+    }
+
+    public EditPart getPrimaryChildEditPart () {
+        return getChildBySemanticHint (GMFGraphVisualIDRegistry.getType (NodeNameEditPart.VISUAL_ID));
+    }
+
+    protected void handleNotificationEvent (Notification event) {
+        if (event.getNotifier () == getModel () && EcorePackage.eINSTANCE.getEModelElement_EAnnotations ().equals (event.getFeature ())) {
+            handleMajorSemanticChange ();
+        } else {
+            super.handleNotificationEvent (event);
+        }
+    }
+
+    public class DiagramElementFigure extends RectangleFigure {
+        private WrappingLabel fFigureDiagramElementFigure_NameLabel;
+
+        public DiagramElementFigure () {
+            ToolbarLayout layoutThis = new ToolbarLayout ();
+            layoutThis.setStretchMinorAxis (true);
+            layoutThis.setMinorAlignment (ToolbarLayout.ALIGN_CENTER);
+            layoutThis.setSpacing (0);
+            layoutThis.setVertical (true);
+            this.setLayoutManager (layoutThis);
+            createContents ();
+        }
+
+        private void createContents () {
+            fFigureDiagramElementFigure_NameLabel = new WrappingLabel ();
+            fFigureDiagramElementFigure_NameLabel.setText ("");
+            this.add (fFigureDiagramElementFigure_NameLabel);
+        }
+
+        private boolean myUseLocalCoordinates = false;
+
+        protected boolean useLocalCoordinates () {
+            return myUseLocalCoordinates;
+        }
+
+        protected void setUseLocalCoordinates (boolean useLocalCoordinates) {
+            myUseLocalCoordinates = useLocalCoordinates;
+        }
+
+        public WrappingLabel getFigureDiagramElementFigure_NameLabel () {
+            return fFigureDiagramElementFigure_NameLabel;
+        }
+
+    }
+
+}
+

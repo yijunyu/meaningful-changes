@@ -1,0 +1,65 @@
+package org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.util;
+
+import java.io.InputStream;
+
+import org.eclipse.core.resources.IFile;
+
+import org.eclipse.core.resources.IResource;
+
+import org.eclipse.core.runtime.IPath;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.ui.IWorkbenchWindow;
+
+import org.eclipse.ui.ide.IDE;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.internal.EditorIDEDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.internal.EditorPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.util.DiagramFileCreator;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.util.EditorUtil;
+
+public class IDEEditorUtil extends EditorUtil {
+
+    public static final DiagramEditPart openDiagram (IFile file, IWorkbenchWindow dWindow, boolean saveDiagram, IProgressMonitor progressMonitor) {
+        IEditorPart editorPart = null;
+        try {
+            IWorkbenchPage page = dWindow.getActivePage ();
+            if (page != null) {
+                editorPart = IDE.openEditor (page, file, true);
+                if (saveDiagram) editorPart.doSave (progressMonitor);
+
+            }
+            file.refreshLocal (IResource.DEPTH_ZERO, null);
+            return ((IDiagramWorkbenchPart) editorPart).getDiagramEditPart ();
+        } catch (Exception e) {
+            Trace.catching (EditorPlugin.getInstance (), EditorIDEDebugOptions.EXCEPTIONS_CATCHING, EditorUtil.class, "openDiagram", e);
+        }
+        return null;
+    }
+
+    public static IFile createAndOpenDiagram (DiagramFileCreator diagramFileCreator, IPath containerPath, String fileName, InputStream initialContents, String kind, IWorkbenchWindow dWindow, IProgressMonitor progressMonitor, boolean openEditor, boolean saveDiagram) {
+        IFile newFile = EditorUtil.createNewDiagramFile (diagramFileCreator, containerPath, fileName, initialContents, kind, dWindow.getShell (), progressMonitor, PreferencesHint.USE_DEFAULTS);
+        if (newFile != null && openEditor) {
+            IDEEditorUtil.openDiagram (newFile, dWindow, saveDiagram, progressMonitor);
+        }
+        return newFile;
+    }
+
+}
+

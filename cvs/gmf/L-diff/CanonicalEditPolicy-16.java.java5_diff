@@ -1,0 +1,108 @@
+24a25,26
+> import org.eclipse.core.commands.ExecutionException;
+> 
+26a29,30
+> import org.eclipse.core.runtime.IProgressMonitor;
+> 
+28a33,36
+> import org.eclipse.core.runtime.NullProgressMonitor;
+> 
+> import org.eclipse.core.runtime.Status;
+> 
+38a47,48
+> import org.eclipse.emf.transaction.Transaction;
+> 
+40a51,52
+> import org.eclipse.emf.workspace.AbstractEMFOperation;
+> 
+57c69
+< import org.eclipse.gmf.runtime.diagram.core.commands.DeleteCommand;
+---
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+59c71,73
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+---
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+> import org.eclipse.gmf.runtime.diagram.core.commands.DeleteCommand;
+76a91,92
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+> 
+78a95,96
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+> 
+83,87c101
+< import org.eclipse.gmf.runtime.emf.core.edit.MObjectState;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunOption;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+---
+> import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+91,92d104
+< import org.eclipse.gmf.runtime.emf.core.util.EObjectUtil;
+< 
+298c310
+<             views.addAll (EObjectUtil.getReferencers (element, features));
+---
+>             views.addAll (EMFCoreUtil.getReferencers (element, features));
+332,333c344,345
+<         int options = MRunOption.UNCHECKED;
+<         MEditingDomainGetter.getMEditingDomain ((View) getHost ().getModel ()).runWithOptions (new MRunnable () {
+---
+>         Map options = Collections.singletonMap (Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+>         AbstractEMFOperation operation = new AbstractEMFOperation (((IGraphicalEditPart) getHost ()).getEditingDomain (), StringStatics.BLANK, options) {
+335c347
+<             public Object run () {
+---
+>             protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+337c349
+<                 return null;
+---
+>                 return Status.OK_STATUS;
+342c354,360
+<         , options);
+---
+>         ;
+>         try {
+>             operation.execute (new NullProgressMonitor (), null);
+>         } catch (ExecutionException e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "executeCommand", e);
+>             Log.warning (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "executeCommand", e);
+>         }
+464c482
+<                 DiagramEventBroker.getInstance ().addNotificationListener (element, listener);
+---
+>                 getDiagramEventBroker ().addNotificationListener (element, listener);
+480c498
+<                 DiagramEventBroker.getInstance ().addNotificationListener (element, feature, listener);
+---
+>                 getDiagramEventBroker ().addNotificationListener (element, feature, listener);
+495c513
+<             DiagramEventBroker.getInstance ().removeNotificationListener ((EObject) objects [0], (EStructuralFeature) objects [1], (NotificationListener) objects [2]);
+---
+>             getDiagramEventBroker ().removeNotificationListener ((EObject) objects [0], (EStructuralFeature) objects [1], (NotificationListener) objects [2]);
+497c515
+<             DiagramEventBroker.getInstance ().removeNotificationListener ((EObject) objects [0], (NotificationListener) objects [1]);
+---
+>             getDiagramEventBroker ().removeNotificationListener ((EObject) objects [0], (NotificationListener) objects [1]);
+512c530,537
+<         return host ().isActive () && ! EObjectUtil.getState ((EObject) host ().getModel ()).equals (MObjectState.DETACHED);
+---
+>         if (! host ().isActive ()) {
+>             return false;
+>         }
+>         EObject eObject = (EObject) host ().getModel ();
+>         if (eObject != null && eObject.eResource () == null && ! eObject.eIsProxy ()) {
+>             return false;
+>         }
+>         return true;
+693a719,726
+>     private DiagramEventBroker getDiagramEventBroker () {
+>         TransactionalEditingDomain theEditingDomain = ((IGraphicalEditPart) getHost ()).getEditingDomain ();
+>         if (theEditingDomain != null) {
+>             return DiagramEventBroker.getInstance (theEditingDomain);
+>         }
+>         return null;
+>     }
+> 

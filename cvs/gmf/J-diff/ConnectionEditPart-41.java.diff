@@ -1,0 +1,186 @@
+16a17,18
+> import java.util.Collection;
+> import java.util.Collections;
+17a20
+> import java.util.HashSet;
+21a25
+> import java.util.Set;
+48a53
+> import org.eclipse.gef.commands.CompoundCommand;
+51a57,61
+> import org.eclipse.gef.requests.CreateConnectionRequest;
+> import org.eclipse.gef.requests.DropRequest;
+> import org.eclipse.gef.requests.GroupRequest;
+> import org.eclipse.gef.requests.ReconnectRequest;
+> import org.eclipse.gef.requests.TargetRequest;
+67a78
+> import org.eclipse.gmf.runtime.diagram.ui.internal.commands.ToggleCanonicalModeCommand;
+82a94,95
+> import org.eclipse.gmf.runtime.diagram.ui.requests.CreateConnectionViewRequest;
+> import org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper;
+164a178,183
+>     /** counter that tracs the recursive depth of the getCommand() method. */
+>     private static volatile int GETCOMMAND_RECURSIVE_COUNT = 0;
+>     
+>     /** A list of editparts who's canonical editpolicies are to be temporarily disabled. */
+>     private static Set _disableCanonicalEditPolicyList = new HashSet();
+>     
+559a579,581
+>         Command cmd = null;
+>         try {
+>             GETCOMMAND_RECURSIVE_COUNT++;
+562c584
+<             Command cmd = (Command) getEditingDomain().runExclusive(
+---
+>                 cmd = (Command) getEditingDomain().runExclusive(
+566c588,589
+<                         setResult(ConnectionEditPart.super.getCommand(request));
+---
+>                             setResult(ConnectionEditPart.super
+>                                 .getCommand(request));
+568d590
+< 
+570d591
+<             return cmd;
+575,576c596
+<             Log
+<                 .error(DiagramUIPlugin.getInstance(),
+---
+>                 Log.error(DiagramUIPlugin.getInstance(),
+579d598
+<             return null;
+580a600,667
+>             
+> 
+>             if ( cmd != null ) {
+>                 _disableCanonicalEditPolicyList.addAll(disableCanonicalFor(_request));
+>             }
+>             
+>             GETCOMMAND_RECURSIVE_COUNT--;
+>             
+>             if ( GETCOMMAND_RECURSIVE_COUNT == 0 ) {
+>                 if ( cmd != null 
+>                         && !_disableCanonicalEditPolicyList.isEmpty() ) {
+>                     CompoundCommand cc = new CompoundCommand();
+>                     cc.setLabel( cmd.getLabel() );
+>                     ToggleCanonicalModeCommand tcmd = 
+>                         ToggleCanonicalModeCommand.getToggleCanonicalModeCommand(_disableCanonicalEditPolicyList, false);
+>                     cc.add( tcmd );
+>                     cc.add( cmd );
+>                     ToggleCanonicalModeCommand tcmd2 = ToggleCanonicalModeCommand.getToggleCanonicalModeCommand(tcmd, true);
+>                     if (tcmd2 != null) {
+>                         tcmd2.setDomain(getEditingDomain());
+>                     }
+>                     cc.add( tcmd2 );
+>                     _disableCanonicalEditPolicyList.clear();
+>                     return cc.unwrap();
+>                 }
+>             }
+>         }
+>         catch( RuntimeException t ) {
+>             GETCOMMAND_RECURSIVE_COUNT = 0;
+>             throw t;
+>         }
+>         return cmd;
+>     }
+>     
+>     /**
+>      * Return a list of editparts who's canonical editpolicies should be disabled
+>      * prior to executing the commands associated to the supplied request.
+>      * This implementation will return the editpart honoring a <code>SemanticWrapperRequest</code>
+>      * and a <code>CreateConnectionViewRequest</code>'s source and target editparts.
+>      *
+>      * @param request a request that has returned a command.
+>      * @return list of editparts.
+>      */
+>     protected Collection disableCanonicalFor( final Request request ) {
+>         //
+>         // not the most generic of solution; however, it will have to do for now...
+>         //
+>         // Alternate solutions
+>         // 1. common request interface on all the requests
+>         //  IRequest#getAffectedEditParts
+>         //
+>         // 2. Traverse down the command and collect of the ICommand#getAffectedObjects()
+>         //  -- this requires that all our commands properly set this value.
+>         
+>         Set hosts = new HashSet();
+>         if ( (request instanceof EditCommandRequestWrapper)  
+>                 || request instanceof TargetRequest
+>                 || request instanceof DropRequest ) {
+>             hosts.add(this);
+>             hosts.add(getParent());
+>         }
+>         if((request instanceof ReconnectRequest)) {
+>             ReconnectRequest reconnect = (ReconnectRequest)request;
+>             hosts.add(this);
+>             hosts.add(getParent());
+>             if(reconnect.getTarget() != null) {
+>                 EditPart target  = reconnect.getTarget();
+>                 addEditPartAndParent(hosts, target);
+581a669,733
+>             if(reconnect.getConnectionEditPart() != null) {
+>                 org.eclipse.gef.ConnectionEditPart connectionEditPart = reconnect.getConnectionEditPart();
+>                 if(connectionEditPart.getSource() != null) {
+>                     EditPart srcEP = connectionEditPart.getSource();
+>                     addEditPartAndParent(hosts, srcEP);
+>                 }
+>                 if(connectionEditPart.getTarget() != null) {
+>                     EditPart trgEP = connectionEditPart.getTarget();
+>                     addEditPartAndParent(hosts, trgEP);
+>                 }
+>             }
+>         }
+>         if ((request instanceof CreateConnectionRequest) ) {
+>             CreateConnectionRequest ccvr = (CreateConnectionRequest)request;
+>             hosts.add(this);
+>             hosts.add(getParent());
+>             if ( ccvr.getSourceEditPart() != null ) {
+>                 hosts.add( ccvr.getSourceEditPart());
+>                 hosts.add( ccvr.getSourceEditPart().getParent());
+>             }
+>             if ( ccvr.getTargetEditPart() != null ) {
+>                 hosts.add( ccvr.getTargetEditPart());
+>                 hosts.add( ccvr.getTargetEditPart().getParent());
+>             }
+>         }
+>         if ((request instanceof GroupRequest)) {
+>             List parts = ((GroupRequest)request).getEditParts();
+>             hosts.add(this);
+>             hosts.add(getParent());
+>         
+>             Iterator editparts = parts == null ? Collections.EMPTY_LIST.iterator() : parts.iterator();  
+>             while ( editparts.hasNext() ) {
+>                 EditPart ep = (EditPart)editparts.next();
+>                 addEditPartAndParent(hosts, ep);
+>             }
+>         }
+>         
+>         /////////////////////////////////////////////////////////////
+>         // This following behavior is specific to BorderItemEditPart and
+>         // AbstractBorderItemEditPart, but we do not want to allow clients to
+>         // override this method so we do not want to make it protected.
+>         
+>         if (this instanceof IBorderItemEditPart) {
+>             if ((request instanceof CreateConnectionViewRequest)) {
+>                 CreateConnectionViewRequest ccvr = (CreateConnectionViewRequest) request;
+>                 if (ccvr.getSourceEditPart() instanceof IBorderItemEditPart) {
+>                     hosts.add(ccvr.getSourceEditPart().getParent().getParent());
+>                 }
+>                 if (ccvr.getTargetEditPart() instanceof IBorderItemEditPart) {
+>                     hosts.add(ccvr.getTargetEditPart().getParent().getParent());
+>                 }
+>             }
+>         }
+>         /////////////////////////////////////////////////////////////
+> 
+>         return hosts;
+>     }
+>     
+>     private void addEditPartAndParent(Set hosts, EditPart editPart) {
+>         hosts.add(editPart);
+>         hosts.add(editPart.getParent());
+>     }
+> 
+>     
+>     

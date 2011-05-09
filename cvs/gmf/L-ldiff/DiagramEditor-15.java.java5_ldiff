@@ -1,0 +1,1067 @@
+1,1c1,1
+< package org.eclipse.gmf.runtime.lite.parts;
+---
+> package org.eclipse.gmf.runtime.diagram.ui.parts;
+2a3,3
+> import java.io.File;
+3,3c7,7
+< import java.util.Collection;
+---
+> import java.util.ArrayList;
+4a5,5
+> import java.io.IOException;
+5,5c9,9
+< import java.util.Collections;
+---
+> import java.util.Collections;
+6,7d9
+< 
+< import java.util.EventObject;
+9,9c11,11
+< import java.util.Map;
+---
+> import java.util.Iterator;
+11,11c17,17
+< import org.eclipse.core.runtime.CoreException;
+---
+> import org.eclipse.core.runtime.IAdaptable;
+13,13c19,19
+< import org.eclipse.core.runtime.IProgressMonitor;
+---
+> import org.eclipse.core.runtime.IPath;
+14a13,13
+> import java.util.List;
+15,15c23,23
+< import org.eclipse.draw2d.ColorConstants;
+---
+> import org.eclipse.draw2d.FigureCanvas;
+17,17c25,25
+< import org.eclipse.draw2d.IFigure;
+---
+> import org.eclipse.draw2d.LightweightSystem;
+19,19d16
+< import org.eclipse.emf.common.notify.AdapterFactory;
+21,21d18
+< import org.eclipse.emf.common.notify.Notification;
+23,23d20
+< import org.eclipse.emf.common.notify.Notifier;
+25,25d22
+< import org.eclipse.emf.common.notify.impl.AdapterImpl;
+27,27c35,35
+< import org.eclipse.emf.ecore.resource.Resource;
+---
+> import org.eclipse.emf.ecore.EObject;
+29,29d26
+< import org.eclipse.emf.ecore.resource.ResourceSet;
+31,31d28
+< import org.eclipse.emf.ecore.util.EcoreUtil;
+32a31,31
+> import org.eclipse.draw2d.parts.ScrollableThumbnail;
+33,33d30
+< import org.eclipse.emf.edit.domain.AdapterFactoryEditingDomain;
+34a33,33
+> import org.eclipse.draw2d.parts.Thumbnail;
+35,35c15,15
+< import org.eclipse.emf.transaction.TransactionalEditingDomain;
+---
+> import org.eclipse.core.resources.IMarker;
+37,37d34
+< import org.eclipse.emf.transaction.util.TransactionUtil;
+39,39c29,29
+< import org.eclipse.emf.workspace.WorkspaceEditingDomainFactory;
+---
+> import org.eclipse.draw2d.geometry.Point;
+41,41c37,37
+< import org.eclipse.gef.DefaultEditDomain;
+---
+> import org.eclipse.gef.ContextMenuProvider;
+43,43c41,41
+< import org.eclipse.gef.EditDomain;
+---
+> import org.eclipse.gef.EditPartFactory;
+45,45c39,39
+< import org.eclipse.gef.EditPart;
+---
+> import org.eclipse.gef.EditPart;
+47,47c43,43
+< import org.eclipse.gef.GraphicalEditPart;
+---
+> import org.eclipse.gef.EditPartViewer;
+49,49c45,45
+< import org.eclipse.gef.GraphicalViewer;
+---
+> import org.eclipse.gef.KeyHandler;
+51,51c47,47
+< import org.eclipse.gef.commands.CommandStack;
+---
+> import org.eclipse.gef.KeyStroke;
+53,53c49,49
+< import org.eclipse.gef.commands.CommandStackEvent;
+---
+> import org.eclipse.gef.LayerConstants;
+55,55c51,51
+< import org.eclipse.gef.commands.CommandStackEventListener;
+---
+> import org.eclipse.gef.RootEditPart;
+57,57c53,53
+< import org.eclipse.gef.commands.CommandStackListener;
+---
+> import org.eclipse.gef.SnapToGeometry;
+61,61c55,55
+< import org.eclipse.gef.palette.PaletteRoot;
+---
+> import org.eclipse.gef.SnapToGrid;
+65,65c193,193
+< import org.eclipse.gef.ui.actions.SelectionAction;
+---
+> import org.eclipse.ui.actions.ActionFactory;
+67a64,125
+> 
+> import org.eclipse.gef.ui.actions.GEFActionConstants;
+> 
+> import org.eclipse.gef.ui.parts.ContentOutlinePage;
+> 
+> import org.eclipse.gef.ui.parts.GraphicalEditor;
+> 
+> import org.eclipse.gef.ui.parts.ScrollingGraphicalViewer;
+> 
+> import org.eclipse.gef.ui.parts.TreeViewer;
+> 
+> import org.eclipse.gef.ui.rulers.RulerComposite;
+> 
+> import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+> import org.eclipse.gmf.runtime.common.ui.action.ActionManager;
+> 
+> import org.eclipse.gmf.runtime.common.ui.services.editor.EditorService;
+> 
+> import org.eclipse.gmf.runtime.common.ui.services.marker.MarkerNavigationService;
+> 
+> import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+> 
+> import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+> 
+> import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.DiagramUIDebugOptions;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.DiagramUIPlugin;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.actions.ActionIds;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramRootEditPart;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.IDiagramPreferenceSupport;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.actions.InsertAction;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.actions.PromptingDeleteAction;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.actions.PromptingDeleteFromModelAction;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.DiagramRootTreeEditPart;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.TreeDiagramEditPart;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.TreeEditPart;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.l10n.DiagramUIPluginImages;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.pagesetup.DefaultValues;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.pagesetup.PageInfoHelper;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.parts.DiagramGraphicalViewerKeyHandler;
+67,67c63,63
+< import org.eclipse.gef.ui.actions.StackAction;
+---
+> import org.eclipse.gef.ui.actions.DirectEditAction;
+68a129,129
+> import org.eclipse.gmf.runtime.diagram.ui.internal.ruler.DiagramRuler;
+69,69c59,59
+< import org.eclipse.gef.ui.actions.WorkbenchPartAction;
+---
+> import org.eclipse.gef.rulers.RulerProvider;
+70a131,131
+> import org.eclipse.gmf.runtime.diagram.ui.internal.ruler.DiagramRulerProvider;
+71,71d130
+< import org.eclipse.gef.ui.views.palette.PalettePage;
+72a135,142
+> import org.eclipse.gmf.runtime.diagram.ui.preferences.IPreferenceConstants;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.providers.DiagramContextMenuProvider;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.services.editpart.EditPartService;
+> 
+> import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+> 
+73,73c143,143
+< import org.eclipse.gmf.runtime.lite.services.DefaultDiagramLayouter;
+---
+> import org.eclipse.gmf.runtime.notation.Diagram;
+73a144,151
+> 
+> import org.eclipse.gmf.runtime.notation.GuideStyle;
+> 
+> import org.eclipse.gmf.runtime.notation.NotationPackage;
+> 
+> import org.eclipse.gmf.runtime.notation.View;
+> 
+> import org.eclipse.jface.action.Action;
+75,75c21,21
+< import org.eclipse.gmf.runtime.lite.services.IDiagramLayouter;
+---
+> import org.eclipse.core.runtime.IStatus;
+78a171,176
+> import org.eclipse.swt.events.DisposeEvent;
+> 
+> import org.eclipse.swt.events.DisposeListener;
+> 
+> import org.eclipse.swt.widgets.Canvas;
+> 
+78a155,155
+> import org.eclipse.jface.action.IToolBarManager;
+79,79c177,177
+< import org.eclipse.swt.widgets.Composite;
+---
+> import org.eclipse.swt.widgets.Composite;
+80a157,157
+> import org.eclipse.jface.preference.IPreferenceStore;
+81,81c187,187
+< import org.eclipse.ui.IEditorDescriptor;
+---
+> import org.eclipse.ui.IWorkbenchPart;
+81a188,190
+> 
+> import org.eclipse.ui.IWorkbenchPartSite;
+> 
+82a179,182
+> import org.eclipse.swt.widgets.Control;
+> 
+> import org.eclipse.ui.IActionBars;
+> 
+83,83c183,183
+< import org.eclipse.ui.IEditorInput;
+---
+> import org.eclipse.ui.IEditorInput;
+84a159,160
+> import org.eclipse.jface.preference.PreferenceStore;
+> 
+85a162,167
+> 
+> import org.eclipse.jface.viewers.ISelection;
+> 
+> import org.eclipse.jface.viewers.IStructuredSelection;
+> 
+> import org.eclipse.swt.SWT;
+85,85c161,161
+< import org.eclipse.ui.IEditorMatchingStrategy;
+---
+> import org.eclipse.jface.util.Assert;
+87,87c27,27
+< import org.eclipse.ui.IEditorReference;
+---
+> import org.eclipse.draw2d.Viewport;
+89,89c169,169
+< import org.eclipse.ui.IEditorRegistry;
+---
+> import org.eclipse.swt.SWTException;
+95,95c133,133
+< import org.eclipse.ui.PlatformUI;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+97,97c195,195
+< import org.eclipse.ui.part.EditorPart;
+---
+> import org.eclipse.ui.part.IPageSite;
+97a196,201
+> 
+> import org.eclipse.ui.part.IShowInSource;
+> 
+> import org.eclipse.ui.part.PageBook;
+> 
+> import org.eclipse.ui.part.ShowInContext;
+100a205,205
+> import org.eclipse.wst.common.ui.properties.internal.provisional.ITabbedPropertySheetPageContributor;
+101,101c127,127
+< import org.eclipse.ui.views.properties.IPropertySheetPage;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.properties.WorkspaceViewerProperties;
+102a207,250
+> public abstract class DiagramEditor extends GraphicalEditor implements IDiagramWorkbenchPart, ITabbedPropertySheetPageContributor, IShowInSource {
+>     protected static final int ID_OUTLINE = 0;
+>     protected static final int ID_OVERVIEW = 1;
+>     protected PreferenceStore workspaceViewerPreferenceStore = null;
+>     class DiagramOutlinePage extends ContentOutlinePage implements IAdaptable {
+>         private PageBook pageBook;
+>         private Control outline;
+>         private Canvas overview;
+>         private IAction showOutlineAction, showOverviewAction;
+>         private boolean overviewInitialized;
+>         private Thumbnail thumbnail;
+>         private DisposeListener disposeListener;
+> 
+>         public DiagramOutlinePage (EditPartViewer viewer) {
+>             super (viewer);
+>         }
+> 
+>         public void init (IPageSite pageSite) {
+>             super.init (pageSite);
+>             ActionRegistry registry = getActionRegistry ();
+>             IActionBars bars = pageSite.getActionBars ();
+>             String id = ActionFactory.UNDO.getId ();
+>             bars.setGlobalActionHandler (id, registry.getAction (id));
+>             id = ActionFactory.REDO.getId ();
+>             bars.setGlobalActionHandler (id, registry.getAction (id));
+>             id = ActionFactory.DELETE.getId ();
+>             bars.setGlobalActionHandler (id, registry.getAction (id));
+>             bars.updateActionBars ();
+>             bars.getToolBarManager ().markDirty ();
+>         }
+> 
+>         protected void configureOutlineViewer () {
+>             getViewer ().setEditDomain (getEditDomain ());
+>             getViewer ().setEditPartFactory (new EditPartFactory () {
+> 
+>                 public EditPart createEditPart (EditPart context, Object model) {
+>                     if (model instanceof Diagram) {
+>                         return new TreeDiagramEditPart (model);
+>                     } else {
+>                         return new TreeEditPart (model);
+>                     }
+>                 }
+> 
+>             }
+103,106d206
+< public abstract class DiagramEditor extends EditorPart implements IDiagramManager {
+<     private DiagramDisplayer myDiagramDisplayer;
+<     private boolean myIsDirty = false;
+<     private CommandStackListener commandStackListener = new CommandStackListener () {
+107a252,258
+>             );
+>             getViewer ().setKeyHandler (getKeyHandler ());
+>             IToolBarManager tbm = this.getSite ().getActionBars ().getToolBarManager ();
+>             showOutlineAction = new Action () {
+> 
+>                 public void run () {
+>                     showPage (ID_OUTLINE);
+108,109d251
+<         public void commandStackChanged (EventObject event) {
+<             setDirty (((CommandStack) event.getSource ()).isDirty ());
+114a264,266
+>             showOutlineAction.setImageDescriptor (DiagramUIPluginImages.DESC_OUTLINE);
+>             tbm.add (showOutlineAction);
+>             showOverviewAction = new Action () {
+115,115d263
+<     private CommandStackEventListener mySaveListener = new CommandStackEventListener () {
+116a268,269
+>                 public void run () {
+>                     showPage (ID_OVERVIEW);
+117,119d267
+<         public void stackChanged (CommandStackEvent event) {
+<             if (event.isPostChangeEvent () && isSaved ()) {
+<                 getCommandStack ().markSaveLocation ();
+122a274,277
+>             ;
+>             showOverviewAction.setImageDescriptor (DiagramUIPluginImages.DESC_OVERVIEW);
+>             tbm.add (showOverviewAction);
+>             showPage (getDefaultOutlineViewMode ());
+123,126d273
+<         private boolean isSaved () {
+<             for (Resource next : getEditingDomain ().getResourceSet ().getResources ()) {
+<                 if (! next.isLoaded ()) {
+<                     continue;
+127a279,287
+> 
+>         public void createControl (Composite parent) {
+>             pageBook = new PageBook (parent, SWT.NONE);
+>             outline = getViewer ().createControl (pageBook);
+>             overview = new Canvas (pageBook, SWT.NONE);
+>             pageBook.showPage (outline);
+>             configureOutlineViewer ();
+>             hookOutlineViewer ();
+>             initializeOutlineViewer ();
+128,129d278
+<                 if (! next.isTrackingModification () || next.isModified ()) {
+<                     return false;
+130a289,293
+> 
+>         public void dispose () {
+>             unhookOutlineViewer ();
+>             if (thumbnail != null) {
+>                 thumbnail.deactivate ();
+132,132d294
+<             return true;
+136a271,271
+> 
+136a303,309
+>         public Control getControl () {
+>             return pageBook;
+>         }
+> 
+>         protected void hookOutlineViewer () {
+>             getSelectionSynchronizer ().addViewer (getViewer ());
+>         }
+137,137d270
+<     ;
+138a311,316
+>         protected void initializeOutlineViewer () {
+>             MEditingDomainGetter.getMEditingDomain (getDiagram ()).runAsRead (new MRunnable () {
+> 
+>                 public Object run () {
+>                     getViewer ().setContents (getDiagram ());
+>                     return null;
+139,140d310
+<     protected void save (IProgressMonitor monitor) throws CoreException {
+<         myDiagramDisplayer.save (getSaveOptions (), monitor);
+143,144d318
+<     protected Map < ?, ? > getSaveOptions () {
+<         return Collections.emptyMap ();
+147,148d320
+<     public final TransactionalEditingDomain getEditingDomain () {
+<         return myDiagramDisplayer.getEditingDomain ();
+150a324,337
+>         protected void initializeOverview () {
+>             LightweightSystem lws = new LightweightSystem (overview);
+>             RootEditPart rep = getGraphicalViewer ().getRootEditPart ();
+>             DiagramRootEditPart root = (DiagramRootEditPart) rep;
+>             thumbnail = new ScrollableThumbnail ((Viewport) root.getFigure ());
+>             thumbnail.setSource (root.getLayer (LayerConstants.SCALABLE_LAYERS));
+>             lws.setContents (thumbnail);
+>             disposeListener = new DisposeListener () {
+> 
+>                 public void widgetDisposed (DisposeEvent e) {
+>                     if (thumbnail != null) {
+>                         thumbnail.deactivate ();
+>                         thumbnail = null;
+>                     }
+151,152d323
+<     protected final EditDomain getEditDomain () {
+<         return myDiagramDisplayer.getEditDomain ();
+155,156d339
+<     protected final CommandStack getCommandStack () {
+<         return getEditDomain ().getCommandStack ();
+158a342,344
+>             ;
+>             getEditor ().addDisposeListener (disposeListener);
+>             this.overviewInitialized = true;
+159,159c573,573
+<     protected final ZoomManager getZoomManager () {
+---
+>     protected ZoomManager getZoomManager () {
+160,160c574,574
+<         return myDiagramDisplayer.getZoomManager ();
+---
+>         return ((DiagramRootEditPart) getRootEditPart ()).getZoomManager ();
+162a347,360
+>         protected void showPage (int id) {
+>             if (id == ID_OUTLINE) {
+>                 showOutlineAction.setChecked (true);
+>                 showOverviewAction.setChecked (false);
+>                 pageBook.showPage (outline);
+>                 if (thumbnail != null) thumbnail.setVisible (false);
+> 
+>             } else if (id == ID_OVERVIEW) {
+>                 if (! overviewInitialized) initializeOverview ();
+> 
+>                 showOutlineAction.setChecked (false);
+>                 showOverviewAction.setChecked (true);
+>                 pageBook.showPage (overview);
+>                 thumbnail.setVisible (true);
+163,164d346
+<     protected final ActionRegistry getActionRegistry () {
+<         return myDiagramDisplayer.getActionRegistry ();
+167,167c371,371
+<     protected final GraphicalViewer getGraphicalViewer () {
+---
+>         protected Control getEditor () {
+167a372,372
+>             return getGraphicalViewer ().getControl ();
+168,168d371
+<         return myDiagramDisplayer.getGraphicalViewer ();
+170a365,368
+>         protected void unhookOutlineViewer () {
+>             getSelectionSynchronizer ().removeViewer (getViewer ());
+>             if (disposeListener != null && getEditor () != null && ! getEditor ().isDisposed ()) getEditor ().removeDisposeListener (disposeListener);
+> 
+171,172d364
+<     protected IPropertySheetPage getPropertySheetPage () {
+<         return myDiagramDisplayer.getPropertySheetPage ();
+175,176d370
+<     protected IContentOutlinePage getOutlinePage () {
+<         return new DiagramContentOutlinePage (myDiagramDisplayer, getDefaultOutlineViewMode ());
+178a494,494
+>     protected ScrollingGraphicalViewer createScrollingGraphicalViewer () {
+179,179d493
+<     protected IDiagramLayouter getDiagramLayouter () {
+180,180c495,495
+<         return new DefaultDiagramLayouter ();
+---
+>         return new DiagramGraphicalViewer ();
+182a377,380
+>     private KeyHandler keyHandler;
+>     private IWorkbenchPartSite partSite;
+>     private RulerComposite rulerComposite;
+> 
+184,184c382,382
+<         return DiagramContentOutlinePage.ID_OVERVIEW;
+---
+>         return ID_OVERVIEW;
+186a385,386
+>     protected RulerComposite getRulerComposite () {
+>         return rulerComposite;
+187,189d384
+<     @Override
+<     public boolean isSaveAsAllowed () {
+<         return false;
+191a389,390
+>     protected void setRulerComposite (RulerComposite rulerComp) {
+>         this.rulerComposite = rulerComp;
+192,193d388
+<     @Override
+<     public void doSaveAs () {
+195a393,394
+>     public DiagramEditor () {
+>         createDiagramEditDomain ();
+196,215d392
+<     @Override
+<     public void init (IEditorSite site, IEditorInput input) throws PartInitException {
+<         setSite (site);
+<         TransactionalEditingDomain editingDomain = getEditingDomain (input);
+<         if (editingDomain == null) {
+<             editingDomain = reuseEditingDomain (input);
+<         }
+<         if (editingDomain == null) {
+<             editingDomain = createEditingDomain ();
+<         }
+<         ForceTrackingModificationAdapter adapter = (ForceTrackingModificationAdapter) EcoreUtil.getExistingAdapter (editingDomain.getResourceSet (), ForceTrackingModificationAdapter.class);
+<         if (adapter == null) {
+<             adapter = new ForceTrackingModificationAdapter ();
+<             editingDomain.getResourceSet ().eAdapters ().add (adapter);
+<         }
+<         adapter.acquire ();
+<         myDiagramDisplayer = new DiagramDisplayer (this, createEditDomain (), editingDomain);
+<         getCommandStack ().addCommandStackListener (commandStackListener);
+<         getCommandStack ().addCommandStackEventListener (mySaveListener);
+<         setInput (input);
+217a397,398
+>     public IDiagramEditDomain getDiagramEditDomain () {
+>         return (IDiagramEditDomain) getEditDomain ();
+218,227d396
+<     @Override
+<     public void dispose () {
+<         if (myDiagramDisplayer != null) {
+<             getCommandStack ().removeCommandStackEventListener (mySaveListener);
+<             getCommandStack ().removeCommandStackListener (commandStackListener);
+<             ForceTrackingModificationAdapter adapter = (ForceTrackingModificationAdapter) EcoreUtil.getExistingAdapter (getEditingDomain ().getResourceSet (), ForceTrackingModificationAdapter.class);
+<             if (adapter != null) {
+<                 adapter.release ();
+<                 if (adapter.isReleased ()) {
+<                     getEditingDomain ().getResourceSet ().eAdapters ().remove (adapter);
+228a400,402
+> 
+>     public IDiagramGraphicalViewer getDiagramGraphicalViewer () {
+>         return (IDiagramGraphicalViewer) getGraphicalViewer ();
+230,231d403
+<             myDiagramDisplayer.dispose ();
+<             myDiagramDisplayer = null;
+232a410,412
+> 
+>     public DiagramEditPart getDiagramEditPart () {
+>         return (DiagramEditPart) getDiagramGraphicalViewer ().getContents ();
+232a295,295
+>             this.overviewInitialized = false;
+233,233c296,296
+<         super.dispose ();
+---
+>             super.dispose ();
+236,236d414
+<     @Override
+237a421,426
+>         if (type == CommandManager.class) return getCommandManager ();
+> 
+>         if (ActionManager.class == type) return getActionManager ();
+> 
+>         if (IDiagramEditDomain.class == type) return getDiagramEditDomain ();
+> 
+237a416,419
+>         if (type == IContentOutlinePage.class) {
+>             TreeViewer viewer = new TreeViewer ();
+>             viewer.setRootEditPart (new DiagramRootTreeEditPart ());
+>             return new DiagramOutlinePage (viewer);
+238,242d420
+<         if (type == IPropertySheetPage.class) {
+<             return getPropertySheetPage ();
+<         } else if (type == IContentOutlinePage.class) {
+<             return getOutlinePage ();
+<         } else if (type == ZoomManager.class) {
+243,243c427,427
+<             return getZoomManager ();
+---
+>         if (type == ZoomManager.class) return getZoomManager ();
+244,257d427
+<         } else if (type == IDiagramLayouter.class) {
+<             return getDiagramLayouter ();
+<         } else if (type == PalettePage.class) {
+<             return myDiagramDisplayer.getPalettePage ();
+<         } else if (type == GraphicalViewer.class) {
+<             return getGraphicalViewer ();
+<         } else if (type == CommandStack.class) {
+<             return getCommandStack ();
+<         } else if (type == ActionRegistry.class) {
+<             return getActionRegistry ();
+<         } else if (type == EditPart.class && getGraphicalViewer () != null) {
+<             return getGraphicalViewer ().getRootEditPart ();
+<         } else if (type == IFigure.class && getGraphicalViewer () != null) {
+<             return ((GraphicalEditPart) getGraphicalViewer ().getRootEditPart ()).getFigure ();
+262a432,438
+>     public void init (IEditorSite site, IEditorInput input) throws PartInitException {
+>         try {
+>             super.init (site, input);
+>             EditorService.getInstance ().registerEditor (this);
+>         } catch (Exception e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "init", e);
+>             throw new PartInitException (e.getMessage (), e);
+263,266d431
+<     private void setDirty (boolean isDirty) {
+<         if (isDirty != myIsDirty) {
+<             myIsDirty = isDirty;
+<             firePropertyChange (PROP_DIRTY);
+269a442,447
+>     public void dispose () {
+>         persistViewerSettings ();
+>         EditorService.getInstance ().unregisterEditor (DiagramEditor.this);
+>         stopListening ();
+>         DiagramRulerProvider vertProvider = (DiagramRulerProvider) getDiagramGraphicalViewer ().getProperty (RulerProvider.PROPERTY_VERTICAL_RULER);
+>         if (vertProvider != null) vertProvider.uninit ();
+270,273d441
+<     @Override
+<     public boolean isDirty () {
+<         return myIsDirty;
+<     }
+274a449,452
+>         DiagramRulerProvider horzProvider = (DiagramRulerProvider) getDiagramGraphicalViewer ().getProperty (RulerProvider.PROPERTY_HORIZONTAL_RULER);
+>         if (horzProvider != null) horzProvider.uninit ();
+> 
+>         super.dispose ();
+275,276d448
+<     protected void addAction (IAction action) {
+<         myDiagramDisplayer.addAction (action);
+278a455,480
+>     protected KeyHandler getKeyHandler () {
+>         if (keyHandler == null) {
+>             keyHandler = new KeyHandler ();
+>             ActionRegistry registry = getActionRegistry ();
+>             IAction action;
+>             action = new PromptingDeleteAction (this);
+>             action.setText (DiagramUIMessages.DiagramEditor_Delete_from_Diagram);
+>             registry.registerAction (action);
+>             getSelectionActions ().add (action.getId ());
+>             action = new InsertAction (this);
+>             action.setText ("");
+>             registry.registerAction (action);
+>             getSelectionActions ().add (action.getId ());
+>             PromptingDeleteFromModelAction deleteModelAction = new PromptingDeleteFromModelAction (this);
+>             deleteModelAction.init ();
+>             registry.registerAction (deleteModelAction);
+>             action = new DirectEditAction ((IWorkbenchPart) this);
+>             registry.registerAction (action);
+>             getSelectionActions ().add (action.getId ());
+>             keyHandler.put (KeyStroke.getPressed (SWT.INSERT, 0), getActionRegistry ().getAction (InsertAction.ID));
+>             keyHandler.put (KeyStroke.getPressed (SWT.DEL, 127, 0), getActionRegistry ().getAction (ActionFactory.DELETE.getId ()));
+>             keyHandler.put (KeyStroke.getPressed (SWT.BS, 8, 0), getActionRegistry ().getAction (ActionFactory.DELETE.getId ()));
+>             keyHandler.put (KeyStroke.getPressed ((char) 0x4, 100, SWT.CTRL), getActionRegistry ().getAction (ActionIds.ACTION_DELETE_FROM_MODEL));
+>             keyHandler.put (KeyStroke.getPressed (SWT.F2, 0), getActionRegistry ().getAction (GEFActionConstants.DIRECT_EDIT));
+>         }
+>         return keyHandler;
+279,280d454
+<     protected void addEditorAction (WorkbenchPartAction action) {
+<         myDiagramDisplayer.addEditorAction (action);
+282a483,491
+>     protected void createGraphicalViewer (Composite parent) {
+>         setRulerComposite (new RulerComposite (parent, SWT.NONE));
+>         ScrollingGraphicalViewer sGViewer = createScrollingGraphicalViewer ();
+>         sGViewer.createControl (getRulerComposite ());
+>         setGraphicalViewer (sGViewer);
+>         hookGraphicalViewer ();
+>         configureGraphicalViewer ();
+>         initializeGraphicalViewer ();
+>         getRulerComposite ().setGraphicalViewer ((ScrollingGraphicalViewer) getGraphicalViewer ());
+283,284d482
+<     protected void addEditPartAction (SelectionAction action) {
+<         myDiagramDisplayer.addEditPartAction (action);
+287,288d493
+<     protected void addStackAction (StackAction action) {
+<         myDiagramDisplayer.addStackAction (action);
+290a498,514
+>     protected void configureGraphicalViewer () {
+>         super.configureGraphicalViewer ();
+>         IDiagramGraphicalViewer viewer = getDiagramGraphicalViewer ();
+>         RootEditPart rootEP = EditPartService.getInstance ().createRootEditPart (getDiagram ());
+>         if (rootEP instanceof IDiagramPreferenceSupport) {
+>             ((IDiagramPreferenceSupport) rootEP).setPreferencesHint (getPreferencesHint ());
+>         }
+>         if (getDiagramGraphicalViewer () instanceof DiagramGraphicalViewer) {
+>             ((DiagramGraphicalViewer) getDiagramGraphicalViewer ()).hookWorkspacePreferenceStore (getWorkspaceViewerPreferenceStore ());
+>         }
+>         viewer.setRootEditPart (rootEP);
+>         viewer.setEditPartFactory (EditPartService.getInstance ());
+>         ContextMenuProvider provider = new DiagramContextMenuProvider (this, viewer);
+>         viewer.setContextMenu (provider);
+>         getSite ().registerContextMenu (ActionIds.DIAGRAM_EDITOR_CONTEXT_MENU, provider, viewer);
+>         viewer.setKeyHandler (new DiagramGraphicalViewerKeyHandler (viewer).setParent (getKeyHandler ()));
+>         ((FigureCanvas) viewer.getControl ()).setScrollBarVisibility (FigureCanvas.ALWAYS);
+291,294d497
+<     @Override
+<     public void createPartControl (Composite parent) {
+<         myDiagramDisplayer.createViewer (parent);
+<         createActions ();
+297,299d516
+<     @Override
+<     public void setFocus () {
+<         myDiagramDisplayer.setFocus ();
+301a521,523
+>     protected void initializeGraphicalViewerContents () {
+>         getDiagramGraphicalViewer ().setContents (getDiagram ());
+>         initializeContents (getDiagramEditPart ());
+302,305d520
+<     protected TransactionalEditingDomain getEditingDomain (IEditorInput input) {
+<         if (input instanceof DiagramEditorInput) {
+<             TransactionalEditingDomain result = TransactionUtil.getEditingDomain (((DiagramEditorInput) input).getDiagram ());
+<             return result;
+306a404,407
+> 
+>     public Diagram getDiagram () {
+>         if (getEditorInput () != null) return ((IDiagramEditorInput) getEditorInput ()).getDiagram ();
+> 
+306a525,528
+> 
+>     protected void createDiagramEditDomain () {
+>         setEditDomain (new DiagramEditDomain (this));
+>         configureDiagramEditDomain ();
+307,307c408,408
+<         return null;
+---
+>         return null;
+309a531,532
+>     protected void configureDiagramEditDomain () {
+>         getEditDomain ().setCommandStack (new DiagramCommandStack (getDiagramEditDomain ()));
+310,320d530
+<     protected TransactionalEditingDomain reuseEditingDomain (IEditorInput input) {
+<         IEditorRegistry editorRegistry = PlatformUI.getWorkbench ().getEditorRegistry ();
+<         IEditorDescriptor editorDesc = editorRegistry.findEditor (getSite ().getId ());
+<         IEditorMatchingStrategy matchingStrategy = editorDesc.getEditorMatchingStrategy ();
+<         IEditorReference [] editorRefs = getEditorSite ().getPage ().getEditorReferences ();
+<         for (int i = 0;
+<         i < editorRefs.length; i ++) {
+<             if (matches (matchingStrategy, editorRefs [i], input)) {
+<                 DiagramEditor anotherEditor = (DiagramEditor) editorRefs [i].getEditor (false);
+<                 if (anotherEditor != null) {
+<                     return anotherEditor.getEditingDomain ();
+321a534,539
+> 
+>     protected void setInput (IEditorInput input) {
+>         stopListening ();
+>         super.setInput (input);
+>         if (input != null) {
+>             Assert.isNotNull (getDiagram (), "Couldn't load/create diagram view");
+322a541,541
+>         startListening ();
+323a299,299
+>         public Object getAdapter (Class type) {
+324,324c300,300
+<         return null;
+---
+>             return null;
+326a547,547
+>     protected void closeEditor (final boolean save) {
+327,329d546
+<     private boolean matches (IEditorMatchingStrategy strategy, IEditorReference editorRef, IEditorInput input) {
+<         if (strategy == null) {
+<             if (getSite ().getId ().equals (editorRef.getId ())) {
+330a549,552
+>             getSite ().getPage ().closeEditor (DiagramEditor.this, save);
+>         } catch (SWTException e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, this.getClass (), "closeEditor", e);
+>             Log.error (DiagramUIPlugin.getInstance (), IStatus.ERROR, e.getMessage (), e);
+331,333d548
+<                     return input.equals (editorRef.getEditorInput ());
+<                 } catch (PartInitException e) {
+<                     return false;
+335a555,556
+> 
+>     protected void startListening () {
+336,338d554
+<             return false;
+<         } else {
+<             return strategy.matches (editorRef, input);
+339a558,559
+> 
+>     protected void stopListening () {
+341a562,566
+>     protected void clearGraphicalViewerContents () {
+>         if (getDiagramGraphicalViewer ().getContents () != null) {
+>             getDiagramGraphicalViewer ().getContents ().removeNotify ();
+>         }
+>         getDiagramGraphicalViewer ().setContents (null);
+342,345d561
+<     protected TransactionalEditingDomain createEditingDomain () {
+<         TransactionalEditingDomain editingDomain = WorkspaceEditingDomainFactory.INSTANCE.createEditingDomain ();
+<         editingDomain.getResourceSet ().eAdapters ().add (new AdapterFactoryEditingDomain.EditingDomainProvider (editingDomain));
+<         return editingDomain;
+347a569,570
+>     protected ActionManager getActionManager () {
+>         return getDiagramEditDomain ().getActionManager ();
+348,349d568
+<     public void configureGraphicalViewer () {
+<         getGraphicalViewer ().getControl ().setBackground (ColorConstants.listBackground);
+352,354d572
+<     protected double [] getZoomLevels () {
+<         double [] result = {.05, .1, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 4};
+<         return result;
+356a577,579
+>     private RootEditPart getRootEditPart () {
+>         return getGraphicalViewer ().getRootEditPart ();
+>     }
+357,357d576
+<     public abstract void configurePalette (PaletteRoot paletteRoot);
+358a581,582
+>     protected CommandManager getCommandManager () {
+>         return getActionManager ().getCommandManager ();
+359,361d580
+<     protected EditDomain createEditDomain () {
+<         DefaultEditDomain domain = new DefaultEditDomain (this);
+<         return domain;
+363a585,587
+>     public final void gotoMarker (IMarker marker) {
+>         MarkerNavigationService.getInstance ().gotoMarker (this, marker);
+>     }
+364,364c517,517
+<     public abstract void initializeGraphicalViewer ();
+---
+>     protected void initializeGraphicalViewer () {
+364a518,518
+>         initializeGraphicalViewerContents ();
+365a589,591
+>     protected Control getGraphicalControl () {
+>         return getRulerComposite ();
+>     }
+366,366d588
+<     public abstract AdapterFactory getDomainAdapterFactory ();
+367a593,595
+>     public IWorkbenchPartSite getSite () {
+>         return partSite;
+>     }
+368,368d592
+<     public abstract boolean isFlyoutPalette ();
+369a597,599
+>     protected void setSite (IWorkbenchPartSite site) {
+>         this.partSite = site;
+>     }
+369a543,543
+> 
+370,370c544,544
+<     protected abstract void createActions ();
+---
+>     protected void createActions () {
+371a601,603
+>     public String getContributorId () {
+>         return "org.eclipse.gmf.runtime.diagram.ui.properties";
+>     }
+372,372d600
+<     private static class ForceTrackingModificationAdapter extends AdapterImpl {
+373a605,627
+>     public static void addDefaultPreferences (PreferenceStore store, PreferencesHint preferencesHint) {
+>         store.setValue (WorkspaceViewerProperties.ZOOM, 1.0);
+>         store.setValue (WorkspaceViewerProperties.VIEWPAGEBREAKS, false);
+>         IPreferenceStore globalPreferenceStore = (IPreferenceStore) preferencesHint.getPreferenceStore ();
+>         boolean viewGrid = globalPreferenceStore.getBoolean (IPreferenceConstants.PREF_SHOW_GRID);
+>         boolean snapToGrid = globalPreferenceStore.getBoolean (IPreferenceConstants.PREF_SNAP_TO_GRID);
+>         boolean viewRulers = globalPreferenceStore.getBoolean (IPreferenceConstants.PREF_SHOW_RULERS);
+>         store.setValue (WorkspaceViewerProperties.VIEWGRID, viewGrid);
+>         store.setValue (WorkspaceViewerProperties.SNAPTOGRID, snapToGrid);
+>         store.setValue (WorkspaceViewerProperties.VIEWRULERS, viewRulers);
+>         store.setValue (WorkspaceViewerProperties.PREF_USE_WORKSPACE_SETTINGS, DefaultValues.DEFAULT_USE_WORKSPACE_SETTINGS);
+>         store.setValue (WorkspaceViewerProperties.PREF_USE_DIAGRAM_SETTINGS, DefaultValues.DEFAULT_USE_DIAGRAM_SETTINGS);
+>         store.setValue (WorkspaceViewerProperties.PREF_USE_INCHES, DefaultValues.DEFAULT_INCHES);
+>         store.setValue (WorkspaceViewerProperties.PREF_USE_MILLIM, DefaultValues.DEFAULT_MILLIM);
+>         store.setValue (WorkspaceViewerProperties.PREF_USE_PORTRAIT, DefaultValues.DEFAULT_PORTRAIT);
+>         store.setValue (WorkspaceViewerProperties.PREF_USE_LANDSCAPE, DefaultValues.DEFAULT_LANDSCAPE);
+>         store.setValue (WorkspaceViewerProperties.PREF_PAGE_SIZE, DefaultValues.getLocaleSpecificPageType ().getName ());
+>         store.setValue (WorkspaceViewerProperties.PREF_PAGE_WIDTH, DefaultValues.getLocaleSpecificPageType ().getWidth ());
+>         store.setValue (WorkspaceViewerProperties.PREF_PAGE_HEIGHT, DefaultValues.getLocaleSpecificPageType ().getHeight ());
+>         store.setValue (WorkspaceViewerProperties.PREF_MARGIN_TOP, DefaultValues.DEFAULT_MARGIN_TOP);
+>         store.setValue (WorkspaceViewerProperties.PREF_MARGIN_BOTTOM, DefaultValues.DEFAULT_MARGIN_BOTTOM);
+>         store.setValue (WorkspaceViewerProperties.PREF_MARGIN_LEFT, DefaultValues.DEFAULT_MARGIN_LEFT);
+>         store.setValue (WorkspaceViewerProperties.PREF_MARGIN_RIGHT, DefaultValues.DEFAULT_MARGIN_RIGHT);
+374,380d604
+<         @Override
+<         public void setTarget (Notifier newTarget) {
+<             super.setTarget (newTarget);
+<             if (newTarget instanceof ResourceSet) {
+<                 ResourceSet resourceSet = (ResourceSet) newTarget;
+<                 for (Resource next : resourceSet.getResources ()) {
+<                     next.setTrackingModification (true);
+381a629,648
+> 
+>     public PreferenceStore getWorkspaceViewerPreferenceStore () {
+>         if (workspaceViewerPreferenceStore != null) {
+>             return workspaceViewerPreferenceStore;
+>         } else {
+>             IPath path = DiagramUIPlugin.getInstance ().getStateLocation ();
+>             String id = ViewUtil.getIdStr (getDiagram ());
+>             String fileName = path.toString () + "/" + id;
+>             java.io.File file = new File (fileName);
+>             workspaceViewerPreferenceStore = new PreferenceStore (fileName);
+>             if (file.exists ()) {
+>                 try {
+>                     workspaceViewerPreferenceStore.load ();
+>                 } catch (Exception e) {
+>                     addDefaultPreferences ();
+>                 }
+>             } else {
+>                 addDefaultPreferences ();
+>             }
+>             return workspaceViewerPreferenceStore;
+384a652,653
+>     protected void addDefaultPreferences () {
+>         addDefaultPreferences (workspaceViewerPreferenceStore, getPreferencesHint ());
+385,399d651
+<         @Override
+<         public void notifyChanged (Notification msg) {
+<             if (msg.getNotifier () == getTarget () && msg.getFeatureID (ResourceSet.class) == ResourceSet.RESOURCE_SET__RESOURCES) {
+<                 switch (msg.getEventType ()) {
+<                     case Notification.ADD :
+<                         {
+<                             Resource resource = (Resource) msg.getNewValue ();
+<                             resource.setTrackingModification (true);
+<                         } break;
+<                     case Notification.ADD_MANY :
+<                         {
+<                             @SuppressWarnings("unchecked")
+<                             Collection < Resource > resources = (Collection < Resource >) msg.getNewValue ();
+<                             for (Resource next : resources) {
+<                                 next.setTrackingModification (true);
+400a655,669
+> 
+>     public void persistViewerSettings () {
+>         Viewport viewport = getDiagramEditPart ().getViewport ();
+>         if (viewport != null) {
+>             int x = viewport.getHorizontalRangeModel ().getValue ();
+>             int y = viewport.getVerticalRangeModel ().getValue ();
+>             getWorkspaceViewerPreferenceStore ().setValue (WorkspaceViewerProperties.VIEWPORTX, x);
+>             getWorkspaceViewerPreferenceStore ().setValue (WorkspaceViewerProperties.VIEWPORTY, y);
+>         }
+>         getWorkspaceViewerPreferenceStore ().setValue (WorkspaceViewerProperties.ZOOM, getZoomManager ().getZoom ());
+>         try {
+>             if (getWorkspaceViewerPreferenceStore ().needsSaving ()) getWorkspaceViewerPreferenceStore ().save ();
+> 
+>         } catch (IOException ioe) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, PageInfoHelper.class, "persistViewerSettings", ioe);
+401,401c321,321
+<                         }}
+---
+>             );
+404a673,737
+>     private void initializeContents (EditPart editpart) {
+>         getZoomManager ().setZoom (getWorkspaceViewerPreferenceStore ().getDouble (WorkspaceViewerProperties.ZOOM));
+>         if (getWorkspaceViewerPreferenceStore ().getBoolean (WorkspaceViewerProperties.VIEWPAGEBREAKS)) {
+>             getDiagramEditPart ().getFigure ().invalidate ();
+>             getDiagramEditPart ().getFigure ().validate ();
+>         }
+>         getDiagramEditPart ().refreshPageBreaks ();
+>         ((DiagramEditPart) editpart).getViewport ().validate ();
+>         if (editpart instanceof DiagramEditPart) {
+>             int x = getWorkspaceViewerPreferenceStore ().getInt (WorkspaceViewerProperties.VIEWPORTX);
+>             int y = getWorkspaceViewerPreferenceStore ().getInt (WorkspaceViewerProperties.VIEWPORTY);
+>             ((DiagramEditPart) editpart).getViewport ().getHorizontalRangeModel ().setValue (x);
+>             ((DiagramEditPart) editpart).getViewport ().getVerticalRangeModel ().setValue (y);
+>         }
+>         int rulerUnits = getWorkspaceViewerPreferenceStore ().getInt (WorkspaceViewerProperties.RULERUNIT);
+>         GuideStyle guideStyle = (GuideStyle) getDiagram ().getStyle (NotationPackage.eINSTANCE.getGuideStyle ());
+>         if (guideStyle != null) {
+>             RootEditPart rep = getGraphicalViewer ().getRootEditPart ();
+>             DiagramRootEditPart root = (DiagramRootEditPart) rep;
+>             DiagramRuler verticalRuler = ((DiagramRootEditPart) getRootEditPart ()).getVerticalRuler ();
+>             verticalRuler.setGuideStyle (guideStyle);
+>             verticalRuler.setUnit (rulerUnits);
+>             DiagramRulerProvider vertProvider = new DiagramRulerProvider (verticalRuler, root.getMapMode ());
+>             vertProvider.init ();
+>             getDiagramGraphicalViewer ().setProperty (RulerProvider.PROPERTY_VERTICAL_RULER, vertProvider);
+>             DiagramRuler horizontalRuler = ((DiagramRootEditPart) getRootEditPart ()).getHorizontalRuler ();
+>             horizontalRuler.setGuideStyle (guideStyle);
+>             horizontalRuler.setUnit (rulerUnits);
+>             DiagramRulerProvider horzProvider = new DiagramRulerProvider (horizontalRuler, root.getMapMode ());
+>             horzProvider.init ();
+>             getDiagramGraphicalViewer ().setProperty (RulerProvider.PROPERTY_HORIZONTAL_RULER, horzProvider);
+>             getDiagramGraphicalViewer ().setProperty (RulerProvider.PROPERTY_RULER_VISIBILITY, Boolean.valueOf (getWorkspaceViewerPreferenceStore ().getBoolean (WorkspaceViewerProperties.VIEWRULERS)));
+>         }
+>         getDiagramGraphicalViewer ().setProperty (SnapToGeometry.PROPERTY_SNAP_ENABLED, Boolean.valueOf (getWorkspaceViewerPreferenceStore ().getBoolean (WorkspaceViewerProperties.SNAPTOGRID)));
+>         getDiagramGraphicalViewer ().setProperty (SnapToGrid.PROPERTY_GRID_ENABLED, Boolean.valueOf (getWorkspaceViewerPreferenceStore ().getBoolean (WorkspaceViewerProperties.VIEWGRID)));
+>         getDiagramGraphicalViewer ().setProperty (SnapToGrid.PROPERTY_GRID_VISIBLE, Boolean.valueOf (getWorkspaceViewerPreferenceStore ().getBoolean (WorkspaceViewerProperties.VIEWGRID)));
+>         Point origin = new Point ();
+>         getDiagramGraphicalViewer ().setProperty (SnapToGrid.PROPERTY_GRID_ORIGIN, origin);
+>         double dSpacing = ((DiagramRootEditPart) getDiagramEditPart ().getRoot ()).getGridSpacing ();
+>         ((DiagramRootEditPart) getDiagramEditPart ().getRoot ()).setGridSpacing (dSpacing);
+>     }
+> 
+>     protected List getElements (final ISelection selection) {
+>         if (selection instanceof IStructuredSelection) {
+>             return (List) MEditingDomainGetter.getMEditingDomain (((IStructuredSelection) selection).toList ()).runAsRead (new MRunnable () {
+> 
+>                 public Object run () {
+>                     List retval = new ArrayList ();
+>                     if (selection instanceof IStructuredSelection) {
+>                         IStructuredSelection structuredSelection = (IStructuredSelection) selection;
+>                         for (Iterator i = structuredSelection.iterator ();
+>                         i.hasNext ();) {
+>                             Object next = i.next ();
+>                             View view = (View) ((IAdaptable) next).getAdapter (View.class);
+>                             if (view != null) {
+>                                 EObject eObject = ViewUtil.resolveSemanticElement (view);
+>                                 if (eObject != null) {
+>                                     retval.add (eObject);
+>                                 } else {
+>                                     retval.add (view);
+>                                 }
+>                             }
+>                         }
+>                     }
+>                     return retval;
+405,407d672
+<         @Override
+<         public boolean isAdapterForType (Object type) {
+<             return ForceTrackingModificationAdapter.class.equals (type);
+410,411d739
+<         public void acquire () {
+<             myRefCount ++;
+413a742,742
+>             );
+414,416d741
+<         public void release () {
+<             if (myRefCount == 0) {
+<                 throw new IllegalStateException ();
+417a744,744
+>         return Collections.EMPTY_LIST;
+418,418d743
+<             myRefCount --;
+420a747,749
+>     public ShowInContext getShowInContext () {
+>         ISelection selection = getGraphicalViewer ().getSelection ();
+>         return new ShowInContext (null, selection);
+421,422d746
+<         public boolean isReleased () {
+<             return myRefCount == 0;
+424a752,753
+>     protected PreferencesHint getPreferencesHint () {
+>         return new PreferencesHint (getEditorSite ().getId ());
+425,425d751
+<         private int myRefCount;
+427a756,756
+>     ;

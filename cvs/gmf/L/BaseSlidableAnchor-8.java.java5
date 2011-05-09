@@ -1,0 +1,208 @@
+package org.eclipse.gmf.runtime.draw2d.ui.figures;
+
+import org.eclipse.draw2d.AbstractConnectionAnchor;
+
+import org.eclipse.draw2d.Connection;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.PositionConstants;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.PrecisionPoint;
+
+import org.eclipse.draw2d.geometry.PrecisionRectangle;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.LineSeg;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.PointListUtilities;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.PrecisionPointList;
+
+public class BaseSlidableAnchor extends AbstractConnectionAnchor implements OrthogonalConnectionAnchor {
+    final private static char TERMINAL_START_CHAR = '(';
+    final private static char TERMINAL_DELIMITER_CHAR = ',';
+    final private static char TERMINAL_END_CHAR = ')';
+    private PrecisionPoint relativeReference;
+
+    public BaseSlidableAnchor () {
+    }
+
+    public BaseSlidableAnchor (IFigure f) {
+        super (f);
+    }
+
+    public BaseSlidableAnchor (IFigure f, PrecisionPoint p) {
+        super (f);
+        this.relativeReference = new PrecisionPoint (p.preciseX, p.preciseY);
+    }
+
+    public String getTerminal () {
+        if (isDefaultAnchor ()) return StringStatics.BLANK;
+
+        return composeTerminalString (relativeReference);
+    }
+
+    public Point getReferencePoint () {
+        return getAnchorPosition ();
+    }
+
+    private String composeTerminalString (PrecisionPoint p) {
+        StringBuffer s = new StringBuffer (24);
+        s.append (TERMINAL_START_CHAR);
+        s.append ((float) p.preciseX);
+        s.append (TERMINAL_DELIMITER_CHAR);
+        s.append ((float) p.preciseY);
+        s.append (TERMINAL_END_CHAR);
+        return s.toString ();
+    }
+
+    private Point getAnchorPosition () {
+        PrecisionRectangle rBox = new PrecisionRectangle (getBox ());
+        if (isDefaultAnchor ()) return rBox.getCenter ();
+
+        return new PrecisionPoint (relativeReference.preciseX * rBox.preciseWidth + rBox.preciseX, relativeReference.preciseY * rBox.preciseHeight + rBox.preciseY);
+    }
+
+    protected Point getLocation (Point ownReference, Point foreignReference) {
+        PointList intersections = getIntersectionPoints (ownReference, foreignReference);
+        if (intersections != null && intersections.size () != 0) {
+            Point location = PointListUtilities.pickClosestPoint (intersections, foreignReference);
+            return location;
+        }
+        return null;
+    }
+
+    static private int STRAIGHT_LINE_TOLERANCE = 3;
+
+    public Point getLocation (Point reference) {
+        Point ownReference = normalizeToStraightlineTolerance (reference, getReferencePoint (), STRAIGHT_LINE_TOLERANCE);
+        Point location = getLocation (ownReference, reference);
+        if (location == null) {
+            location = getLocation (new PrecisionPoint (getBox ().getCenter ()), reference);
+            if (location == null) {
+                location = getBox ().getCenter ();
+            }
+        }
+        return location;
+    }
+
+    protected Point normalizeToStraightlineTolerance (Point foreignReference, Point ownReference, int tolerance) {
+        PrecisionPoint preciseOwnReference = new PrecisionPoint (ownReference);
+        PrecisionPoint normalizedReference = (PrecisionPoint) preciseOwnReference.getCopy ();
+        PrecisionPoint preciseForeignReference = new PrecisionPoint (foreignReference);
+        if (Math.abs (preciseForeignReference.preciseX - preciseOwnReference.preciseX) < tolerance) {
+            normalizedReference.preciseX = preciseForeignReference.preciseX;
+            normalizedReference.updateInts ();
+            return normalizedReference;
+        }
+        if (Math.abs (preciseForeignReference.preciseY - preciseOwnReference.preciseY) < tolerance) {
+            normalizedReference.preciseY = preciseForeignReference.preciseY;
+            normalizedReference.updateInts ();
+        }
+        return normalizedReference;
+    }
+
+    protected PointList getIntersectionPoints (Point ownReference, Point foreignReference) {
+        final PointList polygon = getPolygonPoints ();
+        return (new LineSeg (ownReference, foreignReference)).getLineIntersectionsWithLineSegs (polygon);
+    }
+
+    protected PointList getPolygonPoints () {
+        if (getOwner () instanceof IPolygonAnchorableFigure) {
+            PrecisionPointList polyList = new PrecisionPointList (((IPolygonAnchorableFigure) getOwner ()).getPolygonPoints ());
+            getOwner ().translateToAbsolute (polyList);
+            return polyList;
+        }
+        PrecisionRectangle r = new PrecisionRectangle (getBox ());
+        PrecisionPointList ptList = new PrecisionPointList (5);
+        ptList.addPoint (new PrecisionPoint (r.preciseX, r.preciseY));
+        ptList.addPoint (new PrecisionPoint (r.preciseX + r.preciseWidth, r.preciseY));
+        ptList.addPoint (new PrecisionPoint (r.preciseX + r.preciseWidth, r.preciseY + r.preciseHeight));
+        ptList.addPoint (new PrecisionPoint (r.preciseX, r.preciseY + r.preciseHeight));
+        ptList.addPoint (new PrecisionPoint (r.preciseX, r.preciseY));
+        return ptList;
+    }
+
+    static public PrecisionPoint getAnchorRelativeLocation (Point p, Rectangle bounds) {
+        if (bounds.width == 0 || bounds.height == 0) {
+            return new PrecisionPoint (0.5, 0.5);
+        }
+        PrecisionPoint relLocation;
+        Point temp = new Point (p);
+        if (p.x < bounds.x || p.x > bounds.x + bounds.width || p.y < bounds.y || p.y > bounds.y + bounds.height) {
+            if (p.x < bounds.x || p.x > bounds.x + bounds.width) {
+                temp.x = p.x < bounds.x ? bounds.x : bounds.x + bounds.width;
+            }
+            if (p.y < bounds.y || p.y > bounds.y + bounds.height) {
+                temp.y = p.y < bounds.y ? bounds.y : bounds.y + bounds.height;
+            }
+            relLocation = new PrecisionPoint ((double) (temp.x - bounds.x) / bounds.width, (double) (temp.y - bounds.y) / bounds.height);
+        } else {
+            relLocation = new PrecisionPoint ((double) (temp.x - bounds.x) / bounds.width, (double) (temp.y - bounds.y) / bounds.height);
+        }
+        return relLocation;
+    }
+
+    protected Rectangle getBox () {
+        Rectangle rBox = (getOwner () instanceof Connection) ? ((Connection) getOwner ()).getPoints ().getBounds () : getOwner ().getBounds ();
+        PrecisionRectangle box = new PrecisionRectangle (rBox);
+        getOwner ().translateToAbsolute (box);
+        return box;
+    }
+
+    public boolean isDefaultAnchor () {
+        return relativeReference == null;
+    }
+
+    public static PrecisionPoint parseTerminalString (String terminal) {
+        try {
+            return new PrecisionPoint (Float.parseFloat (terminal.substring (terminal.indexOf (BaseSlidableAnchor.TERMINAL_START_CHAR) + 1, terminal.indexOf (BaseSlidableAnchor.TERMINAL_DELIMITER_CHAR))), Float.parseFloat (terminal.substring (terminal.indexOf (BaseSlidableAnchor.TERMINAL_DELIMITER_CHAR) + 1, terminal.indexOf (BaseSlidableAnchor.TERMINAL_END_CHAR))));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public Point getOrthogonalLocation (Point orthoReference) {
+        PrecisionPoint ownReference = new PrecisionPoint (getReferencePoint ());
+        PrecisionRectangle bounds = new PrecisionRectangle (FigureUtilities.getAnchorableFigureBounds (getOwner ()));
+        getOwner ().translateToAbsolute (bounds);
+        bounds.expand (0.000001, 0.000001);
+        PrecisionPoint preciseOrthoReference = new PrecisionPoint (orthoReference);
+        int orientation = PositionConstants.NONE;
+        if (preciseOrthoReference.preciseX >= bounds.preciseX && preciseOrthoReference.preciseX <= bounds.preciseX + bounds.preciseWidth) {
+            ownReference.preciseX = preciseOrthoReference.preciseX;
+            orientation = PositionConstants.VERTICAL;
+        } else if (preciseOrthoReference.preciseY >= bounds.preciseY && preciseOrthoReference.preciseY <= bounds.preciseY + bounds.preciseHeight) {
+            ownReference.preciseY = preciseOrthoReference.preciseY;
+            orientation = PositionConstants.HORIZONTAL;
+        }
+
+        ownReference.updateInts ();
+        Point location = getLocation (ownReference, preciseOrthoReference);
+        if (location == null) {
+            location = getLocation (orthoReference);
+            orientation = PositionConstants.NONE;
+        }
+        if (orientation != PositionConstants.NONE) {
+            PrecisionPoint loc = new PrecisionPoint (location);
+            if (orientation == PositionConstants.VERTICAL) {
+                loc.preciseX = preciseOrthoReference.preciseX;
+            } else {
+                loc.preciseY = preciseOrthoReference.preciseY;
+            }
+            loc.updateInts ();
+            location = loc;
+        }
+        return location;
+    }
+
+}
+

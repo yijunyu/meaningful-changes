@@ -1,0 +1,89 @@
+4a5,10
+> import java.util.HashMap;
+> 
+> import java.util.Map;
+> 
+> import org.eclipse.core.commands.ExecutionException;
+> 
+12a19,20
+> import org.eclipse.core.runtime.IAdaptable;
+> 
+16a25,26
+> import org.eclipse.core.runtime.NullProgressMonitor;
+> 
+28a39,54
+> import org.eclipse.emf.transaction.Transaction;
+> 
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> 
+> import org.eclipse.emf.workspace.AbstractEMFOperation;
+> 
+> import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+44a71,72
+> import org.eclipse.gmf.runtime.diagram.ui.resources.editor.internal.EditorDebugOptions;
+> 
+49,50d76
+< import org.eclipse.gmf.runtime.emf.core.edit.MEditingDomain;
+< 
+51,51c77,77
+< import org.eclipse.gmf.runtime.emf.core.util.ResourceUtil;
+---
+> import org.eclipse.gmf.runtime.emf.core.internal.util.EMFCoreConstants;
+113,113c139,139
+<             IFile resourceFile = ResourceUtil.getFile (resource);
+---
+>             IFile resourceFile = WorkspaceSynchronizer.getFile (resource);
+123,123c149,149
+<         MEditingDomain domain = diagramDocument.getEditingDomain ();
+---
+>         TransactionalEditingDomain domain = diagramDocument.getEditingDomain ();
+131,131c157,157
+<         IFile resourceFile = ResourceUtil.getFile (resource);
+---
+>         IFile resourceFile = WorkspaceSynchronizer.getFile (resource);
+135a162,162
+>         TransactionalEditingDomain domain = diagramDocument.getEditingDomain ();
+136,136d161
+<         MEditingDomain domain = diagramDocument.getEditingDomain ();
+137,137c163,163
+<         DiagramIOUtil.save (domain, file, diagram, overwrite, DiagramIOUtil.hasUnrecognizedData (diagram.eResource ()), monitor);
+---
+>         DiagramIOUtil.save (domain, file, diagram, DiagramIOUtil.hasUnrecognizedData (diagram.eResource ()), monitor);
+143a170,177
+>         final Collection copiedContents = EcoreUtil.copyAll (contents);
+>         TransactionalEditingDomain editingDomain = TransactionUtil.getEditingDomain (sourceDiagram);
+>         final Resource newResource = editingDomain.createResource (EcoreUtil.generateUUID () + EMFCoreConstants.INVALID_PATH);
+>         Map options = new HashMap ();
+>         options.put (Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+>         AbstractEMFOperation operation = new AbstractEMFOperation (editingDomain, StringStatics.BLANK, options) {
+> 
+>             protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+144,145d169
+<         Collection copiedContents = EcoreUtil.copyAll (contents);
+<         Resource newResource = ResourceUtil.getEditingDomain ().createResource (null);
+146a179,190
+>                 return Status.OK_STATUS;
+>             }
+> 
+>         }
+> 
+>         ;
+>         try {
+>             operation.execute (new NullProgressMonitor (), null);
+>         } catch (ExecutionException e) {
+>             Trace.catching (EditorIDEPlugin.getInstance (), EditorDebugOptions.EXCEPTIONS_CATCHING, getClass (), "createView", e);
+>             Log.warning (EditorIDEPlugin.getInstance (), EditorStatusCodes.RESOURCE_FAILURE, "createView", e);
+>         }
+180,180c224,224
+<     public IEditorInput createInputWithEditingDomain (IEditorInput editorInput, MEditingDomain domain) {
+---
+>     public IEditorInput createInputWithEditingDomain (IEditorInput editorInput, TransactionalEditingDomain domain) {

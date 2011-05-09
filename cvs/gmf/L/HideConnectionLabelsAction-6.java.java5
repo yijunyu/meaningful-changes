@@ -1,0 +1,77 @@
+package org.eclipse.gmf.runtime.diagram.ui.actions.internal;
+
+import java.util.ArrayList;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.ActionIds;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.DiagramAction;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.l10n.DiagramUIActionsMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.l10n.DiagramUIActionsPluginImages;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ShapeCompartmentEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.ToggleConnectionLabelsRequest;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+public class HideConnectionLabelsAction extends DiagramAction {
+
+    public HideConnectionLabelsAction (IWorkbenchPage workbenchPage) {
+        super (workbenchPage);
+    }
+
+    public void init () {
+        super.init ();
+        setText (DiagramUIActionsMessages.HideConnectionLabelsAction_label);
+        setId (ActionIds.ACTION_HIDE_CONNECTION_LABELS);
+        setToolTipText (DiagramUIActionsMessages.HideConnectionLabelsAction_toolTip);
+        setImageDescriptor (DiagramUIActionsPluginImages.DESC_HIDE_CONNECTION_LABELS);
+        setDisabledImageDescriptor (DiagramUIActionsPluginImages.DESC_HIDE_CONNECTION_LABELS_DISABLED);
+    }
+
+    protected Request createTargetRequest () {
+        return new ToggleConnectionLabelsRequest (false);
+    }
+
+    protected boolean isSelectionListener () {
+        return true;
+    }
+
+    protected List createOperationSet () {
+        List selection = getSelectedObjects ();
+        if (selection.isEmpty () || ! (selection.get (0) instanceof EditPart)) {
+            return Collections.EMPTY_LIST;
+        }
+        List connections = new ArrayList ();
+        if (selection.get (0) instanceof ShapeCompartmentEditPart || selection.get (0) instanceof DiagramEditPart) {
+            List diagramConnections = getDiagramEditPart ().getConnections ();
+            if (diagramConnections != null && ! diagramConnections.isEmpty ()) connections.addAll (diagramConnections);
+
+        } else {
+            connections.addAll (selection);
+        }
+        Iterator selectedEPs = connections.iterator ();
+        List targetedEPs = new ArrayList ();
+        while (selectedEPs.hasNext ()) {
+            EditPart selectedEP = (EditPart) selectedEPs.next ();
+            targetedEPs.addAll (getTargetEditParts (selectedEP));
+        }
+        return targetedEPs.isEmpty () ? Collections.EMPTY_LIST : targetedEPs;
+    }
+
+}
+

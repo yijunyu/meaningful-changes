@@ -1,0 +1,74 @@
+package org.eclipse.gmf.runtime.diagram.ui.internal.commands;
+
+import java.text.MessageFormat;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.gef.EditPartViewer;
+
+import org.eclipse.gmf.runtime.common.core.command.AbstractCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.diagram.ui.DiagramUIPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramResourceManager;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class RefreshEditPartCommand extends AbstractCommand {
+    private View notation;
+    private EditPartViewer viewer;
+    private boolean revalidate;
+
+    public RefreshEditPartCommand (IGraphicalEditPart editPart, boolean revalidate) {
+        super (null);
+        this.revalidate = revalidate;
+        notation = (View) editPart.getModel ();
+        viewer = editPart.getRoot ().getViewer ();
+    }
+
+    protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+        Map epRegistry = viewer.getEditPartRegistry ();
+        IGraphicalEditPart editPart = (IGraphicalEditPart) epRegistry.get (notation);
+        if (editPart != null) {
+            editPart.refresh ();
+            if (revalidate) {
+                editPart.getFigure ().invalidate ();
+                editPart.getFigure ().validate ();
+            }
+        } else {
+            String eMsg = MessageFormat.format (DiagramResourceManager.getInstance ().getString ("RefreshEditPartCompartment.execute.failed_ERROR_"), new Object [] {notation});
+            Log.error (DiagramUIPlugin.getInstance (), IStatus.ERROR, eMsg);
+        }
+        notation = null;
+        viewer = null;
+        return newOKCommandResult ();
+    }
+
+    public boolean isRedoable () {
+        return true;
+    }
+
+    public boolean isUndoable () {
+        return true;
+    }
+
+    protected CommandResult doRedo () {
+        return newOKCommandResult ();
+    }
+
+    protected CommandResult doUndo () {
+        return newOKCommandResult ();
+    }
+
+}
+

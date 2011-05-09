@@ -1,0 +1,124 @@
+package org.eclipse.gmf.runtime.diagram.ui.render.clipboard;
+
+import java.awt.Image;
+
+import java.io.ByteArrayOutputStream;
+
+import java.io.IOException;
+
+import java.io.OutputStream;
+
+import java.util.List;
+
+import javax.xml.transform.OutputKeys;
+
+import javax.xml.transform.Transformer;
+
+import javax.xml.transform.TransformerFactory;
+
+import javax.xml.transform.dom.DOMSource;
+
+import javax.xml.transform.stream.StreamResult;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.SharedImages;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.internal.DiagramUIRenderDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.internal.DiagramUIRenderPlugin;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderedImage;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.factory.RenderedImageFactory;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.image.ImageConverter;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.RenderedImageDescriptor;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.svg.export.GraphicsSVG;
+
+import org.eclipse.jface.resource.ImageDescriptor;
+
+import org.w3c.dom.Element;
+
+public class DiagramSVGGenerator extends DiagramGenerator {
+    private RenderedImage svgImage = null;
+    private Element svgRoot = null;
+    private Rectangle viewBox = null;
+
+    public DiagramSVGGenerator (DiagramEditPart diagramEditPart) {
+        super (diagramEditPart);
+    }
+
+    protected Graphics setUpGraphics (int width, int height) {
+        viewBox = new Rectangle (0, 0, width, height);
+        return GraphicsSVG.getInstance (viewBox);
+    }
+
+    protected ImageDescriptor getImageDescriptor (Graphics g) {
+        try {
+            GraphicsSVG svgG = (GraphicsSVG) g;
+            svgRoot = svgG.getRoot ();
+            ByteArrayOutputStream os = new ByteArrayOutputStream (5000);
+            stream (os);
+            os.close ();
+            setSVGImage (RenderedImageFactory.getInstance (os.toByteArray ()));
+            return RenderedImageDescriptor.createFromRenderedImage (getSVGImage ());
+        } catch (IOException ex) {
+            Log.error (DiagramUIRenderPlugin.getInstance (), IStatus.ERROR, ex.getMessage (), ex);
+        }
+        return null;
+    }
+
+    public void stream (OutputStream outputStream) {
+        try {
+            svgRoot.setAttributeNS (null, "viewBox", String.valueOf (viewBox.x) + " " + String.valueOf (viewBox.y) + " " + String.valueOf (viewBox.width) + " " + String.valueOf (viewBox.height));
+            Transformer transformer = TransformerFactory.newInstance ().newTransformer ();
+            transformer.setOutputProperty (OutputKeys.METHOD, "xml");
+            transformer.setOutputProperty (OutputKeys.ENCODING, "UTF-8");
+            transformer.setOutputProperty (OutputKeys.INDENT, "yes");
+            DOMSource source = new DOMSource (svgRoot);
+            StreamResult result = new StreamResult (outputStream);
+            transformer.transform (source, result);
+        } catch (Exception ex) {
+            Log.error (DiagramUIRenderPlugin.getInstance (), IStatus.ERROR, ex.getMessage (), ex);
+        }
+    }
+
+    public Image createAWTImageForParts (List editparts) {
+        createSWTImageDescriptorForParts (editparts);
+        if (getSVGImage () != null) {
+            try {
+                return getSVGImage ().getBufferedImage ();
+            } catch (Error e) {
+                Trace.catching (DiagramUIRenderPlugin.getInstance (), DiagramUIRenderDebugOptions.EXCEPTIONS_THROWING, getClass (), "createAWTImageForParts() failed to generate image", e);
+                return ImageConverter.convert (SharedImages.get (SharedImages.IMG_ERROR));
+            } catch (Exception ex) {
+                Trace.catching (DiagramUIRenderPlugin.getInstance (), DiagramUIRenderDebugOptions.EXCEPTIONS_THROWING, getClass (), "createAWTImageForParts() failed to generate image", ex);
+                return ImageConverter.convert (SharedImages.get (SharedImages.IMG_ERROR));
+            }
+        }
+        return ImageConverter.convert (SharedImages.get (SharedImages.IMG_ERROR));
+    }
+
+    private RenderedImage getSVGImage () {
+        return svgImage;
+    }
+
+    private void setSVGImage (RenderedImage svgImage) {
+        this.svgImage = svgImage;
+    }
+
+}
+

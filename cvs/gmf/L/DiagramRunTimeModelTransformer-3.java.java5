@@ -1,0 +1,70 @@
+package org.eclipse.gmf.internal.bridge.genmodel;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.EPackage;
+
+import org.eclipse.emf.ecore.EcoreFactory;
+
+import org.eclipse.gmf.gmfgraph.Identity;
+
+import org.eclipse.gmf.mappings.AuditContainer;
+
+import org.eclipse.gmf.mappings.CanvasMapping;
+
+import org.eclipse.gmf.mappings.LinkMapping;
+
+import org.eclipse.gmf.mappings.MetricContainer;
+
+import org.eclipse.gmf.mappings.TopNodeReference;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+public class DiagramRunTimeModelTransformer extends MappingTransformer {
+    private final EPackage myPackage;
+
+    public DiagramRunTimeModelTransformer (String modelName, String modelNsURI) {
+        myPackage = EcoreFactory.eINSTANCE.createEPackage ();
+        myPackage.setName (modelName);
+        myPackage.setNsPrefix (modelName + "-drt");
+        myPackage.setNsURI (modelNsURI);
+    }
+
+    public EPackage getResult () {
+        return myPackage;
+    }
+
+    protected void process (CanvasMapping cme) {
+        addEClass (cme.getDiagramCanvas (), NotationPackage.eINSTANCE.getDiagram ());
+    }
+
+    protected void process (TopNodeReference topNode) {
+        addEClass (topNode.getChild ().getDiagramNode (), NotationPackage.eINSTANCE.getNode ());
+    }
+
+    protected void process (LinkMapping lme) {
+        addEClass (lme.getDiagramLink (), NotationPackage.eINSTANCE.getEdge ());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addEClass (Identity diaDefElement, EClass superClass) {
+        EClass c = createEClass (diaDefElement.getName (), superClass);
+        myPackage.getEClassifiers ().add (c);
+    }
+
+    @SuppressWarnings("unchecked")
+    private EClass createEClass (String name, EClass superClass) {
+        EClass c = EcoreFactory.eINSTANCE.createEClass ();
+        c.setName (name);
+        c.getESuperTypes ().add (superClass);
+        return c;
+    }
+
+    protected void process (AuditContainer audits) {
+    }
+
+    protected void process (MetricContainer metrics) {
+    }
+
+}
+

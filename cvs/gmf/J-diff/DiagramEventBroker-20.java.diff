@@ -1,0 +1,311 @@
+19d18
+< import java.util.HashSet;
+20a20,21
+> import java.util.LinkedHashMap;
+> import java.util.LinkedHashSet;
+36d36
+< import org.eclipse.emf.transaction.util.TransactionUtil;
+38c38
+< import org.eclipse.gmf.runtime.diagram.core.internal.commands.PersistElementCommand;
+---
+> import org.eclipse.gmf.runtime.diagram.core.internal.commands.PersistViewsCommand;
+42a43,44
+> 
+> 
+60a63,64
+>     private WeakReference editingDomainRef;
+> 
+91c95
+<             Set listenersSet = (Set) keys.get(key);
+---
+>             Map listenersSet = (Map) keys.get(key);
+93c97
+<                 listenersSet = new HashSet(4);
+---
+>                 listenersSet = new LinkedHashMap(4);
+96c100
+<             listenersSet.add(listener);
+---
+>             listenersSet.put(listener,null);
+120c124
+<                 Set listenersSet = (Set) keys.get(key);
+---
+>                 Map listenersSet = (Map) keys.get(key);
+142c146
+<                 Set listenersSet = (Set) keys.get(key);
+---
+>                 Map listenersSet = (Map) keys.get(key);
+144c148
+<                     return listenersSet;
+---
+>                     return listenersSet.keySet();
+161c165
+<             Set listenersCollection = new HashSet();
+---
+>             Set listenersCollection = new LinkedHashSet();
+165c169
+<                 Set listenersSet = (Set) entry.getValue();
+---
+>                 Map listenersSet = (Map) entry.getValue();
+167c171
+<                     listenersCollection.addAll(listenersSet);
+---
+>                     listenersCollection.addAll(listenersSet.keySet());
+170a175,178
+>         
+>         public boolean isEmpty() {
+>             return listenersMap.isEmpty();
+>         }
+180a189
+> 
+209a219,222
+>             if (diagramEventBroker.editingDomainRef == null) {
+> 				diagramEventBroker.editingDomainRef = new WeakReference(
+> 					editingDomain);
+> 			}
+233c246,249
+<     		return new DiagramEventBroker();
+---
+>             DiagramEventBroker diagramEventBroker =  new DiagramEventBroker();
+>             diagramEventBroker.editingDomainRef = new WeakReference(
+>                 editingDomain);
+>             return diagramEventBroker;
+264c280
+<         Set elementsInPersistQueue = new HashSet();
+---
+>         Set elementsInPersistQueue = new LinkedHashSet();
+265a282,285
+>         TransactionalEditingDomain editingDomain = (TransactionalEditingDomain) editingDomainRef
+>             .get();
+>         boolean hasPreListeners = (preListeners.isEmpty() == false);
+>         List viewsToPersistList = new ArrayList();
+272c292
+<                 if (deletedObjects.contains(notification.getNotifier())) {
+---
+>             	if (deletedObjects.contains(notifier)) {
+275c295,303
+<                 Command cmd = handleTransactionAboutToCommitEvent(notification,elementsInPersistQueue);
+---
+>                 if (editingDomain != null) {
+>                     View viewToPersist = getViewToPersist(notification,
+>                         elementsInPersistQueue);
+>                     if (viewToPersist != null) {
+>                         viewsToPersistList.add(viewToPersist);
+>                     }
+>                 }
+>                 if (hasPreListeners) {
+>                     Command cmd = fireTransactionAboutToCommit(notification);
+281c309,316
+<         elementsInPersistQueue.clear();
+---
+>         }
+> 
+>         if (viewsToPersistList.isEmpty() == false) {
+>             PersistViewsCommand persistCmd = new PersistViewsCommand(
+>                 editingDomain, viewsToPersistList);
+>             cc.append(new EMFOperationCommand(editingDomain, persistCmd));
+>         }
+> 
+291a327,329
+>     	if (postListeners.isEmpty()) {
+>             return;
+>         }
+300,301c338
+<                 if (deletedObjects.contains(notification.getNotifier())&&
+<                     !customNotification) {
+---
+>                 if (!customNotification && deletedObjects.contains(notifier)) {
+305c342
+<                 handleElementEvent(notification);
+---
+>                 fireNotification(notification);
+339,341c376
+<             false);
+<         if (!listenerList.isEmpty()) {
+<             List listenersSnapShot = new ArrayList(listenerList);
+---
+>         	postListeners);
+343c378
+<                 for (Iterator listenerIT = listenersSnapShot.iterator(); listenerIT
+---
+> 			for (Iterator listenerIT = listenerList.iterator(); listenerIT
+351d385
+<     }
+353c387,394
+<     private Command fireTransactionAboutToCommit(Notification event,Set elementsInPersistQueue) {
+---
+>     /**
+>      * Forwards the event to all interested listeners.
+>      * 
+>      * @param event
+>      *            the event to handle
+>      * @p
+>      */
+>     private Command fireTransactionAboutToCommit(Notification event) {
+355,359c396
+<             true);
+<         CompoundCommand cc = new CompoundCommand();
+<         preparePersistCommand(event,cc,elementsInPersistQueue);
+<         if (!listenerList.isEmpty()) {
+<             List listenersSnapShot = new ArrayList(listenerList);
+---
+>             preListeners);       
+361,362c398,399
+<                 
+<                 for (Iterator listenerIT = listenersSnapShot.iterator(); listenerIT
+---
+>         	 CompoundCommand cc = new CompoundCommand();            
+>             for (Iterator listenerIT = listenerList.iterator(); listenerIT
+374,376d410
+<         }
+<         
+<         if (cc.isEmpty())
+378,379d411
+<         
+<         return cc;
+382,383c414
+<     private void preparePersistCommand(Notification event, CompoundCommand cc, Set elementsInPersistQueue) {
+<         PersistElementCommand persistCmd = null;
+---
+>     private View getViewToPersist(Notification event, Set elementsInPersistQueue) {
+386c417,418
+<             while (elementToPersist != null && !(elementToPersist instanceof View)) {
+---
+>             while (elementToPersist != null
+>                 && !(elementToPersist instanceof View)) {
+389c421,422
+<             if (elementToPersist != null && !elementsInPersistQueue.contains(elementToPersist)
+---
+>             if (elementToPersist != null
+>                 && !elementsInPersistQueue.contains(elementToPersist)
+393c426,433
+<                     persistCmd = getPersistViewCommand((View)elementToPersist);
+---
+>                     View view = (View) elementToPersist;
+>                     if (!view.isMutable()) {
+>                         // get Top view needs to get persisted
+>                         View viewToPersist = ViewUtil.getTopViewToPersist(view);
+>                         if (viewToPersist != null) {                            
+>                             elementsInPersistQueue.add(viewToPersist);
+>                             return viewToPersist;
+>                         }
+397,398c437,438
+<         if (persistCmd!=null && persistCmd.getEditingDomain()!=null)
+<             cc.append(new EMFOperationCommand(persistCmd.getEditingDomain(),persistCmd));
+---
+>         }
+>         return null;
+531,548c571
+<     public final void finalize() {
+<         try {
+<             for (Iterator iter = instanceMap.keySet().iterator(); iter
+<                 .hasNext();) {
+<                 TransactionalEditingDomain editingDomain = (TransactionalEditingDomain) iter
+<                     .next();
+<                 editingDomain
+<                     .removeResourceSetListener((DiagramEventBroker) ((WeakReference) instanceMap
+<                         .get(editingDomain)).get());
+<             }
+<         } catch (Throwable ignored) {
+<             // intentionally ignored
+<         }
+<     }
+< 
+<     private Set getNotificationListeners(Object notifier, boolean preCommit) {
+<         NotifierToKeyToListenersSetMap listeners = preCommit ? preListeners
+<             : postListeners;
+---
+>     private Set getNotificationListeners(Object notifier, NotifierToKeyToListenersSetMap listeners) {       
+559,561c582
+<             boolean preCommit) {
+<         NotifierToKeyToListenersSetMap listeners = preCommit ? preListeners
+<             : postListeners;
+---
+>     		NotifierToKeyToListenersSetMap listeners) {
+564c585
+<                 Set listenersSet = new HashSet();
+---
+>                 Set listenersSet = new LinkedHashSet();
+588,589c609,610
+<             boolean preCommit) {
+<         HashSet listenerSet = new HashSet();
+---
+>     		NotifierToKeyToListenersSetMap listeners) {
+>         Set listenerSet = new LinkedHashSet();
+592c613
+<             .getFeature(), preCommit);
+---
+>             .getFeature(), listeners);
+604c625
+<                 preCommit));
+---
+>             	listeners));
+607c628
+<                 preCommit);
+---
+>             	listeners);
+612c633
+<             addListenersOfNotifier(listenerSet, notifier, event, preCommit);
+---
+>             addListenersOfNotifier(listenerSet, notifier, event, listeners);
+629c650
+<             Notification event, boolean preCommit) {
+---
+>             Notification event, NotifierToKeyToListenersSetMap listeners) {
+632c653
+<                 .getFeature(), preCommit);
+---
+>                 .getFeature(), listeners);
+647,698d667
+<     /**
+<      * Forwards the event to all interested listeners.
+<      * 
+<      * @param event
+<      *            the event to handle
+<      * @p
+<      */
+<     private Command handleTransactionAboutToCommitEvent(Notification event, Set elementsInPersistQueue) {
+<         EObject element = (EObject) event.getNotifier();
+<         if (element != null) {
+<             return fireTransactionAboutToCommit(event,elementsInPersistQueue);
+<         }
+<         return null;
+<     }
+<     
+<     
+<     /**
+<      * Forwards the event to all interested listeners.
+<      * 
+<      * @param event
+<      *            the event to handle
+<      * 
+<      */
+<     private void handleElementEvent(Notification event) {
+<         EObject element = (EObject) event.getNotifier();
+<         if (element != null) {
+<             fireNotification(event);
+<         }
+<     }
+< 
+<     /**
+<      * Returns a persisted view command. This command if executed will persisted
+<      * the passed view and all its required parents.
+<      * @param view the view to persist
+<      * @return the command to persist the view; the return value can be null
+<      */
+<     private PersistElementCommand getPersistViewCommand(View view) {
+<         PersistElementCommand pvc = null;
+<         // only immutable views can be persisted
+<         if (!view.isMutable()) {
+<             TransactionalEditingDomain editingDomain = TransactionUtil.getEditingDomain(view);
+<             // get Top view needs to get persisted
+<             View viewToPersist = ViewUtil.getTopViewToPersist(view);
+<             if (viewToPersist!=null){
+<                 // now the command that will persist the view
+<                 //Map options = Collections.singletonMap( Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+<                 pvc = new PersistElementCommand(editingDomain, viewToPersist /*, options*/);
+<             }
+<         }
+<         return pvc;
+<         
+<     }

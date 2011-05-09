@@ -1,0 +1,83 @@
+18a19
+> import java.util.Map;
+19a21
+> import org.eclipse.core.commands.ExecutionException;
+20a23,30
+> import org.eclipse.core.runtime.IProgressMonitor;
+> import org.eclipse.core.runtime.IStatus;
+> import org.eclipse.core.runtime.NullProgressMonitor;
+> import org.eclipse.core.runtime.Status;
+> import org.eclipse.emf.transaction.Transaction;
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> import org.eclipse.emf.workspace.AbstractEMFOperation;
+22c32,37
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+---
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+24d38
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+114c128
+< 		SetMutability(_immutable);
+---
+> 		setMutability(_immutable);
+118,120c132,147
+< 	private void SetMutability(final boolean immutable) {
+< 		MEditingDomainGetter.getMEditingDomain(_viewAdapters).runAsUnchecked(new MRunnable() {
+< 			public Object run() {
+---
+> 	private void setMutability(final boolean immutable) {
+> 		if (!_viewAdapters.isEmpty()) {
+> 			
+> 			TransactionalEditingDomain editingDomain = TransactionUtil
+> 				.getEditingDomain(((IAdaptable) _viewAdapters.get(0))
+> 					.getAdapter(View.class));
+> 			if (editingDomain != null) {
+> 
+> 				Map options = Collections.singletonMap(
+> 					Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+> 				AbstractEMFOperation operation = new AbstractEMFOperation(
+> 					editingDomain, StringStatics.BLANK, options) {
+> 
+> 					protected IStatus doExecute(IProgressMonitor monitor,
+> 							IAdaptable info)
+> 						throws ExecutionException {
+124c151,152
+< 					View notationView = (View)adapter.getAdapter(View.class);
+---
+> 							View notationView = (View) adapter
+> 								.getAdapter(View.class);
+129c157,172
+< 				return null; 
+---
+> 						return Status.OK_STATUS;
+> 					}
+> 				};
+> 				try {
+> 					operation.execute(new NullProgressMonitor(), null);
+> 				} catch (ExecutionException e) {
+> 					Trace.catching(DiagramUIPlugin.getInstance(),
+> 						DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+> 						"setMutability", e); //$NON-NLS-1$
+> 					Log.warning(DiagramUIPlugin.getInstance(),
+> 						DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING,
+> 						"setMutability", e); //$NON-NLS-1$
+> 
+> 				}
+> 
+> 			}
+131d173
+< 		});
+147c189
+< 		SetMutability(_immutable);
+---
+> 		setMutability(_immutable);
+154c196
+< 		SetMutability(!_immutable);
+---
+> 		setMutability(!_immutable);

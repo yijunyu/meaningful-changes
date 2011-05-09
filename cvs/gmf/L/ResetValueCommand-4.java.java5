@@ -1,0 +1,68 @@
+package org.eclipse.gmf.runtime.lite.properties;
+
+import org.eclipse.emf.common.util.BasicEList;
+
+import org.eclipse.emf.common.util.EList;
+
+import org.eclipse.emf.edit.provider.IItemPropertySource;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.ui.views.properties.IPropertySource;
+
+import org.eclipse.ui.views.properties.IPropertySource2;
+
+class ResetValueCommand extends Command {
+    protected Object propertyName;
+    protected Object undoValue;
+    protected IPropertySource target;
+
+    public ResetValueCommand () {
+        super ("Restore Default Value");
+    }
+
+    public boolean canExecute () {
+        boolean answer = false;
+        if (target != null && propertyName != null) {
+            answer = target.isPropertySet (propertyName);
+            if (target instanceof IPropertySource2) {
+                answer = answer && (((IPropertySource2) target).isPropertyResettable (propertyName));
+            }
+        }
+        return answer;
+    }
+
+    public void execute () {
+        undoValue = target.getPropertyValue (propertyName);
+        if (undoValue instanceof IPropertySource) {
+            undoValue = ((IPropertySource) undoValue).getEditableValue ();
+        } else if (undoValue instanceof IItemPropertySource) {
+            undoValue = ((IItemPropertySource) undoValue).getEditableValue (propertyName);
+            if (undoValue instanceof EList) {
+                EList theValue = new BasicEList ();
+                theValue.addAll ((EList) undoValue);
+                undoValue = theValue;
+            }
+        }
+
+        redo ();
+    }
+
+    public void setTarget (IPropertySource propSource) {
+        target = propSource;
+    }
+
+    public void redo () {
+        target.resetPropertyValue (propertyName);
+    }
+
+    public void setPropertyId (Object pName) {
+        propertyName = pName;
+    }
+
+    public void undo () {
+        target.setPropertyValue (propertyName, undoValue);
+    }
+
+}
+

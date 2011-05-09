@@ -1,0 +1,100 @@
+package org.eclipse.gmf.runtime.diagram.ui.commands;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.gmf.runtime.common.core.command.AbstractCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.ui.dialogs.PopupDialog;
+
+import org.eclipse.gmf.runtime.diagram.ui.menus.PopupMenu;
+
+import org.eclipse.jface.dialogs.Dialog;
+
+import org.eclipse.swt.widgets.Shell;
+
+public class PopupMenuCommand extends AbstractCommand {
+    public static final int POPUP_MENU = 1;
+    public static final int POPUP_DIALOG = 2;
+    private Shell parentShell;
+    private PopupMenu popupMenu;
+    private PopupDialog popupDialog;
+
+    public PopupMenuCommand (String label, Shell parentShell) {
+        super (label, null);
+        setParentShell (parentShell);
+    }
+
+    public PopupMenuCommand (String label, Shell parentShell, PopupMenu popupMenu) {
+        super (label, null);
+        setParentShell (parentShell);
+        setPopupMenu (popupMenu);
+    }
+
+    protected CommandResult doExecuteWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException {
+        if (getPopupMenu () != null) {
+            if (getPopupMenu ().show (getParentShell ()) == false) {
+                progressMonitor.setCanceled (true);
+                return CommandResult.newCancelledCommandResult ();
+            }
+            return CommandResult.newOKCommandResult (getPopupMenu ().getResult ());
+        } else if (getPopupDialog () != null) {
+            if (getPopupDialog ().open () == Dialog.CANCEL || getPopupDialog ().getResult () == null || getPopupDialog ().getResult ().length <= 0) {
+                progressMonitor.setCanceled (true);
+                return CommandResult.newCancelledCommandResult ();
+            }
+            return CommandResult.newOKCommandResult (getPopupDialog ().getResult () [0]);
+        }
+
+        return CommandResult.newOKCommandResult ();
+    }
+
+    protected CommandResult doRedoWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException {
+        return CommandResult.newOKCommandResult ();
+    }
+
+    protected CommandResult doUndoWithResult (IProgressMonitor progressMonitor, IAdaptable info) throws ExecutionException {
+        return CommandResult.newOKCommandResult ();
+    }
+
+    public boolean canRedo () {
+        return true;
+    }
+
+    public boolean canUndo () {
+        return true;
+    }
+
+    protected Shell getParentShell () {
+        return parentShell;
+    }
+
+    public void setParentShell (Shell parentShell) {
+        this.parentShell = parentShell;
+    }
+
+    protected PopupMenu getPopupMenu () {
+        return popupMenu;
+    }
+
+    public void setPopupMenu (PopupMenu popupMenu) {
+        this.popupMenu = popupMenu;
+        this.popupDialog = null;
+    }
+
+    protected PopupDialog getPopupDialog () {
+        return popupDialog;
+    }
+
+    public void setPopupDialog (PopupDialog popupDialog) {
+        this.popupDialog = popupDialog;
+        this.popupMenu = null;
+    }
+
+}
+

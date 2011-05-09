@@ -1,0 +1,152 @@
+32a33,34
+> import org.eclipse.emf.ecore.EStructuralFeature;
+> 
+36a39,40
+> import org.eclipse.emf.ecore.impl.EClassImpl;
+> 
+44a49,50
+> import org.eclipse.emf.ecore.util.ECrossReferenceEList;
+> 
+52a59,60
+>     private static Map eClassToChangeableFeatures = new HashMap ();
+>     private static List nullList = new ArrayList (1);
+87c95
+<         if (reference.isContainment ()) {
+---
+>         if (! isImportExportCapable (reference, (EObject) notifier)) {
+213c221
+<                 for (Iterator iter = adapter.getInverseReferencers (value, null, null).iterator ();
+---
+>                 for (Iterator iter = adapter.getInverseReferences (value).iterator ();
+215c223,228
+<                     registerReference (((EObject) iter.next ()).eResource (), resource);
+---
+>                     EStructuralFeature.Setting next = (EStructuralFeature.Setting) iter.next ();
+>                     EReference ref = (EReference) next.getEStructuralFeature ();
+>                     EObject owner = next.getEObject ();
+>                     if (isImportExportCapable (ref, owner)) {
+>                         registerReference (owner.eResource (), resource);
+>                     }
+219c232
+<             EContentsEList.FeatureIterator crossReferences = (EContentsEList.FeatureIterator) (resolve () ? value.eCrossReferences ().iterator () : ((InternalEList) value.eCrossReferences ()).basicIterator ());
+---
+>             EContentsEList.FeatureIterator crossReferences = getOptimizedCrossReferenceIterator (value);
+224c237
+<                     if (eReference.isChangeable ()) {
+---
+>                     if (isImportExportCapable (eReference, referent)) {
+231c244
+<                 for (Iterator iter = adapter.getInverseReferencers (value, null, null).iterator ();
+---
+>                 for (Iterator iter = adapter.getInverseReferences (value).iterator ();
+233c246,251
+<                     deregisterReference (((EObject) iter.next ()).eResource (), resource);
+---
+>                     EStructuralFeature.Setting next = (EStructuralFeature.Setting) iter.next ();
+>                     EReference ref = (EReference) next.getEStructuralFeature ();
+>                     EObject owner = next.getEObject ();
+>                     if (isImportExportCapable (ref, owner)) {
+>                         deregisterReference (owner.eResource (), resource);
+>                     }
+254c272
+<             EContentsEList.FeatureIterator crossReferences = (EContentsEList.FeatureIterator) (resolve () ? eObject.eCrossReferences ().iterator () : ((InternalEList) eObject.eCrossReferences ()).basicIterator ());
+---
+>             EContentsEList.FeatureIterator crossReferences = getOptimizedCrossReferenceIterator (eObject);
+259c277
+<                     if (eReference.isChangeable ()) {
+---
+>                     if (isImportExportCapable (eReference, referent)) {
+398a417,424
+>     public Set getInverseReferencersCrossResource (EObject referenced, EReference reference, EClass type) {
+>         return getReferencers (getInverseReferencesCrossResource (referenced), reference, type);
+>     }
+> 
+>     public Collection getInverseReferencesCrossResource (EObject eObject) {
+>         return getInverseReferencesCrossResource (eObject, ! resolve ());
+>     }
+> 
+472c498
+<     public Collection getInverseReferences (EObject eObject, boolean resolve) {
+---
+>     public Collection getInverseReferences (EObject eObject, boolean _resolve) {
+474c500
+<         if (resolve) {
+---
+>         if (_resolve) {
+507a534,609
+>     private static List getCrossReferencesChangeableFeatures (EClass eCls) {
+>         List features = (List) eClassToChangeableFeatures.get (eCls);
+>         if (features == null) {
+>             features = nullList;
+>             EStructuralFeature [] crossReferenceFeatures = ((EClassImpl.FeatureSubsetSupplier) eCls.getEAllStructuralFeatures ()).crossReferences ();
+>             if (crossReferenceFeatures != null) {
+>                 features = new ArrayList (crossReferenceFeatures.length);
+>                 for (int i = 0;
+>                 i < crossReferenceFeatures.length; i ++) {
+>                     EStructuralFeature feature = crossReferenceFeatures [i];
+>                     if (feature.isChangeable ()) features.add (feature);
+> 
+>                 }
+>             }
+>             eClassToChangeableFeatures.put (eCls, features);
+>         }
+>         return features != nullList ? features : null;
+>     }
+> 
+>     private EContentsEList.FeatureIterator getOptimizedCrossReferenceIterator (EObject eObj) {
+>         List features = getCrossReferencesChangeableFeatures (eObj.eClass ());
+>         if (features != null) {
+>             EContentsEList list = null;
+>             if (features.size () > 0) {
+>                 list = new ECrossReferenceEList (eObj, (EStructuralFeature []) features.toArray (new EStructuralFeature [features.size ()])) {
+>                 }
+> 
+>                 ;
+>             } else {
+>                 list = ECrossReferenceEList.EMPTY_CROSS_REFERENCE_ELIST;
+>             }
+>             return (EContentsEList.FeatureIterator) (resolve () ? list.iterator () : ((InternalEList) list).basicIterator ());
+>         }
+>         return (EContentsEList.FeatureIterator) ECrossReferenceEList.EMPTY_CROSS_REFERENCE_ELIST.iterator ();
+>     }
+> 
+>     public Collection getInverseReferencesCrossResource (EObject eObject, boolean resolve) {
+>         Collection result = new ArrayList ();
+>         if (resolve) {
+>             resolveAll (eObject);
+>         }
+>         EObject eContainer = eObject.eContainer ();
+>         if (eContainer != null) {
+>             result.add (((InternalEObject) eContainer).eSetting (eObject.eContainmentFeature ()));
+>         }
+>         Collection nonNavigableInverseReferences = (Collection) inverseCrossReferencer.get (eObject);
+>         if (nonNavigableInverseReferences != null) {
+>             result.addAll (nonNavigableInverseReferences);
+>         }
+>         for (Iterator i = eObject.eClass ().getEAllReferences ().iterator ();
+>         i.hasNext ();) {
+>             EReference eReference = (EReference) i.next ();
+>             EReference eOpposite = eReference.getEOpposite ();
+>             if (eOpposite != null && isImportExportCapable (eReference, eObject) && eObject.eIsSet (eReference)) {
+>                 if (FeatureMapUtil.isMany (eObject, eReference)) {
+>                     Object collection = eObject.eGet (eReference);
+>                     for (Iterator j = resolve () ? ((Collection) collection).iterator () : ((InternalEList) collection).basicIterator ();
+>                     j.hasNext ();) {
+>                         InternalEObject referencingEObject = (InternalEObject) j.next ();
+>                         result.add (referencingEObject.eSetting (eOpposite));
+>                     }
+>                 } else {
+>                     InternalEObject referencingEObject = ((InternalEObject) eObject.eGet (eReference, resolve ()));
+>                     if (referencingEObject != null) {
+>                         result.add (referencingEObject.eSetting (eOpposite));
+>                     }
+>                 }
+>             }
+>         }
+>         return result;
+>     }
+> 
+>     protected boolean isImportExportCapable (EReference reference, EObject owner) {
+>         return ! reference.isContainer () && ! reference.isContainment () && reference.isResolveProxies () && reference.isChangeable ();
+>     }
+> 

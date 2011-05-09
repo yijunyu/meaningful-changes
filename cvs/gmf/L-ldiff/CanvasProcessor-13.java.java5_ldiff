@@ -1,0 +1,126 @@
+11,12d10
+< import org.eclipse.emf.ecore.util.EcoreUtil;
+< 
+22a13,13
+> import org.eclipse.gmf.gmfgraph.ChildAccess;
+23,23d12
+< import org.eclipse.gmf.gmfgraph.Figure;
+24,24c14,14
+< 
+---
+> 
+25,25d14
+< import org.eclipse.gmf.gmfgraph.FigureAccessor;
+29,29c23,23
+< import org.eclipse.gmf.gmfgraph.FigureHandle;
+---
+> import org.eclipse.gmf.gmfgraph.FigureDescriptor;
+30,30d23
+< 
+39,40d34
+< import org.eclipse.gmf.graphdef.codegen.NamingStrategy;
+< 
+101,101c95,95
+<             handleFigure (next.getNodeFigure ());
+---
+>             handleFigure (next.getFigure ());
+107,107c101,101
+<             handleFigure (next.getConnectionFigure ());
+---
+>             handleFigure (next.getFigure ());
+113,113c107,107
+<             FigureHandle nextFigure = next.getFigure ();
+---
+>             FigureDescriptor nextFigure = next.getFigure ();
+116a111,111
+>             handleFigure (nextFigure);
+117,121d110
+<             if (nextFigure instanceof Figure) {
+<                 handleFigure ((Figure) nextFigure);
+<             } else {
+<                 throw new IllegalStateException ("Don't support accessors for compartments yet");
+<             }
+126a117,118
+>             if (next.getAccessor () != null) {
+>                 ChildAccess labelAccess = next.getAccessor ();
+127,141d116
+<             if (next.getFigure () instanceof FigureAccessor) {
+<                 assert myElementCopier.containsKey (next.getFigure ()) : "Should be copied as part of previously referenced CustomFigure";
+<             } else {
+<                 assert next.getFigure () instanceof Figure;
+<                 Figure f = (Figure) next.getFigure ();
+<                 if (isInsideProcessedFigure (f)) {
+<                     FigureAccessor accessor = GMFGraphFactory.eINSTANCE.createFigureAccessor ();
+<                     accessor.setAccessor (NamingStrategy.INSTANCE.getChildFigureGetterName (f));
+<                     myElementCopier.put (f, accessor);
+<                     Figure parent = f;
+<                     do {
+<                         parent = parent.getParent ();
+<                     } while (! myElementCopier.containsKey (parent));
+<                     assert myElementCopier.get (parent) instanceof CustomFigure : "We used to keep custom figures only in the mirrored gallery";
+<                     ((CustomFigure) myElementCopier.get (parent)).getCustomChildren ().add (accessor);
+142a120,120
+>                 handleFigure (next.getFigure ());
+143,144d119
+<                     handleFigure (f);
+<                 }
+148a125,125
+>     private void handleFigure (FigureDescriptor fd) throws InterruptedException {
+149,153d124
+<     private boolean isInsideProcessedFigure (Figure f) {
+<         return EcoreUtil.isAncestor (myElementCopier.keySet (), f);
+<     }
+< 
+<     private void handleFigure (Figure figure) throws InterruptedException {
+154,154c126,126
+<         if (myElementCopier.isSubstituted (figure)) {
+---
+>         if (myElementCopier.isSubstituted (fd)) {
+156a129,130
+>         if (fd.getActualFigure () instanceof CustomFigure && isPlainBareCustomFigure ((CustomFigure) fd.getActualFigure ())) {
+>             final CustomFigure f = (CustomFigure) fd.getActualFigure ();
+157,157d128
+<         if (figure instanceof CustomFigure && isPlainBareCustomFigure ((CustomFigure) figure)) {
+158,158c131,131
+<             myOutcomeGallery.getFigures ().add ((CustomFigure) myElementCopier.copy (figure));
+---
+>             myOutcomeGallery.getFigures ().add (myElementCopier.xcopy (f));
+160,160c133,133
+<             String fqn = myCallback.visitFigure (figure);
+---
+>             String fqn = myCallback.visitFigure (fd);
+161,161c134,134
+<             myElementCopier.registerSubstitution (figure, createCustomFigure (figure, fqn));
+---
+>             myElementCopier.registerSubstitution (fd, createCustomFigure (fd, fqn));
+169a143,143
+>         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getRealFigure_Name ());
+170,170d142
+<         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getIdentity_Name ());
+171,171c144,144
+<         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getFigure_Children ());
+---
+>         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getRealFigure_Children ());
+172,174d144
+<         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getFigureMarker_Parent ());
+<         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getFigureHandle_ReferencingElements ());
+<         featuresToCheck.remove (GMFGraphPackage.eINSTANCE.getCustomClass_BundleName ());
+188,188c158,158
+<     private CustomFigure createCustomFigure (Figure original, String fqn) {
+---
+>     private FigureDescriptor createCustomFigure (FigureDescriptor original, String fqn) {
+189,189c159,159
+<         CustomFigure cf = DiagramElementsCopier.createCustomFigure (original);
+---
+>         CustomFigure cf = GalleryMirrorProcessor.createCustomFigure (original.getActualFigure ());
+190,190d159
+<         cf.setName (original.getName ());
+191a161,165
+>         FigureDescriptor fd = GMFGraphFactory.eINSTANCE.createFigureDescriptor ();
+>         fd.setName (original.getName ());
+>         fd.setActualFigure (cf);
+>         myOutcomeGallery.getDescriptors ().add (fd);
+>         return fd;
+192,193d160
+<         myOutcomeGallery.getFigures ().add (cf);
+<         return cf;

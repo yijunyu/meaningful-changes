@@ -1,0 +1,67 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2006 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2007 IBM Corporation and others.
+13a14,15
+> import java.util.ArrayList;
+> import java.util.Iterator;
+18a21,21
+> import org.eclipse.gef.EditPart;
+22a26,26
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.GroupEditPart;
+154,157d157
+< 						ENamedElement element = PackageUtil
+< 							.getElement(thePropertyId);
+< 						if (element instanceof EStructuralFeature)
+< 							setResult(editPart
+158,158c158,158
+< 								.getStructuralFeatureValue((EStructuralFeature) element));
+---
+> 						setResult(getStructuralFeatureValue(editPart, thePropertyId));
+185a186,231
+>     /**
+>      * Override to return true to have this property action work on the shapes
+>      * in a <code>GroupEditPart</code> as if the shapes were multi-selected.
+>      * 
+>      * @return true if this property action is to dig into the shapes of groups
+>      */
+>     protected boolean digIntoGroups() {
+>         return false;
+>     }
+>     
+>     /**
+>      * Gets the structural feature value of the property id on the editpart
+>      * passed in or one of the children if the editpart is a group and
+>      * {@link #digIntoGroups()} returns true.
+>      * 
+>      * @param editpart
+>      *            the editpart
+>      * @param thePropertyId
+>      *            the property id
+>      */
+>     private Object getStructuralFeatureValue(IGraphicalEditPart editpart,
+>             final String thePropertyId) {
+>         ENamedElement element = PackageUtil.getElement(thePropertyId);
+>         if (element instanceof EStructuralFeature) {
+>             if (digIntoGroups() && editpart instanceof GroupEditPart) {
+>                 editpart = (IGraphicalEditPart) editpart.getChildren().get(0);
+>             }
+>             return editpart
+>                 .getStructuralFeatureValue((EStructuralFeature) element);
+>         }
+>         return null;
+>     }
+> 
+>     protected List getTargetEditParts(EditPart editpart) {
+>         if (digIntoGroups() && editpart instanceof GroupEditPart) {
+>             List targetEPs = new ArrayList();
+>             for (Iterator iterator = ((GroupEditPart) editpart)
+>                 .getShapeChildren().iterator(); iterator.hasNext();) {
+>                 EditPart childEP = (EditPart) iterator.next();
+>                 targetEPs.addAll(super.getTargetEditParts(childEP));
+>             }
+>             return targetEPs;
+>         }
+>         return super.getTargetEditParts(editpart);
+>     }
+> 

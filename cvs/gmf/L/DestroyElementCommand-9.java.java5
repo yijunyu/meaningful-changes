@@ -1,0 +1,136 @@
+package org.eclipse.gmf.runtime.emf.type.core.commands;
+
+import java.util.Collection;
+
+import java.util.Iterator;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.emf.ecore.EStructuralFeature.Setting;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.ecore.util.EcoreUtil;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.emf.core.util.CrossReferenceAdapter;
+
+import org.eclipse.gmf.runtime.emf.type.core.ElementTypeRegistry;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypeDebugOptions;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePlugin;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePluginStatusCodes;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.l10n.EMFTypeCoreMessages;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest;
+
+import org.eclipse.osgi.util.NLS;
+
+public class DestroyElementCommand extends EditElementCommand {
+    private final EObject elementToDestroy;
+
+    public DestroyElementCommand (DestroyElementRequest request) {
+        super (request.getLabel (), request.getContainer (), request);
+        this.elementToDestroy = request.getElementToDestroy ();
+    }
+
+    public static void destroy (EObject eObject) {
+        Resource resource = eObject.eResource ();
+        if (resource != null) {
+            DestroyElementRequest destroy = new DestroyElementRequest (TransactionUtil.getEditingDomain (resource), eObject, false);
+            IElementType context = ElementTypeRegistry.getInstance ().getElementType (destroy.getEditHelperContext ());
+            ICommand command = context.getEditCommand (destroy);
+            if (command != null && command.canExecute ()) {
+                try {
+                    command.execute (new NullProgressMonitor (), null);
+                } catch (ExecutionException e) {
+                    Trace.catching (EMFTypePlugin.getPlugin (), EMFTypeDebugOptions.EXCEPTIONS_CATCHING, DestroyElementCommand.class, "destroy(EObject)", e);
+                    Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.COMMAND_FAILURE, NLS.bind (EMFTypeCoreMessages.destroyCommandFailed, context.getDisplayName ()), e);
+                }
+            }
+        }
+    }
+
+    protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+        EObject destructee = getElementToDestroy ();
+        if ((destructee != null) && (destructee.eResource () != null)) {
+            tearDownIncomingReferences (destructee);
+            tearDownOutgoingReferences (destructee);
+            EcoreUtil.remove (destructee);
+            Resource res = destructee.eResource ();
+            if (res != null) {
+                res.getContents ().remove (destructee);
+            }
+        }
+        return CommandResult.newOKCommandResult ();
+    }
+
+    protected void tearDownIncomingReferences (EObject destructee) {
+        CrossReferenceAdapter crossReferencer = CrossReferenceAdapter.getExistingCrossReferenceAdapter (destructee);
+        if (crossReferencer != null) {
+            Collection inverseReferences = crossReferencer.getInverseReferences (destructee);
+            if (inverseReferences != null) {
+                int size = inverseReferences.size ();
+                if (size > 0) {
+                    Setting setting;
+                    EReference eRef;
+                    Setting [] settings = (Setting []) inverseReferences.toArray (new Setting [size]);
+                    for (int i = 0;
+                    i < size; ++ i) {
+                        setting = settings [i];
+                        eRef = (EReference) setting.getEStructuralFeature ();
+                        if (eRef.isChangeable () && (eRef.isDerived () == false) && (eRef.isContainment () == false) && (eRef.isContainer () == false)) {
+                            EcoreUtil.remove (setting.getEObject (), eRef, destructee);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    protected void tearDownOutgoingReferences (EObject destructee) {
+        for (Iterator iter = destructee.eClass ().getEAllReferences ().iterator ();
+        iter.hasNext ();) {
+            EReference reference = (EReference) iter.next ();
+            if (reference.isChangeable () && ! reference.isDerived () && ! reference.isContainer () && ! reference.isContainment () && (reference.getEOpposite () == null)) {
+                if (destructee.eIsSet (reference)) {
+                    destructee.eUnset (reference);
+                }
+            }
+        }
+    }
+
+    protected EObject getElementToDestroy () {
+        return elementToDestroy;
+    }
+
+    public boolean canExecute () {
+        return (elementToDestroy != null) && (elementToDestroy.eResource () != null);
+    }
+
+}
+

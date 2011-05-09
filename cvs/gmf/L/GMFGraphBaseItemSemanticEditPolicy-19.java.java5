@@ -1,0 +1,346 @@
+package org.eclipse.gmf.graphdef.editor.edit.policies;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.commands.CompoundCommand;
+
+import org.eclipse.gef.commands.UnexecutableCommand;
+
+import org.eclipse.gef.requests.ReconnectRequest;
+
+import org.eclipse.gmf.gmfgraph.ChildAccess;
+
+import org.eclipse.gmf.gmfgraph.Compartment;
+
+import org.eclipse.gmf.gmfgraph.DiagramElement;
+
+import org.eclipse.gmf.gmfgraph.DiagramLabel;
+
+import org.eclipse.gmf.gmfgraph.Figure;
+
+import org.eclipse.gmf.gmfgraph.FigureDescriptor;
+
+import org.eclipse.gmf.gmfgraph.Node;
+
+import org.eclipse.gmf.graphdef.editor.edit.helpers.GMFGraphBaseEditHelper;
+
+import org.eclipse.gmf.graphdef.editor.part.GMFGraphVisualIDRegistry;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.diagram.core.commands.DeleteCommand;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.CommandProxy;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.ICommandProxy;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.SemanticEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeTransactionalCommand;
+
+import org.eclipse.gmf.runtime.emf.type.core.ElementTypeRegistry;
+
+import org.eclipse.gmf.runtime.emf.type.core.IEditHelperContext;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.ConfigureRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.CreateElementRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyReferenceRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.DuplicateElementsRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.GetEditContextRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.IEditCommandRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.MoveRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.ReorientReferenceRelationshipRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.ReorientRelationshipRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.SetRequest;
+
+import org.eclipse.gmf.runtime.notation.Edge;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class GMFGraphBaseItemSemanticEditPolicy extends SemanticEditPolicy {
+    public static final String VISUAL_ID_KEY = "visual_id";
+
+    public Command getCommand (Request request) {
+        if (request instanceof ReconnectRequest) {
+            Object view = ((ReconnectRequest) request).getConnectionEditPart ().getModel ();
+            if (view instanceof View) {
+                Integer id = new Integer (GMFGraphVisualIDRegistry.getVisualID ((View) view));
+                request.getExtendedData ().put (VISUAL_ID_KEY, id);
+            }
+        }
+        return super.getCommand (request);
+    }
+
+    protected int getVisualID (IEditCommandRequest request) {
+        Object id = request.getParameter (VISUAL_ID_KEY);
+        return id instanceof Integer ? ((Integer) id).intValue () : - 1;
+    }
+
+    protected Command getSemanticCommand (IEditCommandRequest request) {
+        IEditCommandRequest completedRequest = completeRequest (request);
+        Object editHelperContext = completedRequest.getEditHelperContext ();
+        if (editHelperContext instanceof View || (editHelperContext instanceof IEditHelperContext && ((IEditHelperContext) editHelperContext).getEObject () instanceof View)) {
+            return null;
+        }
+        if (editHelperContext == null) {
+            editHelperContext = ViewUtil.resolveSemanticElement ((View) getHost ().getModel ());
+        }
+        IElementType elementType = ElementTypeRegistry.getInstance ().getElementType (editHelperContext);
+        if (elementType == ElementTypeRegistry.getInstance ().getType ("org.eclipse.gmf.runtime.emf.type.core.default")) {
+            elementType = null;
+        }
+        Command semanticCommand = getSemanticCommandSwitch (completedRequest);
+        if (semanticCommand != null) {
+            ICommand command = semanticCommand instanceof ICommandProxy ? ((ICommandProxy) semanticCommand).getICommand () : new CommandProxy (semanticCommand);
+            completedRequest.setParameter (GMFGraphBaseEditHelper.EDIT_POLICY_COMMAND, command);
+        }
+        if (elementType != null) {
+            ICommand command = elementType.getEditCommand (completedRequest);
+            if (command != null) {
+                if (! (command instanceof CompositeTransactionalCommand)) {
+                    TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost ()).getEditingDomain ();
+                    command = new CompositeTransactionalCommand (editingDomain, command.getLabel ()).compose (command);
+                }
+                semanticCommand = new ICommandProxy (command);
+            }
+        }
+        boolean shouldProceed = true;
+        if (completedRequest instanceof DestroyRequest) {
+            shouldProceed = shouldProceed ((DestroyRequest) completedRequest);
+        }
+        if (shouldProceed) {
+            if (completedRequest instanceof DestroyRequest) {
+                TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost ()).getEditingDomain ();
+                Command deleteViewCommand = new ICommandProxy (new DeleteCommand (editingDomain, (View) getHost ().getModel ()));
+                semanticCommand = semanticCommand == null ? deleteViewCommand : semanticCommand.chain (deleteViewCommand);
+            }
+            return semanticCommand;
+        }
+        return null;
+    }
+
+    protected Command getSemanticCommandSwitch (IEditCommandRequest req) {
+        if (req instanceof CreateRelationshipRequest) {
+            return getCreateRelationshipCommand ((CreateRelationshipRequest) req);
+        } else if (req instanceof CreateElementRequest) {
+            return getCreateCommand ((CreateElementRequest) req);
+        } else if (req instanceof ConfigureRequest) {
+            return getConfigureCommand ((ConfigureRequest) req);
+        } else if (req instanceof DestroyElementRequest) {
+            return getDestroyElementCommand ((DestroyElementRequest) req);
+        } else if (req instanceof DestroyReferenceRequest) {
+            return getDestroyReferenceCommand ((DestroyReferenceRequest) req);
+        } else if (req instanceof DuplicateElementsRequest) {
+            return getDuplicateCommand ((DuplicateElementsRequest) req);
+        } else if (req instanceof GetEditContextRequest) {
+            return getEditContextCommand ((GetEditContextRequest) req);
+        } else if (req instanceof MoveRequest) {
+            return getMoveCommand ((MoveRequest) req);
+        } else if (req instanceof ReorientReferenceRelationshipRequest) {
+            return getReorientReferenceRelationshipCommand ((ReorientReferenceRelationshipRequest) req);
+        } else if (req instanceof ReorientRelationshipRequest) {
+            return getReorientRelationshipCommand ((ReorientRelationshipRequest) req);
+        } else if (req instanceof SetRequest) {
+            return getSetCommand ((SetRequest) req);
+        }
+
+        return null;
+    }
+
+    protected Command getConfigureCommand (ConfigureRequest req) {
+        return null;
+    }
+
+    protected Command getCreateRelationshipCommand (CreateRelationshipRequest req) {
+        return null;
+    }
+
+    protected Command getCreateCommand (CreateElementRequest req) {
+        return null;
+    }
+
+    protected Command getSetCommand (SetRequest req) {
+        return null;
+    }
+
+    protected Command getEditContextCommand (GetEditContextRequest req) {
+        return null;
+    }
+
+    protected Command getDestroyElementCommand (DestroyElementRequest req) {
+        return null;
+    }
+
+    protected Command getDestroyReferenceCommand (DestroyReferenceRequest req) {
+        return null;
+    }
+
+    protected Command getDuplicateCommand (DuplicateElementsRequest req) {
+        return null;
+    }
+
+    protected Command getMoveCommand (MoveRequest req) {
+        return null;
+    }
+
+    protected Command getReorientReferenceRelationshipCommand (ReorientReferenceRelationshipRequest req) {
+        return UnexecutableCommand.INSTANCE;
+    }
+
+    protected Command getReorientRelationshipCommand (ReorientRelationshipRequest req) {
+        return UnexecutableCommand.INSTANCE;
+    }
+
+    protected final Command getGEFWrapper (ICommand cmd) {
+        return new ICommandProxy (cmd);
+    }
+
+    protected final Command getMSLWrapper (ICommand cmd) {
+        return getGEFWrapper (cmd);
+    }
+
+    protected EObject getSemanticElement () {
+        return ViewUtil.resolveSemanticElement ((View) getHost ().getModel ());
+    }
+
+    protected TransactionalEditingDomain getEditingDomain () {
+        return ((IGraphicalEditPart) getHost ()).getEditingDomain ();
+    }
+
+    protected Command getDestroyElementCommand (View view) {
+        EditPart editPart = (EditPart) getHost ().getViewer ().getEditPartRegistry ().get (view);
+        DestroyElementRequest request = new DestroyElementRequest (getEditingDomain (), false);
+        return editPart.getCommand (new EditCommandRequestWrapper (request, Collections.EMPTY_MAP));
+    }
+
+    protected CompoundCommand getDestroyEdgesCommand () {
+        CompoundCommand cmd = new CompoundCommand ();
+        View view = (View) getHost ().getModel ();
+        for (Iterator it = view.getSourceEdges ().iterator ();
+        it.hasNext ();) {
+            cmd.add (getDestroyElementCommand ((Edge) it.next ()));
+        }
+        for (Iterator it = view.getTargetEdges ().iterator ();
+        it.hasNext ();) {
+            cmd.add (getDestroyElementCommand ((Edge) it.next ()));
+        }
+        return cmd;
+    }
+
+    protected void addDestroyShortcutsCommand (CompoundCommand command) {
+        View view = (View) getHost ().getModel ();
+        if (view.getEAnnotation ("Shortcut") != null) {
+            return;
+        }
+        for (Iterator it = view.getDiagram ().getChildren ().iterator ();
+        it.hasNext ();) {
+            View nextView = (View) it.next ();
+            if (nextView.getEAnnotation ("Shortcut") == null || ! nextView.isSetElement () || nextView.getElement () != view.getElement ()) {
+                continue;
+            }
+            command.add (getDestroyElementCommand (nextView));
+        }
+    }
+
+    public static class LinkConstraints {
+        private static final String OPPOSITE_END_VAR = "oppositeEnd";
+
+        public static boolean canCreateChildAccess_4002 (FigureDescriptor source, Figure target) {
+            return canExistChildAccess_4002 (source, target);
+        }
+
+        public static boolean canCreateCompartmentAccessor_4003 (Compartment source, ChildAccess target) {
+            if (source != null) {
+                if (source.getAccessor () != null) {
+                    return false;
+                }
+            }
+            return canExistCompartmentAccessor_4003 (source, target);
+        }
+
+        public static boolean canCreateDiagramLabelAccessor_4004 (DiagramLabel source, ChildAccess target) {
+            if (source != null) {
+                if (source.getAccessor () != null) {
+                    return false;
+                }
+            }
+            return canExistDiagramLabelAccessor_4004 (source, target);
+        }
+
+        public static boolean canCreateNodeContentPane_4006 (Node source, ChildAccess target) {
+            if (source != null) {
+                if (source.getContentPane () != null) {
+                    return false;
+                }
+            }
+            return canExistNodeContentPane_4006 (source, target);
+        }
+
+        public static boolean canCreateDiagramElementFigure_4005 (DiagramElement source, FigureDescriptor target) {
+            if (source != null) {
+                if (source.getFigure () != null) {
+                    return false;
+                }
+            }
+            return canExistDiagramElementFigure_4005 (source, target);
+        }
+
+        public static boolean canExistChildAccess_4002 (FigureDescriptor source, Figure target) {
+            return true;
+        }
+
+        public static boolean canExistCompartmentAccessor_4003 (Compartment source, ChildAccess target) {
+            return true;
+        }
+
+        public static boolean canExistDiagramLabelAccessor_4004 (DiagramLabel source, ChildAccess target) {
+            return true;
+        }
+
+        public static boolean canExistNodeContentPane_4006 (Node source, ChildAccess target) {
+            return true;
+        }
+
+        public static boolean canExistDiagramElementFigure_4005 (DiagramElement source, FigureDescriptor target) {
+            return true;
+        }
+
+    }
+
+}
+

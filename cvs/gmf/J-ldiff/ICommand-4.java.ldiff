@@ -1,0 +1,156 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2004 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2006 IBM Corporation and others.
+14a15,15
+> import java.util.List;
+15a17,20
+> import org.eclipse.core.commands.operations.IOperationApprover;
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> import org.eclipse.core.commands.operations.OperationHistoryFactory;
+> import org.eclipse.core.resources.IFile;
+18a24,25
+>  * A self-composing undoable operation that has a {@link CommandResult} and a
+>  * list of affected {@link IFile}s.
+19,23d30
+<  * A unit of work that can potentially be undone and redone. {@link ICommand}s
+<  * can be executed by the
+<  * {@link org.eclipse.gmf.runtime.common.core.command.CommandManager}, which
+<  * will maintain a history of the commands that it has executed that are
+<  * eligible to be undone and redone.
+24,24c31,31
+<  * <P>
+---
+>  * <P>
+24a32,36
+>  * The command provides a list of {@link IFile}s that are expected to be
+>  * modified when the it is executed, undone or redone. An
+>  * {@link IOperationApprover} is registered with the
+>  * {@link OperationHistoryFactory#getOperationHistory()} to validate the
+>  * modification to these resources.
+25,27d31
+<  * Commands have a label that can be used to provide information to a client.
+<  * For example, the command label could be used as the text in an undo or redo
+<  * menu item.
+28,28c37,37
+<  * <P>
+---
+>  * <P>
+28a38,40
+>  * If an error occurs, or the progress monitor is canceled during execute, undo
+>  * or redo, the command should make every effort to roll back the changes it has
+>  * made up to that point.
+29,31d37
+<  * Progress through the work done by a command is monitored by an
+<  * {@link org.eclipse.core.runtime.IProgressMonitor} with which the command is
+<  * executed.
+38a43,43
+>  * @author ldamus
+39,46d42
+<  * @canBeSeenBy %partners
+<  */
+< public interface ICommand {
+< 
+< 	/**
+< 	 * Retrieves the label for this command. The label is typically a very brief
+< 	 * description (suitable for display in a menu item) of what this command
+< 	 * does when it is executed.
+47a45,45
+>  * @canBeSeenBy %partners
+48,48d44
+< 	 * @return The label for this command.
+49a47,47
+> public interface ICommand extends IUndoableOperation {
+50,50d46
+< 	public String getLabel();
+62,62d58
+< 	public CommandResult getCommandResult();
+68a94,97
+>      * 
+>      * @deprecated Commands that will modify resources and wish to have these
+>      *             resources validated should implement the
+>      *             {@link #getAffectedFiles()} interface.
+76a106,109
+>      * 
+>      * @deprecated No replacement. File validation is now done through a
+>      *             {@link IOperationApprover} registered with with the
+>      *             {@link OperationHistoryFactory#getOperationHistory()}.
+85,90d117
+< 	 */		
+< 	public CMValidator getValidator();
+< 	
+< 	/**
+< 	 * Returns a new command object that represents a composition of this
+< 	 * command with the specified <code>command</code> parameter.
+91a119,121
+>      * @deprecated No replacement. File validation is now done through a
+>      *             {@link IOperationApprover} registered with with the
+>      *             {@link OperationHistoryFactory#getOperationHistory()}.
+91a59,74
+> 	public abstract CommandResult getCommandResult();
+> 
+> 	/**
+> 	 * Returns the list of {@link IFile}s that are expected to be modified by
+> 	 * this command.
+> 	 * 
+> 	 * @return the list of {@link IFile}s that will be modified
+> 	 */
+> 	public abstract List getAffectedFiles();
+> 
+> 	/**
+> 	 * Returns a new command object that represents a composition of this
+> 	 * command with the specified <code>command</code> parameter.
+> 	 * 
+> 	 * @param operation
+> 	 *            The operation that is to be composed with this command.
+92,93d58
+< 	 * @param command
+< 	 *            The command that is to be composed with this command.
+94,94c75,75
+< 	 * @return A command that represents a composition of this command with the
+---
+> 	 * @return A command that represents a composition of this command with the
+95,95c76,76
+< 	 *         specified command.
+---
+> 	 *         specified command.
+95a77,87
+> 	 */
+> 	public abstract ICommand compose(IUndoableOperation operation);
+>     
+>     /**
+>      * Returns the simplest form of this command that is equivalent. Use this
+>      * method to remove unnecessary nesting of commands.
+>      * 
+>      * @return the simplest form of this command that is equivalent
+>      */
+>     public abstract ICommand reduce();
+> 
+96a123,123
+>     public CMValidator getValidator();
+97,97d122
+< 	ICommand compose(ICommand command);
+103a130,131
+>      * 
+>      * @deprecated Use {@link IUndoableOperation#canExecute()} instead.
+111a140,141
+>      * 
+>      * @deprecated Use {@link IUndoableOperation#canRedo()} instead.
+119a150,151
+>      * 
+>      * @deprecated Use {@link IUndoableOperation#canUndo()()} instead.
+131a164,167
+>      * 
+>      * @deprecated Use
+>      *             {@link IUndoableOperation#execute(IProgressMonitor, org.eclipse.core.runtime.IAdaptable)}
+>      *             instead.
+136a173,176
+>      * 
+>      * @deprecated Use
+>      *             {@link IUndoableOperation#redo(IProgressMonitor, org.eclipse.core.runtime.IAdaptable)}
+>      *             instead.
+141a182,185
+>      * 
+>      * @deprecated Use
+>      *             {@link IUndoableOperation#undo(IProgressMonitor, org.eclipse.core.runtime.IAdaptable)}
+>      *             instead.

@@ -1,0 +1,258 @@
+15d14
+< import java.util.HashMap;
+22a22
+> import org.eclipse.core.runtime.IExtension;
+25d24
+< 
+122d120
+< 
+149,152c147,148
+< 					Log.info(corePlugin, CommonCoreStatusCodes.OK, "Activating provider '" + getElement().getAttribute(A_CLASS) + "'..."); //$NON-NLS-1$ //$NON-NLS-2$
+< 					provider =
+< 						(IProvider) getElement().createExecutableExtension(
+< 							A_CLASS);
+---
+> 					Log.info(corePlugin, CommonCoreStatusCodes.OK, "Activating provider '" + element.getAttribute(A_CLASS) + "'..."); //$NON-NLS-1$ //$NON-NLS-2$
+> 					provider = (IProvider)element.createExecutableExtension(A_CLASS);
+154c150
+< 					Trace.trace(corePlugin, CommonCoreDebugOptions.SERVICES_ACTIVATE, "Provider '" + String.valueOf(provider) + "' activated."); //$NON-NLS-1$ //$NON-NLS-2$
+---
+> 					Trace.trace(corePlugin, CommonCoreDebugOptions.SERVICES_ACTIVATE, "Provider '" + provider + "' activated."); //$NON-NLS-1$ //$NON-NLS-2$
+180,181c176
+< 				IConfigurationElement[] elements =
+< 					getElement().getChildren(E_POLICY);
+---
+> 				IConfigurationElement[] elements = element.getChildren(E_POLICY);
+200,203c195
+< 							policy =
+< 								(IProviderPolicy) getElement()
+< 									.createExecutableExtension(
+< 									E_POLICY);
+---
+> 							policy = (IProviderPolicy)element.createExecutableExtension(E_POLICY);
+205c197
+< 							Trace.trace(corePlugin, CommonCoreDebugOptions.SERVICES_ACTIVATE, "Provider policy '" + String.valueOf(policy) + "' activated."); //$NON-NLS-1$ //$NON-NLS-2$
+---
+> 							Trace.trace(corePlugin, CommonCoreDebugOptions.SERVICES_ACTIVATE, "Provider policy '" + policy + "' activated."); //$NON-NLS-1$ //$NON-NLS-2$
+273c265
+< 	private static final int cacheSize;
+---
+> 	private static final int priorityCount;
+275c267
+< 	// Initialize the cacheSize.
+---
+> 	// Initialize priorityCount.
+288c280
+< 		cacheSize = maxOrdinal + 1;
+---
+> 		priorityCount = maxOrdinal + 1;
+298c290
+< 	 * The list of registered providers.
+---
+> 	 * The lists of registered providers.
+300c292
+< 	private final Map providers = new HashMap();
+---
+> 	private final ArrayList[] providers;
+360c352
+< 			cache = new Map[cacheSize];
+---
+> 			cache = new Map[priorityCount];
+362c354
+< 			for (int ordinal = cacheSize; --ordinal >= 0;) {
+---
+> 			for (int ordinal = priorityCount; --ordinal >= 0;) {
+368a361,365
+> 
+> 		providers = new ArrayList[priorityCount];
+> 
+> 		for (int ordinal = priorityCount; --ordinal >= 0;)
+> 			providers[ordinal] = new ArrayList(0);
+432c429
+< 			for (int ordinal = cacheSize; --ordinal >= 0;) {
+---
+> 			for (int ordinal = priorityCount; --ordinal >= 0;) {
+447,455c444,445
+< 	List getProviders(ProviderPriority priority) {
+< 		List result = (List) providers.get(priority);
+< 
+< 		if (null == result) {
+< 			result = new ArrayList();
+< 			providers.put(priority, result);
+< 		}
+< 
+< 		return result;
+---
+> 	final List getProviders(ProviderPriority priority) {
+> 		return providers[priority.getOrdinal()];
+485c475
+< 		if (!isOptimized()) {
+---
+> 		if (null == cache) {
+487a478
+> 			Object cachingKey = getCachingKey(operation);
+489c480
+< 			providerList = (List) map.get(getCachingKey(operation));
+---
+> 			providerList = (List)map.get(cachingKey);
+491,498c482,492
+< 			if (!isOptimistic() && null != providerList) {
+< 				if (providerList.isEmpty()) {
+< 					providerList = null;
+< 				} else {
+< 					for (Iterator i = providerList.iterator(); i.hasNext();) {
+< 						IProvider provider = (IProvider) i.next();
+< 						if (!provider.provides(operation)) {
+< 							providerList = null;
+---
+> 			if (null != providerList) {
+> 				if (optimistic)
+> 					return providerList;
+> 
+> 				int n = providerList.size();
+> 
+> 				if (n != 0) {
+> 					for (int i = 0;;) {
+> 						IProvider provider = (IProvider)providerList.get(i);
+> 
+> 						if (!provider.provides(operation))
+500c494,496
+< 						}
+---
+> 
+> 						if (++i == n)
+> 							return providerList;
+505d500
+< 			if (null == providerList) {
+507,508c502
+< 				map.put(getCachingKey(operation), providerList);
+< 			}
+---
+> 			map.put(cachingKey, providerList);
+520c514,524
+< 		List allProviders = new ArrayList();
+---
+> 		int i;
+> 		int n = priorityCount;
+> 		int total;
+> 
+> 		for (i = n, total = 0; --i >= 0;)
+> 			total += providers[i].size();
+> 
+> 		List allProviders = new ArrayList(total);
+> 
+> 		for (i = 0; i < n; ++i)
+> 			allProviders.addAll(providers[i]);
+522,524d525
+< 		for (Iterator i = providers.values().iterator(); i.hasNext();) {
+< 			allProviders.addAll((List)i.next());
+< 		}
+543a545,546
+> 		int ordinal = priority.getOrdinal();
+> 
+545c548
+< 			cache[priority.getOrdinal()].clear();
+---
+> 			cache[ordinal].clear();
+548c551
+< 		getProviders(priority).add(provider);
+---
+> 		providers[ordinal].add(provider);
+561,562c564,565
+< 		for (Iterator i = providers.values().iterator(); i.hasNext();) {
+< 			if (((List) i.next()).remove(provider)) {
+---
+> 		for (int i = 0, n = priorityCount; i < n; ++i) {
+> 			if (providers[i].remove(provider)) {
+593c596
+< 					"Operation '" + String.valueOf(operation) + "' executed using strategy '" + String.valueOf(strategy) + "'."); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+---
+> 					"Operation '" + operation + "' executed using strategy '" + strategy + "'."); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+635,637c638,644
+< 		for (Iterator list = providers.values().iterator(); list.hasNext();) {
+< 			for (Iterator provider = ((List) list.next()).iterator(); provider.hasNext();) {
+< 				if (((IProvider) provider.next()).provides(operation)) {
+---
+> 		for (int priority = 0, n = priorityCount; priority < n; ++priority)
+> 		{
+> 			List providerList = providers[priority];
+> 			int providerCount = providerList.size();
+> 
+> 			for (int provider = 0; provider < providerCount; ++provider)
+> 				if (((IProvider)providerList.get(provider)).provides(operation))
+639,640c646
+< 				}
+< 			}
+---
+> 
+665c671
+< 		for (int i = 0; i < ExecutionStrategy.PRIORITIES.length; i++) {
+---
+> 		for (int i = 0; i < ExecutionStrategy.PRIORITIES.length; ++i) {
+668,669c674,677
+< 			for (Iterator provider = providerList.iterator(); provider.hasNext();) {
+< 				if (((IProvider) provider.next()).provides(operation)) {
+---
+> 			int providerCount = providerList.size();
+> 
+> 			for (int provider = 0; provider < providerCount; ++provider)
+> 				if (((IProvider)providerList.get(provider)).provides(operation))
+672,673c680
+< 			}
+< 		}
+---
+> 
+690a698,712
+> 	 * Registers the service providers described by the extensions of the
+> 	 * specified namespace and extension point name with this service.
+> 	 *
+> 	 * @param namespace the namespace for the given extension point 
+> 	 *		(e.g. <code>"org.eclipse.gmf.runtime.common.core"</code>)
+> 	 * @param extensionPointName the simple identifier of the 
+> 	 *		extension point (e.g. <code>"parserProviders"</code>)
+> 	 */
+> 	public final void configureProviders(String namespace, String extensionPointName) {
+> 		configureProviders(Platform.getExtensionRegistry()
+> 									.getExtensionPoint(namespace, extensionPointName)
+> 									.getConfigurationElements());
+> 	}
+> 
+> 	/**
+700,705c722,746
+< 		for (int i = 0; i < elements.length; i++) {
+< 			addProvider(
+< 				ProviderPriority.parse(
+< 					getPriority(elements[i])),
+< 				newProviderDescriptor(elements[i]));
+< 			Trace.trace(CommonCorePlugin.getDefault(), CommonCoreDebugOptions.SERVICES_CONFIG, "Provider configured from extension '" + String.valueOf(elements[i].getDeclaringExtension()) + "'."); //$NON-NLS-1$ //$NON-NLS-2$
+---
+> 		for (int i = 0; i < elements.length; ++i)
+> 		{
+> 			IConfigurationElement element = elements[i];
+> 
+> 			try
+> 			{
+> 				addProvider(ProviderPriority.parse(getPriority(element)),
+> 						newProviderDescriptor(element));
+> 			}
+> 			finally
+> 			{
+> 				if (Trace.shouldTrace(CommonCorePlugin.getDefault(), CommonCoreDebugOptions.SERVICES_CONFIG))
+> 				{
+> 					IExtension extension = element.getDeclaringExtension();
+> 					String identifier = extension.getUniqueIdentifier();
+> 
+> 					if (identifier == null)
+> 						identifier = String.valueOf(extension.getNamespace());
+> 
+> 					extension.getExtensionPointUniqueIdentifier();
+> 
+> 					Trace.trace(CommonCorePlugin.getDefault(), CommonCoreDebugOptions.SERVICES_CONFIG,
+> 							"Provider of '" + extension.getExtensionPointUniqueIdentifier() //$NON-NLS-1$
+> 								+ "' configured from extension '" + identifier + "'."); //$NON-NLS-1$ //$NON-NLS-2$
+> 				}
+708a750,753
+> 		for (int i = priorityCount; --i >= 0;)
+> 			providers[i].trimToSize();
+> 	}
+> 

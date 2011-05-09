@@ -1,0 +1,72 @@
+package org.eclipse.gmf.runtime.diagram.ui.commands;
+
+import java.util.Collections;
+
+import java.util.List;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.Assert;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.diagram.core.services.ViewService;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.CreateViewRequest;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class CreateCommand extends AbstractTransactionalCommand {
+    protected final CreateViewRequest.ViewDescriptor viewDescriptor;
+    protected final View containerView;
+
+    public CreateCommand (TransactionalEditingDomain editingDomain, CreateViewRequest.ViewDescriptor viewDescriptor, View containerView) {
+        super (editingDomain, DiagramUIMessages.CreateCommand_Label, getWorkspaceFiles (containerView));
+        Assert.isNotNull (viewDescriptor);
+        Assert.isNotNull (containerView);
+        this.viewDescriptor = viewDescriptor;
+        this.containerView = containerView;
+        setResult (CommandResult.newOKCommandResult (viewDescriptor));
+    }
+
+    protected CreateViewRequest.ViewDescriptor getViewDescriptor () {
+        return viewDescriptor;
+    }
+
+    protected View getContainerView () {
+        return containerView;
+    }
+
+    protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+        View view = ViewService.getInstance ().createView (viewDescriptor.getViewKind (), viewDescriptor.getElementAdapter (), containerView, viewDescriptor.getSemanticHint (), viewDescriptor.getIndex (), viewDescriptor.isPersisted (), viewDescriptor.getPreferencesHint ());
+        Assert.isNotNull (view, "failed to create a view");
+        viewDescriptor.setView (view);
+        return CommandResult.newOKCommandResult (viewDescriptor);
+    }
+
+    public boolean canExecute () {
+        return ViewService.getInstance ().provides (viewDescriptor.getViewKind (), viewDescriptor.getElementAdapter (), containerView, viewDescriptor.getSemanticHint (), viewDescriptor.getIndex (), viewDescriptor.isPersisted (), viewDescriptor.getPreferencesHint ());
+    }
+
+    public boolean isPersisted () {
+        return getViewDescriptor ().isPersisted ();
+    }
+
+    public List getAffectedFiles () {
+        if (isPersisted ()) return super.getAffectedFiles ();
+        else return Collections.EMPTY_LIST;
+
+    }
+
+}
+

@@ -1,0 +1,60 @@
+2c2
+<  * Copyright (c) 2006, 2007 Borland Software Corporation
+---
+>  * Copyright (c) 2006, 2008 Borland Software Corporation
+10a11
+>  *    Artem Tikhomirov (Borland) - copy elements with cross-references
+16a18
+> import java.util.Map;
+20a23
+> import org.eclipse.emf.ecore.EStructuralFeature.Setting;
+32a36
+> 	 * @param reconciler TODO
+41c45
+< 	public EObject copyToCurrent(EObject currentParent, EObject old);
+---
+> 	public EObject copyToCurrent(EObject currentParent, EObject old, Reconciler reconciler);
+44c48
+< 		public EObject copyToCurrent(EObject currentParent, EObject old) {
+---
+> 		public EObject copyToCurrent(EObject currentParent, EObject old, Reconciler reconciler) {
+49,51c53,54
+< 	public static final Copier COMPLETE_COPY = new Copier(){
+< 	
+< 		public EObject copyToCurrent(EObject currentParent, EObject old) {
+---
+> 	public static final Copier COMPLETE_COPY_NO_CROSSREF = new Copier() {
+> 		public EObject copyToCurrent(EObject currentParent, EObject old, Reconciler reconciler) {
+73,74c76
+< 		 * It is not trivial to copy the external references while reconciling.
+< 		 * If you need this, do not use this simple implementation.
+---
+> 		 * It is not trivial to copy the external references while reconciling. If you need this, do not use this simple implementation.
+81d82
+< 	
+83a85,109
+> 	// XXX for now, keep this new implementation separate, however, won't hurt to combine it with the old one
+> 	public static final Copier COMPLETE_COPY_WITH_CROSSREF = new Copier() {
+> 
+> 		public EObject copyToCurrent(EObject currentParent, EObject old, Reconciler reconciler) {
+> 			final Map<EObject, Collection<Setting>> crossReferences = EcoreUtil.CrossReferencer.find(Collections.singleton(old));
+> 			EClass currentParentEClass = currentParent.eClass();
+> 			EObject oldParent = old.eContainer();
+> 			EClass oldParentEClass = oldParent.eClass();
+> 			EObject currentCopy = null;
+> 			if (currentParentEClass.equals(oldParentEClass)) {
+> 				currentCopy = EcoreUtil.copy(old);
+> 				EStructuralFeature containment = old.eContainingFeature();
+> 				Object currentValue = currentParent.eGet(containment);
+> 				if (currentValue instanceof Collection) {
+> 					@SuppressWarnings("unchecked")
+> 					Collection<Object> asCollection = (Collection<Object>) currentValue;
+> 					asCollection.add(currentCopy);
+> 				} else {
+> 					currentParent.eSet(containment, currentCopy);
+> 				}
+> 				reconciler.registerCrossReferencesToUpdate(crossReferences);
+> 			}
+> 			return currentCopy;
+> 		}
+> 	};

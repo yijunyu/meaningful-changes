@@ -1,0 +1,80 @@
+18a19,19
+> import java.util.LinkedList;
+32a34,34
+> import org.eclipse.gef.commands.UnexecutableCommand;
+39a42,42
+> import org.eclipse.gmf.runtime.diagram.core.commands.GroupCommand;
+49a53,54
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.GroupEditPart;
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.IBorderItemEditPart;
+55a61,61
+> import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.IEditableEditPart;
+380a387,392
+> 			
+> 			// Disable duplicate on groups for now.  See bugzilla 182972.
+>             if (ep instanceof GroupEditPart) {
+>                 return UnexecutableCommand.INSTANCE;
+>             }
+> 			
+485a498,501
+>         if (ActionIds.ACTION_GROUP.equals(request.getType())
+>             && request instanceof GroupRequest) {
+>             return getGroupCommand((GroupRequest) request);
+>         } 
+486,486d497
+< 		
+487,487c502,502
+< 		if (request instanceof ArrangeRequest) {
+---
+>         else if (request instanceof ArrangeRequest) {
+541a557,604
+>      * Returns a command to group the editparts in the request.
+>      * 
+>      * @param request
+>      *            the request containing the editparts to be grouped.
+>      * @return the command to perform the grouping
+>      */
+>     protected Command getGroupCommand(GroupRequest request) {
+>         List shapeViews = new LinkedList();
+>         IGraphicalEditPart parentEP = null;
+>         for (Iterator iter = request.getEditParts().iterator(); iter.hasNext();) {
+>             Object editpart = iter.next();
+> 
+>             if (editpart instanceof ShapeEditPart) {
+> 
+>                 if (!((IEditableEditPart) editpart).isEditModeEnabled()) {
+>                     return null;
+>                 }
+>                 
+>                 if (editpart instanceof IBorderItemEditPart) {
+>                     return null;
+>                 }
+> 
+>                 if (parentEP != null) {
+>                     if (parentEP != ((ShapeEditPart) editpart).getParent()) {
+>                         // can only group shapes with the same parent
+>                         return null;
+>                     }
+>                 } else {
+>                     parentEP = (IGraphicalEditPart) ((ShapeEditPart) editpart)
+>                         .getParent();
+>                 }
+> 
+>                 if (((ShapeEditPart) editpart).getModel() instanceof Node) {
+>                     shapeViews.add(((ShapeEditPart) editpart).getModel());
+>                 }
+>             }
+>         }
+> 
+>         if (parentEP == null || !parentEP.isEditModeEnabled()) {
+>             return null;
+>         }
+> 
+>         GroupCommand cmd = new GroupCommand(((IGraphicalEditPart) getHost())
+>             .getEditingDomain(), shapeViews);
+>         return new ICommandProxy(cmd);
+>     }
+> 
+>     /**
+555a619,619
+>                 || ActionIds.ACTION_GROUP.equals(request.getType())

@@ -1,0 +1,170 @@
+16d15
+< import org.eclipse.emf.ecore.EClass;
+24a24,25
+> import org.eclipse.gmf.gmfgraph.ChildAccess;
+> import org.eclipse.gmf.gmfgraph.Compartment;
+26c27,29
+< import org.eclipse.gmf.gmfgraph.FigureHandle;
+---
+> import org.eclipse.gmf.gmfgraph.DiagramLabel;
+> import org.eclipse.gmf.gmfgraph.Figure;
+> import org.eclipse.gmf.gmfgraph.FigureDescriptor;
+69a73
+> 	 * Extended request data key to hold editpart visual id.
+115,117c119,121
+< 		Command epCommand = getSemanticCommandSwitch(completedRequest);
+< 		if (epCommand != null) {
+< 			ICommand command = epCommand instanceof ICommandProxy ? ((ICommandProxy) epCommand).getICommand() : new CommandProxy(epCommand);
+---
+> 		Command semanticCommand = getSemanticCommandSwitch(completedRequest);
+> 		if (semanticCommand != null) {
+> 			ICommand command = semanticCommand instanceof ICommandProxy ? ((ICommandProxy) semanticCommand).getICommand() : new CommandProxy(semanticCommand);
+120d123
+< 		Command ehCommand = null;
+128c131
+< 				ehCommand = new ICommandProxy(command);
+---
+> 				semanticCommand = new ICommandProxy(command);
+139c142
+< 				ehCommand = ehCommand == null ? deleteViewCommand : ehCommand.chain(deleteViewCommand);
+---
+> 				semanticCommand = semanticCommand == null ? deleteViewCommand : semanticCommand.chain(deleteViewCommand);
+141c144
+< 			return ehCommand;
+---
+> 			return semanticCommand;
+256c259
+< 	protected Command getMSLWrapper(ICommand cmd) {
+---
+> 	protected final Command getGEFWrapper(ICommand cmd) {
+260a264
+> 	 * @deprecated use getGEFWrapper() instead
+263,264c267,269
+< 	protected EObject getSemanticElement() {
+< 		return ViewUtil.resolveSemanticElement((View) getHost().getModel());
+---
+> 	protected final Command getMSLWrapper(ICommand cmd) {
+> 		// XXX deprecated: use getGEFWrapper() instead
+> 		return getGEFWrapper(cmd);
+268,272d272
+< 	 * Finds container element for the new relationship of the specified type.
+< 	 * Default implementation goes up by containment hierarchy starting from
+< 	 * the specified element and returns the first element that is instance of
+< 	 * the specified container class.
+< 	 * 
+275,284c275,276
+< 	protected EObject getRelationshipContainer(Object uelement, EClass containerClass, IElementType relationshipType) {
+< 		if (uelement instanceof EObject) {
+< 			EObject element = (EObject) uelement;
+< 			for (; element != null; element = element.eContainer()) {
+< 				if (containerClass.isSuperTypeOf(element.eClass())) {
+< 					return element;
+< 				}
+< 			}
+< 		}
+< 		return null;
+---
+> 	protected EObject getSemanticElement() {
+> 		return ViewUtil.resolveSemanticElement((View) getHost().getModel());
+301,303c293,295
+< 	protected Command getDestroyEdgeCommand(Edge edge, boolean confirm) {
+< 		EditPart editPart = (EditPart) getHost().getViewer().getEditPartRegistry().get(edge);
+< 		DestroyElementRequest request = new DestroyElementRequest(getEditingDomain(), confirm);
+---
+> 	protected Command getDestroyElementCommand(View view) {
+> 		EditPart editPart = (EditPart) getHost().getViewer().getEditPartRegistry().get(view);
+> 		DestroyElementRequest request = new DestroyElementRequest(getEditingDomain(), false);
+312c304
+< 	protected CompoundCommand getDestroyEdgesCommand(boolean confirm) {
+---
+> 	protected CompoundCommand getDestroyEdgesCommand() {
+316c308
+< 			cmd.add(getDestroyEdgeCommand((Edge) it.next(), confirm));
+---
+> 			cmd.add(getDestroyElementCommand((Edge) it.next()));
+319c311
+< 			cmd.add(getDestroyEdgeCommand((Edge) it.next(), confirm));
+---
+> 			cmd.add(getDestroyElementCommand((Edge) it.next()));
+326a319,335
+> 	protected void addDestroyShortcutsCommand(CompoundCommand command) {
+> 		View view = (View) getHost().getModel();
+> 		if (view.getEAnnotation("Shortcut") != null) { //$NON-NLS-1$
+> 			return;
+> 		}
+> 		for (Iterator it = view.getDiagram().getChildren().iterator(); it.hasNext();) {
+> 			View nextView = (View) it.next();
+> 			if (nextView.getEAnnotation("Shortcut") == null || !nextView.isSetElement() || nextView.getElement() != view.getElement()) { //$NON-NLS-1$
+> 				continue;
+> 			}
+> 			command.add(getDestroyElementCommand(nextView));
+> 		}
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+332c341,372
+< 		public static boolean canCreateDiagramElementFigure_4001(DiagramElement source, FigureHandle target) {
+---
+> 		public static boolean canCreateChildAccess_4002(FigureDescriptor source, Figure target) {
+> 			return canExistChildAccess_4002(source, target);
+> 		}
+> 
+> 		/**
+> 		 * @generated
+> 		 */
+> 		public static boolean canCreateCompartmentAccessor_4003(Compartment source, ChildAccess target) {
+> 			if (source != null) {
+> 				if (source.getAccessor() != null) {
+> 					return false;
+> 				}
+> 			}
+> 			return canExistCompartmentAccessor_4003(source, target);
+> 		}
+> 
+> 		/**
+> 		 * @generated
+> 		 */
+> 		public static boolean canCreateDiagramLabelAccessor_4004(DiagramLabel source, ChildAccess target) {
+> 			if (source != null) {
+> 				if (source.getAccessor() != null) {
+> 					return false;
+> 				}
+> 			}
+> 			return canExistDiagramLabelAccessor_4004(source, target);
+> 		}
+> 
+> 		/**
+> 		 * @generated
+> 		 */
+> 		public static boolean canCreateDiagramElementFigure_4005(DiagramElement source, FigureDescriptor target) {
+338c378,399
+< 			return canExistDiagramElementFigure_4001(source, target);
+---
+> 			return canExistDiagramElementFigure_4005(source, target);
+> 		}
+> 
+> 		/**
+> 		 * @generated
+> 		 */
+> 		public static boolean canExistChildAccess_4002(FigureDescriptor source, Figure target) {
+> 			return true;
+> 		}
+> 
+> 		/**
+> 		 * @generated
+> 		 */
+> 		public static boolean canExistCompartmentAccessor_4003(Compartment source, ChildAccess target) {
+> 			return true;
+> 		}
+> 
+> 		/**
+> 		 * @generated
+> 		 */
+> 		public static boolean canExistDiagramLabelAccessor_4004(DiagramLabel source, ChildAccess target) {
+> 			return true;
+344c405
+< 		public static boolean canExistDiagramElementFigure_4001(DiagramElement source, FigureHandle target) {
+---
+> 		public static boolean canExistDiagramElementFigure_4005(DiagramElement source, FigureDescriptor target) {

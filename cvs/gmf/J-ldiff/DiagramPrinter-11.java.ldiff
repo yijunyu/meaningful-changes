@@ -1,0 +1,61 @@
+25,25d24
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.IDiagramPreferenceSupport;
+548a550,552
+>             // This causes issues with printing resolution as it uses a display image
+>             // which is typically 72dpi
+>             // This code should be removed when a resolution to Bugzilla 162459 is found
+580a547,547
+>         {
+580,580c546,546
+<         if (rtlEnabled) {
+---
+>         if (rtlEnabled) 
+583,587d585
+<         }
+<         else {
+<             scaledTranslateX += ((margins.left * colIndex) + (margins.right * (colIndex - 1)));
+<             scaledTranslateY += ((margins.top * rowIndex) + (margins.bottom * (rowIndex - 1)));
+<         }
+594a593,593
+>             
+610a610,649
+>         } else {
+>         
+>             this.graphics.translate(translated.x,translated.y);
+>             this.graphics.scale(userScale);
+>             
+>             this.graphics.pushState();
+>     
+>             int translateX = -(width * (colIndex - 1));
+>             int translateY = -(height * (rowIndex - 1));
+>         
+>             int scaledTranslateX = (int) (translateX / userScale);
+>             int scaledTranslateY = (int) (translateY / userScale);
+>         
+>             int scaledWidth = (int) (width / userScale);
+>             int scaledHeight = (int) (height / userScale);
+>             
+>             if (rtlEnabled) {
+>                 scaledTranslateX += (margins.left * (colIndex - 1)) + (margins.right * (colIndex));
+>                 scaledTranslateY += ((margins.top * rowIndex) + (margins.bottom * (rowIndex - 1)));
+>             }
+>             else {
+>                 scaledTranslateX += ((margins.left * colIndex) + (margins.right * (colIndex - 1)));
+>                 scaledTranslateY += ((margins.top * rowIndex) + (margins.bottom * (rowIndex - 1)));
+>             }
+>                 
+>             this.graphics.translate(scaledTranslateX, scaledTranslateY);
+>             
+>             Rectangle clip = new Rectangle((scaledWidth - margins.left - margins.right) 
+>                 * (colIndex - 1) + figureBounds.x, (scaledHeight - margins.bottom - margins.top) 
+>                 * (rowIndex - 1) + figureBounds.y, scaledWidth - margins.right - margins.left, 
+>                 scaledHeight - margins.top - margins.bottom);
+>             this.graphics.clipRect(clip);
+> 
+>             dgrmEP.getLayer(LayerConstants.PRINTABLE_LAYERS).paint(this.graphics);
+>     
+>             this.graphics.popState();
+>             
+>             //draw the header and footer after drawing the image to avoid getting the image getting drawn over them
+>             drawHeaderAndFooter(gc_, dgrmEP, figureBounds, font, rowIndex, colIndex);
+>         }

@@ -1,0 +1,151 @@
+104a105,114
+>     private boolean fitToPage = false;
+>     
+>     /**
+>      * change the fit to page state
+>      * @param fitToPage the new fit to page state
+>      */
+>     public void setFitToPage(boolean fitToPage){
+>         this.fitToPage = fitToPage;
+>     }
+> 
+541d550
+<         
+543,545d551
+<         
+<         int width = pageSize.x, height = pageSize.y;
+<         
+570,598c576
+<             mmg.translate(translated.x,translated.y);
+<             mmg.scale(userScale);
+<             
+<             mmg.pushState();
+<             
+<             int translateX = -(width * (colIndex - 1));
+<             int translateY = -(height * (rowIndex - 1));
+<         
+<             int scaledTranslateX = (int) (translateX / userScale);
+<             int scaledTranslateY = (int) (translateY / userScale);
+<         
+<             int scaledWidth = (int) (width / userScale);
+<             int scaledHeight = (int) (height / userScale);
+<             
+<             scaledTranslateX += (margins.left * (colIndex - 1)) + (margins.right * (colIndex));
+<             scaledTranslateY += ((margins.top * rowIndex) + (margins.bottom * (rowIndex - 1)));
+<            
+<             mmg.translate(scaledTranslateX, scaledTranslateY);
+<             
+<             Rectangle clip = new Rectangle((scaledWidth - margins.left - margins.right) 
+<                 * (colIndex - 1) + figureBounds.x, (scaledHeight - margins.bottom - margins.top) 
+<                 * (rowIndex - 1) + figureBounds.y, scaledWidth - margins.right - margins.left, 
+<                 scaledHeight - margins.top - margins.bottom);
+<             
+<             mmg.clipRect(clip);
+<             
+<             dgrmEP.getLayer(LayerConstants.PRINTABLE_LAYERS).paint(mmg);
+< 
+<             mmg.popState();
+---
+>             internalDrawPage(dgrmEP,figureBounds,fPreferences,margins,mmg,rowIndex, colIndex,true);
+608d585
+<           
+610a588,599
+>             internalDrawPage(dgrmEP,figureBounds,fPreferences,margins,this.graphics,rowIndex, colIndex,false);
+>             //draw the header and footer after drawing the image to avoid getting the image getting drawn over them
+>             drawHeaderAndFooter(gc_, dgrmEP, figureBounds, font, rowIndex, colIndex);
+>         }
+>     }
+>     
+>     private void internalDrawPage(DiagramEditPart dgrmEP,
+>             Rectangle figureBounds, IPreferenceStore fPreferences,
+>             PageMargins margins, Graphics g, int rowIndex, int colIndex,
+>             boolean RTL_ENABLED) {
+>         org.eclipse.draw2d.geometry.Point pageSize = PageInfoHelper
+>             .getPageSize(fPreferences, false, getMapMode());
+612,613c601,603
+<             this.graphics.translate(translated.x,translated.y);
+<             this.graphics.scale(userScale);
+---
+>         int width = pageSize.x, height = pageSize.y;
+>         g.translate(translated.x, translated.y);
+>         g.scale(userScale);
+615c605
+<             this.graphics.pushState();
+---
+>         g.pushState();
+626,627c616,618
+<             if (rtlEnabled) {
+<                 scaledTranslateX += (margins.left * (colIndex - 1)) + (margins.right * (colIndex));
+---
+>         if (RTL_ENABLED) {
+>             scaledTranslateX += (margins.left * (colIndex - 1))
+>                 + (margins.right * (colIndex));
+629,630c620
+<             }
+<             else {
+---
+>         } else {
+635c625
+<             this.graphics.translate(scaledTranslateX, scaledTranslateY);
+---
+>         g.translate(scaledTranslateX, scaledTranslateY);
+637,641c627,632
+<             Rectangle clip = new Rectangle((scaledWidth - margins.left - margins.right) 
+<                 * (colIndex - 1) + figureBounds.x, (scaledHeight - margins.bottom - margins.top) 
+<                 * (rowIndex - 1) + figureBounds.y, scaledWidth - margins.right - margins.left, 
+<                 scaledHeight - margins.top - margins.bottom);
+<             this.graphics.clipRect(clip);
+---
+>         Rectangle clip = new Rectangle(
+>             (scaledWidth - margins.left - margins.right) * (colIndex - 1)
+>                 + figureBounds.x, (scaledHeight - margins.bottom - margins.top)
+>                 * (rowIndex - 1) + figureBounds.y, scaledWidth - margins.right
+>                 - margins.left, scaledHeight - margins.top - margins.bottom);
+>         g.clipRect(clip);
+643,645c634
+<             dgrmEP.getLayer(LayerConstants.PRINTABLE_LAYERS).paint(this.graphics);
+<     
+<             this.graphics.popState();
+---
+>         dgrmEP.getLayer(LayerConstants.PRINTABLE_LAYERS).paint(g);
+647,649c636
+<             //draw the header and footer after drawing the image to avoid getting the image getting drawn over them
+<             drawHeaderAndFooter(gc_, dgrmEP, figureBounds, font, rowIndex, colIndex);
+<         }
+---
+>         g.popState();
+670,672c657
+<         org.eclipse.draw2d.geometry.Point pageBounds = PageInfoHelper
+<             .getPageSize(fPreferences, getMapMode());
+<         
+---
+>         PageMargins margins = PageInfoHelper.getPageMargins(fPreferences, getMapMode());
+676d660
+<          
+680a665,682
+>         float actualWidth = 0;
+>         float actualHeight = 0;
+>         if (this.rows==1 && this.columns==1 && fitToPage){
+>             Rectangle rectangle = dgrmEP.getChildrenBounds();
+>             figureBounds.width = rectangle.x + rectangle.width + (numCols)*margins.right + numCols*margins.left ;
+>             figureBounds.height = rectangle.y + rectangle.height + (numRows)*margins.top + numRows*margins.bottom;
+>             actualWidth = figureBounds.width;
+>             actualHeight = figureBounds.height;
+>         }else {
+>             actualWidth = numCols * pageSize.x;
+>             actualHeight = numRows * pageSize.y;
+>         }
+> 
+>         org.eclipse.draw2d.geometry.Point pageBounds = PageInfoHelper
+>             .getPageSize(fPreferences, getMapMode());
+>         
+> 
+>         
+689,690c691,692
+<         float vScale = ((float) totalHeight) / ((float)(numRows * pageSize.y));
+<         float hScale = ((float) totalWidth) / ((float)(numCols * pageSize.x));
+---
+>         float vScale =  totalHeight / actualHeight;
+>         float hScale = totalWidth / actualWidth;
+698d699
+<         PageMargins margins = PageInfoHelper.getPageMargins(fPreferences, getMapMode());

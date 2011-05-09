@@ -1,0 +1,272 @@
+2a3,8
+> import java.util.ArrayList;
+> 
+> import java.util.Iterator;
+> 
+> import java.util.List;
+> 
+8a15,16
+> import org.eclipse.draw2d.PositionConstants;
+> 
+14a23,24
+> import org.eclipse.gef.editparts.ZoomManager;
+> 
+18a29,32
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+25c39,45
+< import org.eclipse.gmf.runtime.diagram.ui.internal.l10n.DiagramFontRegistry;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramGraphicalViewer;
+28a49,50
+> import org.eclipse.gmf.runtime.draw2d.ui.mapmode.IMapMode;
+> 
+34a57,66
+> import org.eclipse.jface.action.IAction;
+> 
+> import org.eclipse.jface.resource.DeviceResourceException;
+> 
+> import org.eclipse.jface.resource.FontDescriptor;
+> 
+> import org.eclipse.jface.resource.JFaceResources;
+> 
+> import org.eclipse.jface.resource.ResourceManager;
+> 
+64a97,106
+> import org.eclipse.ui.IActionBars;
+> 
+> import org.eclipse.ui.PlatformUI;
+> 
+> import org.eclipse.ui.actions.ActionFactory;
+> 
+> import org.eclipse.ui.part.CellEditorActionHandler;
+> 
+> import com.ibm.icu.util.StringTokenizer;
+> 
+70a113,118
+>     private List cachedFontDescriptors = new ArrayList ();
+>     private IActionBars actionBars;
+>     private CellEditorActionHandler actionHandler;
+>     private IAction copy, cut, paste, undo, redo, find, selectAll, delete;
+>     private Font zoomLevelFont = null;
+>     private CellEditorLocator locator;
+85,87c133,143
+<             Rectangle rect = getWrapLabel ().getTextBounds ().getCopy ();
+<             getWrapLabel ().translateToAbsolute (rect);
+<             if (getWrapLabel ().isTextWrapped () && getWrapLabel ().getText ().length () > 0) rect.setSize (new Dimension (text.computeSize (rect.width, SWT.DEFAULT)));
+---
+>             WrapLabel fig = getWrapLabel ();
+>             Rectangle rect = fig.getTextBounds ().getCopy ();
+>             fig.translateToAbsolute (rect);
+>             int avrWidth = FigureUtilities.getFontMetrics (text.getFont ()).getAverageCharWidth ();
+>             if (fig.isTextWrapped () && fig.getText ().length () > 0) rect.setSize (new Dimension (rect.width, rect.height + FigureUtilities.getFontMetrics (text.getFont ()).getDescent ()));
+>             else rect.setSize (new Dimension (text.computeSize (SWT.DEFAULT, SWT.DEFAULT)).expand (avrWidth * 2, 0));
+> 
+>             org.eclipse.swt.graphics.Rectangle newRect = text.computeTrim (rect.x, rect.y, rect.width, rect.height);
+>             Rectangle textBounds = new Rectangle (text.getBounds ());
+>             if (! newRect.equals (textBounds)) {
+>                 if (! (fig.getTextWrapAlignment () == PositionConstants.LEFT || fig.getTextAlignment () == PositionConstants.LEFT)) text.setBounds (newRect.x, newRect.y, newRect.width + avrWidth * 3, newRect.height);
+89,92c145,146
+<                 int avr = FigureUtilities.getFontMetrics (text.getFont ()).getAverageCharWidth ();
+<                 rect.setSize (new Dimension (text.computeSize (SWT.DEFAULT, SWT.DEFAULT)).expand (avr * 2, 0));
+<             }
+<             if (! rect.equals (new Rectangle (text.getBounds ()))) text.setBounds (rect.x, rect.y, rect.width, rect.height);
+---
+>                     if (text.getBounds ().x == 0 || Math.abs (text.getBounds ().x - newRect.x) >= avrWidth) text.setBounds (newRect.x, newRect.y, newRect.width + avrWidth * 3, newRect.height);
+>                     else text.setBounds (text.getBounds ().x, newRect.y, newRect.width + avrWidth * 3, newRect.height);
+94a149,150
+>             }
+>         }
+115c171,172
+<             if (! rect.equals (new Rectangle (text.getBounds ()))) text.setBounds (rect.x, rect.y, rect.width, rect.height);
+---
+>             org.eclipse.swt.graphics.Rectangle newRect = text.computeTrim (rect.x, rect.y, rect.width, rect.height);
+>             if (! newRect.equals (new Rectangle (text.getBounds ()))) text.setBounds (newRect.x, newRect.y, newRect.width, newRect.height);
+122c179
+<         super (source, getTextCellEditorClass (source), getTextCellEditorLocator (source));
+---
+>         this (source, getTextCellEditorClass (source), getTextCellEditorLocator (source));
+126a184
+>         this.locator = locator;
+152,154c210,218
+<         data.setHeight (fontSize.height);
+<         Font newFont = DiagramFontRegistry.getInstance ().getFont (null, data);
+<         return newFont;
+---
+>         try {
+>             FontDescriptor fontDescriptor = FontDescriptor.createFrom (data);
+>             cachedFontDescriptors.add (fontDescriptor);
+>             return getResourceManager ().createFont (fontDescriptor);
+>         } catch (DeviceResourceException e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "getScaledFont", e);
+>             Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "getScaledFont", e);
+>         }
+>         return JFaceResources.getDefaultFont ();
+173a238,242
+>         actionBars = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ().getActivePage ().getActiveEditor ().getEditorSite ().getActionBars ();
+>         saveCurrentActions (actionBars);
+>         actionHandler = new CellEditorActionHandler (actionBars);
+>         actionHandler.addCellEditor (getCellEditor ());
+>         actionBars.updateActionBars ();
+213a283,296
+>         for (Iterator iter = cachedFontDescriptors.iterator ();
+>         iter.hasNext ();) {
+>             getResourceManager ().destroyFont ((FontDescriptor) iter.next ());
+>         }
+>         cachedFontDescriptors.clear ();
+>         if (actionHandler != null) {
+>             actionHandler.dispose ();
+>             actionHandler = null;
+>         }
+>         if (actionBars != null) {
+>             restoreSavedActions (actionBars);
+>             actionBars.updateActionBars ();
+>             actionBars = null;
+>         }
+239a323,369
+>     private Font getZoomLevelFont (Font actualFont, Display display) {
+>         Object zoom = getEditPart ().getViewer ().getProperty (ZoomManager.class.toString ());
+>         if (zoom != null) {
+>             double zoomLevel = ((ZoomManager) zoom).getZoom ();
+>             if (zoomLevel == 1.0f) return actualFont;
+> 
+>             FontData [] fd = new FontData [actualFont.getFontData ().length];
+>             FontData tempFD = null;
+>             for (int i = 0;
+>             i < fd.length; i ++) {
+>                 tempFD = actualFont.getFontData () [i];
+>                 fd [i] = new FontData (tempFD.getName (), (int) (zoomLevel * tempFD.getHeight ()), tempFD.getStyle ());
+>             }
+>             try {
+>                 FontDescriptor fontDescriptor = FontDescriptor.createFrom (fd);
+>                 cachedFontDescriptors.add (fontDescriptor);
+>                 return getResourceManager ().createFont (fontDescriptor);
+>             } catch (DeviceResourceException e) {
+>                 Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "getZoomLevelFonts", e);
+>                 Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "getZoomLevelFonts", e);
+>                 return actualFont;
+>             }
+>         } else return actualFont;
+> 
+>     }
+> 
+>     private Dimension getTextExtents (String s, Font font, IMapMode mm) {
+>         Dimension d = FigureUtilities.getTextExtents (s, font);
+>         int lineCount = getLineCount (s);
+>         d.height = FigureUtilities.getFontMetrics (font).getHeight () * lineCount;
+>         return new Dimension (mm.DPtoLP (d.width), mm.DPtoLP (d.height));
+>     }
+> 
+>     private int getLineCount (String s) {
+>         StringTokenizer tokenizer = new StringTokenizer (s, "\n");
+>         return tokenizer.countTokens ();
+>     }
+> 
+>     public void show () {
+>         super.show ();
+>         WrapLabel fig = ((TextCompartmentEditPart) this.getEditPart ()).getLabel ();
+>         Control control = getCellEditor ().getControl ();
+>         this.zoomLevelFont = getZoomLevelFont (fig.getFont (), control.getDisplay ());
+>         control.setFont (this.zoomLevelFont);
+>         locator.relocate (getCellEditor ());
+>     }
+> 
+241a372,429
+>         if (! (getEditPart () instanceof TextCompartmentEditPart)) {
+>             sendClickToCellEditor (location);
+>             return;
+>         }
+>         WrapLabel fig = ((TextCompartmentEditPart) this.getEditPart ()).getLabel ();
+>         Text textControl = (Text) getCellEditor ().getControl ();
+>         Rectangle restoreRect = fig.getBounds ().getCopy ();
+>         Rectangle rect = fig.getBounds ();
+>         fig.translateToAbsolute (rect);
+>         if (! rect.contains (new org.eclipse.draw2d.geometry.Point (location.x, location.y))) {
+>             textControl.setSelection (0, textControl.getText ().length ());
+>             fig.setBounds (restoreRect);
+>             return;
+>         }
+>         Rectangle iconBounds = fig.getIconBounds ().getCopy ();
+>         fig.translateToAbsolute (iconBounds);
+>         double avrLines = fig.getBounds ().height / (double) FigureUtilities.getFontMetrics (this.zoomLevelFont).getHeight ();
+>         int xWidth = location.x - rect.x;
+>         if (fig.getIcon () != null && fig.getTextPlacement () == PositionConstants.EAST) xWidth -= iconBounds.width;
+> 
+>         double yPercentage = (location.y - rect.y) / (double) rect.height;
+>         int lineNum = (int) Math.ceil (avrLines * yPercentage);
+>         int charCount = 0;
+>         StringTokenizer tokenizer = new StringTokenizer (fig.getSubStringText (), "\n");
+>         for (int lineCount = 1;
+>         lineCount < lineNum; lineCount ++) {
+>             if (tokenizer.hasMoreTokens ()) {
+>                 charCount += tokenizer.nextToken ().length ();
+>                 String newLineCheck = fig.getText ().substring (charCount, charCount + 1);
+>                 if (newLineCheck.equals ("\r") || newLineCheck.equals ("\n")) charCount ++;
+> 
+>             } else {
+>                 sendClickToCellEditor (location);
+>                 fig.setBounds (restoreRect);
+>                 return;
+>             }
+>         }
+>         if (tokenizer.hasMoreTokens ()) {
+>             String currentLineText = tokenizer.nextToken ();
+>             IMapMode mm = MapModeUtil.getMapMode (fig);
+>             for (int i = 1;
+>             i <= currentLineText.length (); i ++) {
+>                 Dimension textExtent = getTextExtents (currentLineText.substring (0, i), this.zoomLevelFont, mm);
+>                 fig.translateToAbsolute (textExtent);
+>                 charCount ++;
+>                 if (textExtent.width >= xWidth) break;
+> 
+>             }
+>             textControl.setSelection (charCount);
+>             fig.setBounds (restoreRect);
+>         } else {
+>             sendClickToCellEditor (location);
+>             fig.setBounds (restoreRect);
+>         }
+>     }
+> 
+>     private void sendClickToCellEditor (final Point location) {
+>         getCellEditor ().getControl ().setCapture (true);
+288a477,507
+>     protected ResourceManager getResourceManager () {
+>         return ((DiagramGraphicalViewer) getEditPart ().getViewer ()).getResourceManager ();
+>     }
+> 
+>     private void saveCurrentActions (IActionBars _actionBars) {
+>         copy = _actionBars.getGlobalActionHandler (ActionFactory.COPY.getId ());
+>         paste = _actionBars.getGlobalActionHandler (ActionFactory.PASTE.getId ());
+>         delete = _actionBars.getGlobalActionHandler (ActionFactory.DELETE.getId ());
+>         selectAll = _actionBars.getGlobalActionHandler (ActionFactory.SELECT_ALL.getId ());
+>         cut = _actionBars.getGlobalActionHandler (ActionFactory.CUT.getId ());
+>         find = _actionBars.getGlobalActionHandler (ActionFactory.FIND.getId ());
+>         undo = _actionBars.getGlobalActionHandler (ActionFactory.UNDO.getId ());
+>         redo = _actionBars.getGlobalActionHandler (ActionFactory.REDO.getId ());
+>     }
+> 
+>     private void restoreSavedActions (IActionBars _actionBars) {
+>         _actionBars.setGlobalActionHandler (ActionFactory.COPY.getId (), copy);
+>         _actionBars.setGlobalActionHandler (ActionFactory.PASTE.getId (), paste);
+>         _actionBars.setGlobalActionHandler (ActionFactory.DELETE.getId (), delete);
+>         _actionBars.setGlobalActionHandler (ActionFactory.SELECT_ALL.getId (), selectAll);
+>         _actionBars.setGlobalActionHandler (ActionFactory.CUT.getId (), cut);
+>         _actionBars.setGlobalActionHandler (ActionFactory.FIND.getId (), find);
+>         _actionBars.setGlobalActionHandler (ActionFactory.UNDO.getId (), undo);
+>         _actionBars.setGlobalActionHandler (ActionFactory.REDO.getId (), redo);
+>     }
+> 
+>     public void setLocator (CellEditorLocator locator) {
+>         super.setLocator (locator);
+>         this.locator = locator;
+>     }
+> 

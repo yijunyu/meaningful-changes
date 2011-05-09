@@ -1,0 +1,56 @@
+12a13,14
+> import org.eclipse.gmf.runtime.common.core.command.FileModificationValidator.ISyncExecHelper;
+> 
+18a21,22
+> import org.eclipse.jface.operation.ModalContext;
+> 
+73a78,102
+>     class RunnableWithStatus implements Runnable {
+>         private final IFile [] files;
+>         private IStatus status;
+>         private Shell shell;
+> 
+>         RunnableWithStatus (IFile [] files, Shell shell) {
+>             this.files = files;
+>             this.shell = shell;
+>         }
+> 
+>         public void run () {
+>             status = doValidateEdit (files, shell);
+>         }
+> 
+>         public IStatus getResult () {
+>             return status;
+>         }
+> 
+>         public void setShell (Shell shell) {
+>             this.shell = shell;
+>         }
+> 
+>     }
+> 
+>     protected IStatus doValidateEdit (IFile [] files, Shell shell) {
+74,75d77
+<     public IStatus validateEdit (IFile [] files) {
+<         Shell shell = listener == null ? null : listener.getShell ();
+79a107,126
+>     public IStatus validateEdit (IFile [] files) {
+>         Shell shell = listener == null ? null : listener.getShell ();
+>         RunnableWithStatus r = new RunnableWithStatus (files, shell);
+>         ISyncExecHelper syncExecHelper = org.eclipse.gmf.runtime.common.core.command.FileModificationValidator.SyncExecHelper.getInstance ();
+>         if (ModalContext.isModalContextThread (Thread.currentThread ())) {
+>             Runnable safeRunnable = syncExecHelper.safeRunnable (r);
+>             if (safeRunnable != null) {
+>                 Display.getDefault ().syncExec (safeRunnable);
+>             } else {
+>                 r.run ();
+>             }
+>         } else {
+>             if (Display.getCurrent () == null) {
+>                 r.setShell (null);
+>             }
+>             r.run ();
+>         }
+>         return r.getResult ();
+>     }
+> 

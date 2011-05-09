@@ -1,0 +1,111 @@
+2a3,4
+> import java.util.ArrayList;
+> 
+10a13,14
+> import org.eclipse.gmf.common.UnexpectedBehaviourException;
+> 
+24a29,50
+> import org.eclipse.gmf.graphdef.codegen.templates.ConnectionGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.CustomFigureGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.DecorationFigureGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.LabelGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.ShapeAttrsGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.ShapeGenerator;
+> 
+> import org.eclipse.gmf.internal.graphdef.codegen.DispatcherImpl;
+> 
+> import org.eclipse.gmf.internal.graphdef.codegen.NoSuchTemplateException;
+> 
+> import org.eclipse.gmf.internal.graphdef.codegen.StaticTemplateRegistry;
+> 
+> import org.eclipse.gmf.internal.graphdef.codegen.TemplateRegistry;
+> 
+> import org.eclipse.gmf.internal.graphdef.codegen.YAEmitterFactory;
+> 
+28,31d53
+<     private final JETEmitter shapeEmitter;
+<     private final JETEmitter customFigureEmitter;
+<     private final JETEmitter decorationFigureEmitter;
+<     private final JETEmitter polylineConnectionEmitter;
+32a55,56
+>     private YAEmitterFactory myFactory;
+>     private Dispatcher myDispatcher;
+33,33d54
+<     private final JETEmitter labelFigureEmitter;
+41a65,72
+>         final ArrayList variables = new ArrayList ();
+>         variables.add ("org.eclipse.gmf.graphdef");
+>         variables.add ("org.eclipse.emf.ecore");
+>         variables.add ("org.eclipse.emf.common");
+>         variables.add ("org.eclipse.gmf.common");
+>         variables.add ("org.eclipse.gmf.graphdef.codegen");
+>         myFactory = new YAEmitterFactory (thisBundle.getEntry ("/"), fill (), true, variables, true);
+>         myDispatcher = new DispatcherImpl (myFactory);
+42,51d64
+<         shapeEmitter = new JETEmitter (thisBundle.getEntry ("/templates/ConcreteShape.javajet").toString (), FigureGenerator.class.getClassLoader ());
+<         initEmitter (shapeEmitter);
+<         customFigureEmitter = new JETEmitter (thisBundle.getEntry ("/templates/CustomFigure.javajet").toString (), FigureGenerator.class.getClassLoader ());
+<         initEmitter (customFigureEmitter);
+<         decorationFigureEmitter = new JETEmitter (thisBundle.getEntry ("/templates/DecorationFigure.javajet").toString (), FigureGenerator.class.getClassLoader ());
+<         initEmitter (decorationFigureEmitter);
+<         polylineConnectionEmitter = new JETEmitter (thisBundle.getEntry ("/templates/PolylineConnection.javajet").toString (), FigureGenerator.class.getClassLoader ());
+<         initEmitter (polylineConnectionEmitter);
+<         labelFigureEmitter = new JETEmitter (thisBundle.getEntry ("/templates/Label.javajet").toString (), FigureGenerator.class.getClassLoader ());
+<         initEmitter (labelFigureEmitter);
+57a79,87
+>     private static TemplateRegistry fill () {
+>         StaticTemplateRegistry tr = new StaticTemplateRegistry ();
+>         tr.put (PolylineConnection.class, "/templates/PolylineConnection.javajet", ConnectionGenerator.class);
+>         tr.put (DecorationFigure.class, "/templates/DecorationFigure.javajet", DecorationFigureGenerator.class);
+>         tr.put (Shape.class, "/templates/ConcreteShape.javajet", ShapeGenerator.class);
+>         tr.put (Label.class, "/templates/Label.javajet", LabelGenerator.class);
+>         tr.put (CustomFigure.class, "/templates/CustomFigure.javajet", CustomFigureGenerator.class);
+>         tr.put ("ShapeAttrs", "/templates/ShapeAttrs.javajet", ShapeAttrsGenerator.class);
+>         return tr;
+58,66d78
+<     private static void initEmitter (JETEmitter emitter) {
+<         try {
+<             emitter.addVariable ("A", "org.eclipse.gmf.graphdef");
+<             emitter.addVariable ("B", "org.eclipse.emf.ecore");
+<             emitter.addVariable ("C", "org.eclipse.emf.common");
+<             emitter.addVariable ("D", "org.eclipse.gmf.common");
+<         } catch (JETException ex) {
+<             ex.printStackTrace ();
+<         }
+70a92,92
+>         try {
+72,72c94,94
+<             res = generate (fig, polylineConnectionEmitter);
+---
+>                 res = generate (fig, myFactory.acquireEmitter (PolylineConnection.class));
+74,74c96,96
+<             res = generate (fig, decorationFigureEmitter);
+---
+>                 res = generate (fig, myFactory.acquireEmitter (DecorationFigure.class));
+76,76c98,98
+<             res = generate (fig, shapeEmitter);
+---
+>                 res = generate (fig, myFactory.acquireEmitter (Shape.class));
+78,78c100,100
+<             res = generate (fig, customFigureEmitter);
+---
+>                 res = generate (fig, myFactory.acquireEmitter (CustomFigure.class));
+80,80c102,102
+<             res = generate (fig, labelFigureEmitter);
+---
+>                 res = generate (fig, myFactory.acquireEmitter (Label.class));
+85a108,112
+>         } catch (UnexpectedBehaviourException ex) {
+>             throw new IllegalStateException (ex);
+>         } catch (NoSuchTemplateException ex) {
+>             throw new IllegalStateException (ex);
+>         }
+90,90c117,117
+<         Object argument = new Object [] {fig, new NullImportAssistant ()};
+---
+>         Object argument = new Object [] {fig, new NullImportAssistant (), myDispatcher};

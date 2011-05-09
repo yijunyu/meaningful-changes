@@ -1,0 +1,131 @@
+52a53,53
+>     private boolean isProcessingNotification = false;
+68,68c69,69
+<             if (notification.getFeatureID (Resource.class) == Resource.RESOURCE__IS_LOADED) {
+---
+>             if (notification.getFeatureID (Resource.class) == Resource.RESOURCE__IS_LOADED && ! notification.getNewBooleanValue ()) {
+69,71d69
+<                 if (notification.getNewBooleanValue ()) {
+<                     updateImportsAndExports ((Resource) notifier);
+<                 } else {
+74,74d71
+<             }
+86,88d85
+<                     if (reference.isContainment ()) {
+<                         break;
+<                     }
+102,102c78,78
+<                         if (! reference.isContainment ()) {
+---
+>         if (reference.isContainment ()) {
+102a79,80
+>             return;
+>         }
+104,106d99
+<                         } else {
+<                             updateImportsAndExports (newValue, true);
+<                         }
+115,115d107
+<                         if (! reference.isContainment ()) {
+117,119d108
+<                         } else {
+<                             updateImportsAndExports (newValue, true);
+<                         }
+126,126d114
+<                         if (! reference.isContainment ()) {
+128,130d115
+<                         } else {
+<                             updateImportsAndExports (oldValue, false);
+<                         }
+139,139d123
+<                         if (! reference.isContainment ()) {
+141,143d124
+<                         } else {
+<                             updateImportsAndExports (oldValue, false);
+<                         }
+191,191c172,172
+<     private void remove (Resource resource, EObject eObject) {
+---
+>     protected void remove (Resource resource, EObject eObject) {
+337a213,217
+>             if (isProcessingNotification) {
+>                 for (Iterator iter = getInverseReferencers (eObject, null, null).iterator ();
+>                 iter.hasNext ();) {
+>                     registerReference (((EObject) iter.next ()).eResource (), resource);
+>                 }
+338,344d212
+<     private void updateImportsAndExports (Resource resource) {
+<         for (Iterator i = EcoreUtil.getAllContents (resource, resolve ());
+<         i.hasNext ();) {
+<             EObject next = (EObject) i.next ();
+<             for (Iterator iter = getInverseReferencers (next, null, null).iterator ();
+<             iter.hasNext ();) {
+<                 registerReference (((EObject) iter.next ()).eResource (), resource);
+345,345c218,218
+<             }
+---
+>             }
+346,372d218
+<         }
+<     }
+< 
+<     private void updateImportsAndExports (EObject eObject, boolean register) {
+<         Resource resource = eObject.eResource ();
+<         for (Iterator iter = getInverseReferencers (eObject, null, null).iterator ();
+<         iter.hasNext ();) {
+<             if (register) {
+<                 registerReference (((EObject) iter.next ()).eResource (), resource);
+<             } else {
+<                 deregisterReference (((EObject) iter.next ()).eResource (), resource);
+<             }
+<         }
+<         for (Iterator i = EcoreUtil.getAllContents (eObject, resolve ());
+<         i.hasNext ();) {
+<             EObject next = (EObject) i.next ();
+<             for (Iterator iter = getInverseReferencers (next, null, null).iterator ();
+<             iter.hasNext ();) {
+<                 if (register) {
+<                     registerReference (((EObject) iter.next ()).eResource (), resource);
+<                 } else {
+<                     deregisterReference (((EObject) iter.next ()).eResource (), resource);
+<                 }
+<             }
+<         }
+<     }
+< 
+483a436,438
+>         for (Iterator i = eObject.eClass ().getEAllReferences ().iterator ();
+>         i.hasNext ();) {
+>             EReference eReference = (EReference) i.next ();
+484,487d435
+<         EContentsEList.FeatureIterator crossReferences = (EContentsEList.FeatureIterator) eObject.eCrossReferences ().iterator ();
+<         while (crossReferences.hasNext ()) {
+<             InternalEObject referent = (InternalEObject) crossReferences.next ();
+<             EReference eReference = (EReference) crossReferences.feature ();
+488a440,452
+>             if (eOpposite != null && ! eReference.isContainer () && ! eReference.isContainment () && eObject.eIsSet (eReference)) {
+>                 if (eReference.isMany ()) {
+>                     for (Iterator j = ((Collection) eObject.eGet (eReference)).iterator ();
+>                     j.hasNext ();) {
+>                         InternalEObject referencingEObject = (InternalEObject) j.next ();
+>                         result.add (referencingEObject.eSetting (eOpposite));
+>                     }
+>                 } else {
+>                     InternalEObject referencingEObject = ((InternalEObject) eObject.eGet (eReference));
+>                     if (referencingEObject != null) {
+>                         result.add (referencingEObject.eSetting (eOpposite));
+>                     }
+>                 }
+489,490d439
+<             if (referent != null && eOpposite != null) {
+<                 result.add (referent.eSetting (eOpposite));
+495a458,466
+>     public final void notifyChanged (Notification notification) {
+>         try {
+>             isProcessingNotification = true;
+>             super.notifyChanged (notification);
+>         } finally {
+>             isProcessingNotification = false;
+>         }
+>     }
+> 

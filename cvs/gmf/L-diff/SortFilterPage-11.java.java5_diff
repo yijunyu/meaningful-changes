@@ -1,0 +1,78 @@
+21c21
+< import org.eclipse.gmf.runtime.diagram.ui.commands.CommandProxy;
+---
+> import org.eclipse.gef.commands.CompoundCommand;
+23c23
+< import org.eclipse.gmf.runtime.diagram.ui.commands.ICommandProxy;
+---
+> import org.eclipse.gef.commands.UnexecutableCommand;
+41,42d40
+< import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeTransactionalCommand;
+< 
+745,750d742
+<     public boolean performOk () {
+<         if (sortChanged || filterChanged) performApply ();
+< 
+<         return true;
+<     }
+< 
+752d743
+<         if (pageType == CHILD_PAGE) {
+757,779d747
+<         } else if (pageType == ROOT_PAGE) {
+<             PreferenceManager preferenceManager = ((SortFilterDialog) getContainer ()).getPreferenceManager ();
+<             Iterator nodes = preferenceManager.getElements (PreferenceManager.PRE_ORDER).iterator ();
+<             SortFilterRootPreferenceNode rootNode = null;
+<             CompositeTransactionalCommand cc = new CompositeTransactionalCommand (editPart.getEditingDomain (), DiagramUIMessages.Command_SortFilterCommand);
+<             while (nodes.hasNext ()) {
+<                 PreferenceNode node = (PreferenceNode) nodes.next ();
+<                 SortFilterPage page = (SortFilterPage) node.getPage ();
+<                 if (page == this) {
+<                     rootNode = (SortFilterRootPreferenceNode) node;
+<                     continue;
+<                 }
+<                 ((SortFilterDialog) rootNode.getPreferenceDialog ()).showPage (node);
+<                 if (compareFilters (page.getFilterList ())) {
+<                     page.setFilterCriteria (filters.getItems ());
+<                     page.setCriteria (filterList.getItems ());
+<                     page.filterItemsFromList ();
+<                 }
+<                 cc.compose (new CommandProxy (page.getApplyCommand ()));
+<             }
+<             editPart.getRoot ().getViewer ().getEditDomain ().getCommandStack ().execute (new ICommandProxy (cc));
+<         }
+< 
+782a751
+>         if (pageType == CHILD_PAGE) {
+816a786,809
+>         } else if (pageType == ROOT_PAGE) {
+>             PreferenceManager preferenceManager = ((SortFilterDialog) getContainer ()).getPreferenceManager ();
+>             Iterator nodes = preferenceManager.getElements (PreferenceManager.PRE_ORDER).iterator ();
+>             SortFilterRootPreferenceNode rootNode = null;
+>             CompoundCommand cc = new CompoundCommand (DiagramUIMessages.Command_SortFilterCommand);
+>             while (nodes.hasNext ()) {
+>                 PreferenceNode node = (PreferenceNode) nodes.next ();
+>                 SortFilterPage page = (SortFilterPage) node.getPage ();
+>                 if (page == this) {
+>                     rootNode = (SortFilterRootPreferenceNode) node;
+>                     continue;
+>                 }
+>                 ((SortFilterDialog) rootNode.getPreferenceDialog ()).showPage (node);
+>                 if (compareFilters (page.getFilterList ())) {
+>                     page.setFilterCriteria (filters.getItems ());
+>                     page.setCriteria (filterList.getItems ());
+>                     page.filterItemsFromList ();
+>                 }
+>                 cc.add (page.getApplyCommand ());
+>             }
+>             return cc;
+>         }
+> 
+>         return UnexecutableCommand.INSTANCE;
+1034a1028,1033
+>     public Command getCommand () {
+>         if (filterChanged || sortChanged) return getApplyCommand ();
+> 
+>         return null;
+>     }
+> 

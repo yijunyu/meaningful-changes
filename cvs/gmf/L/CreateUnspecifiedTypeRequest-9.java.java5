@@ -1,0 +1,162 @@
+package org.eclipse.gmf.runtime.diagram.ui.requests;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.HashMap;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.requests.CreateRequest;
+
+import org.eclipse.gef.requests.CreationFactory;
+
+import org.eclipse.gmf.runtime.diagram.core.edithelpers.CreateElementRequestAdapter;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.CreateViewAndElementRequest.ViewAndElementDescriptor;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.CreateViewRequest.ViewDescriptor;
+
+import org.eclipse.gmf.runtime.diagram.ui.util.INotationType;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+import org.eclipse.gmf.runtime.emf.type.core.IHintedType;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.CreateElementRequest;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+public class CreateUnspecifiedTypeRequest extends CreateRequest {
+    protected List elementTypes;
+    protected Map requests = new HashMap ();
+    private List newObjectList = new ArrayList ();
+    private PreferencesHint preferencesHint;
+
+    public CreateUnspecifiedTypeRequest (List elementTypes, PreferencesHint preferencesHint) {
+        super ();
+        this.elementTypes = elementTypes;
+        this.preferencesHint = preferencesHint;
+        createRequests ();
+    }
+
+    protected void createRequests () {
+        for (Iterator iter = elementTypes.iterator ();
+        iter.hasNext ();) {
+            IElementType elementType = (IElementType) iter.next ();
+            Request request = null;
+            if (elementType instanceof INotationType) {
+                ViewDescriptor viewDescriptor = new ViewDescriptor (null, Node.class, ((INotationType) elementType).getSemanticHint (), getPreferencesHint ());
+                request = new CreateViewRequest (viewDescriptor);
+            } else if (elementType instanceof IHintedType) {
+                ViewAndElementDescriptor viewDescriptor = new ViewAndElementDescriptor (new CreateElementRequestAdapter (new CreateElementRequest (elementType)), Node.class, ((IHintedType) elementType).getSemanticHint (), getPreferencesHint ());
+                request = new CreateViewAndElementRequest (viewDescriptor);
+                request.setExtendedData (getExtendedData ());
+            } else {
+                ViewAndElementDescriptor viewDescriptor = new ViewAndElementDescriptor (new CreateElementRequestAdapter (new CreateElementRequest (elementType)), Node.class, getPreferencesHint ());
+                request = new CreateViewAndElementRequest (viewDescriptor);
+                request.setExtendedData (getExtendedData ());
+            }
+
+            request.setType (getType ());
+            requests.put (elementType, request);
+        }
+    }
+
+    public CreateRequest getRequestForType (IElementType creationHint) {
+        if (requests != null) {
+            return (CreateRequest) requests.get (creationHint);
+        }
+        return null;
+    }
+
+    public List getElementTypes () {
+        return elementTypes;
+    }
+
+    protected PreferencesHint getPreferencesHint () {
+        return preferencesHint;
+    }
+
+    public void setLocation (Point location) {
+        if (requests != null) {
+            for (Iterator iter = requests.values ().iterator ();
+            iter.hasNext ();) {
+                CreateRequest request = (CreateRequest) iter.next ();
+                request.setLocation (location);
+            }
+        }
+        super.setLocation (location);
+    }
+
+    public void setType (Object type) {
+        if (requests != null) {
+            for (Iterator iter = requests.values ().iterator ();
+            iter.hasNext ();) {
+                CreateRequest request = (CreateRequest) iter.next ();
+                request.setType (type);
+            }
+        }
+        super.setType (type);
+    }
+
+    public void setSize (Dimension size) {
+        if (requests != null) {
+            for (Iterator iter = requests.values ().iterator ();
+            iter.hasNext ();) {
+                CreateRequest request = (CreateRequest) iter.next ();
+                request.setSize (size);
+            }
+        }
+        super.setSize (size);
+    }
+
+    public void setFactory (CreationFactory factory) {
+        if (requests != null) {
+            for (Iterator iter = requests.values ().iterator ();
+            iter.hasNext ();) {
+                CreateRequest request = (CreateRequest) iter.next ();
+                request.setFactory (factory);
+            }
+        }
+        super.setFactory (factory);
+    }
+
+    public void setExtendedData (Map map) {
+        if (requests != null) {
+            for (Iterator iter = requests.values ().iterator ();
+            iter.hasNext ();) {
+                CreateRequest request = (CreateRequest) iter.next ();
+                request.setExtendedData (map);
+            }
+        }
+        super.setExtendedData (map);
+    }
+
+    public void setNewObject (Collection theNewObjects) {
+        newObjectList.addAll (theNewObjects);
+    }
+
+    public Object getNewObject () {
+        return newObjectList;
+    }
+
+    public Object getNewObjectType () {
+        return List.class;
+    }
+
+}
+

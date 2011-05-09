@@ -1,0 +1,233 @@
+package org.eclipse.gmf.runtime.diagram.ui.render.actions;
+
+import java.lang.reflect.InvocationTargetException;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.resources.IContainer;
+
+import org.eclipse.core.resources.IFile;
+
+import org.eclipse.core.runtime.CoreException;
+
+import org.eclipse.core.runtime.IPath;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.MultiStatus;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.DiagramAction;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ShapeEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.ISurfaceEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.internal.DiagramUIRenderDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.internal.DiagramUIRenderPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.internal.DiagramUIRenderStatusCodes;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.internal.dialogs.CopyToImageDialog;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.internal.l10n.DiagramUIRenderMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.render.util.CopyToImageUtil;
+
+import org.eclipse.jface.dialogs.MessageDialog;
+
+import org.eclipse.jface.dialogs.ProgressMonitorDialog;
+
+import org.eclipse.jface.operation.IRunnableWithProgress;
+
+import org.eclipse.osgi.util.NLS;
+
+import org.eclipse.swt.SWTError;
+
+import org.eclipse.swt.widgets.Display;
+
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.ui.ISharedImages;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.ui.PlatformUI;
+
+public class CopyToImageAction extends DiagramAction {
+    private CopyToImageDialog dialog = null;
+
+    public CopyToImageAction (IWorkbenchPage page) {
+        super (page);
+    }
+
+    public void init () {
+        super.init ();
+        setText (DiagramUIRenderMessages.CopyToImageAction_Label);
+        setId (ActionIds.ACTION_COPY_TO_IMAGE);
+        ISharedImages sharedImages = PlatformUI.getWorkbench ().getSharedImages ();
+        setImageDescriptor (sharedImages.getImageDescriptor (ISharedImages.IMG_TOOL_COPY));
+        setHoverImageDescriptor (sharedImages.getImageDescriptor (ISharedImages.IMG_TOOL_COPY));
+        setDisabledImageDescriptor (sharedImages.getImageDescriptor (ISharedImages.IMG_TOOL_COPY_DISABLED));
+    }
+
+    public void run () {
+        IPath path = null;
+        String fileName = null;
+        if (getWorkbenchPart () instanceof IEditorPart) {
+            IEditorPart editor = (IEditorPart) getWorkbenchPart ();
+            IContainer container = (IContainer) editor.getEditorInput ().getAdapter (IContainer.class);
+            if (container != null && container.exists ()) {
+                path = container.getLocation ();
+            }
+            if (path == null) {
+                IFile file = (IFile) editor.getEditorInput ().getAdapter (IFile.class);
+                if (file != null) {
+                    path = file.getLocation ().removeLastSegments (1);
+                    fileName = file.getLocation ().removeFileExtension ().lastSegment ();
+                }
+            }
+        }
+        dialog = new CopyToImageDialog (Display.getCurrent ().getActiveShell (), path, fileName);
+        if (dialog.open () == CopyToImageDialog.CANCEL) {
+            return;
+        }
+        if (! overwriteExisting ()) {
+            return;
+        }
+        Trace.trace (DiagramUIRenderPlugin.getInstance (), "Copy Diagram to " + dialog.getDestination ().toOSString () + " as " + dialog.getImageFormat ().toString ());
+        final MultiStatus status = new MultiStatus (DiagramUIRenderPlugin.getPluginId (), DiagramUIRenderStatusCodes.OK, DiagramUIRenderMessages.CopyToImageAction_Label, null);
+        IRunnableWithProgress runnable = createRunnable (status);
+        ProgressMonitorDialog progressMonitorDialog = new ProgressMonitorDialog (Display.getCurrent ().getActiveShell ());
+        try {
+            progressMonitorDialog.run (false, true, runnable);
+        } catch (InvocationTargetException e) {
+            Log.warning (DiagramUIRenderPlugin.getInstance (), DiagramUIRenderStatusCodes.IGNORED_EXCEPTION_WARNING, e.getTargetException ().getMessage (), e.getTargetException ());
+            if (e.getTargetException () instanceof OutOfMemoryError) {
+                openErrorDialog (DiagramUIRenderMessages.CopyToImageAction_outOfMemoryMessage);
+            } else if (e.getTargetException () instanceof SWTError) {
+                openErrorDialog (DiagramUIRenderMessages.CopyToImageAction_outOfMemoryMessage);
+            } else {
+                openErrorDialog (e.getTargetException ().getMessage ());
+            }
+
+            return;
+        } catch (InterruptedException e) {
+            Log.warning (DiagramUIRenderPlugin.getInstance (), DiagramUIRenderStatusCodes.IGNORED_EXCEPTION_WARNING, e.getMessage (), e);
+        }
+        if (! status.isOK ()) {
+            openErrorDialog (status.getChildren () [0].getMessage ());
+        }
+    }
+
+    private IRunnableWithProgress createRunnable (final MultiStatus status) {
+        return new IRunnableWithProgress () {
+
+            public void run (IProgressMonitor monitor) {
+                try {
+                    List editparts = getOperationSet ();
+                    if (editparts.size () == 1 && editparts.get (0) instanceof DiagramEditPart) {
+                        monitor.beginTask ("", 6);
+                        monitor.worked (1);
+                        monitor.setTaskName (NLS.bind (DiagramUIRenderMessages.CopyToImageAction_copyingDiagramToImageFileMessage, dialog.getDestination ().toOSString ()));
+                        new CopyToImageUtil ().copyToImage ((DiagramEditPart) editparts.get (0), dialog.getDestination (), dialog.getImageFormat (), monitor);
+                    } else {
+                        monitor.beginTask ("", 6);
+                        monitor.worked (1);
+                        monitor.setTaskName (NLS.bind (DiagramUIRenderMessages.CopyToImageAction_copyingSelectedElementsToImageFileMessage, dialog.getDestination ().toOSString ()));
+                        new CopyToImageUtil ().copyToImage (getDiagramEditPart (), editparts, dialog.getDestination (), dialog.getImageFormat (), monitor);
+                    }
+                } catch (CoreException e) {
+                    Log.warning (DiagramUIRenderPlugin.getInstance (), DiagramUIRenderStatusCodes.IGNORED_EXCEPTION_WARNING, e.getMessage (), e);
+                    status.add (e.getStatus ());
+                } finally {
+                    monitor.done ();
+                }
+            }
+
+        }
+
+        ;
+    }
+
+    protected boolean calculateEnabled () {
+        return ! getOperationSet ().isEmpty ();
+    }
+
+    private void openErrorDialog (String message) {
+        MessageDialog.openError (Display.getCurrent ().getActiveShell (), DiagramUIRenderMessages.CopyToImageAction_copyToImageErrorDialogTitle, NLS.bind (DiagramUIRenderMessages.CopyToImageAction_copyToImageErrorDialogMessage, message));
+    }
+
+    private boolean overwriteExisting () {
+        if (dialog.overwriteExisting ()) {
+            return true;
+        }
+        if (! dialog.getDestination ().toFile ().exists ()) {
+            return true;
+        }
+        return MessageDialog.openQuestion (Display.getCurrent ().getActiveShell (), DiagramUIRenderMessages.CopyToImageAction_overwriteExistingConfirmDialogTitle, NLS.bind (DiagramUIRenderMessages.CopyToImageAction_overwriteExistingConfirmDialogMessage, dialog.getDestination ().toOSString ()));
+    }
+
+    protected List createOperationSet () {
+        List selection = getSelectedObjects ();
+        if (selection.size () == 1) {
+            Object editpart = selection.get (0);
+            if (editpart instanceof DiagramEditPart) {
+                return selection;
+            }
+            if (editpart instanceof ISurfaceEditPart) {
+                selection = ((ISurfaceEditPart) editpart).getPrimaryEditParts ();
+            }
+        }
+        for (Iterator iter = selection.iterator ();
+        iter.hasNext ();) {
+            Object editpart = iter.next ();
+            if (editpart instanceof ShapeEditPart) {
+                return selection;
+            }
+        }
+        return Collections.EMPTY_LIST;
+    }
+
+    protected boolean isSelectionListener () {
+        return true;
+    }
+
+    protected Request createTargetRequest () {
+        return null;
+    }
+
+    protected void doRun (IProgressMonitor progressMonitor) {
+        try {
+            getDiagramEditPart ().getEditingDomain ().runExclusive (new Runnable () {
+
+                public void run () {
+                    CopyToImageAction.this.run ();
+                }
+
+            }
+
+            );
+        } catch (Exception e) {
+            Trace.catching (DiagramUIRenderPlugin.getInstance (), DiagramUIRenderDebugOptions.EXCEPTIONS_CATCHING, getClass (), "doRun()", e);
+        }
+    }
+
+    protected CopyToImageUtil getCopyToImageUtil () {
+        return new CopyToImageUtil ();
+    }
+
+}
+

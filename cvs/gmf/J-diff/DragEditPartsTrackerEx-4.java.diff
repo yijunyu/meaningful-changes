@@ -1,0 +1,46 @@
+14a15
+> import java.util.List;
+15a17
+> import org.eclipse.draw2d.geometry.Point;
+19a22
+> import org.eclipse.gef.requests.ChangeBoundsRequest;
+21c24
+< 
+---
+> import org.eclipse.gef.tools.ToolUtilities;
+22a26
+> import org.eclipse.gmf.runtime.diagram.ui.internal.requests.DuplicateRequest;
+23a28
+> import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapModeUtil;
+66d70
+< 		Iterator iter = getOperationSet().iterator();
+68c72,95
+< 		request.setType(isMove ? REQ_MOVE : RequestConstants.REQ_DRAG);
+---
+> 
+>         if (isCloneActive()) {
+> 
+>             // do not use operation set in this case as connections will get
+>             // filtered out
+>             List editparts = ToolUtilities
+>                 .getSelectionWithoutDependants(getCurrentViewer());
+> 
+>             DuplicateRequest duplicateRequest = new DuplicateRequest();
+>             duplicateRequest.setEditParts(editparts);
+>             duplicateRequest.setExtendedData(request.getExtendedData());
+>             if (request instanceof ChangeBoundsRequest) {
+>                 Point delta = ((ChangeBoundsRequest) request).getMoveDelta();
+>                 MapModeUtil.getMapMode(
+>                     ((IGraphicalEditPart) getTargetEditPart()).getFigure())
+>                     .DPtoLP(delta);
+> 
+>                 duplicateRequest.setOffset(delta);
+>             }
+>             command.add(getTargetEditPart().getCommand(duplicateRequest));
+>         } else {
+>             request.setType(isMove ? REQ_MOVE
+>                 : RequestConstants.REQ_DRAG);
+>             Iterator iter = getOperationSet().iterator();
+72a100,101
+>         }
+> 

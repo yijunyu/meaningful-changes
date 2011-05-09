@@ -1,0 +1,52 @@
+package org.eclipse.gmf.internal.graphdef.codegen;
+
+import java.util.HashSet;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.emf.ecore.util.EcoreUtil;
+
+import org.eclipse.gmf.gmfgraph.ConnectionFigure;
+
+import org.eclipse.gmf.gmfgraph.CustomFigure;
+
+import org.eclipse.gmf.gmfgraph.DecorationFigure;
+
+import org.eclipse.gmf.gmfgraph.Figure;
+
+import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+
+class DiagramElementsCopier extends EcoreUtil.Copier {
+    private final HashSet < Figure > myOriginalFigures = new HashSet < Figure > ();
+
+    public void registerSubstitution (Figure original, CustomFigure substituted) {
+        put (original, substituted);
+        myOriginalFigures.add (original);
+    }
+
+    public boolean isSubstituted (Figure original) {
+        return containsKey (original);
+    }
+
+    protected void copyReference (EReference eReference, EObject eObject, EObject copyEObject) {
+        if (EcoreUtil.isAncestor (myOriginalFigures, eObject)) {
+            return;
+        }
+        super.copyReference (eReference, eObject, copyEObject);
+    }
+
+    static CustomFigure createCustomFigure (Figure original) {
+        GMFGraphFactory factory = GMFGraphFactory.eINSTANCE;
+        if (original instanceof DecorationFigure) {
+            return factory.createCustomDecoration ();
+        }
+        if (original instanceof ConnectionFigure) {
+            return factory.createCustomConnection ();
+        }
+        return factory.createCustomFigure ();
+    }
+
+}
+

@@ -1,0 +1,71 @@
+14,14d13
+< import java.util.HashMap;
+16,16d14
+< import java.util.Map;
+19a18,18
+> import org.eclipse.core.resources.ProjectScope;
+21a21,22
+> import org.eclipse.core.runtime.IStatus;
+> import org.eclipse.core.runtime.Platform;
+37a39,40
+> import org.osgi.service.prefs.BackingStoreException;
+> import org.osgi.service.prefs.Preferences;
+47a51,52
+> 	private static final String PREF_KEY = "gmf_dashboard"; //$NON-NLS-1$
+> 
+59,60d63
+< 	private Map<IProject, DashboardState> states;
+< 
+67,67c70,70
+< 		if (memento == null) {
+---
+> 		if (memento != null) {
+68,70d70
+< 			states = new HashMap<IProject, DashboardState>();
+< 		} else {
+< 			states = DashboardPersistence.read(memento);
+114a115,115
+> 				updateDashboardProject(dashboardProject);
+115,115d114
+< 				mediator.setProjectAndState(dashboardProject, states.get(dashboardProject));
+124,124d123
+< 			states.put(mediator.getProject(), mediator.getState());
+130,130d128
+< 		DashboardPersistence.write(memento, states);
+187a186,214
+> 		mediator.setProjectAndState(project, new DashboardState(getPreferences(project)));
+> 	}
+> 
+> 	private Preferences getPreferences(IProject project) {
+> 		Preferences node = getExistingPreferences(project);
+> 		if (node != null) {
+> 			return node;
+> 		}
+> 		return new ProjectScope(project).getNode(Plugin.getPluginID()).node(PREF_KEY);
+> 	}
+> 
+> 	private Preferences getExistingPreferences(IProject project) {
+> 		Preferences node = Platform.getPreferencesService().getRootNode().node(ProjectScope.SCOPE);
+> 		try {
+> 			if (!node.nodeExists(project.getName())) {
+> 				return null;
+> 			}
+> 			node = node.node(project.getName());
+> 			if (!node.nodeExists(Plugin.getPluginID())) {
+> 				return null;
+> 			}
+> 			node = node.node(Plugin.getPluginID());
+> 			if (!node.nodeExists(PREF_KEY)) {
+> 				return null;
+> 			}
+> 			return node.node(PREF_KEY);
+> 		} catch (BackingStoreException e) {
+> 			IStatus status = Plugin.createError("Unable to read state", e);
+> 			Plugin.getDefault().getLog().log(status);
+188,189d185
+< 		if (mediator.getProject() != null) {
+< 			states.put(mediator.getProject(), mediator.getState());
+190a216,216
+> 		return null;
+191,191d215
+< 		mediator.setProjectAndState(project, states.get(project));

@@ -1,0 +1,98 @@
+2a3,16
+> import java.util.Iterator;
+> 
+> import org.eclipse.core.runtime.IStatus;
+> 
+> import org.eclipse.core.runtime.Status;
+> 
+> import org.eclipse.gef.commands.Command;
+> 
+> import org.eclipse.gef.commands.CommandStack;
+> 
+> import org.eclipse.gef.commands.CompoundCommand;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.dialogs.sortfilter.SortFilterPage;
+> 
+4a19,22
+> import org.eclipse.jface.dialogs.IDialogConstants;
+> 
+> import org.eclipse.jface.dialogs.MessageDialog;
+> 
+6a25,26
+> import org.eclipse.jface.preference.IPreferencePage;
+> 
+8a29,36
+> import org.eclipse.jface.preference.PreferenceManager;
+> 
+> import org.eclipse.jface.resource.JFaceResources;
+> 
+> import org.eclipse.jface.util.Policy;
+> 
+> import org.eclipse.jface.util.SafeRunnable;
+> 
+16a45,45
+>     private CommandStack commandStack = null;
+18,18c47,47
+<     public SortFilterDialog (Shell parentShell) {
+---
+>     public SortFilterDialog (Shell parentShell, CommandStack commandStack) {
+19a49,49
+>         this.commandStack = commandStack;
+36a67,123
+>     protected void okPressed () {
+>         SafeRunnable.run (new SafeRunnable () {
+>             private boolean errorOccurred;
+> 
+>             public void run () {
+>                 getButton (IDialogConstants.OK_ID).setEnabled (false);
+>                 errorOccurred = false;
+>                 boolean hasFailedOK = false;
+>                 try {
+>                     Iterator nodes = getPreferenceManager ().getElements (PreferenceManager.PRE_ORDER).iterator ();
+>                     CompoundCommand cc = new CompoundCommand ();
+>                     while (nodes.hasNext ()) {
+>                         IPreferenceNode node = (IPreferenceNode) nodes.next ();
+>                         IPreferencePage page = node.getPage ();
+>                         if (page != null) {
+>                             if (page instanceof SortFilterPage) {
+>                                 Command cmd = ((SortFilterPage) page).getCommand ();
+>                                 if (cmd != null && cmd.canExecute ()) cc.add (cmd);
+> 
+>                             } else if (! page.performOk ()) {
+>                                 hasFailedOK = true;
+>                                 return;
+>                             }
+> 
+>                         }
+>                     }
+>                     if (cc.canExecute ()) commandStack.execute (cc);
+> 
+>                 } catch (Exception e) {
+>                     handleException (e);
+>                 } finally {
+>                     if (hasFailedOK) {
+>                         setReturnCode (FAILED);
+>                         getButton (IDialogConstants.OK_ID).setEnabled (true);
+>                         return;
+>                     }
+>                     if (! errorOccurred) {
+>                         handleSave ();
+>                     }
+>                     setReturnCode (OK);
+>                     close ();
+>                 }
+>             }
+> 
+>             public void handleException (Throwable e) {
+>                 errorOccurred = true;
+>                 Policy.getLog ().log (new Status (IStatus.ERROR, Policy.JFACE, 0, e.toString (), e));
+>                 setSelectedNodePreference (null);
+>                 String message = JFaceResources.getString ("SafeRunnable.errorMessage");
+>                 MessageDialog.openError (getShell (), JFaceResources.getString ("Error"), message);
+>             }
+> 
+>         }
+> 
+>         );
+>     }
+> 

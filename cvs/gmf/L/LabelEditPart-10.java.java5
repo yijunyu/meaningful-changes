@@ -1,0 +1,281 @@
+package org.eclipse.gmf.runtime.diagram.ui.editparts;
+
+import java.util.HashMap;
+
+import java.util.Iterator;
+
+import org.eclipse.draw2d.Connection;
+
+import org.eclipse.draw2d.ConnectionLocator;
+
+import org.eclipse.draw2d.Cursors;
+
+import org.eclipse.draw2d.Figure;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.gef.AccessibleEditPart;
+
+import org.eclipse.gef.DragTracker;
+
+import org.eclipse.gef.EditPolicy;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.editparts.AbstractConnectionEditPart;
+
+import org.eclipse.gef.editparts.AbstractEditPart;
+
+import org.eclipse.gef.editparts.AbstractGraphicalEditPart;
+
+import org.eclipse.gef.editpolicies.ResizableEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableLabelEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.VisibilityComponentEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.figures.LabelLocator;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.editpolicies.LabelSnapBackEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.figures.ResizableLabelLocator;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.util.LabelViewConstants;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramResourceManager;
+
+import org.eclipse.gmf.runtime.diagram.ui.tools.DragEditPartsTrackerEx;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.ConstrainedToolbarLayout;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.WrapLabel;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.PointListUtilities;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.swt.accessibility.AccessibleEvent;
+
+import org.eclipse.ui.views.properties.IPropertySource;
+
+public class LabelEditPart extends TopGraphicEditPart {
+    private String semanticHint = null;
+    private static HashMap snapBackMap = new HashMap ();
+
+    public static void registerSnapBackPosition (String propertyName, Point offset) {
+        snapBackMap.put (propertyName, offset);
+    }
+
+    public static Point getSnapBackPosition (String propertyName) {
+        return (Point) snapBackMap.get (propertyName);
+    }
+
+    public LabelEditPart (View view) {
+        super (view);
+    }
+
+    protected IFigure createFigure () {
+        IFigure label = new Figure ();
+        label.setCursor (Cursors.ARROW);
+        label.setLayoutManager (new ConstrainedToolbarLayout ());
+        return label;
+    }
+
+    protected String getSemanticType () {
+        if (semanticHint == null) {
+            semanticHint = ((String) MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+
+                public Object run () {
+                    return ((View) getModel ()).getType ();
+                }
+
+            }
+
+            ));
+        }
+        return semanticHint;
+    }
+
+    public void refresh () {
+        super.refresh ();
+        refreshBounds ();
+    }
+
+    public void refreshBounds () {
+        if (isResizable ()) {
+            handleResizableRefreshBounds ();
+        } else {
+            handleNonResizableRefreshBoundS ();
+        }
+    }
+
+    private void handleNonResizableRefreshBoundS () {
+        int dx = ((Integer) getStructuralFeatureValue (NotationPackage.eINSTANCE.getLocation_X ())).intValue ();
+        int dy = ((Integer) getStructuralFeatureValue (NotationPackage.eINSTANCE.getLocation_Y ())).intValue ();
+        Point offset = new Point (dx, dy);
+        if (getParent () instanceof AbstractConnectionEditPart) {
+            ((AbstractGraphicalEditPart) getParent ()).setLayoutConstraint (this, getFigure (), new LabelLocator (((AbstractConnectionEditPart) getParent ()).getConnectionFigure (), offset, getKeyPoint ()));
+        } else {
+            getFigure ().getParent ().setConstraint (getFigure (), new LabelLocator (getFigure ().getParent (), offset, getKeyPoint ()));
+        }
+    }
+
+    private void handleResizableRefreshBounds () {
+        int dx = ((Integer) getStructuralFeatureValue (NotationPackage.eINSTANCE.getLocation_X ())).intValue ();
+        int dy = ((Integer) getStructuralFeatureValue (NotationPackage.eINSTANCE.getLocation_Y ())).intValue ();
+        int width = ((Integer) getStructuralFeatureValue (NotationPackage.eINSTANCE.getSize_Width ())).intValue ();
+        int height = ((Integer) getStructuralFeatureValue (NotationPackage.eINSTANCE.getSize_Height ())).intValue ();
+        Rectangle rectangle = new Rectangle (dx, dy, width, height);
+        if (getParent () instanceof AbstractConnectionEditPart) {
+            ((AbstractGraphicalEditPart) getParent ()).setLayoutConstraint (this, getFigure (), new ResizableLabelLocator (((AbstractConnectionEditPart) getParent ()).getConnectionFigure (), rectangle, getKeyPoint ()));
+        } else {
+            getFigure ().getParent ().setConstraint (getFigure (), new ResizableLabelLocator (getFigure ().getParent (), rectangle, getKeyPoint ()));
+        }
+    }
+
+    private boolean isResizable () {
+        EditPolicy editPolicy = getEditPolicy (EditPolicy.PRIMARY_DRAG_ROLE);
+        if (editPolicy instanceof ResizableEditPolicy) return true;
+
+        return false;
+    }
+
+    protected void createDefaultEditPolicies () {
+        super.createDefaultEditPolicies ();
+        installEditPolicy (EditPolicy.PRIMARY_DRAG_ROLE, new NonResizableLabelEditPolicy ());
+        installEditPolicy (EditPolicy.COMPONENT_ROLE, new VisibilityComponentEditPolicy ());
+        installEditPolicy (EditPolicyRoles.SNAP_FEEDBACK_ROLE, new LabelSnapBackEditPolicy ());
+    }
+
+    public DragTracker getDragTracker (Request request) {
+        return new DragEditPartsTrackerEx (this) {
+
+            protected boolean isMove () {
+                return true;
+            }
+
+        }
+
+        ;
+    }
+
+    public boolean isSnapBackNeeded () {
+        return true;
+    }
+
+    protected void refreshVisuals () {
+        super.refreshVisuals ();
+        refreshForegroundColor ();
+    }
+
+    protected void handleNotificationEvent (Notification notification) {
+        Object feature = notification.getFeature ();
+        if (NotationPackage.eINSTANCE.getLocation_X ().equals (feature) || NotationPackage.eINSTANCE.getLocation_Y ().equals (feature) || NotationPackage.eINSTANCE.getSize_Width ().equals (feature) || NotationPackage.eINSTANCE.getSize_Height ().equals (feature)) {
+            refreshBounds ();
+        } else if (NotationPackage.eINSTANCE.getLineStyle_LineColor ().equals (feature)) {
+            Integer c = (Integer) notification.getNewValue ();
+            setForegroundColor (DiagramResourceManager.getInstance ().getColor (c));
+        } else super.handleNotificationEvent (notification);
+
+    }
+
+    protected void addNotationalListeners () {
+        super.addNotationalListeners ();
+        addListenerFilter ("PrimaryView", this, getPrimaryView ());
+    }
+
+    protected void removeNotationalListeners () {
+        super.removeNotationalListeners ();
+        removeListenerFilter ("PrimaryView");
+    }
+
+    protected AccessibleEditPart getAccessibleEditPart () {
+        if (accessibleEP == null) accessibleEP = new AccessibleGraphicalEditPart () {
+
+            public void getName (AccessibleEvent e) {
+                e.result = getAccessibleText ();
+            }
+
+        }
+
+        ;
+
+        return accessibleEP;
+    }
+
+    protected String getAccessibleText () {
+        String accessibleString = "";
+        for (Iterator iter = getChildren ().iterator ();
+        iter.hasNext ();) {
+            IGraphicalEditPart ep = (IGraphicalEditPart) iter.next ();
+            if (ep instanceof TextCompartmentEditPart) {
+                IFigure fig = ep.getFigure ();
+                if (fig instanceof WrapLabel) {
+                    accessibleString += ((WrapLabel) fig).getText () + " ";
+                }
+            }
+        }
+        return accessibleString;
+    }
+
+    public Object getAdapter (Class key) {
+        if (key == IPropertySource.class) {
+            return getParent ().getAdapter (key);
+        }
+        Object adapterFromSuper = super.getAdapter (key);
+        if (adapterFromSuper == null) {
+            return getParent ().getAdapter (key);
+        }
+        return adapterFromSuper;
+    }
+
+    public int getKeyPoint () {
+        return ConnectionLocator.MIDDLE;
+    }
+
+    public Point getReferencePoint () {
+        if (getParent () instanceof AbstractConnectionEditPart) {
+            switch (getKeyPoint ()) {
+                case ConnectionLocator.TARGET :
+                    return calculateRefPoint (LabelViewConstants.SOURCE_LOCATION);
+                case ConnectionLocator.SOURCE :
+                    return calculateRefPoint (LabelViewConstants.TARGET_LOCATION);
+                case ConnectionLocator.MIDDLE :
+                    return calculateRefPoint (LabelViewConstants.MIDDLE_LOCATION);
+                default :
+                    return calculateRefPoint (LabelViewConstants.MIDDLE_LOCATION);
+            }
+        }
+        return ((AbstractGraphicalEditPart) getParent ()).getFigure ().getBounds ().getTopLeft ();
+    }
+
+    private Point calculateRefPoint (int percent) {
+        if (getParent () instanceof AbstractConnectionEditPart) {
+            PointList ptList = ((Connection) ((ConnectionEditPart) getParent ()).getFigure ()).getPoints ();
+            Point refPoint = PointListUtilities.calculatePointRelativeToLine (ptList, 0, percent, true);
+            return refPoint;
+        } else if (getParent () instanceof GraphicalEditPart) {
+            return ((AbstractGraphicalEditPart) getParent ()).getFigure ().getBounds ().getTopLeft ();
+        }
+
+        return null;
+    }
+
+}
+

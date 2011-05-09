@@ -1,0 +1,123 @@
+package org.eclipse.gmf.runtime.emf.ui.properties.sections;
+
+import java.text.MessageFormat;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.ui.views.properties.IPropertySource;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeModelCommand;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.commands.RestoreDefaultPropertyValueCommand;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.commands.SetModelPropertyValueCommand;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.l10n.EMFPropertiesResourceManager;
+
+public class UndoableModelPropertySheetEntry extends PropertySheetEntry {
+    public static final String UNDO_PROPERTY_LABEL = EMFPropertiesResourceManager.getInstance ().getString ("UndoablePropertySheetEntry.commandName");
+
+    public UndoableModelPropertySheetEntry (CommandManager manager) {
+        commandManager = manager;
+    }
+
+    private CommandManager commandManager;
+
+    public void applyEditorValue () {
+        if (editor == null) return;
+
+        if (! editor.isValueValid ()) {
+            setErrorText (editor.getErrorMessage ());
+            return;
+        } else setErrorText (null);
+
+        Object newValue = editor.getValue ();
+        boolean changed = false;
+        if (values.length > 1) {
+            changed = true;
+        } else if (editValue == null) {
+            if (newValue != null) changed = true;
+
+        } else if (! editValue.equals (newValue)) changed = true;
+
+        if (changed) setValue (newValue);
+
+    }
+
+    public void resetPropertyValue () {
+        if (parent == null) {
+            return;
+        }
+        String propertyName = getDescriptor ().getDisplayName ();
+        Object propertyId = getDescriptor ().getId ();
+        CompositeCommand cc = new CompositeCommand (propertyName);
+        RestoreDefaultPropertyValueCommand restoreCommand;
+        boolean executeCommand = false;
+        Object [] parentValues = getParentEntry ().getValues ();
+        for (int i = 0;
+        i < parentValues.length; i ++) {
+            IPropertySource source = getPropertySource (parentValues [i]);
+            if (source.isPropertySet (propertyId)) {
+                restoreCommand = new RestoreDefaultPropertyValueCommand (propertyName, parentValues [i], source, propertyId);
+                cc.compose (restoreCommand);
+                executeCommand = true;
+            }
+        }
+        if (executeCommand) {
+            getCommandManager ().execute (cc);
+            refreshValues ();
+        }
+    }
+
+    protected void setValue (Object newValue) {
+        for (int i = 0;
+        i < values.length; i ++) values [i] = newValue;
+
+        getParentEntry ().valueChanged (this, getCompositeCommand (MessageFormat.format (UNDO_PROPERTY_LABEL, new String [] {getDescriptor ().getDisplayName ()})));
+    }
+
+    protected void valueChanged (UndoableModelPropertySheetEntry child, CompositeCommand command) {
+        String propertyName = child.getDescriptor ().getDisplayName ();
+        Object propertyId = child.getDescriptor ().getId ();
+        for (int i = 0;
+        i < values.length; i ++) command.compose (getPropertyCommand (propertyName, values [i], propertyId, child.getEditValue (i)));
+
+        if (getParentEntry () != null) {
+            getParentEntry ().valueChanged (this, command);
+        } else {
+            command.execute (new NullProgressMonitor ());
+        }
+    }
+
+    protected CommandManager getCommandManager () {
+        return commandManager;
+    }
+
+    protected UndoableModelPropertySheetEntry getParentEntry () {
+        return (UndoableModelPropertySheetEntry) parent;
+    }
+
+    protected ICommand getPropertyCommand (String propertyName, Object object, Object propertyId, Object value) {
+        return new SetModelPropertyValueCommand (propertyName, object, getPropertySource (object), propertyId, value);
+    }
+
+    protected CompositeCommand getCompositeCommand (String propertyName) {
+        return new CompositeModelCommand (propertyName);
+    }
+
+    protected PropertySheetEntry [] createChildEntries (int size) {
+        return new UndoableModelPropertySheetEntry [size];
+    }
+
+    protected PropertySheetEntry createChildEntry () {
+        return new UndoableModelPropertySheetEntry (getCommandManager ());
+    }
+
+}
+

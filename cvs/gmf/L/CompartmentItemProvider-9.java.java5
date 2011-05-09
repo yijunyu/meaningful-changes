@@ -1,0 +1,105 @@
+package org.eclipse.gmf.gmfgraph.provider;
+
+import java.util.Collection;
+
+import java.util.List;
+
+import org.eclipse.emf.common.notify.AdapterFactory;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.common.util.ResourceLocator;
+
+import org.eclipse.emf.edit.command.CommandParameter;
+
+import org.eclipse.emf.edit.provider.ComposeableAdapterFactory;
+
+import org.eclipse.emf.edit.provider.IEditingDomainItemProvider;
+
+import org.eclipse.emf.edit.provider.IItemLabelProvider;
+
+import org.eclipse.emf.edit.provider.IItemPropertyDescriptor;
+
+import org.eclipse.emf.edit.provider.IItemPropertySource;
+
+import org.eclipse.emf.edit.provider.IStructuredItemContentProvider;
+
+import org.eclipse.emf.edit.provider.ITreeItemContentProvider;
+
+import org.eclipse.emf.edit.provider.ItemPropertyDescriptor;
+
+import org.eclipse.emf.edit.provider.ViewerNotification;
+
+import org.eclipse.gmf.gmfgraph.Compartment;
+
+import org.eclipse.gmf.gmfgraph.Figure;
+
+import org.eclipse.gmf.gmfgraph.FigureHandle;
+
+import org.eclipse.gmf.gmfgraph.GMFGraphPackage;
+
+public class CompartmentItemProvider extends DiagramElementItemProvider implements IEditingDomainItemProvider, IStructuredItemContentProvider, ITreeItemContentProvider, IItemLabelProvider, IItemPropertySource {
+
+    public CompartmentItemProvider (AdapterFactory adapterFactory) {
+        super (adapterFactory);
+    }
+
+    @Override
+    public List < IItemPropertyDescriptor > getPropertyDescriptors (Object object) {
+        if (itemPropertyDescriptors == null) {
+            super.getPropertyDescriptors (object);
+            addCollapsiblePropertyDescriptor (object);
+            addNeedsTitlePropertyDescriptor (object);
+        }
+        return itemPropertyDescriptors;
+    }
+
+    protected void addCollapsiblePropertyDescriptor (Object object) {
+        itemPropertyDescriptors.add (createItemPropertyDescriptor (((ComposeableAdapterFactory) adapterFactory).getRootAdapterFactory (), getResourceLocator (), getString ("_UI_Compartment_collapsible_feature"), getString ("_UI_PropertyDescriptor_description", "_UI_Compartment_collapsible_feature", "_UI_Compartment_type"), GMFGraphPackage.eINSTANCE.getCompartment_Collapsible (), true, false, false, ItemPropertyDescriptor.BOOLEAN_VALUE_IMAGE, null, null));
+    }
+
+    protected void addNeedsTitlePropertyDescriptor (Object object) {
+        itemPropertyDescriptors.add (createItemPropertyDescriptor (((ComposeableAdapterFactory) adapterFactory).getRootAdapterFactory (), getResourceLocator (), getString ("_UI_Compartment_needsTitle_feature"), getString ("_UI_PropertyDescriptor_description", "_UI_Compartment_needsTitle_feature", "_UI_Compartment_type"), GMFGraphPackage.eINSTANCE.getCompartment_NeedsTitle (), true, false, false, ItemPropertyDescriptor.BOOLEAN_VALUE_IMAGE, null, null));
+    }
+
+    @Override
+    public Object getImage (Object object) {
+        return overlayImage (object, getResourceLocator ().getImage ("full/obj16/Compartment"));
+    }
+
+    public String getTextGen (Object object) {
+        String label = ((Compartment) object).getName ();
+        return label == null || label.length () == 0 ? getString ("_UI_Compartment_type") : getString ("_UI_Compartment_type") + " " + label;
+    }
+
+    public String getText (Object object) {
+        String textGen = getTextGen (object);
+        FigureHandle figure = ((Compartment) object).getFigure ();
+        String figureName = (figure instanceof Figure) ? String.valueOf (((Figure) figure).getName ()) : "null";
+        return textGen + "(" + figureName + ")";
+    }
+
+    @Override
+    public void notifyChanged (Notification notification) {
+        updateChildren (notification);
+        switch (notification.getFeatureID (Compartment.class)) {
+            case GMFGraphPackage.COMPARTMENT__COLLAPSIBLE :
+            case GMFGraphPackage.COMPARTMENT__NEEDS_TITLE :
+                fireNotifyChanged (new ViewerNotification (notification, notification.getNotifier (), false, true));
+                return;
+        }
+        super.notifyChanged (notification);
+    }
+
+    @Override
+    protected void collectNewChildDescriptors (Collection < CommandParameter > newChildDescriptors, Object object) {
+        super.collectNewChildDescriptors (newChildDescriptors, object);
+    }
+
+    @Override
+    public ResourceLocator getResourceLocator () {
+        return GMFGraphEditPlugin.INSTANCE;
+    }
+
+}
+

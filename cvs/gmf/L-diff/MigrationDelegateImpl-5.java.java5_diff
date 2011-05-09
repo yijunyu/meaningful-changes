@@ -1,0 +1,48 @@
+50a51
+>     private Map < EClass, Map < String, EStructuralFeature > > myTracedHierarchyAttributes = new HashMap < EClass, Map < String, EStructuralFeature > > ();
+62c63
+<     public void registerTracedFeatureForHierarchy (EClass eClass, Map < String, EStructuralFeature > tracedFeature) {
+---
+>     public void registerTracedElementForHierarchy (EClass eClass, Map < String, EStructuralFeature > tracedFeature) {
+65a67,70
+>     public void registerTracedAttributeForHierarchy (EClass eClass, Map < String, EStructuralFeature > tracedFeature) {
+>         myTracedHierarchyAttributes.put (eClass, tracedFeature);
+>     }
+> 
+83a89,102
+>         registerTracedElementForHierarchy (eClass, xmlName, tracerFeature);
+>         registerTracedAttributeForHierarchy (eClass, xmlName, tracerFeature);
+>     }
+> 
+>     public void registerTracedAttributeForHierarchy (EClass eClass, String xmlName, EStructuralFeature tracerFeature) {
+>         Map < String, EStructuralFeature > tracedFeatures = myTracedHierarchyAttributes.get (eClass);
+>         if (tracedFeatures == null) {
+>             tracedFeatures = new HashMap < String, EStructuralFeature > ();
+>         }
+>         tracedFeatures.put (xmlName, tracerFeature);
+>         registerTracedAttributeForHierarchy (eClass, tracedFeatures);
+>     }
+> 
+>     public void registerTracedElementForHierarchy (EClass eClass, String xmlName, EStructuralFeature tracerFeature) {
+89c108
+<         registerTracedFeatureForHierarchy (eClass, tracedFeatures);
+---
+>         registerTracedElementForHierarchy (eClass, tracedFeatures);
+122a142,152
+>     public EStructuralFeature getTracedParentAttributeFor (EClass clazz, String name) {
+>         Map < String, EStructuralFeature > tracings = myTracedHierarchyAttributes.get (clazz);
+>         EStructuralFeature result = tracings != null ? tracings.get (name) : null;
+>         for (Iterator < EClass > it = clazz.getEAllSuperTypes ().iterator ();
+>         result == null && it.hasNext ();) {
+>             EClass nextParent = it.next ();
+>             result = getTracedParentAttributeFor (nextParent, name);
+>         }
+>         return result;
+>     }
+> 
+140c170,172
+<         } else if ((rename = getTracedParentFeatureFor (eClass, name)) != null) {
+---
+>         } else if (isElement && (rename = getTracedParentFeatureFor (eClass, name)) != null) {
+>             result = rename;
+>         } else if (! isElement && (rename = getTracedParentAttributeFor (eClass, name)) != null) {

@@ -1,0 +1,378 @@
+package org.eclipse.gmf.runtime.diagram.ui.properties.sections;
+
+import java.util.ArrayList;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.commands.operations.IOperationHistory;
+
+import org.eclipse.core.commands.operations.OperationHistoryFactory;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.ecore.EAnnotation;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.transaction.DemultiplexingListener;
+
+import org.eclipse.emf.transaction.NotificationFilter;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.services.properties.PropertiesServiceAdapterFactory;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramEditor;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.internal.DiagramPropertiesDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.internal.DiagramPropertiesPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.internal.DiagramPropertiesStatusCodes;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.internal.l10n.DiagramUIPropertiesMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.util.SectionUpdateRequestCollapser;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.views.IReadOnlyDiagramPropertySheetPageContributor;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.views.PropertiesBrowserPage;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+
+import org.eclipse.jface.viewers.ISelection;
+
+import org.eclipse.jface.viewers.IStructuredSelection;
+
+import org.eclipse.swt.graphics.GC;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.ui.views.properties.tabbed.AbstractPropertySection;
+
+import org.eclipse.ui.views.properties.tabbed.ITabbedPropertySheetPageContributor;
+
+import org.eclipse.ui.views.properties.tabbed.TabbedPropertySheetPage;
+
+public abstract class AbstractModelerPropertySection extends AbstractPropertySection {
+    private TabbedPropertySheetPage tabbedPropertySheetPage;
+    protected DemultiplexingListener eventListener = new DemultiplexingListener (getFilter ()) {
+
+        protected void handleNotification (TransactionalEditingDomain domain, Notification notification) {
+            update (domain, notification);
+        }
+
+    }
+
+    ;
+    protected static final PropertiesServiceAdapterFactory propertiesProvider = new PropertiesServiceAdapterFactory ();
+    private boolean bIsCommandInProgress = false;
+    static protected String VALUE_CHANGED_STRING = DiagramUIPropertiesMessages.AbstractPropertySection_UndoIntervalPropertyString;
+    protected List input;
+    protected EObject eObject;
+    private List eObjectList = new ArrayList ();
+    protected boolean disposed = false;
+    private TransactionalEditingDomain editingDomain = null;
+
+    public void setInput (IWorkbenchPart part, ISelection selection) {
+        super.setInput (part, selection);
+        if (! (selection instanceof IStructuredSelection) || selection.equals (getInput ())) return;
+
+        input = new ArrayList ();
+        eObjectList = new ArrayList ();
+        for (Iterator it = ((IStructuredSelection) selection).iterator ();
+        it.hasNext ();) {
+            Object next = it.next ();
+            if (addToEObjectList (next)) {
+                input.add (next);
+            }
+        }
+        if (false == eObjectList.isEmpty ()) setEObject ((EObject) eObjectList.get (0));
+
+    }
+
+    protected boolean addToEObjectList (Object object) {
+        EObject adapted = unwrap (object);
+        if (adapted != null) {
+            getEObjectList ().add (adapted);
+            return true;
+        }
+        return false;
+    }
+
+    protected EObject unwrap (Object object) {
+        return adapt (object);
+    }
+
+    protected EObject adapt (Object object) {
+        if (object instanceof IAdaptable) {
+            return (EObject) ((IAdaptable) object).getAdapter (EObject.class);
+        }
+        return null;
+    }
+
+    protected boolean isCurrentSelection (Notification notification, EObject element) {
+        if (element == null) return false;
+
+        if (eObjectList.contains (element)) return true;
+
+        if (eObjectList.size () > 0) {
+            EObject eventObject = element;
+            if (element instanceof EAnnotation) {
+                eventObject = element.eContainer ();
+            } else {
+                EObject container = element.eContainer ();
+                if (container != null && container instanceof EAnnotation) {
+                    eventObject = container.eContainer ();
+                }
+            }
+            if (eventObject == null) {
+                Object tmpObj = notification.getOldValue ();
+                if (tmpObj != null && tmpObj instanceof EObject) {
+                    eventObject = (EObject) tmpObj;
+                } else {
+                    return false;
+                }
+            }
+            if (eventObject != element) {
+                return eObjectList.contains (eventObject);
+            }
+        }
+        return false;
+    }
+
+    protected void executeAsReadAction (final Runnable code) {
+        try {
+            TransactionalEditingDomain domain = getEditingDomain ();
+            if (domain != null) {
+                getEditingDomain ().runExclusive (code);
+            } else {
+                code.run ();
+            }
+        } catch (InterruptedException e) {
+            Trace.catching (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass (), "executeAsReadAction", e);
+        }
+    }
+
+    protected CommandResult executeAsCompositeCommand (String actionName, List commands) {
+        if (true == bIsCommandInProgress) return null;
+
+        bIsCommandInProgress = true;
+        CompositeCommand command = new CompositeCommand (actionName, commands);
+        IOperationHistory history = OperationHistoryFactory.getOperationHistory ();
+        try {
+            IStatus status = history.execute (command, new NullProgressMonitor (), null);
+            if (status.getCode () == DiagramPropertiesStatusCodes.CANCELLED || status.getCode () == IStatus.CANCEL || status.getCode () == IStatus.ERROR) {
+                refresh ();
+            }
+        } catch (ExecutionException e) {
+            Trace.catching (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass (), "executeAsCompositeCommand", e);
+            Log.error (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesStatusCodes.IGNORED_EXCEPTION_WARNING, e.getLocalizedMessage (), e);
+        }
+        bIsCommandInProgress = false;
+        return command.getCommandResult ();
+    }
+
+    public List getInput () {
+        return input;
+    }
+
+    public void aboutToBeHidden () {
+        super.aboutToBeHidden ();
+        TransactionalEditingDomain theEditingDomain = getEditingDomain ();
+        if (theEditingDomain != null) {
+            theEditingDomain.removeResourceSetListener (getEventListener ());
+        }
+    }
+
+    public void aboutToBeShown () {
+        super.aboutToBeShown ();
+        TransactionalEditingDomain theEditingDomain = getEditingDomain ();
+        if (theEditingDomain != null) {
+            theEditingDomain.addResourceSetListener (getEventListener ());
+        }
+    }
+
+    public void dispose () {
+        super.dispose ();
+        if (eObjectList != null) {
+            eObjectList.clear ();
+        }
+        eObject = null;
+        disposed = true;
+    }
+
+    protected Object getPrimarySelection () {
+        return (getInput () != null && ! getInput ().isEmpty () ? getInput ().get (0) : null);
+    }
+
+    protected EObject getEObject () {
+        return eObject;
+    }
+
+    protected void setEObject (EObject object) {
+        this.eObject = object;
+    }
+
+    public NotificationFilter getFilter () {
+        return NotificationFilter.createEventTypeFilter (Notification.SET).or (NotificationFilter.createEventTypeFilter (Notification.UNSET)).and (NotificationFilter.createNotifierTypeFilter (EObject.class));
+    }
+
+    public void update (final Notification notification, final EObject element) {
+        if (! isDisposed () && isCurrentSelection (notification, element) && ! isNotifierDeleted (notification)) {
+            postUpdateRequest (new Runnable () {
+
+                public void run () {
+                    if (! isDisposed () && isCurrentSelection (notification, element) && ! isNotifierDeleted (notification)) refresh ();
+
+                }
+
+            }
+
+            );
+        }
+    }
+
+    protected void update (TransactionalEditingDomain domain, Notification notification) {
+        Object notifier = notification.getNotifier ();
+        if (notifier instanceof EObject) {
+            update (notification, (EObject) notifier);
+        }
+    }
+
+    protected boolean isNotifierDeleted (Notification notification) {
+        if (! (notification.getNotifier () instanceof EObject)) {
+            return false;
+        }
+        EObject obj = (EObject) notification.getNotifier ();
+        return obj.eResource () == null;
+    }
+
+    protected void postUpdateRequest (Runnable updateRequest) {
+        getUpdateRequestCollapser ().postRequest (this, updateRequest);
+    }
+
+    public void handleElementModifiedEvent (final Notification notification, final EObject element) {
+        update (notification, element);
+    }
+
+    protected List getEObjectList () {
+        return eObjectList;
+    }
+
+    protected boolean isDisposed () {
+        return disposed;
+    }
+
+    protected DemultiplexingListener getEventListener () {
+        return eventListener;
+    }
+
+    protected ICommand createCommand (String name, Resource res, final Runnable runnable) {
+        return createCommandInternal (name, res, runnable);
+    }
+
+    protected ICommand createCommand (String name, EObject res, final Runnable runnable) {
+        return createCommandInternal (name, res.eResource (), runnable);
+    }
+
+    private ICommand createCommandInternal (String name, Resource res, final Runnable runnable) {
+        ICommand command = new AbstractTransactionalCommand (getEditingDomain (), name, Collections.singletonList (WorkspaceSynchronizer.getFile (res))) {
+
+            protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+                runnable.run ();
+                return CommandResult.newOKCommandResult ();
+            }
+
+        }
+
+        ;
+        return command;
+    }
+
+    protected TransactionalEditingDomain getEditingDomain () {
+        if (editingDomain == null) {
+            EObject eObjectInput = getEObject ();
+            if (eObjectInput != null) {
+                editingDomain = TransactionUtil.getEditingDomain (eObjectInput);
+            } else if (! getEObjectList ().isEmpty ()) {
+                editingDomain = TransactionUtil.getEditingDomain (getEObjectList ().get (0));
+            }
+
+        }
+        return editingDomain;
+    }
+
+    protected void setEditingDomain (TransactionalEditingDomain editingDomain) {
+        this.editingDomain = editingDomain;
+    }
+
+    public void createControls (Composite parent, TabbedPropertySheetPage aTabbedPropertySheetPage) {
+        super.createControls (parent, aTabbedPropertySheetPage);
+        this.tabbedPropertySheetPage = aTabbedPropertySheetPage;
+    }
+
+    protected boolean isReadOnly () {
+        if (tabbedPropertySheetPage instanceof PropertiesBrowserPage) {
+            PropertiesBrowserPage propertiesBrowserPage = (PropertiesBrowserPage) tabbedPropertySheetPage;
+            ITabbedPropertySheetPageContributor contributor = propertiesBrowserPage.getContributor ();
+            if (contributor instanceof IReadOnlyDiagramPropertySheetPageContributor || (contributor instanceof DiagramEditor && ! ((DiagramEditor) contributor).isWritable ())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected int getStandardLabelWidth (Composite parent, String [] labels) {
+        int standardLabelWidth = STANDARD_LABEL_WIDTH;
+        GC gc = new GC (parent);
+        int indent = gc.textExtent ("XXX").x;
+        for (int i = 0;
+        i < labels.length; i ++) {
+            int width = gc.textExtent (labels [i]).x;
+            if (width + indent > standardLabelWidth) {
+                standardLabelWidth = width + indent;
+            }
+        }
+        gc.dispose ();
+        return standardLabelWidth;
+    }
+
+    protected SectionUpdateRequestCollapser getUpdateRequestCollapser () {
+        return DiagramPropertiesPlugin.getDefault ().getUpdateRequestCollapser ();
+    }
+
+}
+

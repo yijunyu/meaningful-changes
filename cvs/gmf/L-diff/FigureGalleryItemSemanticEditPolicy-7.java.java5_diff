@@ -1,0 +1,84 @@
+3c3
+< import org.eclipse.emf.ecore.EAnnotation;
+---
+> import java.util.Iterator;
+5c5
+< import org.eclipse.emf.ecore.EObject;
+---
+> import org.eclipse.emf.ecore.EAnnotation;
+10a11,24
+> import org.eclipse.gmf.graphdef.editor.edit.parts.Ellipse3EditPart;
+> 
+> import org.eclipse.gmf.graphdef.editor.edit.parts.FigureDescriptorEditPart;
+> 
+> import org.eclipse.gmf.graphdef.editor.edit.parts.FigureGalleryFiguresEditPart;
+> 
+> import org.eclipse.gmf.graphdef.editor.edit.parts.Polyline3EditPart;
+> 
+> import org.eclipse.gmf.graphdef.editor.edit.parts.Rectangle3EditPart;
+> 
+> import org.eclipse.gmf.graphdef.editor.edit.parts.RoundedRectangle3EditPart;
+> 
+> import org.eclipse.gmf.graphdef.editor.part.GMFGraphVisualIDRegistry;
+> 
+14a29,30
+> import org.eclipse.gmf.runtime.notation.Node;
+> 
+20,21c36,45
+<         CompoundCommand cc = getDestroyEdgesCommand (req.isConfirmationRequired ());
+<         cc.add (getMSLWrapper (new DestroyElementCommand (req) {
+---
+>         CompoundCommand cc = getDestroyEdgesCommand ();
+>         addDestroyChildNodesCommand (cc);
+>         addDestroyShortcutsCommand (cc);
+>         View view = (View) getHost ().getModel ();
+>         if (view.getEAnnotation ("Shortcut") != null) {
+>             req.setElementToDestroy (view);
+>         }
+>         cc.add (getGEFWrapper (new DestroyElementCommand (req)));
+>         return cc.unwrap ();
+>     }
+23c47
+<             protected EObject getElementToDestroy () {
+---
+>     protected void addDestroyChildNodesCommand (CompoundCommand cmd) {
+27c51
+<                     return view;
+---
+>             return;
+29c53,79
+<                 return super.getElementToDestroy ();
+---
+>         for (Iterator it = view.getChildren ().iterator ();
+>         it.hasNext ();) {
+>             Node node = (Node) it.next ();
+>             switch (GMFGraphVisualIDRegistry.getVisualID (node)) {
+>                 case FigureGalleryFiguresEditPart.VISUAL_ID :
+>                     for (Iterator cit = node.getChildren ().iterator ();
+>                     cit.hasNext ();) {
+>                         Node cnode = (Node) cit.next ();
+>                         switch (GMFGraphVisualIDRegistry.getVisualID (cnode)) {
+>                             case FigureDescriptorEditPart.VISUAL_ID :
+>                                 cmd.add (getDestroyElementCommand (cnode));
+>                                 break;
+>                             case Rectangle3EditPart.VISUAL_ID :
+>                                 cmd.add (getDestroyElementCommand (cnode));
+>                                 break;
+>                             case Ellipse3EditPart.VISUAL_ID :
+>                                 cmd.add (getDestroyElementCommand (cnode));
+>                                 break;
+>                             case RoundedRectangle3EditPart.VISUAL_ID :
+>                                 cmd.add (getDestroyElementCommand (cnode));
+>                                 break;
+>                             case Polyline3EditPart.VISUAL_ID :
+>                                 cmd.add (getDestroyElementCommand (cnode));
+>                                 break;
+>                         }
+>                     }
+>                     break;
+31d80
+< 
+33,35d81
+< 
+<         ));
+<         return cc.unwrap ();

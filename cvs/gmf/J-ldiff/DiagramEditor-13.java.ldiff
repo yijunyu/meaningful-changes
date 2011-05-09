@@ -1,0 +1,79 @@
+53a54,54
+> import org.eclipse.ui.IEditorDescriptor;
+54a56,58
+> import org.eclipse.ui.IEditorMatchingStrategy;
+> import org.eclipse.ui.IEditorReference;
+> import org.eclipse.ui.IEditorRegistry;
+56a61,61
+> import org.eclipse.ui.PlatformUI;
+165a171,173
+> 			editingDomain = reuseEditingDomain(input);
+> 		}
+> 		if (editingDomain == null) {
+182,182c199,199
+< 			}
+---
+> 			}
+300a176,177
+> 		ForceTrackingModificationAdapter adapter = (ForceTrackingModificationAdapter) EcoreUtil.getExistingAdapter(editingDomain.getResourceSet(), ForceTrackingModificationAdapter.class);
+> 		if (adapter == null) {
+300a315,334
+> 			return result;
+> 		}
+> 		return null;
+> 	}
+> 
+> 	/**
+> 	 * Returns the editing domain that is used by other editors with the same input. This is done to correctly support 
+> 	 * "New Editor" operation that is available in the context menu of the editor tab.
+> 	 * @return
+> 	 */
+> 	protected TransactionalEditingDomain reuseEditingDomain(IEditorInput input) {
+> 		IEditorRegistry editorRegistry = PlatformUI.getWorkbench().getEditorRegistry();
+> 		IEditorDescriptor editorDesc = editorRegistry.findEditor(getSite().getId());
+> 		IEditorMatchingStrategy matchingStrategy = editorDesc.getEditorMatchingStrategy();
+> 		IEditorReference[] editorRefs = getEditorSite().getPage().getEditorReferences();
+> 		for (int i = 0; i < editorRefs.length; i++) {
+> 			if (matches(matchingStrategy, editorRefs[i], input)) {
+> 				DiagramEditor anotherEditor = (DiagramEditor) editorRefs[i].getEditor(false);
+> 				if (anotherEditor != null) {
+> 					return anotherEditor.getEditingDomain();
+301,303d175
+< 			if (result != null) {
+< 				ForceTrackingModificationAdapter adapter = (ForceTrackingModificationAdapter) EcoreUtil.getExistingAdapter(result.getResourceSet(), ForceTrackingModificationAdapter.class);
+< 				if (adapter == null) {
+304,304c178,178
+< 					adapter = new ForceTrackingModificationAdapter();
+---
+> 			adapter = new ForceTrackingModificationAdapter();
+305a180,181
+> 		}
+> 		adapter.acquire();
+305,305c179,179
+< 					result.getResourceSet().eAdapters().add(adapter);
+---
+> 			editingDomain.getResourceSet().eAdapters().add(adapter);
+307,307d335
+< 				adapter.acquire();
+309,309d336
+< 			return result;
+313a341,355
+> 	private boolean matches(IEditorMatchingStrategy strategy, IEditorReference editorRef, IEditorInput input) {
+> 		if (strategy == null) {
+> 			if (getSite().getId().equals(editorRef.getId())) {
+> 				try {
+> 					return input.equals(editorRef.getEditorInput());
+> 				} catch (PartInitException e) {
+> 					return false;
+> 				}
+> 			}
+> 			return false;
+> 		} else {
+> 			return strategy.matches(editorRef, input);
+> 		}
+> 	}
+> 
+321,323d362
+< 		ForceTrackingModificationAdapter forceTrackingModificationAdapter = new ForceTrackingModificationAdapter();
+< 		editingDomain.getResourceSet().eAdapters().add(forceTrackingModificationAdapter);
+< 		forceTrackingModificationAdapter.acquire();

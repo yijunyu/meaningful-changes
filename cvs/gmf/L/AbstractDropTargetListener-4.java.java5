@@ -1,0 +1,235 @@
+package org.eclipse.gmf.runtime.common.ui.services.dnd.drop;
+
+import java.lang.reflect.InvocationTargetException;
+
+import java.util.Arrays;
+
+import java.util.Collections;
+
+import java.util.List;
+
+import java.util.Vector;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.jface.dialogs.ProgressMonitorDialog;
+
+import org.eclipse.jface.operation.IRunnableWithProgress;
+
+import org.eclipse.swt.custom.BusyIndicator;
+
+import org.eclipse.swt.dnd.DND;
+
+import org.eclipse.swt.dnd.DropTargetEvent;
+
+import org.eclipse.swt.widgets.Shell;
+
+import org.eclipse.ui.IWorkbenchPartSite;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.util.EnumeratedType;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.core.ITransferAgent;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.internal.CommonUIServicesDNDDebugOptions;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.internal.CommonUIServicesDNDPlugin;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.internal.CommonUIServicesDNDStatusCodes;
+
+public abstract class AbstractDropTargetListener implements IDropTargetListener {
+    private IDropTargetContext context = null;
+    private ITransferAgent currentAgent = null;
+    private IDropTargetEvent currentEvent = null;
+    private final List transferIds = new Vector ();
+    public static class WorkIndicatorType extends EnumeratedType {
+        private static int nextOrdinal = 0;
+        public static final WorkIndicatorType NONE = new WorkIndicatorType ("None");
+        public static final WorkIndicatorType BUSY = new WorkIndicatorType ("Busy");
+        public static final WorkIndicatorType PROGRESS_MONITOR = new WorkIndicatorType ("Progress Monitor");
+        public static final WorkIndicatorType CANCELABLE_PROGRESS_MONITOR = new WorkIndicatorType ("Cancelable Progress Monitor");
+        private static final WorkIndicatorType [] VALUES = {NONE, BUSY, PROGRESS_MONITOR, CANCELABLE_PROGRESS_MONITOR};
+
+        protected WorkIndicatorType (String name, int ordinal) {
+            super (name, ordinal);
+        }
+
+        private WorkIndicatorType (String name) {
+            this (name, nextOrdinal ++);
+        }
+
+        protected List getValues () {
+            return Collections.unmodifiableList (Arrays.asList (VALUES));
+        }
+
+    }
+
+    public AbstractDropTargetListener (String [] transferIdArray) {
+        super ();
+        assert null != transferIdArray : "transferIdArray cannot be null";
+        assert transferIdArray.length > 0 : "transferIdArray cannot be empty";
+        this.transferIds.addAll (Arrays.asList (transferIdArray));
+    }
+
+    public AbstractDropTargetListener () {
+        super ();
+    }
+
+    public final String [] getSupportingTransferIds () {
+        return (String []) transferIds.toArray (new String [transferIds.size ()]);
+    }
+
+    public final void addSupportingTransferId (String transferId) {
+        assert null != transferId : "transferId cannot be null";
+        if (! transferIds.contains (transferId)) {
+            transferIds.add (transferId);
+        }
+    }
+
+    public void dragEnter (DropTargetEvent event) {
+    }
+
+    public void dragLeave (DropTargetEvent event) {
+        currentAgent = null;
+        currentEvent = null;
+        context = null;
+    }
+
+    public void dragOperationChanged (DropTargetEvent event) {
+    }
+
+    public void dragOver (DropTargetEvent event) {
+    }
+
+    public final void drop (DropTargetEvent event) {
+        if (getContext ().getCurrentTarget () == null) {
+            event.detail = DND.DROP_NONE;
+            return;
+        }
+        final ICommand command = getExecutableContext (event);
+        final CommandManager manager = (CommandManager) getContext ().getActivePart ().getAdapter (CommandManager.class);
+        if (manager == null || command == null) {
+            event.detail = DND.DROP_NONE;
+            return;
+        }
+        WorkIndicatorType type = getWorkIndicatorType ();
+        if (type == WorkIndicatorType.PROGRESS_MONITOR) {
+            runCommandInProgressMonitorDialog (command, false);
+        } else if (type == WorkIndicatorType.CANCELABLE_PROGRESS_MONITOR) {
+            runCommandInProgressMonitorDialog (command, true);
+        } else if (type == WorkIndicatorType.BUSY) {
+            BusyIndicator.showWhile (null, new Runnable () {
+
+                public void run () {
+                    manager.execute (command, new NullProgressMonitor ());
+                }
+
+            }
+
+            );
+        } else {
+            manager.execute (command, new NullProgressMonitor ());
+        }
+
+        event.detail = (command.getCommandResult ().getStatus ().isOK ()) ? event.detail : DND.DROP_NONE;
+        currentAgent = null;
+        currentEvent = null;
+        context = null;
+    }
+
+    public void dropAccept (DropTargetEvent event) {
+    }
+
+    protected final IDropTargetContext getContext () {
+        return context;
+    }
+
+    public ICommand getExecutableContext (DropTargetEvent event) {
+        return null;
+    }
+
+    public void setFeedback (DropTargetEvent event) {
+        event.feedback |= DND.FEEDBACK_EXPAND | DND.FEEDBACK_SCROLL;
+        switch (getContext ().getRelativeLocation ()) {
+            case IDropTargetContext.LOCATION_BEFORE :
+                event.feedback |= DND.FEEDBACK_INSERT_BEFORE;
+                break;
+            case IDropTargetContext.LOCATION_AFTER :
+                event.feedback |= DND.FEEDBACK_INSERT_AFTER;
+                break;
+            case IDropTargetContext.LOCATION_ON :
+            default :
+                event.feedback |= DND.FEEDBACK_SELECT;
+                break;
+        }
+    }
+
+    public abstract boolean canSupport ();
+
+    public final boolean canSupport (IDropTargetContext cntxt, IDropTargetEvent currEvent, ITransferAgent currAgent) {
+        this.context = cntxt;
+        this.currentEvent = currEvent;
+        this.currentAgent = currAgent;
+        return canSupport ();
+    }
+
+    protected final IDropTargetEvent getCurrentEvent () {
+        return currentEvent;
+    }
+
+    protected final ITransferAgent getCurrentAgent () {
+        return currentAgent;
+    }
+
+    protected final Shell getShell () {
+        IWorkbenchPartSite site = getContext ().getActivePart ().getSite ();
+        return site != null ? site.getShell () : null;
+    }
+
+    protected WorkIndicatorType getWorkIndicatorType () {
+        return WorkIndicatorType.BUSY;
+    }
+
+    private void runCommandInProgressMonitorDialog (final ICommand command, boolean cancelable) {
+        final CommandManager manager = (CommandManager) getContext ().getActivePart ().getAdapter (CommandManager.class);
+        IRunnableWithProgress runnable = new IRunnableWithProgress () {
+
+            public void run (IProgressMonitor monitor) {
+                manager.execute (command, monitor);
+            }
+
+        }
+
+        ;
+        runInProgressMonitorDialog (runnable, cancelable);
+    }
+
+    private void runInProgressMonitorDialog (IRunnableWithProgress runnable, boolean cancelable) {
+        try {
+            if (System.getProperty ("RUN_PROGRESS_IN_THREAD") != null) {
+                new ProgressMonitorDialog (null).run (true, cancelable, runnable);
+            } else {
+                new ProgressMonitorDialog (null).run (false, cancelable, runnable);
+            }
+        } catch (InvocationTargetException ite) {
+            Trace.catching (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.EXCEPTIONS_CATCHING, getClass (), "runInProgressMonitorDialog", ite);
+            Log.error (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDStatusCodes.SERVICE_FAILURE, "runInProgressMonitorDialog", ite);
+            RuntimeException cre = new RuntimeException (ite.getTargetException ());
+            Trace.throwing (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.EXCEPTIONS_THROWING, getClass (), "runInProgressMonitorDialog", cre);
+            throw cre;
+        } catch (InterruptedException ie) {
+            Trace.catching (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.EXCEPTIONS_CATCHING, getClass (), "runInProgressMonitorDialog", ie);
+        }
+    }
+
+}
+

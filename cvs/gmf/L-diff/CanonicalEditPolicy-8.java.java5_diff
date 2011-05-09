@@ -1,0 +1,94 @@
+3,6d2
+< import java.beans.PropertyChangeEvent;
+< 
+< import java.beans.PropertyChangeListener;
+< 
+34a31,32
+> import org.eclipse.emf.common.notify.Notification;
+> 
+63c61,63
+< import org.eclipse.gmf.runtime.diagram.core.listener.NotificationEvent;
+---
+> import org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener;
+> 
+> import org.eclipse.gmf.runtime.diagram.core.listener.NotificationUtil;
+84a85,86
+> import org.eclipse.gmf.runtime.emf.core.edit.MRunOption;
+> 
+105c107
+< public abstract class CanonicalEditPolicy extends AbstractEditPolicy implements PropertyChangeListener {
+---
+> public abstract class CanonicalEditPolicy extends AbstractEditPolicy implements NotificationListener {
+327c329,330
+<         MEditingDomainGetter.getMEditingDomain ((View) getHost ().getModel ()).runAsUnchecked (new MRunnable () {
+---
+>         int options = MRunOption.UNCHECKED;
+>         MEditingDomainGetter.getMEditingDomain ((View) getHost ().getModel ()).runWithOptions (new MRunnable () {
+336c339
+<         );
+---
+>         , options);
+445c448
+<     protected boolean addListenerFilter (String filterId, PropertyChangeListener listener, EObject element) {
+---
+>     protected boolean addListenerFilter (String filterId, NotificationListener listener, EObject element) {
+453c456
+<                 PresentationListener.getInstance ().addPropertyChangeListener (element, listener);
+---
+>                 PresentationListener.getInstance ().addNotificationListener (element, listener);
+461c464
+<     protected boolean addListenerFilter (String filterId, PropertyChangeListener listener, EObject element, EStructuralFeature feature) {
+---
+>     protected boolean addListenerFilter (String filterId, NotificationListener listener, EObject element, EStructuralFeature feature) {
+469c472
+<                 PresentationListener.getInstance ().addPropertyChangeListener (element, feature, listener);
+---
+>                 PresentationListener.getInstance ().addNotificationListener (element, feature, listener);
+484c487
+<             PresentationListener.getInstance ().removePropertyChangeListener ((EObject) objects [0], (EStructuralFeature) objects [1], (PropertyChangeListener) objects [2]);
+---
+>             PresentationListener.getInstance ().removeNotificationListener ((EObject) objects [0], (EStructuralFeature) objects [1], (NotificationListener) objects [2]);
+486c489
+<             PresentationListener.getInstance ().removePropertyChangeListener ((EObject) objects [0], (PropertyChangeListener) objects [1]);
+---
+>             PresentationListener.getInstance ().removeNotificationListener ((EObject) objects [0], (NotificationListener) objects [1]);
+490,493c493,495
+<     public final void propertyChange (PropertyChangeEvent event) {
+<         if (isHostStillValid () && event instanceof NotificationEvent) {
+<             NotificationEvent ne = (NotificationEvent) event;
+<             EObject element = ne.getElement ();
+---
+>     public final void notifyChanged (Notification notification) {
+>         if (isHostStillValid ()) {
+>             Object element = notification.getNotifier ();
+497c499
+<             handleNotificationEvent (ne);
+---
+>             handleNotificationEvent (notification);
+505,506c507
+<     protected void handleSemanticEvent (NotificationEvent event) {
+<         if (shouldHandleSemanticEvent (event)) {
+---
+>     protected void handleSemanticEvent (Notification event) {
+509d509
+<     }
+511,512c511,512
+<     protected boolean shouldHandleSemanticEvent (NotificationEvent event) {
+<         return event.isElementAddedToSlot () || event.isElementRemovedFromSlot ();
+---
+>     protected boolean shouldHandleSemanticEvent (Notification event) {
+>         return NotificationUtil.isElementAddedToSlot (event) || NotificationUtil.isElementRemovedFromSlot (event);
+515c515
+<     protected void handleNotificationEvent (NotificationEvent event) {
+---
+>     protected void handleNotificationEvent (Notification event) {
+534c534
+<     protected boolean shouldHandleNotificationEvent (NotificationEvent event) {
+---
+>     protected boolean shouldHandleNotificationEvent (Notification event) {
+538,539c538,539
+<         EObject element = event.getElement ();
+<         return (! (element instanceof View) && (event.isElementAddedToSlot () || event.isElementRemovedFromSlot ()));
+---
+>         Object element = event.getNotifier ();
+>         return (element instanceof EObject && ! (element instanceof View) && (NotificationUtil.isElementAddedToSlot (event) || NotificationUtil.isElementRemovedFromSlot (event)));

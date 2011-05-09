@@ -1,0 +1,58 @@
+package org.eclipse.gmf.runtime.common.ui.services.parser;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.gmf.runtime.common.core.service.ExecutionStrategy;
+
+import org.eclipse.gmf.runtime.common.core.service.Service;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+public class ParserService extends Service implements IParserProvider {
+    private final static ParserService service = new ParserService ();
+
+    public static ParserService getInstance () {
+        return service;
+    }
+
+    public IParser getParser (IAdaptable hint) {
+        return (IParser) executeUnique (ExecutionStrategy.FIRST, new GetParserOperation (hint));
+    }
+
+    public String getEditString (IAdaptable hint, int options) {
+        String editString = null;
+        IParser parser = service.getParser (hint);
+        if (parser != null) {
+            editString = parser.getEditString (hint, options);
+        }
+        if (editString == null) {
+            editString = StringStatics.BLANK;
+        }
+        return editString;
+    }
+
+    public String getPrintString (IAdaptable hint, int options) {
+        IParser parser = service.getParser (hint);
+        if (parser == null) {
+            return StringStatics.BLANK;
+        }
+        return parser.getPrintString (hint, options);
+    }
+
+    public String getPrintString (IAdaptable hint) {
+        return getPrintString (hint, 0);
+    }
+
+    public boolean canEdit (IAdaptable hint) {
+        IParser parser = service.getParser (hint);
+        if (parser != null) {
+            String editString = parser.getEditString (hint, 0);
+            if (editString != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+}
+

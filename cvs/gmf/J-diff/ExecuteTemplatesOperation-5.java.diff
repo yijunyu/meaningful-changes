@@ -1,0 +1,54 @@
+20c20
+< import org.eclipse.emf.common.util.BasicDiagnostic;
+---
+> import org.eclipse.emf.common.util.Diagnostic;
+97c97
+< 			IStatus loadStatus = loadGenModel();
+---
+> 			Diagnostic loadStatus = loadGenModel();
+103,106c103,104
+< 			IStatus isGenModelValid = validateGenModel();
+< 			if (!isGenModelValid.isOK()) {
+< 				final String[] buttons = new String[] { IDialogConstants.PROCEED_LABEL, IDialogConstants.CANCEL_LABEL };
+< 				final int[] buttonIDs = new int[] { IDialogConstants.PROCEED_ID, IDialogConstants.CANCEL_ID };
+---
+> 			Diagnostic isGenModelValid = validateGenModel();
+> 			if (!ValidationHelper.isOK(isGenModelValid)) {
+108,109c106
+< 				ErrorDialogEx dlg = new ErrorDialogEx(getShell(), getName(), msg, isGenModelValid, buttons, buttonIDs, 0);
+< 				if (dlg.open() == IDialogConstants.CANCEL_ID) {
+---
+> 				if (DiagnosticsDialog.openProceedCancel(getShell(), getName(), msg, isGenModelValid) == IDialogConstants.CANCEL_ID) {
+148,159c145,149
+< 	private boolean canProcessGMFGenModel(IStatus loadStatus) {
+< 		if (!loadStatus.isOK()) {
+< 			String[] buttons = new String[] { IDialogConstants.PROCEED_LABEL, IDialogConstants.CANCEL_LABEL };
+< 			int[] buttonIDs = new int[] { IDialogConstants.PROCEED_ID, IDialogConstants.CANCEL_ID };
+< 			if (myGenModel == null) {
+< 				// we cannot proceed further as there is no gmfgen, allow only cancel
+< 				buttons = new String[] { buttons[1] };
+< 				buttonIDs = new int[] { buttonIDs[1] };
+< 			}
+< 			ErrorDialogEx dlg = new ErrorDialogEx(getShell(), getName(), CodeGenUIPlugin.getBundleString("generatecode.badsrc"), //$NON-NLS-1$ 
+< 					loadStatus, buttons, buttonIDs, 0);
+< 			if (dlg.open() == IDialogConstants.CANCEL_ID) {
+---
+> 	private boolean canProcessGMFGenModel(Diagnostic loadStatus) {
+> 		if (!ValidationHelper.isOK(loadStatus)) {
+> 			boolean disableProceed = myGenModel == null; // we cannot proceed further as there is no gmfgen, disable proceed button
+> 			if (IDialogConstants.CANCEL_ID == 
+> 				DiagnosticsDialog.openProceedCancel(getShell(), getName(), null, loadStatus, disableProceed)) {
+197c187
+< 	private IStatus loadGenModel() {
+---
+> 	private Diagnostic loadGenModel() {
+209c199
+< 		return loadHelper.getStatus();
+---
+> 		return loadHelper.getDiagnostics();
+219,220c209,210
+< 	private IStatus validateGenModel() {
+< 		return BasicDiagnostic.toIStatus(ValidationHelper.validate(getGenModel(), true));
+---
+> 	private Diagnostic validateGenModel() {
+> 		return ValidationHelper.validate(getGenModel(), true);

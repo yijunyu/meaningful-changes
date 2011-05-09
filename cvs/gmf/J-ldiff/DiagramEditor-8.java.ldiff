@@ -1,0 +1,132 @@
+27a28,28
+> import org.eclipse.emf.ecore.util.EcoreUtil;
+29a31,31
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+36,36c39,39
+< import org.eclipse.gef.commands.Command;
+---
+> import org.eclipse.gef.commands.CommandStackEvent;
+36a40,40
+> import org.eclipse.gef.commands.CommandStackEventListener;
+139a163,163
+> 		getCommandStack().addCommandStackEventListener(mySaveListener);
+145a170,170
+> 			getCommandStack().removeCommandStackEventListener(mySaveListener);
+149a175,180
+> 		ForceTrackingModificationAdapter adapter = (ForceTrackingModificationAdapter) EcoreUtil.getExistingAdapter(getEditingDomain().getResourceSet(), ForceTrackingModificationAdapter.class);
+> 		assert adapter != null;
+> 		adapter.release();
+> 		if (adapter.isReleased()) {
+> 			getEditingDomain().getResourceSet().eAdapters().remove(adapter);
+> 		}
+258a290,302
+> 	protected TransactionalEditingDomain getEditingDomain(IEditorInput input) {
+> 		if (input instanceof DiagramEditorInput) {
+> 			TransactionalEditingDomain result = TransactionUtil.getEditingDomain(((DiagramEditorInput) input).getDiagram());
+> 			if (result != null) {
+> 				ForceTrackingModificationAdapter adapter = (ForceTrackingModificationAdapter) EcoreUtil.getExistingAdapter(result.getResourceSet(), ForceTrackingModificationAdapter.class);
+> 				if (adapter == null) {
+> 					adapter = new ForceTrackingModificationAdapter();
+> 					result.getResourceSet().eAdapters().add(adapter);
+> 				}
+> 				adapter.acquire();
+> 			}
+> 			return result;
+> 		}
+259,259d289
+< 	protected TransactionalEditingDomain getEditingDomain(IEditorInput editorInput) {
+285a74,77
+> 	private CommandStackEventListener mySaveListener = new CommandStackEventListener() {
+> 		public void stackChanged(CommandStackEvent event) {
+> 			if (event.isPostChangeEvent() && isSaved()) {
+> 				getCommandStack().markSaveLocation();
+286,292d73
+< 		domain.setCommandStack(new CommandStack(){
+< 			@Override
+< 			public void execute(Command command) {
+< 				super.execute(command);
+< 				if (isSaved()) {
+< 					markSaveLocation();
+< 				}
+293a79,84
+> 		}
+> 		private boolean isSaved() {
+> 			for(Iterator it = getEditingDomain().getResourceSet().getResources().iterator(); it.hasNext(); ) {
+> 				Resource next = (Resource) it.next();
+> 				if (!next.isLoaded()) {
+> 					continue;
+293,293c78,78
+< 			}
+---
+> 			}
+294,298d78
+< 			@Override
+< 			public void undo() {
+< 				super.undo();
+< 				if (isSaved()) {
+< 					markSaveLocation();
+299a86,88
+> 				if (!next.isTrackingModification() || next.isModified()) {
+> 					return false;
+> 				}
+299,299c85,85
+< 				}
+---
+> 				}
+300,300c89,89
+< 			}
+---
+> 			}
+301,317d89
+< 			@Override
+< 			public void redo() {
+< 				super.redo();
+< 				if (isSaved()) {
+< 					markSaveLocation();
+< 				}
+< 			}
+< 			private boolean isSaved() {
+< 				for(Iterator it = getEditingDomain().getResourceSet().getResources().iterator(); it.hasNext(); ) {
+< 					Resource next = (Resource) it.next();
+< 					if (!next.isLoaded()) {
+< 						continue;
+< 					}
+< 					if (!next.isTrackingModification() || next.isModified()) {
+< 						return false;
+< 					}
+< 				}
+318,318c90,90
+< 				return true;
+---
+> 			return true;
+319,319c91,91
+< 			}
+---
+> 		}
+320,320c92,92
+< 		});
+---
+> 	};
+320a93,93
+> 
+362a371,390
+> 		@Override
+> 		public boolean isAdapterForType(Object type) {
+> 			return ForceTrackingModificationAdapter.class.equals(type);
+> 		}
+> 		public void acquire() {
+> 			myRefCount++;
+> 		}
+> 
+> 		public void release() {
+> 			if (myRefCount == 0) {
+> 				throw new IllegalStateException();
+> 			}
+> 			myRefCount--;
+> 		}
+> 
+> 		public boolean isReleased() {
+> 			return myRefCount == 0;
+> 		}
+> 
+> 		private int myRefCount;

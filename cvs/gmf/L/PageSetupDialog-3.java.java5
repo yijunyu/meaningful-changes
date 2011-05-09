@@ -1,0 +1,126 @@
+package org.eclipse.gmf.runtime.diagram.ui.internal.dialogs;
+
+import java.util.ArrayList;
+
+import org.eclipse.jface.dialogs.Dialog;
+
+import org.eclipse.jface.preference.IPreferenceStore;
+
+import org.eclipse.swt.widgets.Button;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.swt.widgets.Control;
+
+import org.eclipse.swt.widgets.Shell;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.ui.PlatformUI;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IDiagramPreferenceSupport;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.pagesetup.ILabels;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramGraphicalViewer;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramGraphicalViewer;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+
+public class PageSetupDialog extends Dialog implements ILabels {
+    private static PageSetupConfigBlock fPrinterConfigurationBlock;
+    private static PageSetupSelectionConfigBlock fSelectionConfigurationBlock;
+    private ArrayList fConfigBlocks = new ArrayList ();
+
+    public PageSetupDialog (Shell parentShell) {
+        super (parentShell);
+        IPreferenceStore diagramViewerStore = getDiagramViewerStore ();
+        IPreferenceStore globalStore = getGlobalPreferencesStore ();
+        fSelectionConfigurationBlock = new PageSetupSelectionConfigBlock (diagramViewerStore, globalStore, this);
+        fPrinterConfigurationBlock = new PageSetupConfigBlock (diagramViewerStore, this);
+        fConfigBlocks.add (fPrinterConfigurationBlock);
+        fConfigBlocks.add (fSelectionConfigurationBlock);
+    }
+
+    protected void cancelPressed () {
+        super.cancelPressed ();
+    }
+
+    protected Control createDialogArea (Composite parent) {
+        fSelectionConfigurationBlock.createContents (parent);
+        fPrinterConfigurationBlock.createContents (parent);
+        enableConfigurationBlocks ();
+        getShell ().setText (LABEL_TITLE_PAGE_SETUP);
+        return parent;
+    }
+
+    protected void okPressed () {
+        Button useDiagramSettings = (Button) fSelectionConfigurationBlock.getControl (PageSetupControlType.BUTTON_USE_DIAGRAM_SETTINGS);
+        if (useDiagramSettings.getSelection ()) {
+            fPrinterConfigurationBlock.save ();
+            fSelectionConfigurationBlock.save ();
+            super.okPressed ();
+        } else {
+            fSelectionConfigurationBlock.save ();
+            super.okPressed ();
+        }
+    }
+
+    public Button getOkButton () {
+        return super.getButton (OK);
+    }
+
+    protected PageSetupConfigBlock getConfigurationBlock () {
+        return fPrinterConfigurationBlock;
+    }
+
+    protected static PageSetupSelectionConfigBlock getSelectionConfigurationBlock () {
+        return fSelectionConfigurationBlock;
+    }
+
+    private void enableConfigurationBlocks () {
+        Button bUseWorkspaceSettings = (Button) fSelectionConfigurationBlock.getControl (PageSetupControlType.BUTTON_USE_WORKSPACE_SETTINGS);
+        if (bUseWorkspaceSettings.getSelection ()) {
+            fSelectionConfigurationBlock.enableButtonConfigure ();
+            fPrinterConfigurationBlock.disableAllControls ();
+        } else {
+            fSelectionConfigurationBlock.disableButtonConfigure ();
+            fPrinterConfigurationBlock.enableAllControls ();
+        }
+    }
+
+    private static IDiagramGraphicalViewer getDiagramGraphicalViewer () {
+        IWorkbenchPart page = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ().getActivePage ().getActivePart ();
+        if (page instanceof IDiagramWorkbenchPart) {
+            return ((IDiagramWorkbenchPart) page).getDiagramGraphicalViewer ();
+        }
+        return null;
+    }
+
+    private static IPreferenceStore getDiagramViewerStore () {
+        IPreferenceStore store = null;
+        IDiagramGraphicalViewer viewer = getDiagramGraphicalViewer ();
+        if (viewer instanceof DiagramGraphicalViewer) {
+            store = ((DiagramGraphicalViewer) viewer).getWorkspaceViewerPreferenceStore ();
+        }
+        return store;
+    }
+
+    private static IPreferenceStore getGlobalPreferencesStore () {
+        IDiagramGraphicalViewer viewer = getDiagramGraphicalViewer ();
+        if (viewer.getRootEditPart () instanceof IDiagramPreferenceSupport) {
+            PreferencesHint preferencesHint = ((IDiagramPreferenceSupport) viewer.getRootEditPart ()).getPreferencesHint ();
+            IPreferenceStore store = (IPreferenceStore) preferencesHint.getPreferenceStore ();
+            IPreferenceStore defaultStore = (IPreferenceStore) PreferencesHint.USE_DEFAULTS.getPreferenceStore ();
+            if (! store.equals (defaultStore)) {
+                return store;
+            }
+        }
+        return null;
+    }
+
+}
+

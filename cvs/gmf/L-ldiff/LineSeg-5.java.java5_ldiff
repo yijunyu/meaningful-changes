@@ -1,0 +1,141 @@
+6a7,10
+> import org.eclipse.draw2d.geometry.PrecisionPoint;
+> 
+> import org.eclipse.draw2d.geometry.PrecisionRectangle;
+> 
+49a54,54
+>         origin = ptStart.getCopy ();
+50,50d53
+<         origin = new Point (ptStart);
+51,51c55,55
+<         terminus = new Point (ptEnd);
+---
+>         terminus = ptEnd.getCopy ();
+94,94c98,98
+<         return new Point (origin);
+---
+>         return origin.getCopy ();
+98,98c102,102
+<         return new Point (terminus);
+---
+>         return terminus.getCopy ();
+102,102c106,106
+<         this.origin = new Point (origin);
+---
+>         this.origin = origin.getCopy ();
+106,106c110,110
+<         this.terminus = new Point (terminus);
+---
+>         this.terminus = terminus.getCopy ();
+161,163d164
+<         Point theOrigin = getOrigin ();
+<         Point theTerminus = getTerminus ();
+<         return (theOrigin.getDistance (aPoint) + aPoint.getDistance (theTerminus) <= length () + tolerance);
+344a350,352
+>         PrecisionPoint preciseOrigin = new PrecisionPoint (origin);
+>         PrecisionPoint preciseTerminus = new PrecisionPoint (terminus);
+>         return getLineEquation (preciseOrigin.preciseX, preciseOrigin.preciseY, preciseTerminus.preciseX, preciseTerminus.preciseY);
+345,345c165,165
+<         return getLineEquation (origin.x, origin.y, terminus.x, terminus.y);
+---
+>         double lengthOfSegment = Math.sqrt ((origin.x - terminus.x) * (origin.x - terminus.x) + (origin.y - terminus.y) * (origin.y - terminus.y));
+345a166,168
+>         double lengthFromOriginToPoint = Math.sqrt ((origin.x - aPoint.x) * (origin.x - aPoint.x) + (origin.y - aPoint.y) * (origin.y - aPoint.y));
+>         double lengthFromTerminusToPoint = Math.sqrt ((terminus.x - aPoint.x) * (terminus.x - aPoint.x) + (terminus.y - aPoint.y) * (terminus.y - aPoint.y));
+>         return lengthFromTerminusToPoint + lengthFromOriginToPoint - lengthOfSegment < tolerance;
+348a356,356
+>         PrecisionPointList intersections = new PrecisionPointList ();
+349,349c420,420
+<         PointList intersections = new PointList ();
+---
+>         PointList intersections = new PrecisionPointList ();
+360a368,368
+>                 intersections.addPoint (line.getOrigin ().getCopy ());
+361,361d367
+<                 intersections.addPoint (new Point (line.getOrigin ().getCopy ()));
+362,362c369,369
+<                 intersections.addPoint (new Point (line.getTerminus ().getCopy ()));
+---
+>                 intersections.addPoint (line.getTerminus ().getCopy ());
+365,365c372,372
+<             intersections.addPoint (new Point (Math.round ((c1 * b2 - b1 * c2) / det), Math.round ((a1 * c2 - c1 * a2) / det)));
+---
+>             intersections.addPoint (new PrecisionPoint ((c1 * b2 - b1 * c2) / det, (a1 * c2 - c1 * a2) / det));
+370a378,389
+>         PointList intersections = new PrecisionPointList ();
+>         PrecisionPoint preciseOrigin = new PrecisionPoint (origin);
+>         PrecisionPoint preciseTerminus = new PrecisionPoint (terminus);
+>         PrecisionRectangle preciseEllipseBounds = new PrecisionRectangle (ellipseBounds);
+>         if (preciseEllipseBounds.preciseWidth == 0 || preciseEllipseBounds.preciseHeight == 0) return intersections;
+> 
+>         PrecisionPoint ellipsePreciseCenter = new PrecisionPoint (preciseEllipseBounds.getCenter ());
+>         double xl1 = preciseOrigin.preciseX - ellipsePreciseCenter.preciseX;
+>         double xl2 = preciseTerminus.preciseX - ellipsePreciseCenter.preciseX;
+>         double yl1 = preciseOrigin.preciseY - ellipsePreciseCenter.preciseY;
+>         double yl2 = preciseTerminus.preciseY - ellipsePreciseCenter.preciseY;
+>         double [] equation = LineSeg.getLineEquation (xl1, yl1, xl2, yl2);
+371,378d377
+<         PointList intersections = new PointList ();
+<         if (ellipseBounds.width == 0 || ellipseBounds.height == 0) return intersections;
+< 
+<         double xl1 = getOrigin ().x - ellipseBounds.getCenter ().x;
+<         double xl2 = getTerminus ().x - ellipseBounds.getCenter ().x;
+<         double yl1 = getOrigin ().y - ellipseBounds.getCenter ().y;
+<         double yl2 = getTerminus ().y - ellipseBounds.getCenter ().y;
+<         double [] equation = getLineEquation (xl1, yl1, xl2, yl2);
+383a395,395
+>         double w = preciseEllipseBounds.preciseWidth;
+384,384d394
+<         double w = ellipseBounds.width;
+385,385c396,396
+<         double h = ellipseBounds.height;
+---
+>         double h = preciseEllipseBounds.preciseHeight;
+390a402,402
+>             intersections.addPoint (new PrecisionPoint (x + ellipsePreciseCenter.preciseX, Math.sqrt (y) + ellipsePreciseCenter.preciseY));
+391,391d401
+<             intersections.addPoint (new Point (Math.round (x + ellipseBounds.getCenter ().x), Math.round (Math.sqrt (y) + ellipseBounds.getCenter ().y)));
+392,392c403,403
+<             intersections.addPoint (new Point (Math.round (x + ellipseBounds.getCenter ().x), Math.round (- Math.sqrt (y) + ellipseBounds.getCenter ().y)));
+---
+>             intersections.addPoint (new PrecisionPoint (x + ellipsePreciseCenter.preciseX, - Math.sqrt (y) + ellipsePreciseCenter.preciseY));
+401a413,414
+>             intersections.addPoint (new PrecisionPoint (x1 + ellipsePreciseCenter.preciseX, (c - a * x1) / b + ellipsePreciseCenter.preciseY));
+>             intersections.addPoint (new PrecisionPoint (x2 + ellipsePreciseCenter.preciseX, (c - a * x2) / b + ellipsePreciseCenter.preciseY));
+402,403d412
+<             intersections.addPoint (new Point (Math.round (x1 + ellipseBounds.getCenter ().x), Math.round ((c - a * x1) / b + ellipseBounds.getCenter ().y)));
+<             intersections.addPoint (new Point (Math.round (x2 + ellipseBounds.getCenter ().x), Math.round ((c - a * x2) / b + ellipseBounds.getCenter ().y)));
+409,413d419
+<         double temp [] = getEquation ();
+<         double a = temp [0];
+<         double b = temp [1];
+<         double c = temp [2];
+<         PointList intersections = new PointList ();
+414a422,423
+>             if (containsPoint (points.getFirstPoint (), DEFAULT_INTERSECTION_TOLERANCE)) {
+>                 intersections.addPoint (points.getFirstPoint ());
+415,418d421
+<             if (a * points.getPoint (0).x + b * points.getPoint (0).y == c) {
+<                 intersections.addPoint (points.getPoint (0).getCopy ());
+<             }
+<             return intersections;
+419a425,425
+>         } else {
+421a428,428
+>                 LineSeg seg = new LineSeg (points.getPoint (i), points.getPoint (i + 1));
+422,422d427
+<             LineSeg line = new LineSeg (points.getPoint (i).getCopy (), points.getPoint (i + 1).getCopy ());
+423,423c429,429
+<             PointList currentIntersections = getLinesIntersections (line);
+---
+>                 PointList currentIntersections = getLinesIntersections (seg);
+427,427c433,433
+<                 if (line.containsPoint (intersection, DEFAULT_INTERSECTION_TOLERANCE)) intersections.addPoint (currentIntersections.getPoint (j));
+---
+>                     if (seg.containsPoint (intersection, DEFAULT_INTERSECTION_TOLERANCE)) {
+427a434,436
+>                         intersections.addPoint (currentIntersections.getPoint (j));
+>                     }
+>                 }
+428,428d433
+< 

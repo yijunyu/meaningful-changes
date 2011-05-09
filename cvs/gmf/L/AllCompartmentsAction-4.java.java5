@@ -1,0 +1,83 @@
+package org.eclipse.gmf.runtime.diagram.ui.actions.internal;
+
+import java.util.Collections;
+
+import java.util.List;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.l10n.Images;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.l10n.Messages;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.TopGraphicEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.requests.ActionIds;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.Properties;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class AllCompartmentsAction extends PropertyChangeAction {
+    private Boolean visibility;
+
+    protected AllCompartmentsAction (IWorkbenchPage workbenchPage, boolean visibility) {
+        super (workbenchPage, Properties.ID_ISVISIBLE, Messages.getString ("ConstrainedFlowLayoutEditPolicy.changeVisibilityCommand.label"));
+        this.visibility = visibility ? Boolean.TRUE : Boolean.FALSE;
+    }
+
+    protected Object getNewPropertyValue () {
+        return visibility;
+    }
+
+    protected List getTargetEdiParts (EditPart editpart) {
+        List targetEPs = null;
+        if (editpart instanceof TopGraphicEditPart) {
+            final TopGraphicEditPart topEP = (TopGraphicEditPart) editpart;
+            targetEPs = (List) MEditingDomainGetter.getMEditingDomain ((View) editpart.getModel ()).runAsRead (new MRunnable () {
+
+                public Object run () {
+                    return topEP.getResizableCompartments ();
+                }
+
+            }
+
+            );
+        }
+        return (targetEPs == null || targetEPs.isEmpty ()) ? Collections.EMPTY_LIST : targetEPs;
+    }
+
+    protected String getCommandLabel () {
+        if (((Boolean) getNewPropertyValue ()).booleanValue ()) return Messages.getString ("ShowAllResizableCompartmentsAction.ShowAllText");
+        else return Messages.getString ("ShowAllResizableCompartmentsAction.HideAllText");
+
+    }
+
+    public static AllCompartmentsAction createShowAllCompartmentsAction (IWorkbenchPage workbenchPage) {
+        AllCompartmentsAction action = new AllCompartmentsAction (workbenchPage, true);
+        action.setId (ActionIds.ACTION_COMPARTMENT_ALL);
+        action.setText (Messages.getString ("ShowAllResizableCompartmentsAction.ShowAllText"));
+        action.setToolTipText (Messages.getString ("ShowAllResizableCompartmentsAction.ShowAllTooltip"));
+        action.setImageDescriptor (Images.DESC_ACTION_SHOW_ALL_RESIZABLE_COMPARTMENTS);
+        action.setHoverImageDescriptor (Images.DESC_ACTION_SHOW_ALL_RESIZABLE_COMPARTMENTS);
+        return action;
+    }
+
+    public static AllCompartmentsAction createHideAllCompartmentsAction (IWorkbenchPage workbenchPage) {
+        AllCompartmentsAction action = new AllCompartmentsAction (workbenchPage, false);
+        action.setId (ActionIds.ACTION_COMPARTMENT_NONE);
+        action.setText (Messages.getString ("ShowAllResizableCompartmentsAction.HideAllText"));
+        action.setToolTipText (Messages.getString ("ShowAllResizableCompartmentsAction.HideAllTooltip"));
+        action.setImageDescriptor (Images.DESC_ACTION_HIDE_ALL_RESIZABLE_COMPARTMENTS);
+        action.setHoverImageDescriptor (Images.DESC_ACTION_HIDE_ALL_RESIZABLE_COMPARTMENTS);
+        return action;
+    }
+
+}
+

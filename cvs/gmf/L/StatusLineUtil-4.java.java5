@@ -1,0 +1,62 @@
+package org.eclipse.gmf.runtime.common.ui.util;
+
+import org.eclipse.jface.action.IStatusLineManager;
+
+import org.eclipse.swt.widgets.Display;
+
+import org.eclipse.ui.IEditorActionBarContributor;
+
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.ui.IViewPart;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.ui.PlatformUI;
+
+import org.eclipse.ui.part.EditorActionBarContributor;
+
+public class StatusLineUtil {
+
+    private StatusLineUtil () {
+    }
+
+    public static void outputErrorMessage (IWorkbenchPart part, final String errorMessage) {
+        final IStatusLineManager statusLineManager = getStatusLineManager (part);
+        if (statusLineManager == null) {
+            return;
+        }
+        final Display workbenchDisplay = PlatformUI.getWorkbench ().getDisplay ();
+        if (workbenchDisplay.getThread () == Thread.currentThread ()) {
+            statusLineManager.setErrorMessage (errorMessage);
+        } else {
+            workbenchDisplay.asyncExec (new Runnable () {
+
+                public void run () {
+                    statusLineManager.setErrorMessage (errorMessage);
+                }
+
+            }
+
+            );
+        }
+    }
+
+    private static IStatusLineManager getStatusLineManager (IWorkbenchPart part) {
+        IStatusLineManager result = null;
+        if (part instanceof IViewPart) {
+            IViewPart viewPart = (IViewPart) part;
+            result = viewPart.getViewSite ().getActionBars ().getStatusLineManager ();
+        } else if (part instanceof IEditorPart) {
+            IEditorPart editorPart = (IEditorPart) part;
+            IEditorActionBarContributor contributor = editorPart.getEditorSite ().getActionBarContributor ();
+            if (contributor instanceof EditorActionBarContributor) {
+                result = ((EditorActionBarContributor) contributor).getActionBars ().getStatusLineManager ();
+            }
+        }
+
+        return result;
+    }
+
+}
+

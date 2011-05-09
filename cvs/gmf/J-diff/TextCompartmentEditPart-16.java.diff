@@ -1,0 +1,170 @@
+2c2
+<  * Copyright (c) 2002, 2006 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2007 IBM Corporation and others.
+48a49,50
+> import org.eclipse.gmf.runtime.diagram.ui.label.ILabelDelegate;
+> import org.eclipse.gmf.runtime.diagram.ui.label.WrappingLabelDelegate;
+52a55
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.WrappingLabel;
+92a96,97
+> 	private ILabelDelegate labelDelegate;
+> 
+112c117,126
+< 	 * @return WrapLabelFigure
+---
+>      * Override to use a different figure for this editpart.
+>      * <p>
+>      * IMPORTANT NOTES:
+>      * <li> If you override this to create a different type of figure, you
+>      * should also override {@link #createLabelDelegate()} and make sure you no
+>      * longer call {@link #getLabel()}.
+>      * <li> Do not call {@link #getLabelDelegate()} from within this method. Any
+>      * initialization of the label delegate should be done in the
+>      * {@link #createLabelDelegate()} method.
+>      * </p>
+119a134,138
+>      * @deprecated This method has been deprecated to remove the assumption that
+>      *             the figure of a <code>TextCompartmentEditPart</code> is a
+>      *             <code>WrapLabel</code>. Create your figure in the
+>      *             {@link #createFigure()} method instead and don't forget to
+>      *             stop calling {@link #getLabel()}.
+122,125c141,142
+< 		WrapLabel label = new WrapLabel(""); //$NON-NLS-1$
+< 		label.setLabelAlignment(PositionConstants.TOP);
+< 		label.setTextAlignment(PositionConstants.TOP);
+< 		return label;
+---
+>         // alignment properties are set in createLabelDelegate().
+>         return new WrapLabel();
+128d144
+< 	
+130,132c146,150
+< 	 * Use getLabel() instead if you which to get the WrapLabel
+< 	 * for the the text compartent
+< 	 * @see org.eclipse.gef.GraphicalEditPart#getFigure()
+---
+>      * Creates the label delegate that will be used to interact with the label
+>      * figure.
+>      * 
+>      * @return the new label delegate
+>      * @since 2.1
+133a152,172
+>     protected ILabelDelegate createLabelDelegate() {
+> 
+>         // just in case the client has overridden getLabel()...
+>         WrapLabel label = getLabel();
+>         ILabelDelegate newLabelDelegate = null;
+>         if (label != null) {
+>             newLabelDelegate = new WrappingLabelDelegate(label);
+>         } else {
+> 
+>             // this should be a WrappingLabel since this is what is created in
+>             // createFigure()...
+>             newLabelDelegate = new WrappingLabelDelegate(
+>                 (WrappingLabel) getFigure());
+>         }
+> 
+>         newLabelDelegate.setTextJustification(PositionConstants.CENTER);
+>         newLabelDelegate.setAlignment(PositionConstants.CENTER);
+>         newLabelDelegate.setTextAlignment(PositionConstants.TOP);
+>         return newLabelDelegate;
+>     }
+>     
+135c174,220
+< 		return super.getFigure();
+---
+>         if (figure == null) {
+>             setFigure(createFigure());
+>             setLabelDelegate(createLabelDelegate());
+>         }
+>         return figure;
+>     }
+> 
+>     /**
+>      * Returns the label delegate that can be used to interact with the label
+>      * figure.
+>      * 
+>      * @return the label delegate
+>      * @since 2.1
+>      */
+>     public ILabelDelegate getLabelDelegate() {
+>         if (labelDelegate == null) {
+>             // this means that getFigure() has never been called as getFigure()
+>             // sets the label delegate. Call getFigure() first.
+>             getFigure();
+> 
+>             // check if the label delegate is null, just in case getFigure() was
+>             // overridden
+>             if (labelDelegate == null) {
+>                 setLabelDelegate(createLabelDelegate());
+>             }
+> 
+>             return labelDelegate;
+>         }
+>         return labelDelegate;
+>     }
+> 
+>     /**
+>      * Sets the label delegate.
+>      * 
+>      * @param labelDelegate
+>      *            the label delegate to be set
+>      * @since 2.1
+>      */
+>     protected void setLabelDelegate(ILabelDelegate labelDelegate) {
+>         this.labelDelegate = labelDelegate;
+>     }
+>     
+>     public Object getAdapter(Class key) {
+>         if (key == ILabelDelegate.class) {
+>             return getLabelDelegate();
+>         }
+>         return super.getAdapter(key);
+139a225
+>      * 
+140a227,232
+>      * @deprecated This method has been deprecated to remove the assumption that
+>      *             the figure of a <code>TextCompartmentEditPart</code> is a
+>      *             <code>WrapLabel</code>. Use {@link #getLabelDelegate()} if
+>      *             the behavior you need is available from the label delegate,
+>      *             if not use {@link #getFigure()} and cast to the type of label
+>      *             that you created in the {@link #createFigure()} method.
+182c274
+< 		getLabel().setText(text);
+---
+>         getLabelDelegate().setText(text);
+488c580
+< 		getLabel().setForegroundColor(color);
+---
+> 		getFigure().setForegroundColor(color);
+570c662
+< 		getLabel().setText(getLabelText());
+---
+> 		getLabelDelegate().setText(getLabelText());
+574c666
+< 			getLabel().setIcon(getLabelIcon(i), i);
+---
+> 			getLabelDelegate().setIcon(getLabelIcon(i), i);
+577c669
+< 		getLabel().setToolTip(getLabelToolTip());
+---
+> 		getFigure().setToolTip(getLabelToolTip());
+586c678
+< 			getLabel().setTextUnderline(style.isUnderline());
+---
+> 			getLabelDelegate().setTextUnderline(style.isUnderline());
+595c687
+< 			getLabel().setTextStrikeThrough(style.isStrikeThrough());
+---
+> 			getLabelDelegate().setTextStrikeThrough(style.isStrikeThrough());
+605,607c697,699
+< 				IFigure fig = getFigure();
+< 				if (fig instanceof WrapLabel) {
+< 					e.result = ((WrapLabel)fig).getText();
+---
+>                 ILabelDelegate label = getLabelDelegate();
+>                 if (label != null) {
+>                     e.result = label.getText();
+608a701
+> 

@@ -1,0 +1,179 @@
+46a60,60
+> import org.eclipse.gmf.runtime.notation.CanonicalStyle;
+47,47c61,61
+< import org.eclipse.gmf.runtime.diagram.core.listener.PropertyChangeNotifier;
+---
+> import org.eclipse.gmf.runtime.notation.DrawerStyle;
+53,53c64,64
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.ConnectionEditPart;
+---
+> import org.eclipse.gmf.runtime.notation.Style;
+64,64c32,32
+< import org.eclipse.jface.util.Assert;
+---
+> import org.eclipse.emf.common.util.UniqueEList;
+90,90c91,91
+< 	public static class AsyncCommand extends Command {
+---
+> 	private static class AsyncCommand extends Command {
+181,181c182,182
+< 	public static final class CanonicalElementAdapter extends EObjectAdapter {
+---
+> 	protected static final class CanonicalElementAdapter extends EObjectAdapter {
+496a498,500
+> 		Command cmd = host().getCommand(request);
+> 		if (cmd == null) {
+> 			assert request instanceof CreateViewRequest;
+497,497d497
+< 		Assert.isTrue( request instanceof CreateViewRequest);
+509a513,513
+> 		}
+509,509c512,512
+< 		return new EtoolsProxyCommand(cc.unwrap());
+---
+> 			cmd = new EtoolsProxyCommand(cc.unwrap());
+510a515,515
+> 		return cmd;
+589a596,598
+> 			
+> 			// listen to persisted children to eliminate duplicate views.
+> 			addListenerFilter(SEMANTIC_FILTER_ID, this, semanticHost);
+595a605,613
+> 			Style style = ((View)host().getModel()).getStyle(NotationPackage.eINSTANCE.getDrawerStyle());
+> 			if ( style != null ) {
+> 				addListenerFilter("NotationListener_DrawerStyle", this, style); //$NON-NLS-1$
+> 			}
+> 			style = ((View)host().getModel()).getStyle(NotationPackage.eINSTANCE.getCanonicalStyle());
+> 			if ( style != null ) {
+> 				addListenerFilter("NotationListener_CanonicalStyle", this, style);  //$NON-NLS-1$
+> 			}
+> 			
+601,601c517,517
+< 
+---
+> 	
+607a625,637
+> 		DrawerStyle dstyle = (DrawerStyle) ((View)host().getModel()).getStyle(NotationPackage.eINSTANCE.getDrawerStyle());
+> 		boolean isCollapsed = dstyle == null ? false : dstyle.isCollapsed();
+> 		
+> 		if ( isCollapsed ) {
+> 			return false;
+> 		}
+> 		
+> 		CanonicalStyle style = getCanonicalStyle();
+> 		boolean enabled = _enabled && ((View)host().getModel()).isVisible();
+> 		
+> 		return style == null 
+> 			? enabled
+> 			: style.isCanonical() && enabled;
+608,608d624
+< 		return _enabled && ((View)host().getModel()).isVisible();
+672,672d700
+<     	removeListenerFilter("NotationListener_Visibility");//$NON-NLS-1$
+677,709d704
+<     /**
+< 	 * Adds a listener filter by adding the given listener to a passed notifier.
+< 	 * The supplied <tt>listener</tt> will not be added to there is already a listener
+< 	 * registered against the supplied <tt>filterId</tt>
+< 	 * 
+< 	 * @param filterId A unique filter id (within the same editpart instance)
+< 	 * @param listener A listener instance
+< 	 * @param notifier An element notifer to add the listener to
+< 	 * @return <tt>true</tt> if the listener was added, otherwise <tt>false</tt>
+< 	 * @throws NullPointerException if either <tt>filterId</tt> or <tt>listner</tt> parameters are <tt>null</tt>.
+< 	 * @deprecated use {@link CanonicalEditPolicy#addListenerFilter(String, PropertyChangeListener, EObject)} or
+< 	 * {@link CanonicalEditPolicy#addListenerFilter(String, PropertyChangeListener, EObject,EStructuralFeature )}
+< 	 */
+< 	protected boolean addListenerFilter(
+< 		String filterId,
+< 		PropertyChangeListener listener,
+< 		PropertyChangeNotifier notifier) {
+< 		if ( filterId == null || listener == null ) {
+< 			throw new NullPointerException();
+< 		}
+< 
+< 		if (notifier != null) {
+< 			if (_listenerFilters == null)
+< 				_listenerFilters = new HashMap();
+< 			
+< 			if ( !_listenerFilters.containsKey(filterId)) {
+< 				notifier.addPropertyChangeListener(listener);
+< 				_listenerFilters.put(filterId, new Object[] { notifier, listener });
+< 				return true;
+< 			}
+< 		}
+< 		return false;
+< 	}
+790,793d784
+< 			if (objects[0] instanceof PropertyChangeNotifier){
+< 				((PropertyChangeNotifier) objects[0]).removePropertyChangeListener(
+< 					(PropertyChangeListener) objects[1]);
+< 			} else{
+799,800d789
+< 	}
+< 	
+861a851,856
+> 			if ( NotationPackage.eINSTANCE.getCanonicalStyle_Canonical() == event.getFeature() ) {
+> 				CanonicalStyle style = (CanonicalStyle) ((View)host().getModel()).getStyle(NotationPackage.eINSTANCE.getCanonicalStyle());
+> 				if (style != null) {
+> 					setEnable(style.isCanonical());
+> 				}
+> 			}
+883a879,880
+> 	  if ( NotationPackage.eINSTANCE.getDrawerStyle_Collapsed() == event.getFeature() || 
+> 	 	   NotationPackage.eINSTANCE.getCanonicalStyle_Canonical() == event.getFeature() ||
+884a882,882
+> 	 	   NotationPackage.eINSTANCE.getView_PersistedChildren() == event.getFeature()) {
+884,884c881,881
+< 	  if ( NotationPackage.eINSTANCE.getView_Visible() == event.getFeature() ) {
+---
+> 	 	   NotationPackage.eINSTANCE.getView_Visible() == event.getFeature() ||
+958a957,958
+> 			addListenersToContainers(createdViews);
+> 			
+965a966,987
+> 	private void addListenersToContainers(List createdViews) {
+> 		UniqueEList list = new UniqueEList();
+> 		ListIterator li = createdViews.listIterator();
+> 		while (li.hasNext()) {
+> 			Object obj = li.next();
+> 			if (obj instanceof IAdaptable) {
+> 				View view = (View)((IAdaptable)obj).getAdapter(View.class);
+> 				if (view != null)
+> 					list.add(view.eContainer());
+> 			}
+> 		}
+> 		
+> 		ListIterator liContainers = list.listIterator();
+> 		while (liContainers.hasNext()) {
+> 			View containerView = (View)liContainers.next();
+> 			addListenerFilter("NotationListener_Container" + containerView.toString(), //$NON-NLS-1$
+> 				  this,
+> 				  containerView,
+> 				  NotationPackage.eINSTANCE.getView_PersistedChildren()); 
+> 		}
+> 	}
+> 	
+1072a1095,1095
+> 		Map viewToSemanticMap = new HashMap();
+1077a1101,1101
+> 				viewToSemanticMap.put(semanticChild, viewChild);
+1081a1106,1114
+> 			
+> 			View viewInMap = (View)viewToSemanticMap.get(semanticChild);
+> 			if (viewInMap != null && !viewChild.equals(viewInMap)) { 
+> 				if (viewInMap.isMutable()) {
+> 					orphaned.remove(viewChild);
+> 					orphaned.add(viewInMap);
+> 					viewToSemanticMap.put(semanticChild, viewChild);
+> 				}
+> 			}
+1104a1138,1145
+> 
+> 	/**
+> 	 * gets the canonical style that may be installed on the host shape compartment view.
+> 	 * @return <code>CanonicalStyle</code>
+> 	 */
+> 	protected CanonicalStyle getCanonicalStyle() {
+> 		return (CanonicalStyle) ((View)host().getModel()).getStyle(NotationPackage.eINSTANCE.getCanonicalStyle());
+> 	}				

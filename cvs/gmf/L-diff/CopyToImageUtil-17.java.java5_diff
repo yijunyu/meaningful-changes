@@ -1,0 +1,109 @@
+6a7,8
+> import java.io.ByteArrayOutputStream;
+> 
+14a17,18
+> import java.io.OutputStream;
+> 
+66a71,72
+> import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.Draw2dRenderPlugin;
+> 
+113a120,157
+>     public byte [] copyToImageByteArray (Diagram diagram, int maxWidth, int maxHeight, ImageFileFormat format, IProgressMonitor monitor, PreferencesHint preferencesHint, boolean useMargins) throws CoreException {
+>         DiagramEditor openedDiagramEditor = DiagramEditorUtil.findOpenedDiagramEditorForID (ViewUtil.getIdStr (diagram));
+>         if (openedDiagramEditor != null) {
+>             return copyToImageByteArray (openedDiagramEditor.getDiagramEditPart (), null, maxWidth, maxHeight, format, monitor, useMargins);
+>         } else {
+>             Shell shell = new Shell ();
+>             try {
+>                 DiagramEditPart diagramEditPart = createDiagramEditPart (diagram, shell, preferencesHint);
+>                 Assert.isNotNull (diagramEditPart);
+>                 return copyToImageByteArray (diagramEditPart, null, maxWidth, maxHeight, format, monitor, useMargins);
+>             } finally {
+>                 shell.dispose ();
+>             }
+>         }
+>     }
+> 
+>     public byte [] copyToImageByteArray (DiagramEditPart diagramEP, List editParts, int maxWidth, int maxHeight, ImageFileFormat format, IProgressMonitor monitor, boolean useMargins) throws CoreException {
+>         Assert.isNotNull (diagramEP);
+>         ByteArrayOutputStream stream = new ByteArrayOutputStream ();
+>         DiagramGenerator gen = getDiagramGenerator (diagramEP, format);
+>         if (editParts == null || editParts.isEmpty ()) {
+>             editParts = diagramEP.getPrimaryEditParts ();
+>         }
+>         if (format.equals (ImageFileFormat.SVG) || format.equals (ImageFileFormat.PDF)) {
+>             gen.createConstrainedSWTImageDecriptorForParts (editParts, maxWidth, maxHeight, useMargins);
+>             monitor.worked (1);
+>             saveToOutputStream (stream, (DiagramSVGGenerator) gen, format, monitor);
+>         } else {
+>             Image image = gen.createConstrainedSWTImageDecriptorForParts (editParts, maxWidth, maxHeight, useMargins).createImage ();
+>             monitor.worked (1);
+>             saveToOutputStream (stream, image, format, monitor);
+>             ;
+>             image.dispose ();
+>         }
+>         monitor.worked (1);
+>         return stream.toByteArray ();
+>     }
+> 
+161d204
+<         monitor.worked (1);
+165,169d207
+<         monitor.worked (1);
+<         ImageData imageData = image.getImageData ();
+<         if (imageFormat.equals (ImageFileFormat.GIF) || imageFormat.equals (ImageFileFormat.BMP)) imageData = createImageData (image);
+< 
+<         monitor.worked (1);
+173a212,228
+>         try {
+>             FileOutputStream stream = new FileOutputStream (destination.toOSString ());
+>             saveToOutputStream (stream, image, imageFormat, monitor);
+>             stream.close ();
+>         } catch (Exception e) {
+>             Log.error (Draw2dRenderPlugin.getInstance (), IStatus.ERROR, e.getMessage (), e);
+>             IStatus status = new Status (IStatus.ERROR, "exportToFile", IStatus.OK, e.getMessage (), null);
+>             throw new CoreException (status);
+>         }
+>         refreshLocal (destination);
+>     }
+> 
+>     private void saveToOutputStream (OutputStream stream, Image image, ImageFileFormat imageFormat, IProgressMonitor monitor) {
+>         monitor.worked (1);
+>         ImageData imageData = image.getImageData ();
+>         if (imageFormat.equals (ImageFileFormat.GIF) || imageFormat.equals (ImageFileFormat.BMP)) imageData = createImageData (image);
+> 
+179c234
+<         imageLoader.save (destination.toOSString (), imageFormat.getOrdinal ());
+---
+>         imageLoader.save (stream, imageFormat.getOrdinal ());
+181d235
+<         refreshLocal (destination);
+197,205c251
+<             if (format == ImageFileFormat.PDF) {
+<                 SVGImageConverter.exportToPDF ((SVGImage) generator.getRenderedImage (), os);
+<             } else if (format == ImageFileFormat.SVG) {
+<                 generator.stream (os);
+<             } else {
+<                 throw new IllegalArgumentException ("Unexpected format: " + format.getName ());
+<             }
+< 
+<             monitor.worked (1);
+---
+>             saveToOutputStream (os, generator, format, monitor);
+215a262,273
+>     private void saveToOutputStream (OutputStream stream, DiagramSVGGenerator generator, ImageFileFormat format, IProgressMonitor monitor) throws CoreException {
+>         if (format == ImageFileFormat.PDF) {
+>             SVGImageConverter.exportToPDF ((SVGImage) generator.getRenderedImage (), stream);
+>         } else if (format == ImageFileFormat.SVG) {
+>             generator.stream (stream);
+>         } else {
+>             throw new IllegalArgumentException ("Unexpected format: " + format.getName ());
+>         }
+> 
+>         monitor.worked (1);
+>     }
+> 
+308c366
+<                     for (newPixel = 0; newPixel < 216; ++ newPixel) {
+---
+>                     for (newPixel = 0; newPixel < 256; ++ newPixel) {

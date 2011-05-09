@@ -1,0 +1,215 @@
+package org.eclipse.gmf.runtime.diagram.ui.commands;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.List;
+
+import org.eclipse.core.resources.IFile;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gmf.runtime.common.core.command.AbstractCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.util.ObjectAdapter;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.requests.CreateViewRequestFactory;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramCommandStack;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.CreateViewRequest;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectUtil;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.osgi.util.NLS;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.widgets.Display;
+
+import org.eclipse.swt.widgets.MessageBox;
+
+public class CreateViewAndOptionallyElementCommand extends AbstractCommand {
+    private IAdaptable elementAdapter;
+    private Point location;
+    private IGraphicalEditPart containerEP;
+    private Command command = null;
+    private ObjectAdapter resultAdapter = new ObjectAdapter ();
+    private PreferencesHint preferencesHint;
+
+    public CreateViewAndOptionallyElementCommand (IAdaptable elementAdapter, IGraphicalEditPart containerEP, Point location, PreferencesHint preferencesHint) {
+        super (DiagramUIMessages.CreateCommand_Label);
+        setElementAdapter (elementAdapter);
+        setContainerEP (containerEP);
+        if (location != null) {
+            setLocation (location);
+        } else {
+            setLocation (getContainerEP ().getFigure ().getBounds ().getTopRight ().translate (100, 100));
+        }
+        setPreferencesHint (preferencesHint);
+    }
+
+    public Collection getAffectedObjects () {
+        if (containerEP != null) {
+            View view = (View) containerEP.getModel ();
+            if (view != null) {
+                IFile f = EObjectUtil.getWorkspaceFile (view);
+                return f != null ? Collections.singletonList (f) : Collections.EMPTY_LIST;
+            }
+        }
+        return super.getAffectedObjects ();
+    }
+
+    protected View getExistingView (EObject element) {
+        IGraphicalEditPart theTarget = (IGraphicalEditPart) getContainerEP ().findEditPart (null, element);
+        if (theTarget != null) return (View) theTarget.getModel ();
+
+        return null;
+    }
+
+    protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+        CreateViewRequest createRequest;
+        EObject element = (EObject) getElementAdapter ().getAdapter (EObject.class);
+        if (element == null) {
+            IElementType type = (IElementType) getElementAdapter ().getAdapter (IElementType.class);
+            if (type == null) {
+                return newErrorCommandResult (getLabel ());
+            }
+            createRequest = CreateViewRequestFactory.getCreateShapeRequest (type, getPreferencesHint ());
+        } else {
+            createRequest = new CreateViewRequest (new CreateViewRequest.ViewDescriptor (new EObjectAdapter (element), getPreferencesHint ()));
+        }
+        createRequest.setLocation (getLocation ());
+        if (createRequest != null) {
+            IGraphicalEditPart target = (IGraphicalEditPart) getContainerEP ().getTargetEditPart (createRequest);
+            if (target != null) {
+                Command theCmd = target.getCommand (createRequest);
+                setCommand (theCmd);
+                View theExistingView = getExistingView (element);
+                if (theExistingView != null) {
+                    MessageBox messageBox = new MessageBox (Display.getCurrent ().getActiveShell (), SWT.YES | SWT.NO);
+                    messageBox.setText (DiagramUIMessages.CreateViewAndOptionallyElementCommand_ViewExists_Title);
+                    messageBox.setMessage (NLS.bind (DiagramUIMessages.CreateViewAndOptionallyElementCommand_ViewExists_Message, EObjectUtil.getName (element)));
+                    int iResult = messageBox.open ();
+                    if (iResult == SWT.YES) {
+                        setResult (new EObjectAdapter (theExistingView));
+                        return newOKCommandResult (getResult ());
+                    }
+                }
+                if (getCommand ().canExecute ()) {
+                    ICommand cmd = DiagramCommandStack.getICommand (getCommand ());
+                    cmd.execute (progressMonitor);
+                    if (progressMonitor.isCanceled ()) {
+                        return newCancelledCommandResult ();
+                    } else if (! (cmd.getCommandResult ().getStatus ().isOK ())) {
+                        return cmd.getCommandResult ();
+                    }
+
+                    Object obj = ((List) createRequest.getNewObject ()).get (0);
+                    setResult ((IAdaptable) obj);
+                    return newOKCommandResult (getResult ());
+                }
+            }
+        }
+        containerEP = null;
+        return newErrorCommandResult (getLabel ());
+    }
+
+    public boolean isUndoable () {
+        return getCommand () != null && getCommand ().canUndo ();
+    }
+
+    public boolean isRedoable () {
+        return getCommand () != null && getCommand ().canExecute ();
+    }
+
+    protected CommandResult doRedo () {
+        if (getCommand () != null) {
+            getCommand ().redo ();
+        }
+        return newOKCommandResult ();
+    }
+
+    protected CommandResult doUndo () {
+        if (getCommand () != null) {
+            getCommand ().undo ();
+        }
+        return newOKCommandResult ();
+    }
+
+    public IAdaptable getResult () {
+        return resultAdapter;
+    }
+
+    protected void setResult (IAdaptable viewAdapter) {
+        View view = (View) viewAdapter.getAdapter (View.class);
+        resultAdapter.setObject (view);
+    }
+
+    protected IAdaptable getElementAdapter () {
+        return elementAdapter;
+    }
+
+    protected void setElementAdapter (IAdaptable elementAdapter) {
+        this.elementAdapter = elementAdapter;
+    }
+
+    protected Point getLocation () {
+        return location;
+    }
+
+    protected void setLocation (Point location) {
+        this.location = location;
+    }
+
+    protected IGraphicalEditPart getContainerEP () {
+        return containerEP;
+    }
+
+    protected void setContainerEP (IGraphicalEditPart containerEP) {
+        this.containerEP = containerEP;
+    }
+
+    protected PreferencesHint getPreferencesHint () {
+        return preferencesHint;
+    }
+
+    protected void setPreferencesHint (PreferencesHint preferencesHint) {
+        this.preferencesHint = preferencesHint;
+    }
+
+    protected Command getCommand () {
+        return command;
+    }
+
+    protected void setCommand (Command command) {
+        this.command = command;
+    }
+
+}
+

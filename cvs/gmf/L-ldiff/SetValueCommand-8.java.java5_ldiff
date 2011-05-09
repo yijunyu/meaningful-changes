@@ -1,0 +1,63 @@
+4a5,6
+> import java.util.Iterator;
+> 
+12a15,16
+> import org.eclipse.emf.ecore.EObject;
+> 
+31a36,36
+>         EObject elementToEdit = getElementToEdit ();
+32a38,38
+>         if (many) {
+32,32c37,37
+<         if (FeatureMapUtil.isMany (getElementToEdit (), feature)) {
+---
+>         boolean many = FeatureMapUtil.isMany (elementToEdit, feature);
+33,33c39,39
+<             ((Collection) getElementToEdit ().eGet (feature)).add (value);
+---
+>             Collection collection = ((Collection) elementToEdit.eGet (feature));
+33a40,46
+>             if (value instanceof List) {
+>                 List values = (List) value;
+>                 collection.clear ();
+>                 collection.addAll (values);
+>             } else {
+>                 collection.add (value);
+>             }
+40a54,54
+>         EObject elementToEdit = getElementToEdit ();
+41,41c55,55
+<         if (getElementToEdit () == null || ! super.canExecute ()) {
+---
+>         if (elementToEdit == null || ! super.canExecute ()) {
+44,44c58,58
+<         if (value == null && FeatureMapUtil.isMany (getElementToEdit (), feature)) {
+---
+>         boolean many = FeatureMapUtil.isMany (elementToEdit, feature);
+44a59,59
+>         if (value == null && many) {
+48,48c63,63
+<         return allFeatures.contains (feature) && feature.isChangeable () && (value == null || feature.getEType ().isInstance (value));
+---
+>         if (allFeatures.contains (feature) && feature.isChangeable ()) {
+48a64,83
+>             if (! many && (value == null || feature.getEType ().isInstance (value))) return true;
+>             else {
+>                 return verifyMany ();
+>             }
+>         }
+>         return false;
+>     }
+> 
+>     private boolean verifyMany () {
+>         if (value instanceof List) {
+>             List values = (List) value;
+>             for (Iterator iter = values.iterator ();
+>             iter.hasNext ();) {
+>                 Object element = iter.next ();
+>                 if (! feature.getEType ().isInstance (element)) return false;
+> 
+>             }
+>             return true;
+>         }
+>         return feature.getEType ().isInstance (value);

@@ -1,0 +1,84 @@
+13a14,14
+> import java.util.ArrayList;
+14a16,17
+> import java.util.HashSet;
+> import java.util.Iterator;
+16a20,20
+> import java.util.Set;
+24a29,29
+> import org.eclipse.gef.commands.CompoundCommand;
+28a35,35
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+32,32c32,32
+< import org.eclipse.gmf.runtime.diagram.ui.preferences.IPreferenceConstants;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.IPreferenceConstants;
+81a88,97
+> 		if (isArrangeAll()){
+> 			CompoundCommand arrangeCC = new CompoundCommand(getLabel());
+> 			List elements = getOperationSet();
+> 			for (Iterator iter = elements.iterator(); iter.hasNext();) {
+> 				EditPart element = (EditPart) iter.next();
+> 				arrangeCC.add(element.getCommand(getTargetRequest()));
+> 			}
+> 			return arrangeCC;
+> 		}
+> 		else if (getOperationSet().size() >= 2) {
+82,82d87
+< 		if (!getOperationSet().isEmpty()) {
+84,84c99,99
+< 			if (parent != null) {
+---
+> 			if (parent != null)
+87,87d101
+< 		}
+123,123d136
+< 
+126a140,142
+> 			if( !selection.isEmpty()){
+> 				return getElementsToArrange(selection);
+> 			}
+127,129d139
+< 			if( !selection.isEmpty() && selection.get(0) instanceof ShapeCompartmentEditPart )
+< 				return createOperationSet( ((ShapeCompartmentEditPart)selection.get(0)).getChildren());
+< 
+280a294,299
+> 			if (isArrangeAll()){
+> 				for (Iterator iter = operationSet.iterator(); iter.hasNext();) {
+> 					IGraphicalEditPart element = (IGraphicalEditPart) iter.next();
+> 					AnimationFigureHelper.getInstance().animate(element.getFigure());
+> 				}
+> 			}
+281,281c300,300
+< 			if (operationSet != null && !operationSet.isEmpty()) {
+---
+> 			else if (operationSet != null && !operationSet.isEmpty()) {
+287a307,334
+> 	/**
+> 	 * @param selection
+> 	 * @return
+> 	 */
+> 	private List getElementsToArrange(List selection) {
+> 		Set parentsSet = new HashSet();
+> 		for (Iterator iter = selection.iterator(); iter.hasNext();) {
+> 			Object element = iter.next();
+> 			if (element instanceof ShapeCompartmentEditPart || element instanceof DiagramEditPart){
+> 				parentsSet.add(element);
+> 			} else if (element instanceof EditPart){
+> 				EditPart gEditPart = 
+> 					(EditPart)element;
+> 				EditPart parentEditPart = gEditPart.getParent();
+> 				if (parentEditPart instanceof ShapeCompartmentEditPart ||
+> 					parentEditPart instanceof DiagramEditPart){
+> 					if (!parentsSet.contains(parentEditPart))
+> 						parentsSet.add(parentEditPart);
+> 				}
+> 			}
+> 		}
+> 		if (parentsSet.isEmpty())
+> 			return Collections.EMPTY_LIST;
+> 		List elements = new ArrayList();
+> 		elements.addAll(parentsSet);			
+> 		return elements;
+> 	}
+> 

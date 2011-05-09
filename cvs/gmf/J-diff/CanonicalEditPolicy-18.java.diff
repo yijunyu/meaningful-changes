@@ -1,0 +1,42 @@
+39a40,41
+> import org.eclipse.emf.transaction.impl.InternalTransaction;
+> import org.eclipse.emf.transaction.impl.InternalTransactionalEditingDomain;
+59a62
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+476c479,488
+< 		Map options = Collections.singletonMap(Transaction.OPTION_UNPROTECTED,
+---
+>         Map options = null;
+>         EditPart ep = getHost();
+>         while (ep !=null && !(ep instanceof DiagramEditPart)){
+>             ep = ep.getParent();
+>         }
+>         
+>         if ( ep==null ||
+>             (ep!=null && ((DiagramEditPart)ep).isActivatingDiagram())||
+>             !isWriteTransactionInProgress())
+>             options = Collections.singletonMap(Transaction.OPTION_UNPROTECTED,
+1196a1209,1231
+>     
+>     /**
+>      * Checks if the current active transaction is a Write transaction or not
+>      * unprotected transaction are not considered write transaction
+>      * 
+>      * @return true if the current active transaction is a write transaction 
+>      */
+>     private boolean isWriteTransactionInProgress() {
+>         TransactionalEditingDomain theEditingDomain = ((IGraphicalEditPart) getHost())
+>             .getEditingDomain();
+>         if (theEditingDomain instanceof InternalTransactionalEditingDomain){
+>             InternalTransactionalEditingDomain internalEditingDomain = 
+>                 (InternalTransactionalEditingDomain)theEditingDomain;
+>             InternalTransaction transaction = internalEditingDomain.getActiveTransaction();
+>             if (transaction!=null && !transaction.isReadOnly()){
+>                 Object unprotectedMode = transaction.getOptions().get(Transaction.OPTION_UNPROTECTED); 
+>                 if (unprotectedMode == null ||
+>                     unprotectedMode == Boolean.FALSE)
+>                 return true;
+>             }
+>         }
+>         return false;
+>     }

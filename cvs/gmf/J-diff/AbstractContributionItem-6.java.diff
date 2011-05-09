@@ -1,0 +1,144 @@
+2c2
+<  * Copyright (c) 2002, 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2006 IBM Corporation and others.
+13a14,19
+> import org.eclipse.core.commands.ExecutionException;
+> import org.eclipse.core.commands.operations.IOperationHistory;
+> import org.eclipse.core.commands.operations.IOperationHistoryListener;
+> import org.eclipse.core.commands.operations.IUndoContext;
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> import org.eclipse.core.commands.operations.OperationHistoryEvent;
+15a22
+> import org.eclipse.core.runtime.NullProgressMonitor;
+16a24,31
+> import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+> import org.eclipse.gmf.runtime.common.core.command.ICommand;
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+> import org.eclipse.gmf.runtime.common.ui.util.PartListenerAdapter;
+40,50d54
+< import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+< import org.eclipse.gmf.runtime.common.core.command.CommandManagerChangeEvent;
+< import org.eclipse.gmf.runtime.common.core.command.ICommand;
+< import org.eclipse.gmf.runtime.common.core.command.ICommandManagerChangeListener;
+< import org.eclipse.gmf.runtime.common.core.util.Log;
+< import org.eclipse.gmf.runtime.common.core.util.Trace;
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+< import org.eclipse.gmf.runtime.common.ui.util.PartListenerAdapter;
+< 
+58c62
+< 	implements ISelectionChangedListener, ICommandManagerChangeListener,
+---
+> 	implements ISelectionChangedListener, IOperationHistoryListener,
+161a166,180
+>      * Gets the undo context from my workbench part.
+>      * 
+>      * @return the undo context
+>      */
+>     protected IUndoContext getUndoContext() {
+>         IWorkbenchPart part = getWorkbenchPart();
+> 
+>         if (part != null) {
+>             return (IUndoContext) part.getAdapter(IUndoContext.class);
+>         }
+> 
+>         return null;
+>     }
+> 
+> 	/**
+241,242c260,261
+< 			if (isCommandStackListener()) {
+< 				getCommandManager().removeCommandManagerChangeListener(this);
+---
+> 			if (isOperationHistoryListener()) {
+>                 getOperationHistory().removeOperationHistoryListener(this);
+256,257c275,276
+< 			if (isCommandStackListener()) {
+< 				getCommandManager().addCommandManagerChangeListener(this);
+---
+> 			if (isOperationHistoryListener()) {
+>                 getOperationHistory().addOperationHistoryListener(this);
+460c479
+< 		if (command == null || !command.isExecutable())
+---
+> 		if (command == null || !command.canExecute())
+463c482,490
+< 		getCommandManager().execute(command);
+---
+>         command.addContext(getUndoContext());
+>         
+>         try {
+>             getOperationHistory().execute(command, new NullProgressMonitor(), null);
+>         
+>         } catch (ExecutionException e) {
+>             Trace.catching(CommonUIPlugin.getDefault(),
+>                 CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+>                 "execute", e); //$NON-NLS-1$
+464a492,494
+>             Log.error(CommonUIPlugin.getDefault(),
+>                 CommonUIStatusCodes.ACTION_FAILURE, e.getLocalizedMessage(), e);
+>         }
+486a517
+>      * @deprecated Use {@link #getOperationHistory()} instead.
+489c520,530
+< 		return getActionManager().getCommandManager();
+---
+> 		return CommandManager.getDefault();
+> 	}
+> 	
+>     /**
+>      * Returns the operation history for this contribution item from its action
+>      * manager.
+>      * 
+>      * @return the operation history
+>      */
+>     protected IOperationHistory getOperationHistory() {
+>         return getActionManager().getOperationHistory();
+582a624
+>      * @deprecated Subclasses must implement {@link #isOperationHistoryListener()}.
+587a630,640
+>     /**
+>      * Retrieves a Boolean indicating whether this contribution item is interested
+>      * in operation history changed events.
+>      * 
+>      * @return <code>true</code> if this action handler is interested;
+>      *         <code>false</code> otherwise.
+>      */
+>     protected boolean isOperationHistoryListener() {
+>         return false;
+>     }
+> 
+595,596c648,649
+< 	/* (non-Javadoc)
+< 	 * @see org.eclipse.gmf.runtime.common.core.command.ICommandManagerChangeListener#commandManagerChanged(org.eclipse.gmf.runtime.common.core.command.CommandManagerChangeEvent)
+---
+>     /**
+>      * Refreshes me if the history event has my workbench part's context.
+598c651,658
+< 	public final void commandManagerChanged(CommandManagerChangeEvent event) {
+---
+>     public void historyNotification(OperationHistoryEvent event) {
+> 
+>         IUndoableOperation operation = event.getOperation();
+> 
+>         if (operation != null) {
+>             IUndoContext partContext = getUndoContext();
+> 
+>             if (partContext != null && operation.hasContext(partContext)) {
+600,604c660
+< 			/*
+< 			 * (non-Javadoc)
+< 			 * 
+< 			 * @see java.lang.Runnable#run()
+< 			 */
+---
+> 
+609a666,667
+>         }
+>     }

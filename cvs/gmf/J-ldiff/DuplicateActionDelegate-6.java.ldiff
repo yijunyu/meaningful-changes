@@ -1,0 +1,125 @@
+18a19,19
+> import org.eclipse.core.commands.ExecutionException;
+20a22,23
+> import org.eclipse.core.runtime.IStatus;
+> import org.eclipse.core.runtime.Status;
+21a25,26
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+23,23c44,44
+< import org.eclipse.jface.viewers.IStructuredSelection;
+---
+> import org.eclipse.jface.viewers.IStructuredSelection;
+24,24c45,45
+< import org.eclipse.jface.viewers.StructuredSelection;
+---
+> import org.eclipse.jface.viewers.StructuredSelection;
+25,25c46,46
+< import org.eclipse.ui.IObjectActionDelegate;
+---
+> import org.eclipse.ui.IObjectActionDelegate;
+26,26c47,47
+< import org.eclipse.ui.IWorkbenchPart;
+---
+> import org.eclipse.ui.IWorkbenchPart;
+27,27c48,48
+< import org.eclipse.ui.IWorkbenchWindowActionDelegate;
+---
+> import org.eclipse.ui.IWorkbenchWindowActionDelegate;
+28,29d48
+< 
+< import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+30a33,34
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+30a29,30
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+31,31d32
+< import org.eclipse.gmf.runtime.diagram.core.internal.services.semantic.DuplicateElementsRequest;
+32,32c35,35
+< import org.eclipse.gmf.runtime.diagram.core.internal.services.semantic.SemanticService;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+37a39,41
+> import org.eclipse.gmf.runtime.emf.type.core.ElementTypeRegistry;
+> import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+> import org.eclipse.gmf.runtime.emf.type.core.requests.DuplicateElementsRequest;
+66,66c75,75
+< 			request = new DuplicateElementsRequest();
+---
+> 			request = new DuplicateElementsRequest(getEditingDomain(getStructuredSelection()));
+70a80,82
+>             try {
+>                 IStatus status = cmd.execute(progressMonitor, null);
+>                 setStatus(status);
+70,70c79,79
+< 		if (cmd != null && cmd.isExecutable())
+---
+> 		if (cmd != null && cmd.canExecute()) {
+71,73d79
+< 			;
+< 		{
+< 			CommandResult result = getCommandManager().execute(cmd);
+75,75c84,84
+< 			if (result.getStatus().isOK()) {
+---
+>     			if (status.isOK()) {
+83a93,106
+>             } catch (ExecutionException e) {
+>                 IStatus status = new Status(Status.ERROR, DiagramUIPlugin
+>                     .getPluginId(), DiagramUIStatusCodes.COMMAND_FAILURE, e
+>                     .getLocalizedMessage(), e);
+>                 setStatus(status);
+> 
+>                 Trace.catching(DiagramUIPlugin.getInstance(),
+>                     DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+>                     "doRun", e); //$NON-NLS-1$
+> 
+>                 Log.error(DiagramUIPlugin.getInstance(),
+>                     DiagramUIStatusCodes.COMMAND_FAILURE, e
+>                         .getLocalizedMessage(), e);
+>             }
+101,101c124,124
+< 				new DuplicateElementsRequest());
+---
+> 				new DuplicateElementsRequest(getEditingDomain(selection)));
+103,103c126,126
+< 		return (cmd != null && cmd.isExecutable());
+---
+> 		return (cmd != null && cmd.canExecute());
+129a153,159
+>             
+>             IElementType elementType = ElementTypeRegistry.getInstance()
+>                 .getElementType(request.getEditHelperContext());
+>             
+>             if (elementType != null) {
+>                 return elementType.getEditCommand(request);
+>             }
+130,130d152
+< 			return SemanticService.getInstance().getCommand(request);
+195a225,248
+>     public static TransactionalEditingDomain getEditingDomain(
+>             IStructuredSelection selection) {
+> 
+>         for (Iterator i = selection.iterator(); i.hasNext();) {
+>             EObject element = (EObject) ((IAdaptable) i.next())
+>                 .getAdapter(EObject.class);
+> 
+>             if (element != null) {
+>                 TransactionalEditingDomain editingDomain = TransactionUtil
+>                     .getEditingDomain(element);
+> 
+>                 if (editingDomain != null) {
+>                     return editingDomain;
+>                 }
+>             }
+>         }
+>         return null;
+>     }
+>     
+>     // Documentation copied from superclass
+>     protected TransactionalEditingDomain getEditingDomain() {
+>         return getEditingDomain(getStructuredSelection());
+>     }
+> 

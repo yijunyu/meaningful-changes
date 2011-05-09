@@ -1,0 +1,57 @@
+4a5,14
+> import org.eclipse.emf.transaction.Transaction;
+> 
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+> import org.eclipse.emf.transaction.impl.InternalTransaction;
+> 
+> import org.eclipse.emf.transaction.impl.InternalTransactionalEditingDomain;
+> 
+> import org.eclipse.gef.EditPartViewer;
+> 
+6a17,18
+> import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramGraphicalViewer;
+> 
+12a25,28
+> import org.eclipse.swt.widgets.Display;
+> 
+> import org.eclipse.ui.PlatformUI;
+> 
+23a40,76
+>     public static void handleRunnableForAccessingSWT (IGraphicalEditPart editPart, Runnable runThreadSafe) {
+>         if (Display.getCurrent () == null) {
+>             EditPartViewer viewer = editPart.getViewer ();
+>             if (viewer instanceof DiagramGraphicalViewer) {
+>                 if (! ((DiagramGraphicalViewer) viewer).areUpdatesDisabled ()) {
+>                     TransactionalEditingDomain editingDomain = (TransactionalEditingDomain) editPart.getEditingDomain ();
+>                     if (editingDomain != null) {
+>                         PlatformUI.getWorkbench ().getDisplay ().syncExec (editingDomain.createPrivilegedRunnable (runThreadSafe));
+>                         return;
+>                     }
+>                 } else {
+>                     PlatformUI.getWorkbench ().getDisplay ().asyncExec (runThreadSafe);
+>                 }
+>             } else {
+>                 PlatformUI.getWorkbench ().getDisplay ().asyncExec (runThreadSafe);
+>             }
+>         } else {
+>             runThreadSafe.run ();
+>         }
+>     }
+> 
+>     public static boolean isWriteTransactionInProgress (IGraphicalEditPart editPart, boolean otherThread) {
+>         TransactionalEditingDomain theEditingDomain = editPart.getEditingDomain ();
+>         if (theEditingDomain instanceof InternalTransactionalEditingDomain) {
+>             InternalTransactionalEditingDomain internalEditingDomain = (InternalTransactionalEditingDomain) theEditingDomain;
+>             InternalTransaction transaction = internalEditingDomain.getActiveTransaction ();
+>             if (transaction != null && ! transaction.isReadOnly ()) {
+>                 Object unprotectedMode = transaction.getOptions ().get (Transaction.OPTION_UNPROTECTED);
+>                 if (unprotectedMode == null || unprotectedMode == Boolean.FALSE) {
+>                     if (! otherThread || (Thread.currentThread () != transaction.getOwner ())) return true;
+> 
+>                 }
+>             }
+>         }
+>         return false;
+>     }
+> 

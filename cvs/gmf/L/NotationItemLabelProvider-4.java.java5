@@ -1,0 +1,83 @@
+package org.eclipse.gmf.runtime.diagram.ui.properties.descriptors;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.jface.viewers.ILabelProvider;
+
+import org.eclipse.jface.viewers.LabelProvider;
+
+import org.eclipse.swt.graphics.Image;
+
+import org.eclipse.swt.graphics.ImageData;
+
+import org.eclipse.swt.graphics.PaletteData;
+
+import org.eclipse.swt.graphics.RGB;
+
+import org.eclipse.swt.widgets.Display;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+class NotationItemLabelProvider extends LabelProvider {
+    private ILabelProvider itemLabelProvider;
+    private EStructuralFeature feature;
+
+    public NotationItemLabelProvider (ILabelProvider provider, EStructuralFeature feature) {
+        this.itemLabelProvider = provider;
+        this.feature = feature;
+    }
+
+    public String getText (Object anObject) {
+        if (getFeature ().isMany ()) return "";
+
+        if (getFeature () == NotationPackage.eINSTANCE.getNode_LayoutConstraint ()) return "";
+
+        if (anObject instanceof RGB) {
+            RGB rgb = (RGB) anObject;
+            return "(" + rgb.red + "," + rgb.green + "," + rgb.blue + ")";
+        }
+        return itemLabelProvider.getText (anObject);
+    }
+
+    public Image getImage (Object anObject) {
+        if (anObject instanceof RGB) {
+            ImageData id = createColorImage ((RGB) anObject);
+            ImageData mask = id.getTransparencyMask ();
+            return new Image (Display.getCurrent (), id, mask);
+        }
+        return itemLabelProvider.getImage (anObject);
+    }
+
+    private ImageData createColorImage (RGB color) {
+        int size = 10;
+        int indent = 6;
+        int extent = 16;
+        if (size > extent) size = extent;
+
+        int width = indent + size;
+        int height = extent;
+        int xoffset = indent;
+        int yoffset = (height - size) / 2;
+        RGB black = new RGB (0, 0, 0);
+        PaletteData dataPalette = new PaletteData (new RGB [] {black, black, color});
+        ImageData data = new ImageData (width, height, 4, dataPalette);
+        data.transparentPixel = 0;
+        int end = size - 1;
+        for (int y = 0;
+        y < size; y ++) {
+            for (int x = 0;
+            x < size; x ++) {
+                if (x == 0 || y == 0 || x == end || y == end) data.setPixel (x + xoffset, y + yoffset, 1);
+                else data.setPixel (x + xoffset, y + yoffset, 2);
+
+            }
+        }
+        return data;
+    }
+
+    protected EStructuralFeature getFeature () {
+        return feature;
+    }
+
+}
+

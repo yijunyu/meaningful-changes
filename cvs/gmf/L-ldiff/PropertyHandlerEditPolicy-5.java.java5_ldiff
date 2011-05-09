@@ -1,0 +1,82 @@
+3,3c3,3
+< import java.util.Dictionary;
+---
+> import java.util.ArrayList;
+5,5c5,5
+< import java.util.Enumeration;
+---
+> import java.util.List;
+6a7,7
+> import org.eclipse.core.runtime.IProgressMonitor;
+7,7d6
+< import java.util.Iterator;
+15,15c37,37
+< import org.eclipse.gef.commands.CompoundCommand;
+---
+> import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractModelCommand;
+16,16d37
+< 
+18a17,20
+> import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+> 
+> import org.eclipse.gmf.runtime.common.core.command.ICommand;
+> 
+30a23,24
+> import org.eclipse.gmf.runtime.diagram.core.util.ViewRefactorHelper;
+> 
+31a26,26
+> 
+31,31c25,25
+< import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+---
+> import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+34a41,42
+> import org.eclipse.gmf.runtime.notation.NotationPackage;
+> 
+53a62,66
+>             final ApplyAppearancePropertiesRequest aapr = (ApplyAppearancePropertiesRequest) request;
+>             final IGraphicalEditPart gep = (IGraphicalEditPart) getHost ();
+>             final ViewRefactorHelper vrh = new ViewRefactorHelper (gep.getDiagramPreferencesHint ());
+>             final List exclusions = getStyleExclusionsForCopyAppearance ();
+>             ICommand viewStyleCommand = new AbstractModelCommand (APPLY_APPEARANCE_PROPERTIES_UNDO_COMMAND_NAME, null) {
+54,72d61
+<             ApplyAppearancePropertiesRequest aapr = (ApplyAppearancePropertiesRequest) request;
+<             CompoundCommand cc = new CompoundCommand (APPLY_APPEARANCE_PROPERTIES_UNDO_COMMAND_NAME);
+<             Iterator semanticHints = aapr.getSemanticHints ().iterator ();
+<             IGraphicalEditPart part = (IGraphicalEditPart) getHost ();
+<             View view = part.getNotationView ();
+<             String semanticHint = "";
+<             if (view != null) semanticHint = view.getType ();
+< 
+<             while (semanticHints.hasNext ()) {
+<                 String hint = (String) semanticHints.next ();
+<                 IGraphicalEditPart target = hint.equals (semanticHint) ? part : part.getChildBySemanticHint (hint);
+<                 if (target != null) {
+<                     Dictionary properties = aapr.getPropertiesFor (hint);
+<                     Enumeration propertyIDs = properties.keys ();
+<                     while (propertyIDs.hasMoreElements ()) {
+<                         String propertyID = (String) propertyIDs.nextElement ();
+<                         ChangePropertyValueRequest cpvr = new ChangePropertyValueRequest (APPLY_APPEARANCE_PROPERTIES_UNDO_COMMAND_NAME, propertyID, properties.get (propertyID));
+<                         Command command = target.getCommand (cpvr);
+<                         if (command != null) cc.add (command);
+73a68,70
+>                 protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+>                     vrh.copyViewAppearance (aapr.getViewToCopyFrom (), gep.getNotationView (), exclusions);
+>                     return newOKCommandResult ();
+74a72,72
+> 
+75a74,76
+> 
+>             ;
+>             return new EtoolsProxyCommand (viewStyleCommand);
+76,77d73
+<             }
+<             return cc;
+82a82,88
+>     protected List getStyleExclusionsForCopyAppearance () {
+>         List exclusions = new ArrayList ();
+>         exclusions.add (NotationPackage.eINSTANCE.getDescriptionStyle ());
+>         exclusions.add (NotationPackage.eINSTANCE.getImageBufferStyle ());
+>         return exclusions;
+>     }
+> 

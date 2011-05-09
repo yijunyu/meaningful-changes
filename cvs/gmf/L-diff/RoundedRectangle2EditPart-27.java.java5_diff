@@ -1,0 +1,284 @@
+7,20d6
+< import java.util.Collections;
+< 
+< import org.eclipse.core.commands.ExecutionException;
+< 
+< import org.eclipse.core.runtime.IAdaptable;
+< 
+< import org.eclipse.core.runtime.IProgressMonitor;
+< 
+< import org.eclipse.core.runtime.IStatus;
+< 
+< import org.eclipse.core.runtime.NullProgressMonitor;
+< 
+< import org.eclipse.core.runtime.Status;
+< 
+39,42d24
+< import org.eclipse.emf.transaction.Transaction;
+< 
+< import org.eclipse.emf.workspace.AbstractEMFOperation;
+< 
+47,52d28
+< import org.eclipse.gmf.gmfgraph.ColorConstants;
+< 
+< import org.eclipse.gmf.gmfgraph.ConstantColor;
+< 
+< import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+< 
+55,56d30
+< import org.eclipse.gmf.gmfgraph.RGBColor;
+< 
+65,66d38
+< import org.eclipse.gmf.graphdef.editor.part.GMFGraphDiagramEditorPlugin;
+< 
+73,74d44
+< import org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener;
+< 
+85,88d54
+< import org.eclipse.gmf.runtime.notation.FillStyle;
+< 
+< import org.eclipse.gmf.runtime.notation.LineStyle;
+< 
+165a132,144
+>     protected void handleNotificationEvent (Notification notification) {
+>         Object feature = notification.getFeature ();
+>         if (NotationPackage.eINSTANCE.getSize_Width ().equals (feature) || NotationPackage.eINSTANCE.getSize_Height ().equals (feature) || NotationPackage.eINSTANCE.getLocation_X ().equals (feature) || NotationPackage.eINSTANCE.getLocation_Y ().equals (feature)) {
+>             return;
+>         } else if (NotationPackage.eINSTANCE.getFillStyle_FillColor ().equals (feature)) {
+>             return;
+>         } else if (NotationPackage.eINSTANCE.getLineStyle_LineColor ().equals (feature)) {
+>             return;
+>         }
+> 
+>         super.handleNotificationEvent (notification);
+>     }
+> 
+217a197,199
+>             getPrimaryShape ().setBackgroundColor (getColor (modelElement.getBackgroundColor ()));
+>             getPrimaryShape ().setForegroundColor (getColor (modelElement.getForegroundColor ()));
+>             refreshFont ();
+313,326c295
+<         modelElement.eAdapters ().addAll (myDomainElementAdapters);
+<         View view = getNotationView ();
+<         final FillStyle theFillStyle = (FillStyle) view.getStyle (NotationPackage.eINSTANCE.getFillStyle ());
+<         if (modelElement.getBackgroundColor () != null) {
+<             final int rgbColor;
+<             if (modelElement.getBackgroundColor () instanceof RGBColor) {
+<                 RGBColor modelColor = (RGBColor) modelElement.getBackgroundColor ();
+<                 rgbColor = (modelColor.getRed () & 0xFF) | ((modelColor.getGreen () & 0xFF) << 8) | ((modelColor.getBlue () & 0xFF) << 16);
+<             } else {
+<                 ConstantColor modelColor = (ConstantColor) modelElement.getBackgroundColor ();
+<                 rgbColor = getRgbColor (modelColor);
+<             }
+<             if (rgbColor != - 1 && theFillStyle.getFillColor () != rgbColor) {
+<                 AbstractEMFOperation setColorOperation = new AbstractEMFOperation (getEditingDomain (), "Synchronizing view Background color with the model", Collections.singletonMap (Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) {
+---
+>         ChangeTracker backgroundColorTracker = new ChangeTracker () {
+328,330c297,298
+<                     protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+<                         theFillStyle.setFillColor (rgbColor);
+<                         return Status.OK_STATUS;
+---
+>             public void modelChanged (Notification msg) {
+>                 getPrimaryShape ().setBackgroundColor (getColor (modelElement.getBackgroundColor ()));
+336,354c304,305
+<                 try {
+<                     setColorOperation.execute (new NullProgressMonitor (), null);
+<                 } catch (ExecutionException e) {
+<                     GMFGraphDiagramEditorPlugin.getInstance ().logError ("Unable to synchronize view Background color with the model", e);
+<                 }
+<             }
+<         }
+<         final LineStyle theLineStyle = (LineStyle) view.getStyle (NotationPackage.eINSTANCE.getLineStyle ());
+<         if (modelElement.getForegroundColor () != null) {
+<             final int rgbColor;
+<             if (modelElement.getForegroundColor () instanceof RGBColor) {
+<                 RGBColor modelColor = (RGBColor) modelElement.getForegroundColor ();
+<                 rgbColor = (modelColor.getRed () & 0xFF) | ((modelColor.getGreen () & 0xFF) << 8) | ((modelColor.getBlue () & 0xFF) << 16);
+<             } else {
+<                 ConstantColor modelColor = (ConstantColor) modelElement.getForegroundColor ();
+<                 rgbColor = getRgbColor (modelColor);
+<             }
+<             if (rgbColor != - 1 && theLineStyle.getLineColor () != rgbColor) {
+<                 AbstractEMFOperation setColorOperation = new AbstractEMFOperation (getEditingDomain (), "Synchronizing view Foreground color with the model", Collections.singletonMap (Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) {
+---
+>         myDomainElementAdapters.add (new AttachAdapter (GMFGraphPackage.eINSTANCE.getFigure_BackgroundColor (), backgroundColorTracker, new FeatureTracker (backgroundColorTracker, GMFGraphPackage.eINSTANCE.getConstantColor_Value ()), new FeatureTracker (backgroundColorTracker, GMFGraphPackage.eINSTANCE.getRGBColor_Red ()), new FeatureTracker (backgroundColorTracker, GMFGraphPackage.eINSTANCE.getRGBColor_Green ()), new FeatureTracker (backgroundColorTracker, GMFGraphPackage.eINSTANCE.getRGBColor_Blue ())));
+>         ChangeTracker foregroundColorTracker = new ChangeTracker () {
+356,358c307,308
+<                     protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+<                         theLineStyle.setLineColor (rgbColor);
+<                         return Status.OK_STATUS;
+---
+>             public void modelChanged (Notification msg) {
+>                 getPrimaryShape ().setForegroundColor (getColor (modelElement.getForegroundColor ()));
+364,406c314,315
+<                 try {
+<                     setColorOperation.execute (new NullProgressMonitor (), null);
+<                 } catch (ExecutionException e) {
+<                     GMFGraphDiagramEditorPlugin.getInstance ().logError ("Unable to synchronize view Foreground color with the model", e);
+<                 }
+<             }
+<         }
+<         final FillStyle theFillStyle1 = (FillStyle) view.getStyle (NotationPackage.eINSTANCE.getFillStyle ());
+<         addListenerFilter ("FillStyleListener", new NotificationListener () {
+< 
+<             public void notifyChanged (final Notification notification) {
+<                 try {
+<                     new AbstractEMFOperation (getEditingDomain (), "Synchronizing model Background color with the view", Collections.singletonMap (Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) {
+< 
+<                         protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+<                             FillStyle theFillStyle = (FillStyle) notification.getNotifier ();
+<                             if (notification.getFeatureID (FillStyle.class) == NotationPackage.FILL_STYLE__FILL_COLOR) {
+<                                 int color = theFillStyle.getFillColor ();
+<                                 RGBColor modelColor;
+<                                 if (modelElement.getBackgroundColor () instanceof RGBColor) {
+<                                     modelColor = (RGBColor) modelElement.getBackgroundColor ();
+<                                 } else {
+<                                     modelColor = GMFGraphFactory.eINSTANCE.createRGBColor ();
+<                                     modelElement.setBackgroundColor (modelColor);
+<                                 }
+<                                 if (modelColor.getRed () != (color & 0x000000FF) || modelColor.getGreen () != (color & 0x0000FF00)>> 8 || modelColor.getBlue () != (color & 0x00FF0000)>> 16) {
+<                                     modelColor.setRed (color & 0x000000FF);
+<                                     modelColor.setGreen ((color & 0x0000FF00)>> 8);
+<                                     modelColor.setBlue ((color & 0x00FF0000)>> 16);
+<                                 }
+<                             }
+<                             return Status.OK_STATUS;
+<                         }
+< 
+<                     }
+< 
+<                     .execute (new NullProgressMonitor (), null);
+<                 } catch (ExecutionException e) {
+<                     GMFGraphDiagramEditorPlugin.getInstance ().logError ("Unable to synchronize model Background color with the view", e);
+<                 }
+<             }
+< 
+<         }
+---
+>         myDomainElementAdapters.add (new AttachAdapter (GMFGraphPackage.eINSTANCE.getFigure_ForegroundColor (), foregroundColorTracker, new FeatureTracker (foregroundColorTracker, GMFGraphPackage.eINSTANCE.getConstantColor_Value ()), new FeatureTracker (foregroundColorTracker, GMFGraphPackage.eINSTANCE.getRGBColor_Red ()), new FeatureTracker (foregroundColorTracker, GMFGraphPackage.eINSTANCE.getRGBColor_Green ()), new FeatureTracker (foregroundColorTracker, GMFGraphPackage.eINSTANCE.getRGBColor_Blue ())));
+>         ChangeTracker refreshFontTracker = new ChangeTracker () {
+408,433c317,318
+<         , theFillStyle1);
+<         final LineStyle theLineStyle1 = (LineStyle) view.getStyle (NotationPackage.eINSTANCE.getLineStyle ());
+<         addListenerFilter ("LineStyleListener", new NotificationListener () {
+< 
+<             public void notifyChanged (final Notification notification) {
+<                 try {
+<                     new AbstractEMFOperation (getEditingDomain (), "Synchronizing model Foreground color with the view", Collections.singletonMap (Transaction.OPTION_UNPROTECTED, Boolean.TRUE)) {
+< 
+<                         protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+<                             LineStyle theLineStyle = (LineStyle) notification.getNotifier ();
+<                             if (notification.getFeatureID (LineStyle.class) == NotationPackage.LINE_STYLE__LINE_COLOR) {
+<                                 int color = theLineStyle.getLineColor ();
+<                                 RGBColor modelColor;
+<                                 if (modelElement.getForegroundColor () instanceof RGBColor) {
+<                                     modelColor = (RGBColor) modelElement.getForegroundColor ();
+<                                 } else {
+<                                     modelColor = GMFGraphFactory.eINSTANCE.createRGBColor ();
+<                                     modelElement.setForegroundColor (modelColor);
+<                                 }
+<                                 if (modelColor.getRed () != (color & 0x000000FF) || modelColor.getGreen () != (color & 0x0000FF00)>> 8 || modelColor.getBlue () != (color & 0x00FF0000)>> 16) {
+<                                     modelColor.setRed (color & 0x000000FF);
+<                                     modelColor.setGreen ((color & 0x0000FF00)>> 8);
+<                                     modelColor.setBlue ((color & 0x00FF0000)>> 16);
+<                                 }
+<                             }
+<                             return Status.OK_STATUS;
+---
+>             public void modelChanged (Notification msg) {
+>                 refreshFont ();
+438,441c323,326
+<                     .execute (new NullProgressMonitor (), null);
+<                 } catch (ExecutionException e) {
+<                     GMFGraphDiagramEditorPlugin.getInstance ().logError ("Unable to synchronize model Foreground color with the view", e);
+<                 }
+---
+>         ;
+>         myDomainElementAdapters.add (new AttachAdapter (GMFGraphPackage.eINSTANCE.getFigure_Font (), refreshFontTracker, new FeatureTracker (refreshFontTracker, GMFGraphPackage.eINSTANCE.getBasicFont_FaceName ()), new FeatureTracker (refreshFontTracker, GMFGraphPackage.eINSTANCE.getBasicFont_Height ()), new FeatureTracker (refreshFontTracker, GMFGraphPackage.eINSTANCE.getBasicFont_Style ())));
+>         modelElement.eAdapters ().addAll (myDomainElementAdapters);
+>         super.activate ();
+443a329,332
+>     protected void refreshBounds () {
+>         org.eclipse.gmf.gmfgraph.RoundedRectangle modelElement = (org.eclipse.gmf.gmfgraph.RoundedRectangle) getModelFigureElement ();
+>         if (modelElement == null) {
+>             return;
+445,447c334,335
+< 
+<         , theLineStyle1);
+<         super.activate ();
+---
+>         if (modelElement.getPreferredSize () != null) {
+>             getFigure ().setPreferredSize (getDraw2dDimension (modelElement.getPreferredSize ()));
+449,514c337,338
+< 
+<     public static int getRgbColor (ConstantColor modelColor) {
+<         final int rgbColor;
+<         switch (modelColor.getValue ().getValue ()) {
+<             case ColorConstants.WHITE :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.white.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.BLACK :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.black.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.LIGHT_GRAY :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.lightGray.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.GRAY :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.gray.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.DARK_GRAY :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.darkGray.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.RED :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.red.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.ORANGE :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.orange.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.YELLOW :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.yellow.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.GREEN :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.green.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.LIGHT_GREEN :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.lightGreen.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.DARK_GREEN :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.darkGreen.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.CYAN :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.cyan.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.LIGHT_BLUE :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.lightBlue.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.BLUE :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.blue.getRGB ().hashCode ();
+<                     break;
+<                 } case ColorConstants.DARK_BLUE :
+<                 {
+<                     rgbColor = org.eclipse.draw2d.ColorConstants.darkBlue.getRGB ().hashCode ();
+<                     break;
+<                 } default :
+<                 rgbColor = - 1;
+---
+>         if (modelElement.getLocation () != null) {
+>             getFigure ().setLocation (getDraw2DPoint (modelElement.getLocation ()));
+516d339
+<         return rgbColor;

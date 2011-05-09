@@ -1,0 +1,731 @@
+2a3,4
+> import java.lang.ref.WeakReference;
+> 
+4a7,10
+> import java.util.Map;
+> 
+> import java.util.WeakHashMap;
+> 
+12a19,20
+> import org.eclipse.draw2d.LayoutManager;
+> 
+22a31,34
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.mapmode.IMapModeHolder;
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.mapmode.IMapMode;
+> 
+26a39,40
+> import org.eclipse.swt.graphics.FontMetrics;
+> 
+34,34c48,48
+<     private static String _ellipse = "...";
+---
+>     private static final String _ellipse = "...";
+35a50,105
+>     private static final Map mapModeConstantsMap = new WeakHashMap ();
+>     private static class MapModeConstants {
+>         private static final int MAX_IMAGE_INFO = 12;
+>         public final WeakReference mapModeRef;
+>         public final int nDPtoLP_3;
+>         public final int nDPtoLP_2;
+>         public final int nDPtoLP_0;
+>         public final Dimension dimension_nDPtoLP_0;
+>         public final WeakHashMap fontToEllipseTextSize = new WeakHashMap ();
+>         public final SingleIconInfo [] singleIconInfos = new SingleIconInfo [MAX_IMAGE_INFO];
+> 
+>         public MapModeConstants (IMapMode mapMode) {
+>             this.mapModeRef = new WeakReference (mapMode);
+>             nDPtoLP_2 = mapMode.DPtoLP (2);
+>             nDPtoLP_3 = mapMode.DPtoLP (3);
+>             nDPtoLP_0 = mapMode.DPtoLP (0);
+>             dimension_nDPtoLP_0 = new Dimension (nDPtoLP_0, nDPtoLP_0);
+>         }
+> 
+>         public Dimension getEllipseTextSize (Font f) {
+>             Dimension d = (Dimension) fontToEllipseTextSize.get (f);
+>             if (d == null) {
+>                 IMapMode mapMode = (IMapMode) mapModeRef.get ();
+>                 d = FigureUtilities.getTextExtents (_ellipse, f);
+>                 d.height = FigureUtilities.getFontMetrics (f).getHeight ();
+>                 d = new Dimension (mapMode.DPtoLP (d.width), mapMode.DPtoLP (d.height));
+>                 fontToEllipseTextSize.put (f, d);
+>             }
+>             return d;
+>         }
+> 
+>         public SingleIconInfo getSingleIconInfo (Image image) {
+>             if (image == null) {
+>                 return SingleIconInfo.NULL_INFO;
+>             }
+>             SingleIconInfo info;
+>             for (int i = 0;
+>             i < MAX_IMAGE_INFO; ++ i) {
+>                 info = singleIconInfos [i];
+>                 if (info == null) {
+>                     info = new SingleIconInfo (image);
+>                     singleIconInfos [i] = info;
+>                     return info;
+>                 }
+>                 if (info.icon == image) {
+>                     return info;
+>                 }
+>             }
+>             int index = SingleIconInfo.count % MAX_IMAGE_INFO;
+>             info = new SingleIconInfo (image);
+>             singleIconInfos [index] = info;
+>             return info;
+>         }
+> 
+>     }
+> 
+45a116,116
+>     private MapModeConstants mapModeConstants;
+46,46c117,117
+<     private String text = "";
+---
+>     private String text;
+49a122,123
+>     private int cachedPrefSizeHint_width;
+>     private int cachedPrefSizeHint_height;
+50,50d119
+<     private Dimension cachedPrefSizeHint = new Dimension (- 1, - 1);
+51,51c120,120
+<     private Dimension cachedTextSizeHint = new Dimension (- 1, - 1);
+---
+>     private Dimension ellipseTextSize;
+52a125,214
+>     private static abstract class IconInfo {
+> 
+>         public abstract Image getIcon (int i);
+> 
+>         public abstract Dimension getIconSize (IMapMode mapMode, int i);
+> 
+>         public abstract int getNumberofIcons ();
+> 
+>         public abstract Dimension getTotalIconSize (IMapMode mapMode);
+> 
+>         public abstract void invalidate ();
+> 
+>         public abstract void setIcon (Image icon, int i);
+> 
+>         public abstract int getMaxIcons ();
+> 
+>     }
+> 
+>     private static class SingleIconInfo extends IconInfo {
+>         static int count;
+>         public static final SingleIconInfo NULL_INFO = new SingleIconInfo () {
+> 
+>             public int getNumberofIcons () {
+>                 return 0;
+>             }
+> 
+>         }
+> 
+>         ;
+>         final Image icon;
+>         private Dimension totalIconSize;
+> 
+>         private SingleIconInfo () {
+>             icon = null;
+>         }
+> 
+>         public SingleIconInfo (Image icon) {
+>             this.icon = icon;
+>             ++ count;
+>         }
+> 
+>         public final int getMaxIcons () {
+>             return 1;
+>         }
+> 
+>         public Image getIcon (int i) {
+>             if (i == 0) {
+>                 return icon;
+>             } else if (i > 0) {
+>                 return null;
+>             }
+> 
+>             throw new IndexOutOfBoundsException ();
+>         }
+> 
+>         public void setIcon (Image img, int i) {
+>             throw new UnsupportedOperationException ();
+>         }
+> 
+>         public Dimension getIconSize (IMapMode mapMode, int i) {
+>             if (i == 0) {
+>                 return getTotalIconSize (mapMode);
+>             }
+>             throw new IndexOutOfBoundsException ();
+>         }
+> 
+>         public int getNumberofIcons () {
+>             return 1;
+>         }
+> 
+>         public Dimension getTotalIconSize (IMapMode mapMode) {
+>             if (totalIconSize != null) return totalIconSize;
+> 
+>             if (icon != null && ! icon.isDisposed ()) {
+>                 org.eclipse.swt.graphics.Rectangle imgBounds = icon.getBounds ();
+>                 totalIconSize = new Dimension (mapMode.DPtoLP (imgBounds.width), mapMode.DPtoLP (imgBounds.height));
+>             } else {
+>                 totalIconSize = EMPTY_DIMENSION;
+>             }
+>             return totalIconSize;
+>         }
+> 
+>         public void invalidate () {
+>             totalIconSize = null;
+>         }
+> 
+>     }
+> 
+>     private static class MultiIconInfo extends IconInfo {
+>         private ArrayList icons = new ArrayList (2);
+53,54d124
+<     private class IconInfo {
+<         private ArrayList icons = new ArrayList ();
+56a217,224
+>         public MultiIconInfo () {
+>             super ();
+>         }
+> 
+>         public int getMaxIcons () {
+>             return - 1;
+>         }
+> 
+63a232,233
+>             int size = icons.size ();
+>             if (i >= size) {
+64,64d231
+<             if (i >= icons.size ()) {
+65,65c234,234
+<                 for (int j = icons.size ();
+---
+>                 for (int j = size;
+74,74c243,243
+<         public Dimension getIconSize (int i) {
+---
+>         public Dimension getIconSize (IMapMode mapMode, int i) {
+78,78c247,247
+<                 return new Dimension (MapModeUtil.getMapMode (WrapLabel.this).DPtoLP (imgBounds.width), MapModeUtil.getMapMode (WrapLabel.this).DPtoLP (imgBounds.height));
+---
+>                 return new Dimension (mapMode.DPtoLP (imgBounds.width), mapMode.DPtoLP (imgBounds.height));
+87,87c256,256
+<         public Dimension getTotalIconSize () {
+---
+>         public Dimension getTotalIconSize (IMapMode mapMode) {
+89a259,262
+>             int iconNum = getNumberofIcons ();
+>             if (iconNum == 0) {
+>                 return totalIconSize = EMPTY_DIMENSION;
+>             }
+90,90c263,263
+<             totalIconSize = new Dimension (0, 0);
+---
+>             totalIconSize = new Dimension ();
+91a265,265
+>             i < iconNum; i ++) {
+92,92d264
+<             i < getNumberofIcons (); i ++) {
+93,93c266,266
+<                 Dimension iconSize = getIconSize (i);
+---
+>                 Dimension iconSize = getIconSize (mapMode, i);
+94,94d266
+<                 if (iconSize != null) {
+99,99c808,808
+<             }
+---
+>             }
+109,109c280,280
+<     private IconInfo iconInfo = null;
+---
+>     private IconInfo iconInfo;
+109a281,282
+>     private int cachedTextSizeHint_width;
+>     private int cachedTextSizeHint_height;
+111a285,290
+>         text = "";
+>         setAlignmentFlags (CENTER, FLAG_TEXT_ALIGN);
+>         setAlignmentFlags (CENTER, FLAG_ICON_ALIGN);
+>         setAlignmentFlags (CENTER, FLAG_LABEL_ALIGN);
+>         setAlignmentFlags (LEFT, FLAG_WRAP_ALIGN);
+>         setPlacementFlags (EAST, FLAG_TEXT_PLACEMENT);
+112,116d284
+<         setTextAlignment (CENTER);
+<         setIconAlignment (CENTER);
+<         setLabelAlignment (CENTER);
+<         setTextWrapAlignment (LEFT);
+<         setTextPlacement (EAST);
+119a294,298
+>         if (s != null) {
+>             text = s;
+>         } else {
+>             text = "";
+>         }
+120,120d293
+<         setText (s);
+123a302,303
+>         text = "";
+>         iconInfo = new SingleIconInfo (i);
+124,124d301
+<         setIcon (i);
+127a307,331
+>         if (s != null) {
+>             text = s;
+>         } else {
+>             text = "";
+>         }
+>         iconInfo = new SingleIconInfo (i);
+>     }
+> 
+>     private IMapMode getMapMode () {
+>         return (IMapMode) getMapModeConstants ().mapModeRef.get ();
+>     }
+> 
+>     private MapModeConstants getMapModeConstants () {
+>         if (mapModeConstants == null) {
+>             IMapMode mapMode = MapModeUtil.getMapMode (this);
+>             while (mapMode instanceof IMapModeHolder) {
+>                 mapMode = ((IMapModeHolder) mapMode).getMapMode ();
+>             }
+>             mapModeConstants = (MapModeConstants) mapModeConstantsMap.get (mapMode);
+>             if (mapModeConstants == null) {
+>                 mapModeConstants = new MapModeConstants (mapMode);
+>                 mapModeConstantsMap.put (mapMode, mapModeConstants);
+>             }
+>         }
+>         return mapModeConstants;
+128,129d306
+<         setText (s);
+<         setIcon (i);
+133,133d334
+<         Insets insets = getInsets ();
+136,136c337,337
+<                 loc.y = insets.top;
+---
+>                 loc.y = getInsets ().top;
+139,139c340,340
+<                 loc.y = bounds.height - size.height - insets.bottom;
+---
+>                 loc.y = bounds.height - size.height - getInsets ().bottom;
+147,147d347
+<         Insets insets = getInsets ();
+150,150c350,350
+<                 loc.x = insets.left;
+---
+>                 loc.x = getInsets ().left;
+153,153c353,353
+<                 loc.x = bounds.width - size.width - insets.right;
+---
+>                 loc.x = bounds.width - size.width - getInsets ().right;
+159a360,360
+>     private void calculateAlignment (Dimension iconSize, int textPlacement) {
+160,161d359
+<     private void calculateAlignment () {
+<         Dimension iconSize = getTotalIconSize ();
+162,162c361,361
+<         switch (getTextPlacement ()) {
+---
+>         switch (textPlacement) {
+176a442,443
+>     private void calculatePlacement (Dimension iconSize, int textPlacement) {
+>         int gap = (getText ().length () == 0 || (iconSize.width == 0 && iconSize.height == 0)) ? 0 : getIconTextGap ();
+177,180d441
+<         int gap = getIconTextGap ();
+<         if (! hasIcons () || getText ().equals ("")) gap = 0;
+< 
+<         Dimension d = new Dimension (0, 0);
+181a377,383
+>         boolean isEmpty = (iconSize.width == 0 && iconSize.height == 0);
+>         int len = getText ().length ();
+>         if (len == 0 && isEmpty) {
+>             return new Dimension (txtSize.width, txtSize.height);
+>         }
+>         int gap = (len == 0 || isEmpty) ? 0 : getIconTextGap ();
+>         int placement = getTextPlacement ();
+182,182c384,384
+<         if (getTextPlacement () == WEST || getTextPlacement () == EAST) {
+---
+>         if (placement == WEST || placement == EAST) {
+183,183d384
+<             d.width = iconSize.width + gap + txtSize.width;
+184,184c385,385
+<             d.height = Math.max (iconSize.height, txtSize.height);
+---
+>             return new Dimension (iconSize.width + gap + txtSize.width, Math.max (iconSize.height, txtSize.height));
+186,186d386
+<             d.width = Math.max (iconSize.width, txtSize.width);
+187,187c387,387
+<             d.height = iconSize.height + gap + txtSize.height;
+---
+>             return new Dimension (Math.max (iconSize.width, txtSize.width), iconSize.height + gap + txtSize.height);
+189,189d388
+<         return d;
+194a394,405
+>         Dimension iconSize = getTotalIconSize ();
+>         int textPlacement = getTextPlacement ();
+>         calculatePlacement (iconSize, textPlacement);
+>         calculateAlignment (iconSize, textPlacement);
+>         Rectangle r = getBounds ();
+>         Dimension ps = getPreferredSize (r.width, r.height);
+>         int w = (r.width - ps.width) + (getTextSize ().width - getSubStringTextSize ().width);
+>         int h = r.height - ps.height;
+>         if (w == 0 && h == 0) {
+>             return;
+>         }
+>         Dimension offset = new Dimension (w, h);
+195,198d393
+<         calculatePlacement ();
+<         calculateAlignment ();
+<         Dimension offset = getSize ().getDifference (getPreferredSize (getSize ().width, getSize ().height));
+<         offset.width += getTextSize ().width - getSubStringTextSize ().width;
+221,221c428,428
+<         switch (getTextPlacement ()) {
+---
+>         switch (textPlacement) {
+235,238d441
+<     private void calculatePlacement () {
+<         int gap = getIconTextGap ();
+<         if (! hasIcons () || text.equals ("")) gap = 0;
+< 
+239a445,445
+>         switch (textPlacement) {
+240,241d444
+<         Dimension iconSize = getTotalIconSize ();
+<         switch (getTextPlacement ()) {
+261,261d464
+<         return getTextExtents (getSubStringText (), getFont ());
+264a470,470
+>         Font f = getFont ();
+265,265c471,471
+<         return getTextExtents (getWrappedText (wHint, hHint), getFont ());
+---
+>         return getTextExtents (getWrappedText (wHint, hHint), f, getMapMode ().DPtoLP (FigureUtilities.getFontMetrics (f).getHeight ()));
+282a489,489
+>         return (getNumberofIcons () > 0);
+283,283d488
+<         return ! Dimension.SINGLETON.equals (getTotalIconSize ());
+300a507,507
+>         return getMapModeConstants ().nDPtoLP_3;
+301,301d506
+<         return MapModeUtil.getMapMode (this).DPtoLP (3);
+307a514,514
+>         LayoutManager layoutManager = getLayoutManager ();
+308,308c515,515
+<         if (getLayoutManager () != null) minSize.setSize (getLayoutManager ().getMinimumSize (this, w, h));
+---
+>         if (layoutManager != null) minSize.setSize (layoutManager.getMinimumSize (this, w, h));
+309a517,518
+>         Font f = getFont ();
+>         Dimension d = getEllipseTextSize ().getIntersected (getTextExtents (getText (), f, getMapMode ().DPtoLP (FigureUtilities.getFontMetrics (f).getHeight ())));
+310,310d516
+<         Dimension d = getTextExtents (getEllipse (), getFont ()).intersect (getTextExtents (getText (), getFont ()));
+319,319c527,527
+<         if (prefSize == null || wHint != cachedPrefSizeHint.width || hHint != cachedPrefSizeHint.height) {
+---
+>         if (prefSize == null || wHint != cachedPrefSizeHint_width || hHint != cachedPrefSizeHint_height) {
+322a531,532
+>             LayoutManager layoutManager = getLayoutManager ();
+>             if (layoutManager != null) {
+323,323c533,533
+<             if (getLayoutManager () != null) prefSize.union (getLayoutManager ().getPreferredSize (this, wHint, hHint));
+---
+>                 prefSize.union (layoutManager.getPreferredSize (this, wHint, hHint));
+323a534,534
+>             }
+324,324d533
+< 
+325a536,537
+>             cachedPrefSizeHint_width = wHint;
+>             cachedPrefSizeHint_height = hHint;
+326,327d535
+<             cachedPrefSizeHint.width = wHint;
+<             cachedPrefSizeHint.height = hHint;
+338a549,555
+>         String theText = getText ();
+>         int textLen = theText.length ();
+>         if (textLen == 0) {
+>             return subStringText = "";
+>         }
+>         Dimension size = getSize ();
+>         Dimension shrink = getPreferredSize (size.width, size.height).getDifference (size);
+339,339d548
+<         Dimension shrink = getPreferredSize (getSize ().width, getSize ().height).getDifference (getSize ());
+340a557,559
+>         if (effectiveSize.height == 0) {
+>             return subStringText = "";
+>         }
+341a561,564
+>         FontMetrics metrics = FigureUtilities.getFontMetrics (f);
+>         IMapMode mm = getMapMode ();
+>         int fontHeight = mm.DPtoLP (metrics.getHeight ());
+>         int charAverageWidth = mm.DPtoLP (metrics.getAverageCharWidth ());
+342,342c611,611
+<         int fontHeight = MapModeUtil.getMapMode (this).DPtoLP (FigureUtilities.getFontMetrics (f).getHeight ());
+---
+>         int fontHeight = getMapMode ().DPtoLP (FigureUtilities.getFontMetrics (f).getHeight ());
+343a566,568
+>         if (maxLines == 0) {
+>             return subStringText = "";
+>         }
+344a570,572
+>         StringBuffer remainingText = new StringBuffer (theText);
+>         int effectiveSizeWidth = effectiveSize.width;
+>         int widthHint = Math.max (effectiveSizeWidth - getEllipseTextSize ().width, 0);
+345,345c620,620
+<         StringBuffer remainingText = new StringBuffer (getText ());
+---
+>         StringBuffer remainingText = new StringBuffer (theText);
+347a575,575
+>             i = getLineWrapPosition (remainingText.toString (), f, effectiveSizeWidth, fontHeight);
+348,348d574
+<             i = getLineWrapPosition (remainingText.toString (), f, effectiveSize.width);
+349,349c576,576
+<             if (accumlatedText.length () > 0) accumlatedText.append ("\n");
+---
+>             if (accumlatedText.length () > 0) accumlatedText.append ('\n');
+351a579,579
+>                 i = getLargestSubstringConfinedTo (remainingText.toString (), f, widthHint, fontHeight, charAverageWidth);
+352,353d578
+<                 int dotsWidth = getTextExtents (getEllipse (), f).width;
+<                 i = getLargestSubstringConfinedTo (remainingText.toString (), f, Math.max (effectiveSize.width - dotsWidth, 0));
+363a590,590
+>         String theText = getText ();
+364,364c591,591
+<         if (! isTextWrapped () || wHint == - 1) return getText ();
+---
+>         if (wHint == - 1 || theText.length () == 0 || ! isTextWrapped ()) return theText;
+366a594,594
+>         if (! (iconSize.width == 0 && iconSize.height == 0)) {
+367,367d593
+<         if (hasIcons ()) {
+379a607,609
+>         if ((hHint == 0) || (wHint == 0)) {
+>             return "";
+>         }
+382a465,465
+>         Font f = getFont ();
+383,383c466,466
+<             int fontHeight = MapModeUtil.getMapMode (this).DPtoLP (FigureUtilities.getFontMetrics (f).getHeight ());
+---
+>         return getTextExtents (getSubStringText (), f, getMapMode ().DPtoLP (FigureUtilities.getFontMetrics (f).getHeight ()));
+384a615,617
+>             if (maxLines == 0) {
+>                 return "";
+>             }
+387,387d619
+<         StringBuffer remainingText = new StringBuffer (getText ());
+390,390c623,623
+<             if ((i = getLineWrapPosition (remainingText.toString (), f, wHint)) == 0) break;
+---
+>             if ((i = getLineWrapPosition (remainingText.toString (), f, wHint, fontHeight)) == 0) break;
+392,392c625,625
+<             if (accumlatedText.length () > 0) accumlatedText.append ("\n");
+---
+>             if (accumlatedText.length () > 0) accumlatedText.append ('\n');
+403a637,643
+>     private Dimension getEllipseTextSize () {
+>         if (ellipseTextSize == null) {
+>             ellipseTextSize = getMapModeConstants ().getEllipseTextSize (getFont ());
+>         }
+>         return ellipseTextSize;
+>     }
+> 
+432,432c672,672
+<         if (textSize == null || wHint != cachedTextSizeHint.width || hHint != cachedTextSizeHint.height) {
+---
+>         if (textSize == null || wHint != cachedTextSizeHint_width || hHint != cachedTextSizeHint_height) {
+433a674,675
+>             cachedTextSizeHint_width = wHint;
+>             cachedTextSizeHint_height = hHint;
+434,435d673
+<             cachedTextSizeHint.width = wHint;
+<             cachedTextSizeHint.height = hHint;
+440a681,682
+>         Rectangle r = getBounds ();
+>         return getTextSize (r.width, r.height);
+441,441d680
+<         return getTextSize (getSize ().width, getSize ().height);
+447a689,689
+>         ellipseTextSize = null;
+480a723,724
+>         String subString = getSubStringText ();
+>         if (subString.length () > 0) {
+484,484c728,728
+<             paintText (graphics);
+---
+>                 paintText (graphics, subString);
+487a731,731
+>             } else {
+488a733,733
+>             }
+488,488c732,732
+<         paintText (graphics);
+---
+>                 paintText (graphics, subString);
+492,492c738,738
+<     private void paintText (Graphics graphics) {
+---
+>     private void paintText (Graphics graphics, String subString) {
+493,493d738
+<         String subString = getSubStringText ();
+495a741,744
+>         FontMetrics fontMetrics = FigureUtilities.getFontMetrics (f);
+>         int fontHeight = getMapMode ().DPtoLP (fontMetrics.getHeight ());
+>         int fontHeightHalf = fontHeight / 2;
+>         int textWidth = getTextExtents (subString, f, fontHeight).width;
+496,497d740
+<         int fontHeight = MapModeUtil.getMapMode (this).DPtoLP (FigureUtilities.getFontMetrics (f).getHeight ());
+<         int textWidth = getTextExtents (subString, f).width;
+498,498c745,745
+<         int y = getTextLocation ().y;
+---
+>         Point p = getTextLocation ();
+498a746,753
+>         int y = p.y;
+>         int x = p.x;
+>         final int wrapAlignment = getTextWrapAlignment ();
+>         boolean isUnderlined = isTextUnderlined ();
+>         boolean isStrikedThrough = isTextStrikedThrough ();
+>         Rectangle clipRect = new Rectangle ();
+>         graphics.getClip (clipRect);
+>         int clipRectTopRight_x = clipRect.getTopRight ().x;
+499,499c754,754
+<         if (0 == FigureUtilities.getFontMetrics (f).getLeading ()) {
+---
+>         if (0 == fontMetrics.getLeading ()) {
+500,500c755,755
+<             int offset = MapModeUtil.getMapMode (this).DPtoLP (2);
+---
+>             y += getMapModeConstants ().nDPtoLP_2;
+501,501d755
+<             y += offset;
+505,505c759,759
+<             int tokenWidth = getTextExtents (token, f).width;
+---
+>             int tokenWidth = getTextExtents (token, f, fontHeight).width;
+506,506d759
+<             int x = getTextLocation ().x;
+507,507c760,760
+<             switch (getTextWrapAlignment ()) {
+---
+>             switch (wrapAlignment) {
+514a768,768
+>             if (tokenWidth + x <= clipRectTopRight_x) {
+515,517d767
+<             Rectangle clipRect = new Rectangle ();
+<             graphics.getClip (clipRect);
+<             if (tokenWidth + x <= clipRect.getTopRight ().x) {
+525,525c776,776
+<             if (isTextUnderlined ()) graphics.drawLine (x, y - 1, x + tokenWidth, y - 1);
+---
+>             if (isUnderlined) graphics.drawLine (x, y - 1, x + tokenWidth, y - 1);
+527,527c778,778
+<             if (isTextStrikedThrough ()) graphics.drawLine (x, y - fontHeight / 2 + 1, x + tokenWidth, y - fontHeight / 2 + 1);
+---
+>             if (isStrikedThrough) graphics.drawLine (x, y - fontHeightHalf + 1, x + tokenWidth, y - fontHeightHalf + 1);
+550a802,805
+>         if (iconInfo == null) {
+>             if (index == 0) {
+>                 iconInfo = getMapModeConstants ().getSingleIconInfo (image);
+>             } else {
+551,551c806,806
+<         if (iconInfo == null) iconInfo = new IconInfo ();
+---
+>                 iconInfo = new MultiIconInfo ();
+552,554d806
+< 
+<         if (iconInfo.getIcon (index) == image) return;
+< 
+557a811,827
+>         } else if (iconInfo.getIcon (index) != image) {
+>             if (iconInfo.getMaxIcons () == 1) {
+>                 if (index == 0) {
+>                     iconInfo = getMapModeConstants ().getSingleIconInfo (image);
+>                     revalidate ();
+>                     repaint ();
+>                     return;
+>                 }
+>                 IconInfo oldIconInfo = iconInfo;
+>                 iconInfo = new MultiIconInfo ();
+>                 iconInfo.setIcon (oldIconInfo.getIcon (0), 0);
+>             }
+>             iconInfo.setIcon (image, index);
+>             revalidate ();
+>             repaint ();
+>         }
+> 
+571,571c841,841
+<         return iconInfo.getIconSize (index);
+---
+>         return iconInfo.getIconSize (getMapMode (), index);
+583,583c853,853
+<         return iconInfo.getTotalIconSize ();
+---
+>         return iconInfo.getTotalIconSize (getMapMode ());
+755a1026,1027
+>         int expansion = getMapModeConstants ().nDPtoLP_2;
+>         figBounds.resize (expansion, expansion);
+756,756d1025
+<         figBounds.expand (new Insets (MapModeUtil.getMapMode (this).DPtoLP (2), MapModeUtil.getMapMode (this).DPtoLP (2), 0, 0));
+762,762c1033,1033
+<     private int getLineWrapPosition (String s, Font f, int w) {
+---
+>     private int getLineWrapPosition (String s, Font f, int w, int fontHeight) {
+762a1034,1036
+>         if (getTextExtents (s, f, fontHeight).width <= w) {
+>             return s.length ();
+>         }
+767,767c1041,1041
+<         if (getTextExtents (s.substring (start, end), f).width > w) {
+---
+>         if (getTextExtents (s.substring (start, end), f, fontHeight).width > w) {
+773,773c1047,1047
+<         while (end != BreakIterator.DONE && getTextExtents (s.substring (start, end), f).width <= w);
+---
+>         while (end != BreakIterator.DONE && getTextExtents (s.substring (start, end), f, fontHeight).width <= w);
+776a1051,1053
+>     private int getLargestSubstringConfinedTo (String s, Font f, int w, int fontHeight, int charAverageWidth) {
+>         float avg = charAverageWidth;
+>         int min = 0;
+777,780d1050
+<     private int getLargestSubstringConfinedTo (String s, Font f, int w) {
+<         int min, max;
+<         float avg = MapModeUtil.getMapMode (this).DPtoLP (FigureUtilities.getFontMetrics (f).getAverageCharWidth ());
+<         min = 0;
+781,781c1054,1054
+<         max = s.length () + 1;
+---
+>         int max = s.length () + 1;
+789,789c1062,1062
+<             guessSize = getTextExtents (s.substring (0, guess), f).width;
+---
+>             guessSize = getTextExtents (s.substring (0, guess), f, fontHeight).width;
+797,797c1070,1070
+<     private Dimension getTextExtents (String s, Font f) {
+---
+>     private Dimension getTextExtents (String s, Font f, int fontHeight) {
+797a1071,1073
+>         if (s.length () == 0) {
+>             return getMapModeConstants ().dimension_nDPtoLP_0;
+>         } else {
+799a1076,1078
+>             d.width = mapMode.DPtoLP (d.width);
+>             d.height = fontHeight * new StringTokenizer (s, "\n").countTokens ();
+>             return d;
+799,799c1075,1075
+<         int lineCount = getLineCount (s);
+---
+>             IMapMode mapMode = getMapMode ();
+800,801d1075
+<         d.height = FigureUtilities.getFontMetrics (f).getHeight () * lineCount;
+<         return new Dimension (MapModeUtil.getMapMode (this).DPtoLP (d.width), MapModeUtil.getMapMode (this).DPtoLP (d.height));
+803,806d1079
+< 
+<     private int getLineCount (String s) {
+<         StringTokenizer tokenizer = new StringTokenizer (s, "\n");
+<         return tokenizer.countTokens ();

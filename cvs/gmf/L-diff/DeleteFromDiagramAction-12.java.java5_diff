@@ -1,0 +1,81 @@
+33,34d32
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.GroupEditPart;
+< 
+114,131c112,121
+<         if (selectedItems.isEmpty ()) {
+<             return false;
+<         }
+<         for (Iterator i = selectedItems.iterator ();
+<         i.hasNext ();) {
+<             Object selectedObject = i.next ();
+<             if (! (selectedObject instanceof IGraphicalEditPart)) {
+<                 continue;
+<             }
+<             IGraphicalEditPart gep = (IGraphicalEditPart) selectedObject;
+<             Object model = gep.getModel ();
+<             if (! (model instanceof View)) {
+<                 continue;
+<             }
+<             EObject element = ((View) model).getElement ();
+<             if (element == null || element instanceof View) {
+<                 if (selectedObject instanceof ConnectionEditPart) {
+<                     if (! ((ConnectionEditPart) selectedObject).isSemanticConnection ()) {
+---
+>         boolean isCanonical = false;
+>         if (! selectedItems.isEmpty ()) {
+>             for (Iterator si = selectedItems.iterator ();
+>             si.hasNext () && ! isCanonical;) {
+>                 Object selected = si.next ();
+>                 if (selected instanceof EditPart) {
+>                     EditPart child = (EditPart) selected;
+>                     View view = (View) child.getAdapter (View.class);
+>                     if (view == null || view.getElement () == null || view.getElement () instanceof View) {
+>                         isCanonical = false;
+133a124,126
+>                     if (child instanceof ConnectionEditPart) {
+>                         ConnectionEditPart connection = (ConnectionEditPart) child;
+>                         isCanonical = (! connection.isSemanticConnection () || (isCanonical (connection.getSource ()) && isCanonical (connection.getTarget ())));
+135c128
+<                     continue;
+---
+>                         isCanonical = isCanonical (child);
+138,146d130
+<             if (selectedObject instanceof ConnectionEditPart) {
+<                 ConnectionEditPart ePart = (ConnectionEditPart) selectedObject;
+<                 EditPart sEditPart = ePart.getSource ();
+<                 EditPart tEditPart = ePart.getTarget ();
+<                 if (isCanonical (sEditPart) && isCanonical (tEditPart)) return true;
+< 
+<             } else {
+<                 if (isCanonical (gep)) return true;
+< 
+149c133
+<         return false;
+---
+>         return isCanonical;
+152,164c136,139
+<     private boolean isCanonical (EditPart gep) {
+<         if (gep instanceof IGraphicalEditPart) {
+<             return isCanonical ((IGraphicalEditPart) gep);
+<         }
+<         return false;
+<     }
+< 
+<     private boolean isCanonical (IGraphicalEditPart gep) {
+<         EditPart parent = gep.getParent ();
+<         while (parent instanceof GroupEditPart) {
+<             parent = parent.getParent ();
+<         }
+<         if (parent instanceof IGraphicalEditPart) {
+---
+>     private boolean isCanonical (EditPart ep) {
+>         EObject eObject = (EObject) ep.getAdapter (EObject.class);
+>         EditPart parent = ep.getParent ();
+>         if (eObject != null && parent != null) {
+166,169c141
+<             if (cep != null) {
+<                 if (cep.isEnabled ()) return true;
+< 
+<             }
+---
+>             return cep != null && cep.isEnabled () && cep.canCreate (eObject);

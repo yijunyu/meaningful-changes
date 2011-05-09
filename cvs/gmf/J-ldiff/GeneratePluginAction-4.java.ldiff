@@ -1,0 +1,79 @@
+23a24,24
+> import org.eclipse.emf.ecore.EObject;
+69a71,71
+> 			private IContainer myResourcesContainer;
+79a82,88
+> 					StandaloneGalleryConverter converter = new StandaloneGalleryConverter(generator.getGenerationInfo());					
+> 
+> 					IStatus result = saveToFile(decideOnDestinationFile("bundled"), converter.convertFigureGallery());
+> 					if (result.isOK()){
+> 						result = saveToFile(decideOnDestinationFile("mirrored"), converter.mirrorDiagramElements(rs.getResources()));
+> 					}
+> 					return result;
+80,82d81
+< 					IFile galleryFile = decideOnDestinationFile();
+< 					Resource r = rs.createResource(URI.createPlatformResourceURI(galleryFile.getFullPath().toString()));
+< 					return saveNewFigureGallery(r, generator.getGenerationInfo());
+92,94d97
+< 			private IFile decideOnDestinationFile() {
+< 				StandaloneGenerator.Config config = generator.getGenerationInfo().getConfig();
+< 				IProject p = ResourcesPlugin.getWorkspace().getRoot().getProject(config.getPluginID());
+95a112,112
+> 					myResourcesContainer = p;
+96,96d111
+< 				IContainer fileContainer = p;
+101,101c117,117
+< 						fileContainer = modelsFolder;
+---
+> 							myResourcesContainer = modelsFolder;
+105a98,99
+> 			private IFile decideOnDestinationFile(String baseName) {
+> 				final IPath basePath = new Path(baseName);
+106,106d97
+< 				final IPath baseName = new Path("bundled");
+107a101,101
+> 				IFile resultFile = getResourcesContainer().getFile(basePath.addFileExtension(ext));
+107,107c100,100
+< 				final String ext = "gmfgraph";
+---
+> 				final String ext = "gmfgraph";
+108,108d100
+< 				IFile galleryFile = fileContainer.getFile(baseName.addFileExtension(ext));
+109,109c102,102
+< 				for (int i = 1; galleryFile.exists(); i++) {
+---
+> 				for (int i = 1; resultFile.exists(); i++) {
+110,110c103,103
+< 					galleryFile = fileContainer.getFile(new Path(baseName.lastSegment() + String.valueOf(i)).addFileExtension(ext));
+---
+> 					resultFile = getResourcesContainer().getFile(new Path(basePath.lastSegment() + String.valueOf(i)).addFileExtension(ext));
+110a104,110
+> 				}
+> 				return resultFile;
+> 			}
+> 			
+> 			private IContainer getResourcesContainer(){
+> 				if (myResourcesContainer == null){
+> 					IProject p = ResourcesPlugin.getWorkspace().getRoot().getProject(getConfig().getPluginID());
+112,112c123,123
+< 				return galleryFile;
+---
+> 				return myResourcesContainer;
+114a126,133
+> 			private StandaloneGenerator.Config getConfig(){
+> 				return generator.getGenerationInfo().getConfig();
+> 			}
+> 
+> 			private IStatus saveToFile(IFile outputFile, EObject root) {
+> 				if (root != null){
+> 					Resource outputResource = rs.createResource(URI.createPlatformResourceURI(outputFile.getFullPath().toString()));
+> 					outputResource.getContents().add(root);
+115,116d125
+< 			private IStatus saveNewFigureGallery(Resource galleryResource, StandaloneGenerator.GenerationInfo info) {
+< 				galleryResource.getContents().add(new StandaloneGalleryConverter().convertFigureGallery(info));
+118,118c135,135
+< 					galleryResource.save(null);
+---
+> 						outputResource.save(null);
+121a139,139
+> 				}

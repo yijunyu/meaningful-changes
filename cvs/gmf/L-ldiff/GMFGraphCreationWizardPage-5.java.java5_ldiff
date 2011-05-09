@@ -1,0 +1,128 @@
+3,6d2
+< import java.io.InputStream;
+< 
+< import org.eclipse.core.resources.IFile;
+< 
+9,9c5,5
+< import org.eclipse.core.runtime.IProgressMonitor;
+---
+> import org.eclipse.core.runtime.Path;
+10a7,7
+> import org.eclipse.emf.common.util.URI;
+11,13d6
+< import org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.wizards.EditorWizardPage;
+< 
+< import org.eclipse.gmf.runtime.diagram.ui.resources.editor.util.DiagramFileCreator;
+17,17c15,15
+< import org.eclipse.ui.IWorkbench;
+---
+> import org.eclipse.ui.dialogs.WizardNewFileCreationPage;
+18a13,13
+> import org.eclipse.swt.widgets.Composite;
+19,19c11,11
+< import org.eclipse.ui.IWorkbenchWindow;
+---
+> import org.eclipse.osgi.util.NLS;
+21,21d14
+< import org.eclipse.core.resources.ResourcesPlugin;
+23,23d16
+< import org.eclipse.gmf.graphdef.editor.edit.parts.CanvasEditPart;
+24a20,23
+>     public GMFGraphCreationWizardPage (String pageName, IStructuredSelection selection, String fileExtension) {
+>         super (pageName, selection);
+>         this.fileExtension = fileExtension;
+>     }
+25,25c17,17
+< public class GMFGraphCreationWizardPage extends EditorWizardPage {
+---
+> public class GMFGraphCreationWizardPage extends WizardNewFileCreationPage {
+25a18,18
+>     private final String fileExtension;
+27,30d24
+<     public GMFGraphCreationWizardPage (IWorkbench workbench, IStructuredSelection selection) {
+<         super ("CreationWizardPage", workbench, selection);
+<         setTitle ("Create GMFGraph Diagram");
+<         setDescription ("Create a new GMFGraph diagram.");
+32a29,30
+>     public URI getURI () {
+>         return URI.createPlatformResourceURI (getFilePath ().toString ());
+33,34d28
+<     public IFile createAndOpenDiagram (IPath containerPath, String fileName, InputStream initialContents, String kind, IWorkbenchWindow dWindow, IProgressMonitor progressMonitor, boolean saveDiagram) {
+<         return GMFGraphDiagramEditorUtil.createAndOpenDiagram (getDiagramFileCreator (), containerPath, fileName, initialContents, kind, dWindow, progressMonitor, isOpenNewlyCreatedDiagramEditor (), saveDiagram);
+37,37c25,25
+<     protected String getDefaultFileName () {
+---
+>     protected String getExtension () {
+38,38c26,26
+<         return "default";
+---
+>         return fileExtension;
+40a45,67
+>     private String getUniqueFileName (IPath containerFullPath, String fileName) {
+>         if (containerFullPath == null) {
+>             containerFullPath = new Path ("");
+>         }
+>         if (fileName == null || fileName.trim ().length () == 0) {
+>             fileName = "default";
+>         }
+>         IPath filePath = containerFullPath.append (fileName);
+>         String extension = getExtension ();
+>         if (extension != null && ! extension.equals (filePath.getFileExtension ())) {
+>             filePath = filePath.addFileExtension (extension);
+>         }
+>         extension = filePath.getFileExtension ();
+>         fileName = filePath.removeFileExtension ().lastSegment ();
+>         int i = 1;
+>         while (GMFGraphDiagramEditorUtil.exists (filePath)) {
+>             i ++;
+>             filePath = containerFullPath.append (fileName + i);
+>             if (extension != null) {
+>                 filePath = filePath.addFileExtension (extension);
+>             }
+>         }
+>         return filePath.lastSegment ();
+41,42d44
+<     public DiagramFileCreator getDiagramFileCreator () {
+<         return GMFGraphDiagramFileCreator.getInstance ();
+44a70,73
+>     public void createControl (Composite parent) {
+>         super.createControl (parent);
+>         setFileName (getUniqueFileName (getContainerFullPath (), getFileName ()));
+>         setPageComplete (validatePage ());
+45,46d69
+<     protected String getDiagramKind () {
+<         return CanvasEditPart.MODEL_ID;
+50,50c77,77
+<         if (super.validatePage ()) {
+---
+>         if (! super.validatePage ()) {
+51,52d77
+<             String fileName = getFileName ();
+<             if (fileName == null) {
+54a33,39
+>     protected IPath getFilePath () {
+>         IPath path = getContainerFullPath ();
+>         if (path == null) {
+>             path = new Path ("");
+>         }
+>         String fileName = getFileName ();
+>         if (fileName != null) {
+54a80,82
+>         String extension = getExtension ();
+>         if (extension != null && ! getFilePath ().toString ().endsWith ("." + extension)) {
+>             setErrorMessage (NLS.bind ("File name should have ''{0}'' extension.", extension));
+55,55d32
+<             IPath path = getContainerFullPath ().append (getDiagramFileCreator ().appendExtensionToFileName (fileName));
+56a41,42
+>         }
+>         return path;
+56,56c40,40
+<             path = path.removeFileExtension ().addFileExtension ("gmfgraph");
+---
+>             path = path.append (fileName);
+57,58d40
+<             if (ResourcesPlugin.getWorkspace ().getRoot ().exists (path)) {
+<                 setErrorMessage ("Model File already exists: " + path.lastSegment ());
+63,64d86
+<         return false;
+<     }

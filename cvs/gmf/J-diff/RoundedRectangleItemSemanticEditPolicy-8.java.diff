@@ -1,0 +1,176 @@
+13c13,15
+< import org.eclipse.emf.ecore.EObject;
+---
+> import java.util.Iterator;
+> 
+> import org.eclipse.emf.ecore.EAnnotation;
+16,18d17
+< import org.eclipse.gef.commands.UnexecutableCommand;
+< import org.eclipse.gmf.gmfgraph.DiagramElement;
+< import org.eclipse.gmf.gmfgraph.FigureHandle;
+20c19,20
+< import org.eclipse.gmf.graphdef.editor.edit.commands.DiagramElementFigureReorientCommand;
+---
+> import org.eclipse.gmf.graphdef.editor.edit.commands.ChildAccessCreateCommand;
+> import org.eclipse.gmf.graphdef.editor.edit.commands.ChildAccessReorientCommand;
+25c25,30
+< import org.eclipse.gmf.graphdef.editor.edit.parts.DiagramElementFigureEditPart;
+---
+> import org.eclipse.gmf.graphdef.editor.edit.parts.ChildAccessEditPart;
+> import org.eclipse.gmf.graphdef.editor.edit.parts.EllipseEditPart;
+> import org.eclipse.gmf.graphdef.editor.edit.parts.PolylineEditPart;
+> import org.eclipse.gmf.graphdef.editor.edit.parts.Rectangle2EditPart;
+> import org.eclipse.gmf.graphdef.editor.edit.parts.RoundedRectangleEditPart;
+> import org.eclipse.gmf.graphdef.editor.part.GMFGraphVisualIDRegistry;
+28d32
+< import org.eclipse.gmf.runtime.emf.type.core.commands.SetValueCommand;
+32,33c36,38
+< import org.eclipse.gmf.runtime.emf.type.core.requests.ReorientReferenceRelationshipRequest;
+< import org.eclipse.gmf.runtime.emf.type.core.requests.SetRequest;
+---
+> import org.eclipse.gmf.runtime.emf.type.core.requests.ReorientRelationshipRequest;
+> import org.eclipse.gmf.runtime.notation.Node;
+> import org.eclipse.gmf.runtime.notation.View;
+44c49
+< 		if (GMFGraphElementTypes.Rectangle_3002 == req.getElementType()) {
+---
+> 		if (GMFGraphElementTypes.Rectangle_3011 == req.getElementType()) {
+46c51
+< 				req.setContainmentFeature(GMFGraphPackage.eINSTANCE.getFigure_Children());
+---
+> 				req.setContainmentFeature(GMFGraphPackage.eINSTANCE.getRealFigure_Children());
+48c53
+< 			return getMSLWrapper(new Rectangle2CreateCommand(req));
+---
+> 			return getGEFWrapper(new Rectangle2CreateCommand(req));
+50c55
+< 		if (GMFGraphElementTypes.Ellipse_3003 == req.getElementType()) {
+---
+> 		if (GMFGraphElementTypes.Ellipse_3012 == req.getElementType()) {
+52c57
+< 				req.setContainmentFeature(GMFGraphPackage.eINSTANCE.getFigure_Children());
+---
+> 				req.setContainmentFeature(GMFGraphPackage.eINSTANCE.getRealFigure_Children());
+54c59
+< 			return getMSLWrapper(new EllipseCreateCommand(req));
+---
+> 			return getGEFWrapper(new EllipseCreateCommand(req));
+56c61
+< 		if (GMFGraphElementTypes.RoundedRectangle_3004 == req.getElementType()) {
+---
+> 		if (GMFGraphElementTypes.RoundedRectangle_3013 == req.getElementType()) {
+58c63
+< 				req.setContainmentFeature(GMFGraphPackage.eINSTANCE.getFigure_Children());
+---
+> 				req.setContainmentFeature(GMFGraphPackage.eINSTANCE.getRealFigure_Children());
+60c65
+< 			return getMSLWrapper(new RoundedRectangleCreateCommand(req));
+---
+> 			return getGEFWrapper(new RoundedRectangleCreateCommand(req));
+62c67
+< 		if (GMFGraphElementTypes.Polyline_3005 == req.getElementType()) {
+---
+> 		if (GMFGraphElementTypes.Polyline_3014 == req.getElementType()) {
+64c69
+< 				req.setContainmentFeature(GMFGraphPackage.eINSTANCE.getFigure_Children());
+---
+> 				req.setContainmentFeature(GMFGraphPackage.eINSTANCE.getRealFigure_Children());
+66c71
+< 			return getMSLWrapper(new PolylineCreateCommand(req));
+---
+> 			return getGEFWrapper(new PolylineCreateCommand(req));
+75,76c80,83
+< 		CompoundCommand cc = getDestroyEdgesCommand(req.isConfirmationRequired());
+< 		cc.add(getMSLWrapper(new DestroyElementCommand(req)));
+---
+> 		CompoundCommand cc = getDestroyEdgesCommand();
+> 		addDestroyChildNodesCommand(cc);
+> 		addDestroyShortcutsCommand(cc);
+> 		cc.add(getGEFWrapper(new DestroyElementCommand(req)));
+83,85c90,111
+< 	protected Command getCreateRelationshipCommand(CreateRelationshipRequest req) {
+< 		if (GMFGraphElementTypes.DiagramElementFigure_4001 == req.getElementType()) {
+< 			return req.getTarget() == null ? null : getCreateCompleteIncomingDiagramElementFigure_4001Command(req);
+---
+> 	protected void addDestroyChildNodesCommand(CompoundCommand cmd) {
+> 		View view = (View) getHost().getModel();
+> 		EAnnotation annotation = view.getEAnnotation("Shortcut"); //$NON-NLS-1$
+> 		if (annotation != null) {
+> 			return;
+> 		}
+> 		for (Iterator it = view.getChildren().iterator(); it.hasNext();) {
+> 			Node node = (Node) it.next();
+> 			switch (GMFGraphVisualIDRegistry.getVisualID(node)) {
+> 			case Rectangle2EditPart.VISUAL_ID:
+> 				cmd.add(getDestroyElementCommand(node));
+> 				break;
+> 			case EllipseEditPart.VISUAL_ID:
+> 				cmd.add(getDestroyElementCommand(node));
+> 				break;
+> 			case RoundedRectangleEditPart.VISUAL_ID:
+> 				cmd.add(getDestroyElementCommand(node));
+> 				break;
+> 			case PolylineEditPart.VISUAL_ID:
+> 				cmd.add(getDestroyElementCommand(node));
+> 				break;
+> 			}
+87d112
+< 		return super.getCreateRelationshipCommand(req);
+93,97c118,120
+< 	protected Command getCreateCompleteIncomingDiagramElementFigure_4001Command(CreateRelationshipRequest req) {
+< 		EObject sourceEObject = req.getSource();
+< 		EObject targetEObject = req.getTarget();
+< 		if (false == sourceEObject instanceof DiagramElement || false == targetEObject instanceof FigureHandle) {
+< 			return UnexecutableCommand.INSTANCE;
+---
+> 	protected Command getCreateRelationshipCommand(CreateRelationshipRequest req) {
+> 		Command command = req.getTarget() == null ? getStartCreateRelationshipCommand(req) : getCompleteCreateRelationshipCommand(req);
+> 		return command != null ? command : super.getCreateRelationshipCommand(req);
+99,102c122,128
+< 		DiagramElement source = (DiagramElement) sourceEObject;
+< 		FigureHandle target = (FigureHandle) targetEObject;
+< 		if (!GMFGraphBaseItemSemanticEditPolicy.LinkConstraints.canCreateDiagramElementFigure_4001(source, target)) {
+< 			return UnexecutableCommand.INSTANCE;
+---
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	protected Command getStartCreateRelationshipCommand(CreateRelationshipRequest req) {
+> 		if (GMFGraphElementTypes.ChildAccess_4002 == req.getElementType()) {
+> 			return null;
+104,105c130
+< 		SetRequest setReq = new SetRequest(sourceEObject, GMFGraphPackage.eINSTANCE.getDiagramElement_Figure(), target);
+< 		return getMSLWrapper(new SetValueCommand(setReq));
+---
+> 		return null;
+109c134,144
+< 	 * Returns command to reorient EReference based link. New link target or source
+---
+> 	 * @generated
+> 	 */
+> 	protected Command getCompleteCreateRelationshipCommand(CreateRelationshipRequest req) {
+> 		if (GMFGraphElementTypes.ChildAccess_4002 == req.getElementType()) {
+> 			return getGEFWrapper(new ChildAccessCreateCommand(req, req.getSource(), req.getTarget()));
+> 		}
+> 		return null;
+> 	}
+> 
+> 	/**
+> 	 * Returns command to reorient EClass based link. New link target or source
+114c149
+< 	protected Command getReorientReferenceRelationshipCommand(ReorientReferenceRelationshipRequest req) {
+---
+> 	protected Command getReorientRelationshipCommand(ReorientRelationshipRequest req) {
+116,117c151,152
+< 		case DiagramElementFigureEditPart.VISUAL_ID:
+< 			return getMSLWrapper(new DiagramElementFigureReorientCommand(req));
+---
+> 		case ChildAccessEditPart.VISUAL_ID:
+> 			return getGEFWrapper(new ChildAccessReorientCommand(req));
+119c154
+< 		return super.getReorientReferenceRelationshipCommand(req);
+---
+> 		return super.getReorientRelationshipCommand(req);
+120a156
+> 

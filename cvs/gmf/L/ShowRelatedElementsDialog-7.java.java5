@@ -1,0 +1,260 @@
+package org.eclipse.gmf.runtime.common.ui.dialogs;
+
+import java.util.ArrayList;
+
+import java.util.List;
+
+import org.eclipse.jface.dialogs.Dialog;
+
+import org.eclipse.jface.dialogs.IDialogConstants;
+
+import org.eclipse.jface.dialogs.IDialogSettings;
+
+import org.eclipse.jface.window.Window;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.layout.GridData;
+
+import org.eclipse.swt.layout.GridLayout;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.swt.widgets.Control;
+
+import org.eclipse.swt.widgets.Shell;
+
+import org.eclipse.ui.PlatformUI;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+
+import org.eclipse.gmf.runtime.common.ui.internal.l10n.CommonUIMessages;
+
+public class ShowRelatedElementsDialog extends Dialog implements IShowRelatedElementsWithDetails {
+    private SelectableElement rootElement;
+    private String helpContextId;
+    private ShowRelatedElementsComposite showRelatedElementsComposite;
+    protected boolean detailsShown = false;
+    IDialogSettings dialogSettings = CommonUIPlugin.getDefault ().getDialogSettings ();
+    protected static final String DIALOG_SETTINGS_KEY = "ShowRelatedElementsDetails";
+    protected List queriesList;
+    protected int cachedExpandLevels = 1;
+    protected int cachedExpansionType = ExpansionType.BOTH.getOrdinal ();
+    protected List cachedRelationshipTypes;
+    protected Composite placeholderForShowRelatedElementsComposite = null;
+    protected ShowRelatedElementsPredefinedComposite showRelatedElementsPredefinedComposite;
+    protected Composite body;
+    protected int preferredViewerWidth = - 1;
+    public static int MAX_VIEWER_WIDTH = 360;
+
+    static {
+        try {
+            MAX_VIEWER_WIDTH = Integer.parseInt (CommonUIMessages.ShowRelatedElementsDialog_MAX_VIEWER_WIDTH);
+        } catch (NumberFormatException e) {
+            Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, CommonUIPlugin.getDefault ().getClass (), "NumberFormatException", e);
+            Log.error (CommonUIPlugin.getDefault (), CommonUIStatusCodes.RESOURCE_FAILURE, "Failed to parse Show Related Elements Composite's localized size", e);
+        }
+    }
+
+    public ShowRelatedElementsDialog (Shell parentShell, SelectableElement aRootElement) {
+        this (parentShell, aRootElement, null);
+    }
+
+    public ShowRelatedElementsDialog (Shell parentShell, SelectableElement aRootElement, List aQueriesList) {
+        super (parentShell);
+        this.rootElement = aRootElement;
+        this.queriesList = aQueriesList;
+        initDialogSettings ();
+    }
+
+    protected ShowRelatedElementsPredefinedComposite makePredefinedComposite (Composite parent, SelectableElement root, List queries, int viewerWidth) {
+        return new ShowRelatedElementsPredefinedComposite (parent, this, root, queries, viewerWidth, detailsShown);
+    }
+
+    protected int getPreferredViewerWidth () {
+        if (preferredViewerWidth == - 1) {
+            preferredViewerWidth = SelectableElement.calculateLongestStringLength (rootElement, getShell ()) + 96;
+            if (preferredViewerWidth > MAX_VIEWER_WIDTH) preferredViewerWidth = MAX_VIEWER_WIDTH;
+
+        }
+        return preferredViewerWidth;
+    }
+
+    protected ShowRelatedElementsComposite makeShowRelatedElementsCompositeInPlaceholder (Composite parent, SelectableElement root) {
+        if (placeholderForShowRelatedElementsComposite == null) {
+            placeholderForShowRelatedElementsComposite = new Composite (parent, SWT.NULL);
+            GridLayout gridLayout = new GridLayout (1, false);
+            gridLayout.marginHeight = 0;
+            gridLayout.marginWidth = 0;
+            placeholderForShowRelatedElementsComposite.setLayout (gridLayout);
+        }
+        if (detailsShown) {
+            ShowRelatedElementsComposite sreComposite = makeShowRelatedElementsComposite (placeholderForShowRelatedElementsComposite, root, getPreferredViewerWidth ());
+            sreComposite.setDetailsChangedListener (this);
+            placeholderForShowRelatedElementsComposite.setLayoutData (new GridData (GridData.FILL_VERTICAL | GridData.VERTICAL_ALIGN_BEGINNING));
+            return sreComposite;
+        } else {
+            placeholderForShowRelatedElementsComposite.setLayoutData (new GridData (0, 0));
+            return null;
+        }
+    }
+
+    protected ShowRelatedElementsComposite makeShowRelatedElementsComposite (Composite parent, SelectableElement root, int aViewerWidth) {
+        return new ShowRelatedElementsComposite (parent, root, aViewerWidth);
+    }
+
+    protected Control createDialogArea (Composite parent) {
+        body = new Composite (parent, SWT.NONE);
+        body.setLayout (new GridLayout (2, false));
+        showRelatedElementsPredefinedComposite = makePredefinedComposite (body, rootElement, queriesList, getPreferredViewerWidth ());
+        showRelatedElementsComposite = makeShowRelatedElementsCompositeInPlaceholder (body, rootElement);
+        assert (! detailsShown || (detailsShown && showRelatedElementsComposite != null));
+        if (showRelatedElementsComposite != null) {
+            this.showRelatedElementsComposite.getTreeViewer ().refresh ();
+        }
+        getShell ().setText (CommonUIMessages.ShowRelatedElementsDialog_Title);
+        if (helpContextId != null) {
+            PlatformUI.getWorkbench ().getHelpSystem ().setHelp (parent, helpContextId);
+        } else {
+            PlatformUI.getWorkbench ().getHelpSystem ().setHelp (parent, "org.eclipse.gmf.runtime.common.ui.egmf0200");
+        }
+        return parent;
+    }
+
+    protected Control createContents (Composite parent) {
+        Control control = super.createContents (parent);
+        getButton (IDialogConstants.OK_ID).setFocus ();
+        return control;
+    }
+
+    protected void okPressed () {
+        if (getShowRelatedElementsComposite () != null) {
+            if (getShowRelatedElementsComposite ().validate (true) != null) return;
+
+            getShowRelatedElementsComposite ().saveCachedValues ();
+            saveCachedValues ();
+        }
+        setReturnCode (Window.OK);
+        close ();
+    }
+
+    protected void cancelPressed () {
+        setReturnCode (Window.CANCEL);
+        close ();
+    }
+
+    public boolean getExpandIndefinitely () {
+        return (cachedExpandLevels == - 1);
+    }
+
+    public int getExpandLevels () {
+        return cachedExpandLevels;
+    }
+
+    public boolean getConsumerToSelection () {
+        return (cachedExpansionType == ExpansionType.INCOMING.getOrdinal () || cachedExpansionType == ExpansionType.BOTH.getOrdinal ());
+    }
+
+    public boolean getSelectionToSupplier () {
+        return (cachedExpansionType == ExpansionType.OUTGOING.getOrdinal () || cachedExpansionType == ExpansionType.BOTH.getOrdinal ());
+    }
+
+    public ExpansionType getExpansionType () {
+        return ExpansionType.VALUES [cachedExpansionType];
+    }
+
+    public List getSelectedRelationshipTypes () {
+        return (cachedRelationshipTypes != null) ? cachedRelationshipTypes : getRootElement ().getSelectedElementTypes ();
+    }
+
+    public SelectableElement getRootElement () {
+        return rootElement;
+    }
+
+    public ShowRelatedElementsComposite getShowRelatedElementsComposite () {
+        return this.showRelatedElementsComposite;
+    }
+
+    public void initHelpContextId (String helpId) {
+        this.helpContextId = helpId;
+    }
+
+    protected void saveCachedValues () {
+        showRelatedElementsComposite.saveCachedValues ();
+        if (getShowRelatedElementsComposite ().getExpandIndefinitely ()) {
+            cachedExpandLevels = - 1;
+        } else {
+            cachedExpandLevels = getShowRelatedElementsComposite ().getExpandLevel ();
+        }
+        cachedExpansionType = getShowRelatedElementsComposite ().getExpansionType ().getOrdinal ();
+        cachedRelationshipTypes = getShowRelatedElementsComposite ().getSelectedRelationshipTypes ();
+    }
+
+    public void showOrHideDetails () {
+        if (detailsShown) {
+            detailsShown = false;
+            saveCachedValues ();
+            showRelatedElementsComposite.dispose ();
+            showRelatedElementsComposite = makeShowRelatedElementsCompositeInPlaceholder (body, rootElement);
+        } else {
+            detailsShown = true;
+            showRelatedElementsComposite = makeShowRelatedElementsCompositeInPlaceholder (body, rootElement);
+        }
+        placeholderForShowRelatedElementsComposite.pack ();
+        placeholderForShowRelatedElementsComposite.getParent ().pack ();
+        getShell ().pack ();
+    }
+
+    public void updateRelationships (ShowRelatedElementsPreset preset) {
+        if (detailsShown) {
+            showRelatedElementsComposite.updateRelationships (preset);
+        } else {
+            if (preset == null) return;
+
+            cachedExpandLevels = preset.getLevels ();
+            cachedExpansionType = preset.getExpansionType ();
+            cachedRelationshipTypes = new ArrayList ();
+            rootElement.getHintsThatMatchTheseIds (cachedRelationshipTypes, preset.getIds ());
+        }
+    }
+
+    public ShowRelatedElementsPreset getCurrentSettings () {
+        if (detailsShown) {
+            return showRelatedElementsComposite.getCurrentSettings ();
+        }
+        return null;
+    }
+
+    public void detailsChanged () {
+        if (showRelatedElementsPredefinedComposite != null) {
+            showRelatedElementsPredefinedComposite.detailsChanged ();
+        }
+    }
+
+    protected ShowRelatedElementsPredefinedComposite getPredefinedComposite () {
+        return showRelatedElementsPredefinedComposite;
+    }
+
+    protected void initDialogSettings () {
+        detailsShown = dialogSettings.getBoolean (DIALOG_SETTINGS_KEY);
+    }
+
+    protected void saveDialogSettings () {
+        dialogSettings.put (DIALOG_SETTINGS_KEY, detailsShown);
+    }
+
+    public boolean close () {
+        saveDialogSettings ();
+        return super.close ();
+    }
+
+}
+

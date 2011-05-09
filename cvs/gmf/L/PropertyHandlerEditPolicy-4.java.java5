@@ -1,0 +1,104 @@
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import java.util.Dictionary;
+
+import java.util.Enumeration;
+
+import java.util.Iterator;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.commands.CompoundCommand;
+
+import org.eclipse.gef.editpolicies.AbstractEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.core.commands.SetPropertyCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.requests.ApplyAppearancePropertiesRequest;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.ChangePropertyValueRequest;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.RequestConstants;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class PropertyHandlerEditPolicy extends AbstractEditPolicy {
+    static private final String APPLY_APPEARANCE_PROPERTIES_UNDO_COMMAND_NAME = "Apply appearance properties";
+
+    public Command getCommand (Request request) {
+        if (! understandsRequest (request)) {
+            return null;
+        }
+        if (request.getType ().equals (RequestConstants.REQ_PROPERTY_CHANGE)) {
+            ChangePropertyValueRequest cpvr = (ChangePropertyValueRequest) request;
+            EditPart ep = getHost ();
+            if (ep instanceof IGraphicalEditPart) {
+                View view = (View) ((IGraphicalEditPart) ep).getModel ();
+                if (ViewUtil.isPropertySupported (view, cpvr.getPropertyID ())) {
+                    return new EtoolsProxyCommand (new SetPropertyCommand (new EObjectAdapter (view), cpvr.getPropertyID (), cpvr.getPropertyName (), ((ChangePropertyValueRequest) request).getValue ()));
+                }
+            }
+        } else if (request instanceof ApplyAppearancePropertiesRequest && getHost () instanceof IGraphicalEditPart) {
+            ApplyAppearancePropertiesRequest aapr = (ApplyAppearancePropertiesRequest) request;
+            CompoundCommand cc = new CompoundCommand (APPLY_APPEARANCE_PROPERTIES_UNDO_COMMAND_NAME);
+            Iterator semanticHints = aapr.getSemanticHints ().iterator ();
+            IGraphicalEditPart part = (IGraphicalEditPart) getHost ();
+            View view = part.getNotationView ();
+            String semanticHint = "";
+            if (view != null) semanticHint = view.getType ();
+
+            while (semanticHints.hasNext ()) {
+                String hint = (String) semanticHints.next ();
+                IGraphicalEditPart target = hint.equals (semanticHint) ? part : part.getChildBySemanticHint (hint);
+                if (target != null) {
+                    Dictionary properties = aapr.getPropertiesFor (hint);
+                    Enumeration propertyIDs = properties.keys ();
+                    while (propertyIDs.hasMoreElements ()) {
+                        String propertyID = (String) propertyIDs.nextElement ();
+                        ChangePropertyValueRequest cpvr = new ChangePropertyValueRequest (APPLY_APPEARANCE_PROPERTIES_UNDO_COMMAND_NAME, propertyID, properties.get (propertyID));
+                        Command command = target.getCommand (cpvr);
+                        if (command != null) cc.add (command);
+
+                    }
+                }
+            }
+            return cc;
+        }
+
+        return null;
+    }
+
+    public boolean understandsRequest (Request request) {
+        if (request.getType ().equals (RequestConstants.REQ_PROPERTY_CHANGE)) return true;
+
+        if (request instanceof ApplyAppearancePropertiesRequest && getHost () instanceof IGraphicalEditPart) return true;
+
+        return super.understandsRequest (request);
+    }
+
+    public EditPart getTargetEditPart (Request request) {
+        if (! understandsRequest (request)) return null;
+
+        if (request.getType ().equals (RequestConstants.REQ_PROPERTY_CHANGE)) {
+            return getHost ();
+        } else if (request instanceof ApplyAppearancePropertiesRequest) {
+            return getHost ();
+        }
+
+        return super.getTargetEditPart (request);
+    }
+
+}
+

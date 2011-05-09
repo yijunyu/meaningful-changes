@@ -1,0 +1,80 @@
+6a7,12
+> import org.eclipse.core.resources.ResourcesPlugin;
+> 
+> import org.eclipse.core.runtime.Path;
+> 
+> import org.eclipse.emf.common.util.URI;
+> 
+8a15,16
+> import org.eclipse.emf.ecore.EObject;
+> 
+10a19,22
+> import org.eclipse.gmf.gmfgraph.provider.GMFGraphEditPlugin;
+> 
+> import org.eclipse.jface.dialogs.MessageDialog;
+> 
+14a27,28
+> import org.eclipse.jface.viewers.StructuredSelection;
+> 
+24a39,42
+> import org.eclipse.ui.PlatformUI;
+> 
+> import org.eclipse.ui.internal.UIPlugin;
+> 
+61a80,90
+>     public static String getCapName (EObject element) {
+>         if (element instanceof EClass) {
+>             return WizardUtil.getCapName ((EClass) element);
+>         } else if (element instanceof EStructuralFeature) {
+>             return WizardUtil.getCapName ((EStructuralFeature) element);
+>         } else {
+>             return null;
+>         }
+> 
+>     }
+> 
+70a100,143
+>     public static void openEditor (URI uri) {
+>         IFile modelFile = null;
+>         String fileName = uri.toFileString ();
+>         if (fileName != null) {
+>             modelFile = ResourcesPlugin.getWorkspace ().getRoot ().getFileForLocation (new Path (fileName));
+>         }
+>         if (uri.toString ().startsWith ("platform:/resource")) {
+>             String path = uri.toString ().substring ("platform:/resources".length ());
+>             IResource workspaceResource = ResourcesPlugin.getWorkspace ().getRoot ().findMember (new Path (path));
+>             if (workspaceResource instanceof IFile) {
+>                 modelFile = (IFile) workspaceResource;
+>             }
+>         }
+>         if (modelFile != null) {
+>             openEditor (modelFile);
+>         }
+>     }
+> 
+>     public static boolean openEditor (IFile modelFile) {
+>         IWorkbench workbench = PlatformUI.getWorkbench ();
+>         IWorkbenchWindow workbenchWindow = workbench.getActiveWorkbenchWindow ();
+>         IWorkbenchPage page = workbenchWindow.getActivePage ();
+>         final IWorkbenchPart activePart = page.getActivePart ();
+>         if (activePart instanceof ISetSelectionTarget) {
+>             final ISelection targetSelection = new StructuredSelection (modelFile);
+>             workbenchWindow.getShell ().getDisplay ().asyncExec (new Runnable () {
+> 
+>                 public void run () {
+>                     ((ISetSelectionTarget) activePart).selectReveal (targetSelection);
+>                 }
+> 
+>             }
+> 
+>             );
+>         }
+>         try {
+>             page.openEditor (new FileEditorInput (modelFile), workbench.getEditorRegistry ().getDefaultEditor (modelFile.getFullPath ().toString ()).getId ());
+>         } catch (PartInitException exception) {
+>             MessageDialog.openError (workbenchWindow.getShell (), "Unable to open editor for " + modelFile, exception.getMessage ());
+>             return false;
+>         }
+>         return true;
+>     }
+> 

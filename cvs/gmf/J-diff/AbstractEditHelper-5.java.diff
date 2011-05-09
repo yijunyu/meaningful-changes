@@ -1,0 +1,72 @@
+15a16
+> import java.util.Collection;
+28a30
+> import org.eclipse.gmf.runtime.common.core.command.ICompositeCommand;
+29a32
+> import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeTransactionalCommand;
+91c94
+< 		CompositeCommand command = createCompositeCommand(req);
+---
+> 		ICompositeCommand command = createCommand(req);
+166a170,171
+>      * @deprecated Subclasses must implement
+>      *             {@link #createComposite(IEditCommandRequest)} instead.
+168a174,192
+>         return null;
+>     }
+> 
+> 	/**
+> 	 * Creates a new composite command.
+> 	 * <P>
+> 	 * Subclasses may override to provide their own kind of composite command.
+> 	 * 
+> 	 * @param req the edit request
+> 	 * @return a new composite command
+> 	 */
+> 	protected ICompositeCommand createCommand(IEditCommandRequest req) {
+>         
+>         // Delegate to the old API first
+>         // TODO remove this with deprecated method
+>         CompositeCommand command = createCompositeCommand(req);
+>         if (command != null) {
+>             return command;
+>         }
+170c194
+< 		return new CompositeCommand(req.getLabel()) {
+---
+> 		return new CompositeTransactionalCommand(req.getEditingDomain(), req.getLabel()) {
+171a196,199
+> 			/**
+> 			 * Extracts the first return value out of the collection of return
+> 			 * values from the superclass command result.
+> 			 */
+175c203,205
+< 				if (result.getStatus().getSeverity() == IStatus.OK) {
+---
+> 				IStatus status = result.getStatus();
+> 				
+> 				if (status.getSeverity() == IStatus.OK) {
+178,179c208
+< 					if (result.getReturnValue() instanceof List) {
+< 						List returnValue = (List) result.getReturnValue();
+---
+> 					Object returnValue = result.getReturnValue();
+181,182c210,214
+< 						if (returnValue.size() > 0) {
+< 							returnObject = returnValue.get(0);
+---
+> 					if (returnValue instanceof Collection) {
+> 						Collection collection = (Collection) returnValue;
+> 						
+> 						if (!collection.isEmpty()) {
+> 							returnObject = collection.iterator().next();
+186c218
+< 						returnObject = result.getReturnValue();
+---
+> 						returnObject = returnValue;
+188c220
+< 					result = new CommandResult(result.getStatus(), returnObject);
+---
+> 					result = new CommandResult(status, returnObject);
+189a222
+> 				

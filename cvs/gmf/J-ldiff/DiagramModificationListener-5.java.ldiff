@@ -1,0 +1,138 @@
+2,2c2,2
+<  * Copyright (c) 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2005, 2006 IBM Corporation and others.
+16a18,18
+> import org.eclipse.emf.ecore.resource.ResourceSet;
+17,17c19,19
+< import org.eclipse.emf.transaction.DemultiplexingListener;
+---
+> import org.eclipse.emf.ecore.util.EContentAdapter;
+19,19c14,14
+< import org.eclipse.emf.transaction.ResourceSetListener;
+---
+> import org.eclipse.emf.common.notify.Notifier;
+32,32c33,33
+< public class DiagramModificationListener {
+---
+> public class DiagramModificationListener extends EContentAdapter {
+33,34d33
+< 	
+< 	private ResourceSetListener diagramChangeListener = null;
+37a37,40
+> 	private NotificationFilter diagramResourceModifiedFilter;
+> 	
+> 	private DiagramDocument document;
+> 	
+48a52,53
+> 			DiagramDocument document) {
+> 		this.document = document;
+48,48c51,51
+< 			final AbstractDocumentProvider documentProvider,
+---
+> 			AbstractDocumentProvider documentProvider,
+49,50d51
+< 			final DiagramDocument document) {
+< 		
+51,51c54,54
+< 		final Diagram diagram = document.getDiagram();
+---
+> 		Diagram diagram = document.getDiagram();
+54,54c57,57
+< 		NotificationFilter diagramResourceModifiedFilter = NotificationFilter
+---
+> 		diagramResourceModifiedFilter = NotificationFilter
+60a64,71
+> 	}
+> 
+> 	public void startListening() {
+> 		EList adapters = getEditingDomain().getResourceSet().eAdapters();
+> 		if (!adapters.contains(this)) {
+> 				adapters.add(this);
+> 		}
+> 	}
+62,64d72
+< 		if (diagramChangeListener == null) {
+< 			diagramChangeListener = new DemultiplexingListener(
+< 				diagramResourceModifiedFilter) {
+66,67d76
+< 				protected void handleNotification(TransactionalEditingDomain domain,
+< 						Notification notification) {
+70,70c101,101
+< 					if (diagram != null
+---
+> 			if (getDiagramDocument().getDiagram() != null
+85a117,118
+> 							getDiagramDocument().setContent(getDiagramDocument().getContent());
+> 						}
+86,86d116
+< 									document.setContent(document.getContent());
+92a125,127
+> 	public void unsetTarget(Notifier oldTarget) {
+> 		if (oldTarget instanceof ResourceSet) {
+> 		    super.unsetTarget(oldTarget);
+93,93d124
+< 			};
+96a131,132
+> 	public Notifier getTarget() {
+> 		return null;
+97,98d130
+< 	public void startListening() {
+< 		getEditingDomain().addResourceSetListener(diagramChangeListener);
+100a135,137
+> 	public void setTarget(Notifier newTarget) {
+> 		if (newTarget instanceof ResourceSet) {
+> 		    super.setTarget(newTarget);
+101,101c73,73
+< 	public void stopListening() {
+---
+> 	public void stopListening() {
+102,102c74,74
+< 		getEditingDomain().removeResourceSetListener(diagramChangeListener);
+---
+> 		getEditingDomain().getResourceSet().eAdapters().remove(this);
+102a75,75
+> 	}
+104,104d76
+< 	
+105,105c77,77
+< 	/**
+---
+> 	/**
+106,106c78,78
+< 	 * Gets the editingDomain.
+---
+> 	 * Gets the editingDomain.
+107,107c79,79
+< 	 * @return Returns the editingDomain.
+---
+> 	 * @return Returns the editingDomain.
+108,108c80,80
+< 	 */
+---
+> 	 */
+109,109c81,81
+< 	protected TransactionalEditingDomain getEditingDomain() {
+---
+> 	protected TransactionalEditingDomain getEditingDomain() {
+110,110c82,82
+< 		return editingDomain;
+---
+> 		return editingDomain;
+110a83,98
+> 	}
+> 
+> 	protected DiagramDocument getDiagramDocument() {
+> 		return document;
+> 	}
+> 	
+> 	public boolean isAdapterForType(Object type) {
+> 		return type == DiagramModificationListener.class;
+> 	}
+> 
+> 	public void notifyChanged(Notification notification) {
+> 		if (notification.getNotifier() instanceof ResourceSet) {
+> 			super.notifyChanged(notification);
+> 		}
+> 		
+> 		if (diagramResourceModifiedFilter.matches(notification)) {

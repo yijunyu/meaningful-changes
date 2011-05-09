@@ -1,0 +1,46 @@
+44a45,45
+> import org.eclipse.emf.transaction.ResourceSetChangeEvent;
+134a136,136
+> import org.eclipse.ui.PlatformUI;
+962a965,1001
+>     private class DiagramEventBrokerThreadSafe extends DiagramEventBroker {
+> 
+>         public DiagramEventBrokerThreadSafe() {
+>             super();
+>             // TODO Auto-generated constructor stub
+>         }
+> 
+>         /* (non-Javadoc)
+>          * @see org.eclipse.gmf.runtime.diagram.core.listener.DiagramEventBroker#resourceSetChanged(org.eclipse.emf.transaction.ResourceSetChangeEvent)
+>          */
+>         public void resourceSetChanged(ResourceSetChangeEvent event) {
+>             if (Display.getCurrent() == null) {
+>                 EditPartViewer viewer = getDiagramGraphicalViewer();
+>                 if (viewer instanceof DiagramGraphicalViewer) {
+>                     DiagramGraphicalViewer dgv = (DiagramGraphicalViewer)viewer;
+>                     if (!dgv.areUpdatesDisabled()) {
+>                         // force synchronization with the main thread
+>                         final ResourceSetChangeEvent eventToHandle = event;
+>                         PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() { 
+>                             public void run() {
+>                                 internal_resourceSetChanged(eventToHandle);
+>                             }
+>                         });
+>                         
+>                         return;
+>                     }
+>                 }
+>             }
+>             
+>             super.resourceSetChanged(event);
+>         }
+>         
+>         private void internal_resourceSetChanged(ResourceSetChangeEvent event) {
+>             super.resourceSetChanged(event);
+>         }
+>     };
+>     
+984,984c1023,1023
+<                 DiagramEventBroker.startListening(domain);
+---
+>                 DiagramEventBroker.startListening(domain, new DiagramEventBrokerThreadSafe());

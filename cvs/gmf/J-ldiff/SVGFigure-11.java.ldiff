@@ -1,0 +1,121 @@
+26,30d25
+< import org.apache.batik.transcoder.Transcoder;
+< import org.apache.batik.transcoder.TranscoderException;
+< import org.apache.batik.transcoder.TranscoderInput;
+< import org.apache.batik.transcoder.TranscoderOutput;
+< import org.apache.batik.transcoder.image.ImageTranscoder;
+36,36c32,32
+< import org.eclipse.gmf.internal.runtime.lite.svg.SimpleImageTranscoder;
+---
+> import org.eclipse.gmf.internal.runtime.lite.svg.SimpleImageTranscoder;
+51,51d45
+< 	private Document document;
+52,52c46,46
+< 	private boolean failedToLoadDocument;
+---
+> 	private boolean failedToLoadDocument, specifyCanvasWidth = true, specifyCanvasHeight = true;
+54,54d47
+< 	private Rectangle2D aoi;
+66,66c59,59
+< 		document = null;
+---
+> 		transcoder = null;
+82,82c75,75
+< 			document = factory.createDocument(uri);
+---
+> 			Document document = factory.createDocument(uri);
+82a76,76
+> 			transcoder = new SimpleImageTranscoder(document);
+84,84d77
+< 			transcoder = new SimpleImageTranscoder();
+94,94d86
+< 		if (document == null) {
+97,97d89
+< 		return document;
+131a125,125
+> 		if (getDocument() == null || getDocument() != element.getOwnerDocument()) {
+132,132d86
+< 		Document document = getDocument();
+133,133c87,87
+< 		if (document == null || transcoder == null) {
+---
+> 		if (transcoder == null) {
+138,138c130,130
+< 		BridgeContext ctx = transcoder.initCSSEngine(document);
+---
+> 		BridgeContext ctx = transcoder.initCSSEngine();
+149,162d140
+< 	private void renderDocument(Transcoder transcoder, Document document) {
+< 		try {
+< 			Rectangle r = getClientArea();
+< 			transcoder.addTranscodingHint(ImageTranscoder.KEY_WIDTH, new Float(r.width));
+< 			transcoder.addTranscodingHint(ImageTranscoder.KEY_HEIGHT, new Float(r.height));
+< 			if (aoi != null) {
+< 				transcoder.addTranscodingHint(ImageTranscoder.KEY_AOI, aoi);
+< 			}
+< 			transcoder.transcode(new TranscoderInput(document), new TranscoderOutput());
+< 		} catch (TranscoderException e) {
+< 			Activator.logError("Error rendering SVG image", e);
+< 		}
+< 	}
+< 
+172,172d149
+< 			renderDocument(transcoder, document);
+176a151,151
+> 			transcoder.setCanvasSize(specifyCanvasWidth ? r.width : -1, specifyCanvasHeight ? r.height : -1);
+176,176c150,150
+< 				Rectangle r = getClientArea();
+---
+> 			Rectangle r = getClientArea();
+216a195,196
+> 		getDocument();
+> 		return transcoder == null ? null : transcoder.getCanvasAreaOfInterest();
+217,222d194
+< 		if (aoi == null) {
+< 			return null;
+< 		}
+< 		Rectangle2D result = new Rectangle2D.Float();
+< 		result.setRect(aoi);
+< 		return result;
+225a200,231
+> 		getDocument();
+> 		if (transcoder != null) {
+> 			transcoder.setCanvasAreaOfInterest(value);
+> 		}
+> 		repaint();
+> 	}
+> 
+> 	public final boolean isSpecifyCanvasWidth() {
+> 		return specifyCanvasWidth;
+> 	}
+> 
+> 	public void setSpecifyCanvasWidth(boolean specifyCanvasWidth) {
+> 		this.specifyCanvasWidth = specifyCanvasWidth;
+> 		contentChanged();
+> 	}
+> 
+> 	public final boolean isSpecifyCanvasHeight() {
+> 		return specifyCanvasHeight;
+> 	}
+> 
+> 	public void setSpecifyCanvasHeight(boolean specifyCanvasHeight) {
+> 		this.specifyCanvasHeight = specifyCanvasHeight;
+> 		contentChanged();
+> 	}
+> 
+> 	/**
+> 	 * Should be called when SVG document has been changed. It will be re-rendered and figure will be repainted.
+> 	 */
+> 	public void contentChanged() {
+> 		getDocument();
+> 		if (transcoder != null) {
+> 			transcoder.contentChanged();
+225a90,90
+> 		return transcoder == null ? null : transcoder.getDocument();
+226,228d89
+< 		if (value == null) {
+< 			aoi = null;
+< 			return;
+230,231d232
+< 		aoi = new Rectangle2D.Float();
+< 		aoi.setRect(value);

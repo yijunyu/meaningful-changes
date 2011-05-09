@@ -1,0 +1,48 @@
+17a18,18
+> import org.eclipse.emf.ecore.EClass;
+24a26,26
+> import org.eclipse.gmf.gmfgraph.FigureAccessor;
+29a32,32
+> import org.eclipse.gmf.gmfgraph.RealFigure;
+119,119c122,122
+< 			if (next.getAccessor() != null) {
+---
+> 			if (next.getAccessor() == null) {
+120,123d122
+< 				// accessor
+< 				ChildAccess labelAccess = next.getAccessor();
+< 				// XXX nothing to do?
+< 			} else {
+125a125,125
+> 			// else nothing to do as child accessors will get copied as part of parent figure process
+144a145,155
+> 			final FigureDescriptor newFD = createCustomFigure(fd, fqn);
+> 			myElementCopier.registerSubstitution(fd, newFD);
+> 			for (ChildAccess ca : fd.getAccessors()) {
+> 				FigureAccessor newFA = GMFGraphFactory.eINSTANCE.createFigureAccessor();
+> 				newFA.setAccessor(ca.getAccessor());
+> 				newFA.setTypedFigure(createReferencedFigure(ca));
+> 				((CustomFigure) newFD.getActualFigure()).getCustomChildren().add(newFA);
+> 				final ChildAccess newCA = myElementCopier.xcopy(ca);
+> 				newCA.setFigure(newFA.getTypedFigure());
+> 				newFD.getAccessors().add(newCA);
+> 			}
+145,145d144
+< 			myElementCopier.registerSubstitution(fd, createCustomFigure(fd, fqn));
+148a159,159
+> 
+183a195,208
+> 
+> 	private static RealFigure createReferencedFigure(ChildAccess ca) {
+> 		// XXX ca.getFigure() may be FigureRef, need to revisit this usecase
+> 		if (false == ca.getFigure() instanceof RealFigure) {
+> 			return null;
+> 		}
+> 		EClass eType = ca.getFigure().eClass();
+> 		// it's just a type holder, hence no need to copy any attribute/children but type only.
+> 		RealFigure copy = (RealFigure) eType.getEPackage().getEFactoryInstance().create(eType);
+> 		if (copy instanceof CustomFigure) {
+> 			((CustomFigure) copy).setQualifiedClassName(((CustomFigure) ca.getFigure()).getQualifiedClassName());
+> 		}
+> 		return copy;
+> 	}

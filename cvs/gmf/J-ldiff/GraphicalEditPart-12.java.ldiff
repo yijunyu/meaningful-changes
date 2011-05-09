@@ -1,0 +1,161 @@
+13a14,15
+> import java.beans.PropertyChangeEvent;
+> import java.beans.PropertyChangeListener;
+53,53c55,55
+< import org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener;
+---
+> import org.eclipse.gmf.runtime.diagram.core.listener.NotificationEvent;
+54a57,57
+> import org.eclipse.gmf.runtime.diagram.core.listener.PropertyChangeNotifier;
+65,65c72,72
+< import org.eclipse.gmf.runtime.diagram.ui.internal.properties.Properties;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.properties.Properties;
+92,92c95,95
+<  * @author melaasar,mmostafa
+---
+>  * @author melaasar
+98,98c101,101
+< 	implements IGraphicalEditPart, IAdaptableSelection, NotificationListener {
+---
+> 	implements IGraphicalEditPart, PropertyChangeListener, IAdaptableSelection {
+159,159c162,162
+< 	/*protected void addListenerFilter(String filterId,
+---
+> 	protected void addListenerFilter(String filterId,
+169,169c172,172
+< 	}*/
+---
+> 	}
+182,182c185,185
+< 			NotificationListener listener,
+---
+> 			PropertyChangeListener listener,
+190,190c193,193
+< 		PresentationListener.getInstance().addNotificationListener(element,listener);
+---
+> 		PresentationListener.getInstance().addPropertyChangeListener(element,listener);
+205,205c208,208
+< 			NotificationListener listener,
+---
+> 			PropertyChangeListener listener,
+214,214c217,217
+< 		PresentationListener.getInstance().addNotificationListener(element,listener);
+---
+> 		PresentationListener.getInstance().addPropertyChangeListener(element,listener);
+260,260c263,263
+< 						removeNotificationListener((EObject)obj[0],(EStructuralFeature) obj[1],(NotificationListener) obj[2]);
+---
+> 						removePropertyChangeListener((EObject)obj[0],(EStructuralFeature) obj[1],(PropertyChangeListener) obj[2]);
+261a265,267
+> 					if (obj[0] instanceof PropertyChangeNotifier)
+> 						((PropertyChangeNotifier) obj[0]).removePropertyChangeListener((PropertyChangeListener) obj[1]);
+> 					else
+262,262c268,268
+< 					PresentationListener.getInstance().removeNotificationListener((EObject) obj[0],(NotificationListener) obj[1]);
+---
+> 						PresentationListener.getInstance().removePropertyChangeListener((EObject) obj[0],(PropertyChangeListener) obj[1]);
+595a602,640
+> 	 * Handles the passed property changed event only if the editpart's view is
+> 	 * not deleted.
+> 	 */
+> 	public final void propertyChange(PropertyChangeEvent event) {
+> 		if (isActive())
+> 			handlePropertyChangeEvent(event);
+> 	}
+> 
+> 	/**
+> 	 * Handles the property changed event
+> 	 * 
+> 	 * @param event
+> 	 *            the property changed event
+> 	 */
+> 	protected void handlePropertyChangeEvent(PropertyChangeEvent event) {
+> 		if (Properties.ID_PERSISTED_CHILDREN.equals(event.getPropertyName())||
+> 			Properties.ID_TRANSIENT_CHILDREN.equals(event.getPropertyName())) {
+> 			refreshChildren();
+> 		}
+> 		else if (Properties.ID_ISVISIBLE.equals(event.getPropertyName())) {
+> 			refreshVisibility();
+> 		}
+> 		else if (Properties.ID_SEMANTICREF.equals(event.getPropertyName())) {
+> 			handleMajorSemanticChange();
+> 		} else if (event instanceof NotificationEvent) {
+> 			handleNotificationEvent((NotificationEvent) event);
+> 		}
+> 	}
+> 
+> 	/**
+> 	 * Handles the supplied notification event.
+> 	 * 
+> 	 * @param e event to handle
+> 	 */
+> 	protected void handleNotificationEvent(NotificationEvent e) {
+> 		// for children to override
+> 	}
+> 
+> 	/**
+726,726c771,771
+< 				removeNotificationListener((EObject) objects[0],
+---
+> 				removePropertyChangeListener((EObject) objects[0],
+728,728c773,773
+< 											 (NotificationListener) objects[2]);
+---
+> 											 (PropertyChangeListener) objects[2]);
+729a775,778
+> 			if (objects[0] instanceof PropertyChangeNotifier){
+> 				((PropertyChangeNotifier) objects[0])
+> 				  .removePropertyChangeListener((PropertyChangeListener) objects[1]);
+> 			} else {
+730,730c779,779
+< 			PresentationListener.getInstance().removeNotificationListener((EObject) objects[0],(NotificationListener) objects[1]);
+---
+> 				PresentationListener.getInstance().removePropertyChangeListener((EObject) objects[0],(PropertyChangeListener) objects[1]);
+730a780,780
+> 			}
+1174a1225,1268
+> 	/*
+> 	 * ATTENTION!!!!: Do not remove, see below. Only update based on newer GEF framework
+> 	 *  
+> 	 * This function is "copied" from GEF for the following reason:
+> 	 * GEF does not check if the connector's source or target are the same as the editpart
+> 	 * before setting them to <code>null</code> which causes the following usecase to currently fail:
+> 	 * 
+> 	 * "in a model transaction, view's source connectors are detached, a new view is
+> 	 * created, and the connectors are attached to it, then the old view is destroyed"
+> 	 * 
+> 	 * The reason for the problem is the filtering of Deleted/Uncreated object's events in the
+> 	 * PresentationListener which prevents the first connector detach event from coming and 
+> 	 * avoiding the problem
+> 	 * 
+> 	 * TODO: Remove this override as soon as the bugzilla <Bug 110476> is resolved or the event filtering is removed
+> 	 * 
+> 	 * @see org.eclipse.gef.EditPart#removeNotify()
+> 	 */
+> 	public void removeNotify() {
+> 		if (getSelected() != SELECTED_NONE)
+> 			getViewer().deselect(this);
+> 		if (hasFocus())
+> 			getViewer().setFocus(null);
+> 
+> 		List children = getChildren();
+> 		for (int i = 0; i < children.size(); i++)
+> 			((EditPart)children.get(i))
+> 				.removeNotify();
+> 		unregister();
+> 		List conns;
+> 		conns = getSourceConnections();
+> 		for (int i = 0; i < conns.size(); i++) {
+> 			ConnectionEditPart conn = (ConnectionEditPart)conns.get(i);
+> 			if (conn.getSource() == this)
+> 				conn.setSource(null);
+> 		}
+> 		conns = getTargetConnections();
+> 		for (int i = 0; i < conns.size(); i++) {
+> 			ConnectionEditPart conn = (ConnectionEditPart)conns.get(i);
+> 			if (conn.getTarget() == this)
+> 				conn.setTarget(null);
+> 		}
+> 	}
+> 

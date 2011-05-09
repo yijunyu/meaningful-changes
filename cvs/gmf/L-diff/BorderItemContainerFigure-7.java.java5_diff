@@ -1,0 +1,103 @@
+41c41
+<         Rectangle clip = getParentRectangle ();
+---
+>         Rectangle clip = getVisibleExtendedBounds ();
+42a43,45
+>         if (useLocalCoordinates ()) {
+>             graphics.translate (getBounds ().x + getInsets ().left, getBounds ().y + getInsets ().top);
+>         }
+65a69,72
+>         if (useLocalCoordinates ()) {
+>             x = x - getBounds ().x - getInsets ().left;
+>             y = y - getBounds ().y - getInsets ().top;
+>         }
+131c138
+<         Rectangle rectangle = getParentRectangle ();
+---
+>         Rectangle rectangle = getExtendedBounds ();
+135,136c142,147
+<     private Rectangle getParentRectangle () {
+<         return _getParentRectangle ();
+---
+>     private Rectangle getVisibleExtendedBounds () {
+>         Rectangle extendedRect = getExtendedBounds ().getCopy ();
+>         translateToAbsolute (extendedRect);
+>         Rectangle parentRect = getViewportBounds ().getIntersection (extendedRect);
+>         translateToRelative (parentRect);
+>         return parentRect;
+139c150
+<     private Rectangle _getParentRectangle () {
+---
+>     private Rectangle getViewportBounds () {
+140a152,153
+>         getParent ().getParent ().translateToParent (rect);
+>         getParent ().getParent ().translateToAbsolute (rect);
+143a157,158
+>             port.translateToParent (portRect);
+>             port.translateToAbsolute (portRect);
+151,153c166,167
+<     private IFigure getMainFigure (BorderItemContainerFigure gf) {
+<         BorderedNodeFigure gpf = (BorderedNodeFigure) gf.getParent ();
+<         return gpf.getMainFigure ();
+---
+>     public IFigure getMainFigure () {
+>         return ((BorderedNodeFigure) getParent ()).getMainFigure ();
+157c171
+<         IFigure fig = getMainFigure (this);
+---
+>         IFigure fig = getMainFigure ();
+163c177
+<                 fig = getMainFigure ((BorderItemContainerFigure) fig);
+---
+>                 fig = ((BorderItemContainerFigure) fig).getMainFigure ();
+185c199
+<             Rectangle rectBounds = getParentRectangle ();
+---
+>             Rectangle rectBounds = getExtendedBounds ();
+199,202c213,215
+<     public Rectangle getExtendedBounds () {
+<         if (extendedBounds == null) extendedBounds = getExtendedBounds (getParent ()).getCopy ();
+< 
+<         return extendedBounds;
+---
+>     public void validate () {
+>         extendedBounds = null;
+>         super.validate ();
+205,213c218,221
+<     private Rectangle getExtendedBounds (IFigure figure) {
+<         if (figure == null) return getBounds ().getCopy ();
+<         else {
+<             Rectangle _bounds = figure.getBounds ().getCopy ();
+<             if (figure instanceof BorderedNodeFigure) {
+<                 BorderedNodeFigure borderedFigure = (BorderedNodeFigure) figure;
+<                 BorderItemContainerFigure borderedItemContainer = (BorderItemContainerFigure) borderedFigure.getBorderItemContainer ();
+<                 if (borderedItemContainer != null) {
+<                     Iterator iterator = borderedItemContainer.getChildren ().iterator ();
+---
+>     public Rectangle getExtendedBounds () {
+>         if (extendedBounds == null) {
+>             extendedBounds = getBounds ().getCopy ();
+>             Iterator iterator = getChildren ().iterator ();
+215,223c223,227
+<                         Figure element = (Figure) iterator.next ();
+<                         if (element instanceof BorderedNodeFigure) {
+<                             BorderedNodeFigure childbFigure = (BorderedNodeFigure) element;
+<                             BorderItemContainerFigure childBorderedItemContainer = (BorderItemContainerFigure) childbFigure.getBorderItemContainer ();
+<                             if (childBorderedItemContainer != null) _bounds.union (childBorderedItemContainer.getExtendedBounds ());
+<                             else _bounds.union (childbFigure.getBounds ());
+< 
+<                         } else _bounds.union (element.getBounds ());
+< 
+---
+>                 Figure childFigure = (Figure) iterator.next ();
+>                 Rectangle childBounds = (childFigure instanceof IExpandableFigure) ? ((IExpandableFigure) childFigure).getExtendedBounds () : childFigure.getBounds ();
+>                 if (useLocalCoordinates ()) {
+>                     childBounds = childBounds.getCopy ();
+>                     childBounds.translate (getLocation ());
+224a229
+>                 extendedBounds.union (childBounds);
+227,228c232
+<             return _bounds;
+<         }
+---
+>         return extendedBounds;

@@ -1,0 +1,94 @@
+2a3,3
+> import java.util.List;
+2a5,12
+> import java.util.ListIterator;
+> 
+> import org.eclipse.draw2d.Graphics;
+> 
+> import org.eclipse.draw2d.IFigure;
+> 
+> import org.eclipse.draw2d.Layer;
+> 
+3,3c13,13
+< import org.eclipse.draw2d.ScalableFreeformLayeredPane;
+---
+> import org.eclipse.draw2d.geometry.Rectangle;
+5,5d4
+< import org.eclipse.jface.preference.IPreferenceStore;
+10a19,20
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.MapModeGraphics;
+> 
+11,11c21,21
+< import org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics.RenderedScalableFreeformLayeredPane;
+---
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.ScalableFreeformLayeredPane;
+11a22,33
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.ScaledGraphics;
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.render.figures.ScalableImageFigure;
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics.RenderedMapModeGraphics;
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics.RenderedScaledGraphics;
+> 
+> import org.eclipse.gmf.runtime.gef.ui.internal.editparts.AnimatedZoomListener;
+> 
+> import org.eclipse.jface.preference.IPreferenceStore;
+13a36,79
+>     static protected class DiagramRenderedScalableFreeformLayeredPane extends DiagramScalableFreeformLayeredPane implements AnimatedZoomListener {
+>         private boolean animatedZoomOn;
+> 
+>         protected ScaledGraphics createScaledGraphics (MapModeGraphics gMM) {
+>             if (animatedZoomOn) {
+>                 return new ScaledGraphics (gMM);
+>             }
+>             return new RenderedScaledGraphics (gMM);
+>         }
+> 
+>         protected MapModeGraphics createMapModeGraphics (Graphics graphics) {
+>             MapModeGraphics gMM = new RenderedMapModeGraphics (graphics);
+>             return gMM;
+>         }
+> 
+>         public void animatedZoomEnded () {
+>             animatedZoomOn = false;
+>             Layer primaryLayer = getLayer (PRINTABLE_LAYERS);
+>             if (primaryLayer != null) paintScalableImageFigures (primaryLayer.getChildren ());
+> 
+>         }
+> 
+>         private void paintScalableImageFigures (List figures) {
+>             ListIterator iter = figures.listIterator ();
+>             Rectangle absbounds = getBounds ().getCopy ();
+>             translateToAbsolute (absbounds);
+>             while (iter.hasNext ()) {
+>                 IFigure fig = (IFigure) iter.next ();
+>                 if (fig instanceof ScalableImageFigure) {
+>                     Rectangle absfigbounds = fig.getBounds ().getCopy ();
+>                     fig.translateToAbsolute (absfigbounds);
+>                     if (absbounds.intersects (absfigbounds)) fig.repaint ();
+> 
+>                 } else {
+>                     paintScalableImageFigures (fig.getChildren ());
+>                 }
+>             }
+>         }
+> 
+>         public void animatedZoomStarted () {
+>             animatedZoomOn = true;
+>         }
+> 
+>     }
+14a81,81
+>     protected org.eclipse.draw2d.ScalableFreeformLayeredPane createScalableFreeformLayeredPane () {
+15,15d80
+<     protected ScalableFreeformLayeredPane createScalableFreeformLayeredPane () {
+16,16c82,82
+<         setLayers (new RenderedScalableFreeformLayeredPane ());
+---
+>         setLayers (new DiagramRenderedScalableFreeformLayeredPane ());
+23,23c89,89
+<         if (getLayers () instanceof RenderedScalableFreeformLayeredPane) ((RenderedScalableFreeformLayeredPane) getLayers ()).setAntiAlias (antiAlias);
+---
+>         if (getLayers () instanceof ScalableFreeformLayeredPane) ((ScalableFreeformLayeredPane) getLayers ()).setAntiAlias (antiAlias);

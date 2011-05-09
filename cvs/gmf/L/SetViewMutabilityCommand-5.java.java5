@@ -1,0 +1,97 @@
+package org.eclipse.gmf.runtime.diagram.ui.commands;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramResourceManager;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class SetViewMutabilityCommand extends Command {
+    private List _viewAdapters = Collections.EMPTY_LIST;
+    private boolean _immutable = true;
+
+    public SetViewMutabilityCommand (IAdaptable viewAdapter, boolean immutable) {
+        this (Collections.singletonList (viewAdapter), immutable);
+    }
+
+    public SetViewMutabilityCommand (List viewAdapters, boolean immutable) {
+        super (DiagramResourceManager.getI18NString ("SetViewMutabilityCommand.Label"));
+        Assert.isNotNull (viewAdapters);
+        _viewAdapters = viewAdapters;
+        _immutable = immutable;
+    }
+
+    public static SetViewMutabilityCommand makeMutable (List viewAdapters) {
+        return new SetViewMutabilityCommand (viewAdapters, false);
+    }
+
+    public static SetViewMutabilityCommand makeMutable (IAdaptable viewAdapter) {
+        return new SetViewMutabilityCommand (viewAdapter, false);
+    }
+
+    public static SetViewMutabilityCommand makeImmutable (List viewAdapters) {
+        return new SetViewMutabilityCommand (viewAdapters, true);
+    }
+
+    public static SetViewMutabilityCommand makeImmutable (IAdaptable viewAdapter) {
+        return new SetViewMutabilityCommand (viewAdapter, true);
+    }
+
+    protected List getViewAdapters () {
+        return Collections.unmodifiableList (_viewAdapters);
+    }
+
+    public void execute () {
+        SetMutability (_immutable);
+    }
+
+    private void SetMutability (final boolean immutable) {
+        MEditingDomainGetter.getMEditingDomain (_viewAdapters).runAsUnchecked (new MRunnable () {
+
+            public Object run () {
+                Iterator adapters = _viewAdapters.iterator ();
+                while (adapters.hasNext ()) {
+                    IAdaptable adapter = (IAdaptable) adapters.next ();
+                    View notationView = (View) adapter.getAdapter (View.class);
+                    if (notationView != null) {
+                        notationView.setMutable (! immutable);
+                    }
+                }
+                return null;
+            }
+
+        }
+
+        );
+    }
+
+    public Collection getAffectedObjects () {
+        return getViewAdapters ();
+    }
+
+    public void redo () {
+        SetMutability (_immutable);
+    }
+
+    public void undo () {
+        SetMutability (! _immutable);
+    }
+
+}
+

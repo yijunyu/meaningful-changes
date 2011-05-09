@@ -1,0 +1,141 @@
+package org.eclipse.gmf.runtime.emf.ui.services.modelingassistant;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IConfigurationElement;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gmf.runtime.common.core.service.ExecutionStrategy;
+
+import org.eclipse.gmf.runtime.common.core.service.IOperation;
+
+import org.eclipse.gmf.runtime.common.core.service.Service;
+
+import org.eclipse.gmf.runtime.common.ui.services.util.ActivityFilterProviderDescriptor;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+public class ModelingAssistantService extends Service implements IModelingAssistantProvider {
+    protected static class ProviderDescriptor extends ActivityFilterProviderDescriptor {
+        private ModelingAssistantProviderConfiguration providerConfiguration;
+
+        public ProviderDescriptor (IConfigurationElement element) {
+            super (element);
+            this.providerConfiguration = ModelingAssistantProviderConfiguration.parse (element);
+            assert providerConfiguration != null : "providerConfiguration is null";
+        }
+
+        public boolean provides (IOperation operation) {
+            if (! super.provides (operation)) {
+                return false;
+            }
+            if (getPolicy () != null) return getPolicy ().provides (operation);
+
+            return isSupportedInExtension (operation) ? getProvider ().provides (operation) : false;
+        }
+
+        private boolean isSupportedInExtension (IOperation operation) {
+            if (operation instanceof IModelingAssistantOperation) {
+                String operationId = ((IModelingAssistantOperation) operation).getId ();
+                IAdaptable context = ((IModelingAssistantOperation) operation).getContext ();
+                return providerConfiguration.supports (operationId, context);
+            }
+            return false;
+        }
+
+    }
+
+    private final static ModelingAssistantService service = new ModelingAssistantService ();
+
+    protected Service.ProviderDescriptor newProviderDescriptor (IConfigurationElement element) {
+        return new ProviderDescriptor (element);
+    }
+
+    public static ModelingAssistantService getInstance () {
+        return service;
+    }
+
+    private static List collapseList (List list) {
+        List collapsedList = new ArrayList ();
+        for (Iterator iter = list.iterator ();
+        iter.hasNext ();) {
+            Object object = iter.next ();
+            if (object instanceof List) {
+                for (Iterator iterator = ((List) object).iterator ();
+                iterator.hasNext ();) {
+                    Object subObject = iterator.next ();
+                    if (! collapsedList.contains (subObject)) {
+                        collapsedList.add (subObject);
+                    }
+                }
+            } else {
+                collapsedList.add (object);
+            }
+        }
+        return collapsedList;
+    }
+
+    public List getTypesForAttribute (IAdaptable attribute) {
+        List results = execute (ExecutionStrategy.FORWARD, new GetTypesForAttributeOperation (attribute));
+        return collapseList (results);
+    }
+
+    public List getRelTypesOnSource (IAdaptable source) {
+        List results = execute (ExecutionStrategy.FORWARD, new GetRelTypesOnSourceOperation (source));
+        return collapseList (results);
+    }
+
+    public List getRelTypesOnTarget (IAdaptable target) {
+        List results = execute (ExecutionStrategy.FORWARD, new GetRelTypesOnTargetOperation (target));
+        return collapseList (results);
+    }
+
+    public List getRelTypesOnSourceAndTarget (IAdaptable source, IAdaptable target) {
+        List results = execute (ExecutionStrategy.FORWARD, new GetRelTypesOnSourceAndTargetOperation (source, target));
+        return collapseList (results);
+    }
+
+    public List getRelTypesForSREOnSource (IAdaptable source) {
+        List results = execute (ExecutionStrategy.FORWARD, new GetRelTypesForSREOnSourceOperation (source));
+        return collapseList (results);
+    }
+
+    public List getRelTypesForSREOnTarget (IAdaptable target) {
+        List results = execute (ExecutionStrategy.FORWARD, new GetRelTypesForSREOnTargetOperation (target));
+        return collapseList (results);
+    }
+
+    public List getTypesForSource (IAdaptable target, IElementType relationshipType) {
+        List results = execute (ExecutionStrategy.FORWARD, new GetTypesForSourceOperation (target, relationshipType));
+        return collapseList (results);
+    }
+
+    public List getTypesForTarget (IAdaptable source, IElementType relationshipType) {
+        List results = execute (ExecutionStrategy.FORWARD, new GetTypesForTargetOperation (source, relationshipType));
+        return collapseList (results);
+    }
+
+    public EObject selectExistingElementForSource (IAdaptable target, IElementType relationshipType) {
+        List results = execute (ExecutionStrategy.FIRST, new SelectExistingElementForSourceOperation (target, relationshipType));
+        return (EObject) results.get (0);
+    }
+
+    public EObject selectExistingElementForTarget (IAdaptable source, IElementType relationshipType) {
+        List results = execute (ExecutionStrategy.FIRST, new SelectExistingElementForTargetOperation (source, relationshipType));
+        return (EObject) results.get (0);
+    }
+
+    public List getTypesForActionBar (IAdaptable host) {
+        List results = execute (ExecutionStrategy.FORWARD, new GetTypesForActionBarOperation (host));
+        return collapseList (results);
+    }
+
+}
+

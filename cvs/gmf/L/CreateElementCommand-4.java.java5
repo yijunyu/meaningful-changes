@@ -1,0 +1,129 @@
+package org.eclipse.gmf.runtime.emf.type.core.commands;
+
+import java.util.Collection;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.EClassifier;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.emf.type.core.ElementTypeRegistry;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.ConfigureRequest;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.CreateElementRequest;
+
+public class CreateElementCommand extends EditElementCommand {
+    private EObject newElement;
+    private final IElementType elementType;
+    private EReference containmentFeature;
+
+    public CreateElementCommand (CreateElementRequest request) {
+        super (request.getLabel (), null, request);
+        elementType = request.getElementType ();
+        containmentFeature = request.getContainmentFeature ();
+    }
+
+    protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+        newElement = doDefaultElementCreation ();
+        ConfigureRequest configureRequest = createConfigureRequest ();
+        ICommand configureCommand = elementType.getEditCommand (configureRequest);
+        if (configureCommand != null && configureCommand.isExecutable ()) {
+            configureCommand.execute (progressMonitor);
+        }
+        getCreateRequest ().setNewElement (newElement);
+        return newOKCommandResult (newElement);
+    }
+
+    protected ConfigureRequest createConfigureRequest () {
+        ConfigureRequest configureRequest = new ConfigureRequest (newElement, getElementType ());
+        configureRequest.addParameters (getRequest ().getParameters ());
+        return configureRequest;
+    }
+
+    protected EObject doDefaultElementCreation () {
+        EClass eClass = getElementType ().getEClass ();
+        EObject element = eClass.getEPackage ().getEFactoryInstance ().create (eClass);
+        if (getContainmentFeature () != null) {
+            EObject container = getElementToEdit ();
+            if (container != null) {
+                if (getContainmentFeature ().isMany ()) {
+                    ((Collection) container.eGet (getContainmentFeature ())).add (element);
+                } else {
+                    container.eSet (getContainmentFeature (), element);
+                }
+            }
+        }
+        return element;
+    }
+
+    protected EObject getElementToEdit () {
+        if (super.getElementToEdit () == null) {
+            CreateElementRequest request = (CreateElementRequest) getRequest ();
+            setElementToEdit (request.createContainer ());
+        }
+        return super.getElementToEdit ();
+    }
+
+    protected EClass getEClassToEdit () {
+        CreateElementRequest request = (CreateElementRequest) getRequest ();
+        Object context = request.getEditHelperContext ();
+        if (context instanceof EObject) {
+            return ((EObject) context).eClass ();
+        } else {
+            IElementType type = ElementTypeRegistry.getInstance ().getElementType (context);
+            if (type != null) {
+                return type.getEClass ();
+            }
+        }
+        return null;
+    }
+
+    protected EReference getContainmentFeature () {
+        return containmentFeature;
+    }
+
+    protected void setContainmentFeature (EReference containmentFeature) {
+        this.containmentFeature = containmentFeature;
+    }
+
+    protected IElementType getElementType () {
+        return elementType;
+    }
+
+    public CreateElementRequest getCreateRequest () {
+        return (CreateElementRequest) getRequest ();
+    }
+
+    public boolean isExecutable () {
+        if (getEClassToEdit () == null) {
+            return false;
+        }
+        if (getContainmentFeature () != null) {
+            EClassifier eClassifier = getContainmentFeature ().getEType ();
+            boolean result = true;
+            if (eClassifier instanceof EClass) {
+                result = ((EClass) eClassifier).isSuperTypeOf (getElementType ().getEClass ());
+            }
+            return result && super.isExecutable ();
+        }
+        return false;
+    }
+
+    public EObject getNewElement () {
+        return newElement;
+    }
+
+}
+

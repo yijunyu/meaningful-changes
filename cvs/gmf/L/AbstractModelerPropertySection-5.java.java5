@@ -1,0 +1,359 @@
+package org.eclipse.gmf.runtime.diagram.ui.properties.sections;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.ecore.EAnnotation;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.jface.viewers.ISelection;
+
+import org.eclipse.jface.viewers.IStructuredSelection;
+
+import org.eclipse.swt.graphics.GC;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.wst.common.ui.properties.internal.provisional.AbstractPropertySection;
+
+import org.eclipse.wst.common.ui.properties.internal.provisional.ITabbedPropertySheetPageContributor;
+
+import org.eclipse.wst.common.ui.properties.internal.provisional.TabbedPropertySheetPage;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.services.properties.PropertiesServiceAdapterFactory;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.internal.DiagramPropertiesStatusCodes;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.internal.DiagramPropertiesDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.internal.DiagramPropertiesPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.util.SectionUpdateRequestCollapser;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.views.IReadOnlyDiagramPropertySheetPageContributor;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.views.PropertiesBrowserPage;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractModelCommand;
+
+import org.eclipse.gmf.runtime.emf.core.edit.DemuxingMListener;
+
+import org.eclipse.gmf.runtime.emf.core.edit.IDemuxedMListener;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MFilter;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MUndoInterval;
+
+import org.eclipse.gmf.runtime.emf.core.exceptions.MSLActionAbandonedException;
+
+import org.eclipse.gmf.runtime.emf.ui.internal.l10n.ResourceManager;
+
+public abstract class AbstractModelerPropertySection extends AbstractPropertySection implements IDemuxedMListener {
+    private TabbedPropertySheetPage tabbedPropertySheetPage;
+    protected DemuxingMListener eventListener = new DemuxingMListener (this);
+    protected static final PropertiesServiceAdapterFactory propertiesProvider = new PropertiesServiceAdapterFactory ();
+    private boolean bIsCommandInProgress = false;
+    static protected String VALUE_CHANGED_STRING = ResourceManager.getInstance ().getString ("AbstractPropertySection.UndoIntervalPropertyString");
+    protected List input;
+    protected EObject eObject;
+    private List eObjectList = new ArrayList ();
+    protected boolean disposed = false;
+
+    public void setInput (IWorkbenchPart part, ISelection selection) {
+        super.setInput (part, selection);
+        if (! (selection instanceof IStructuredSelection) || selection.equals (getInput ())) return;
+
+        input = new ArrayList ();
+        eObjectList = new ArrayList ();
+        for (Iterator it = ((IStructuredSelection) selection).iterator ();
+        it.hasNext ();) {
+            Object next = it.next ();
+            if (addToEObjectList (next)) {
+                input.add (next);
+            }
+        }
+        if (false == eObjectList.isEmpty ()) setEObject ((EObject) eObjectList.get (0));
+
+    }
+
+    protected boolean addToEObjectList (Object object) {
+        EObject adapted = unwrap (object);
+        if (adapted != null) {
+            getEObjectList ().add (adapted);
+            return true;
+        }
+        return false;
+    }
+
+    protected EObject unwrap (Object object) {
+        return adapt (object);
+    }
+
+    protected EObject adapt (Object object) {
+        if (object instanceof IAdaptable) {
+            return (EObject) ((IAdaptable) object).getAdapter (EObject.class);
+        }
+        return null;
+    }
+
+    protected boolean isCurrentSelection (Notification notification, EObject element) {
+        if (element == null) return false;
+
+        if (eObjectList.contains (element)) return true;
+
+        if (eObjectList.size () > 0) {
+            EObject eventObject = element;
+            if (element instanceof EAnnotation) {
+                eventObject = element.eContainer ();
+            } else {
+                EObject container = element.eContainer ();
+                if (container != null && container instanceof EAnnotation) {
+                    eventObject = container.eContainer ();
+                }
+            }
+            if (eventObject == null) {
+                Object tmpObj = notification.getOldValue ();
+                if (tmpObj != null && tmpObj instanceof EObject) {
+                    eventObject = (EObject) tmpObj;
+                } else {
+                    return false;
+                }
+            }
+            if (eventObject != element) {
+                return eObjectList.contains (eventObject);
+            }
+        }
+        return false;
+    }
+
+    protected void executeAsReadAction (final Runnable code) {
+        executeAsReadAction (new MRunnable () {
+
+            public Object run () {
+                code.run ();
+                return null;
+            }
+
+        }
+
+        );
+    }
+
+    protected Object executeAsReadAction (MRunnable code) {
+        return MEditingDomainGetter.getMEditingDomain (getEObjectList ()).runAsRead (code);
+    }
+
+    protected CommandResult executeAsCompositeCommand (String actionName, List commands) {
+        if (true == bIsCommandInProgress) return null;
+
+        bIsCommandInProgress = true;
+        CompositeCommand compCmd = new CompositeCommand (actionName, commands);
+        CommandResult result = CommandManager.getDefault ().execute (compCmd);
+        if (result.getStatus ().getCode () == DiagramPropertiesStatusCodes.CANCELLED) refresh ();
+
+        bIsCommandInProgress = false;
+        return result;
+    }
+
+    public List getInput () {
+        return input;
+    }
+
+    public void aboutToBeHidden () {
+        super.aboutToBeHidden ();
+        eventListener.stopListening ();
+    }
+
+    public void aboutToBeShown () {
+        super.aboutToBeShown ();
+        eventListener.startListening ();
+    }
+
+    public void dispose () {
+        super.dispose ();
+        disposed = true;
+    }
+
+    protected Object getPrimarySelection () {
+        return (getInput () != null && ! getInput ().isEmpty () ? getInput ().get (0) : null);
+    }
+
+    protected EObject getEObject () {
+        return eObject;
+    }
+
+    protected void setEObject (EObject object) {
+        this.eObject = object;
+    }
+
+    public MFilter getFilter () {
+        return MFilter.ELEMENT_MODIFIED_FILTER;
+    }
+
+    public void handleResourceLoadedEvent (Notification notification, Resource resource) {
+    }
+
+    public void handleResourceUnloadedEvent (Notification notification, Resource resource, EObject modelRoot) {
+    }
+
+    public void handleResourceDirtiedEvent (Notification notification, Resource resource) {
+    }
+
+    public void handleResourceSavedEvent (Notification notification, Resource resource) {
+    }
+
+    public void handleResourceImportedEvent (Notification notification, Resource resource) {
+    }
+
+    public void handleResourceExportedEvent (Notification notification, Resource resource) {
+    }
+
+    public void handleElementCreatedEvent (Notification notification, EObject owner, EObject newElement) {
+    }
+
+    public void handleElementDeletedEvent (Notification notification, EObject owner, EObject oldElement) {
+    }
+
+    public void update (final Notification notification, final EObject element) {
+        if (! isDisposed () && isCurrentSelection (notification, element) && ! isNotifierDeleted (notification)) {
+            postUpdateRequest (new Runnable () {
+
+                public void run () {
+                    if (! isDisposed () && isCurrentSelection (notification, element) && ! isNotifierDeleted (notification)) refresh ();
+
+                }
+
+            }
+
+            );
+        }
+    }
+
+    protected boolean isNotifierDeleted (Notification notification) {
+        if (! (notification.getNotifier () instanceof EObject)) {
+            return false;
+        }
+        EObject obj = (EObject) notification.getNotifier ();
+        return obj.eResource () == null;
+    }
+
+    protected void postUpdateRequest (Runnable updateRequest) {
+        getUpdateRequestCollapser ().postRequest (this, updateRequest);
+    }
+
+    public void handleElementModifiedEvent (final Notification notification, final EObject element) {
+        update (notification, element);
+    }
+
+    protected void handleException (MSLActionAbandonedException exception) {
+        Trace.catching (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass (), exception.getMessage (), exception);
+        Log.warning (DiagramPropertiesPlugin.getDefault (), DiagramPropertiesStatusCodes.IGNORED_EXCEPTION_WARNING, exception.getMessage (), exception);
+    }
+
+    public void handleUndoIntervalClosedEvent (Notification notification, MUndoInterval undoInterval) {
+    }
+
+    public void handleUndoIntervalsFlushedEvent (Notification notification, MUndoInterval undoInterval) {
+    }
+
+    protected List getEObjectList () {
+        return eObjectList;
+    }
+
+    protected boolean isDisposed () {
+        return disposed;
+    }
+
+    protected DemuxingMListener getEventListener () {
+        return eventListener;
+    }
+
+    protected ICommand createCommand (String name, Resource res, final Runnable runnable) {
+        return createCommandInternal (name, res, runnable);
+    }
+
+    protected ICommand createCommand (String name, EObject res, final Runnable runnable) {
+        return createCommandInternal (name, res, runnable);
+    }
+
+    private ICommand createCommandInternal (String name, Object res, final Runnable runnable) {
+        ICommand command = new AbstractModelCommand (name, res) {
+
+            protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+                runnable.run ();
+                return newOKCommandResult ();
+            }
+
+        }
+
+        ;
+        return command;
+    }
+
+    public void createControls (Composite parent, TabbedPropertySheetPage aTabbedPropertySheetPage) {
+        super.createControls (parent, aTabbedPropertySheetPage);
+        this.tabbedPropertySheetPage = aTabbedPropertySheetPage;
+    }
+
+    protected boolean isReadOnly () {
+        if (tabbedPropertySheetPage instanceof PropertiesBrowserPage) {
+            PropertiesBrowserPage propertiesBrowserPage = (PropertiesBrowserPage) tabbedPropertySheetPage;
+            ITabbedPropertySheetPageContributor contributor = propertiesBrowserPage.getContributor ();
+            if (contributor instanceof IReadOnlyDiagramPropertySheetPageContributor) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected int getStandardLabelWidth (Composite parent, String [] labels) {
+        int standardLabelWidth = STANDARD_LABEL_WIDTH;
+        GC gc = new GC (parent);
+        int indent = gc.textExtent ("XXX").x;
+        for (int i = 0;
+        i < labels.length; i ++) {
+            int width = gc.textExtent (labels [i]).x;
+            if (width + indent > standardLabelWidth) {
+                standardLabelWidth = width + indent;
+            }
+        }
+        gc.dispose ();
+        return standardLabelWidth;
+    }
+
+    protected SectionUpdateRequestCollapser getUpdateRequestCollapser () {
+        return DiagramPropertiesPlugin.getDefault ().getUpdateRequestCollapser ();
+    }
+
+}
+

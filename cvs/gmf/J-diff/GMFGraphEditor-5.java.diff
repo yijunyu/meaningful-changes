@@ -1,0 +1,293 @@
+10a11,12
+> import java.io.InputStream;
+> 
+18a21,23
+> import java.util.Map;
+> import java.util.LinkedHashMap;
+> 
+34a40,42
+> import org.eclipse.emf.common.util.BasicDiagnostic;
+> import org.eclipse.emf.common.util.Diagnostic;
+> 
+35a44,45
+> import org.eclipse.emf.common.notify.Notification;
+> 
+36a47
+> import org.eclipse.emf.common.ui.editor.ProblemEditorPart;
+42a54,56
+> import org.eclipse.emf.ecore.util.EcoreUtil;
+> import org.eclipse.emf.ecore.util.EContentAdapter;
+> 
+57a72,74
+> import org.eclipse.emf.common.ui.MarkerHelper;
+> import org.eclipse.emf.edit.ui.util.EditUIMarkerHelper;
+> 
+101a119,120
+> import org.eclipse.ui.PartInitException;
+> 
+263a283,291
+> 	 * The MarkerHelper is responsible for creating workspace resource markers presented
+> 	 * in Eclipse's Problems View.
+> 	 * <!-- begin-user-doc -->
+> 	 * <!-- end-user-doc -->
+> 	 * @generated
+> 	 */
+> 	protected MarkerHelper markerHelper = new EditUIMarkerHelper();
+> 
+> 	/**
+303c331
+< 	Collection removedResources = new ArrayList();
+---
+> 	protected Collection removedResources = new ArrayList();
+309c337
+< 	Collection changedResources = new ArrayList();
+---
+> 	protected Collection changedResources = new ArrayList();
+315c343,391
+< 	Collection savedResources = new ArrayList();
+---
+> 	protected Collection savedResources = new ArrayList();
+> 
+> 	/**
+> 	 * Map to store the diagnostic associated with a resource.
+> 	 * <!-- begin-user-doc -->
+> 	 * <!-- end-user-doc -->
+> 	 * @generated
+> 	 */
+> 	protected Map resourceToDiagnosticMap = new LinkedHashMap();
+> 	
+> 	/**
+> 	 * Controls whether the problem indication should be updated.
+> 	 * <!-- begin-user-doc -->
+> 	 * <!-- end-user-doc -->
+> 	 * @generated
+> 	 */	
+> 	protected boolean updateProblemIndication = true;
+> 
+> 	/**
+> 	 * Adapter used to update the problem indication when resources are demanded loaded.
+> 	 * <!-- begin-user-doc -->
+> 	 * <!-- end-user-doc -->
+> 	 * @generated
+> 	 */	
+> 	protected EContentAdapter problemIndicationAdapter = 
+> 		new EContentAdapter() {
+> 			public void notifyChanged(Notification notification) {
+> 				if (notification.getNotifier() instanceof Resource) {
+> 					switch (notification.getFeatureID(Resource.class)) {
+> 						case Resource.RESOURCE__IS_LOADED:
+> 						case Resource.RESOURCE__ERRORS:
+> 						case Resource.RESOURCE__WARNINGS: {
+> 							Resource resource = (Resource)notification.getNotifier();
+> 							Diagnostic diagnostic = analyzeResourceProblems((Resource)notification.getNotifier(), null);
+> 							if (diagnostic.getSeverity() != Diagnostic.OK) {
+> 								resourceToDiagnosticMap.put(resource, diagnostic);
+> 							}
+> 							else {
+> 								resourceToDiagnosticMap.remove(resource);
+> 							}
+> 							updateProblemIndication();
+> 						}
+> 					}
+> 				}
+> 				else {
+> 					super.notifyChanged(notification);
+> 				}
+> 			}
+> 		};
+345c421
+< 											else {
+---
+> 											else if (!savedResources.remove(resource)) {
+381a458,465
+> 							if (getSite().getPage().getActiveEditor() == GMFGraphEditor.this) {
+> 								getSite().getShell().getDisplay().asyncExec
+> 									(new Runnable() {
+> 										 public void run() {
+> 											 handleActivate();
+> 										 }
+> 									 });
+> 							}
+425d508
+< 
+433a517
+> 			updateProblemIndication = false;
+441a526,587
+> 						if (!resourceToDiagnosticMap.containsKey(resource)) {
+> 							resourceToDiagnosticMap.put(resource, analyzeResourceProblems(resource, exception));
+> 						}
+> 					}
+> 				}
+> 			}
+> 			updateProblemIndication = true;
+> 			updateProblemIndication();
+> 		}
+> 	}
+>   
+> 	/**
+> 	 * Updates the problems indication with the information described in the specified diagnostic.
+> 	 * <!-- begin-user-doc -->
+> 	 * <!-- end-user-doc -->
+> 	 * @generated
+> 	 */
+> 	protected void updateProblemIndication() {
+> 		if (updateProblemIndication) {
+> 			BasicDiagnostic diagnostic =
+> 				new BasicDiagnostic
+> 					(Diagnostic.OK,
+> 					 "org.eclipse.gmf.graphdef.edit", 
+> 					 0,
+> 					 null,
+> 					 new Object [] { editingDomain.getResourceSet() });
+> 			for (Iterator i = resourceToDiagnosticMap.values().iterator(); i.hasNext(); ) {
+> 				Diagnostic childDiagnostic = (Diagnostic)i.next();
+> 				if (childDiagnostic.getSeverity() != Diagnostic.OK) {
+> 					diagnostic.add(childDiagnostic);
+> 				}
+> 			}
+> 			
+> 			int lastEditorPage = getPageCount() - 1;
+> 			if (lastEditorPage >= 0 && getEditor(lastEditorPage) instanceof ProblemEditorPart) {
+> 				((ProblemEditorPart)getEditor(lastEditorPage)).setDiagnostic(diagnostic);
+> 				if (diagnostic.getSeverity() != Diagnostic.OK) {
+> 					setActivePage(lastEditorPage);
+> 				}
+> 			}
+> 			else if (diagnostic.getSeverity() != Diagnostic.OK) {
+> 				ProblemEditorPart problemEditorPart = new ProblemEditorPart();
+> 				problemEditorPart.setDiagnostic(diagnostic);
+> 				problemEditorPart.setMarkerHelper(markerHelper);
+> 				try {
+> 					addPage(getPageCount(), problemEditorPart, getEditorInput());
+> 					lastEditorPage++;
+> 					setPageText(lastEditorPage, problemEditorPart.getPartName());
+> 					setActivePage(lastEditorPage);
+> 				}
+> 				catch (PartInitException exception) {
+> 					GMFGraphEditPlugin.INSTANCE.log(exception);
+> 				}
+> 			}
+> 
+> 			if (markerHelper.hasMarkers(editingDomain.getResourceSet())) {
+> 				markerHelper.deleteMarkers(editingDomain.getResourceSet());
+> 				if (diagnostic.getSeverity() != Diagnostic.OK) {
+> 					try {
+> 						markerHelper.createMarkers(diagnostic);
+> 					}
+> 					catch (CoreException exception) {
+693c839
+< 		// I assume that the input is a file object.
+---
+> 		// Assumes that the input is a file object.
+696c842,844
+< 
+---
+> 		URI resourceURI = URI.createPlatformResourceURI(modelFile.getFile().getFullPath().toString());;
+> 		Exception exception = null;
+> 		Resource resource = null;
+700c848
+< 			editingDomain.loadResource(URI.createPlatformResourceURI(modelFile.getFile().getFullPath().toString()).toString());
+---
+> 			resource = editingDomain.getResourceSet().getResource(resourceURI, true);
+702,703c850,891
+< 		catch (Exception exception) {
+< 			GMFGraphEditPlugin.INSTANCE.log(exception);
+---
+> 		catch (Exception e) {
+> 			exception = e;
+> 			resource = editingDomain.getResourceSet().getResource(resourceURI, false);			
+> 		}
+> 
+> 		Diagnostic diagnostic = analyzeResourceProblems(resource, exception);
+> 		if (diagnostic.getSeverity() != Diagnostic.OK) {
+> 			resourceToDiagnosticMap.put(resource,  analyzeResourceProblems(resource, exception));
+> 		}
+> 		editingDomain.getResourceSet().eAdapters().add(problemIndicationAdapter);		
+> 	}
+> 	
+> 	/**
+> 	 * Returns a dignostic describing the errors and warnings listed in the resource
+> 	 * and the specified exception (if any).
+> 	 * <!-- begin-user-doc -->
+> 	 * <!-- end-user-doc -->
+> 	 * @generated
+> 	 */
+> 	public Diagnostic analyzeResourceProblems(Resource resource, Exception exception) {
+> 		if (!resource.getErrors().isEmpty() || !resource.getWarnings().isEmpty()) {
+> 			BasicDiagnostic basicDiagnostic =
+> 				new BasicDiagnostic
+> 					(Diagnostic.ERROR,
+> 					 "org.eclipse.gmf.graphdef.edit", 
+> 					 0,
+> 					 getString("_UI_CreateModelError_message", resource.getURI()), 
+> 					 new Object [] { exception == null ? (Object)resource : exception });
+> 			basicDiagnostic.merge(EcoreUtil.computeDiagnostic(resource, true));
+> 			return basicDiagnostic;
+> 		}
+> 		else if (exception != null) {
+> 			return
+> 				new BasicDiagnostic
+> 					(Diagnostic.ERROR,
+> 					 "org.eclipse.gmf.graphdef.edit", 
+> 					 0,
+> 					 getString("_UI_CreateModelError_message", resource.getURI()), 
+> 					 new Object[] { exception });
+> 		}
+> 		else {
+> 			return Diagnostic.OK_INSTANCE;
+717a906,909
+> 		// Only creates the other pages if there is something that can be edited
+> 		//
+> 		if (!getEditingDomain().getResourceSet().getResources().isEmpty() &&
+> 		    !((Resource)getEditingDomain().getResourceSet().getResources().get(0)).getContents().isEmpty()) {
+906a1099
+> 		}
+907a1101,1103
+> 		// Ensures that this editor will only display the page's tab
+> 		// area if there are more than one page
+> 		//		
+918a1115,1116
+> 
+> 		updateProblemIndication();
+1126d1323
+< 					try {
+1132c1329,1330
+< 							if ((first || !resource.getContents().isEmpty()) && !editingDomain.isReadOnly(resource)) {
+---
+> 						if ((first || !resource.getContents().isEmpty() || isPersisted(resource)) && !editingDomain.isReadOnly(resource)) {
+> 							try {
+1135a1334,1336
+> 							catch (Exception exception) {
+> 								resourceToDiagnosticMap.put(resource, analyzeResourceProblems(resource, exception));
+> 							}
+1139,1141d1339
+< 					catch (Exception exception) {
+< 						GMFGraphEditPlugin.INSTANCE.log(exception);
+< 					}
+1144a1343
+> 		updateProblemIndication = false;
+1159a1359,1382
+> 		updateProblemIndication = true;
+> 		
+> 		updateProblemIndication();
+> 	}
+> 
+> 	/**
+> 	 * This returns wether something has been persisted to the URI of the specified resource.
+> 	 * The implementation uses the URI converter from the editor's resource set to try to open an input stream. 
+> 	 * <!-- begin-user-doc -->
+> 	 * <!-- end-user-doc -->
+> 	 * @generated
+> 	 */
+> 	protected boolean isPersisted(Resource resource) {
+> 		boolean result = false;
+> 		try {
+> 			InputStream stream = editingDomain.getResourceSet().getURIConverter().createInputStream(resource.getURI());
+> 			if (stream != null) {
+> 				result = true;
+> 				stream.close();
+> 			}
+> 		}
+> 		catch (IOException e) {
+> 		}
+> 		return result;

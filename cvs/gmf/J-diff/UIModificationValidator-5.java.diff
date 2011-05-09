@@ -1,0 +1,109 @@
+2c2
+<  * Copyright (c) 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2005, 2006 IBM Corporation and others.
+18d17
+< 
+22a22,26
+> import org.eclipse.swt.widgets.Display;
+> import org.eclipse.swt.widgets.Shell;
+> import org.eclipse.ui.IWindowListener;
+> import org.eclipse.ui.IWorkbenchWindow;
+> import org.eclipse.ui.PlatformUI;
+35a40,100
+>      * Window listener
+>      */
+>     private WindowListener listener;
+>     
+>     /**
+>      * Window listener to obtain the active shell
+>      * 
+>      * @author wdiu, Wayne Diu
+>      */
+>     private class WindowListener implements IWindowListener {
+>         /**
+>          * A shell that can be specified as a parameter in the constructor
+>          */
+>         protected Shell shell;
+>         
+>         /* (non-Javadoc)
+>          * @see org.eclipse.ui.IWindowListener#windowActivated(org.eclipse.ui.IWorkbenchWindow)
+>          */
+>         public void windowActivated(IWorkbenchWindow window) {
+>             shell = window.getShell();
+>         }
+> 
+>         /* (non-Javadoc)
+>          * @see org.eclipse.ui.IWindowListener#windowClosed(org.eclipse.ui.IWorkbenchWindow)
+>          */
+>         public void windowClosed(IWorkbenchWindow window) {
+>             //do nothing
+>         }
+> 
+>         /* (non-Javadoc)
+>          * @see org.eclipse.ui.IWindowListener#windowDeactivated(org.eclipse.ui.IWorkbenchWindow)
+>          */
+>         public void windowDeactivated(IWorkbenchWindow window) {
+>             //do nothing
+>         }
+> 
+>         /* (non-Javadoc)
+>          * @see org.eclipse.ui.IWindowListener#windowOpened(org.eclipse.ui.IWorkbenchWindow)
+>          */
+>         public void windowOpened(IWorkbenchWindow window) {
+>             //do nothing
+>         }
+>         
+>         /**
+>          * Constructor that takes a shell
+>          * @param theShell initial active shell
+>          */
+>         public WindowListener(Shell theShell) {
+>             this.shell = theShell;
+>         }
+>         
+>         /**
+>          * Returns the active shell
+>          * @return active Shell
+>          */
+>         public Shell getShell() {
+>             return shell;
+>         }
+>     }
+>     
+> 	/**
+41a107,120
+>     /**
+>      * Constructs a UI modification validator and initializes the UI context
+>      */
+>     public UIModificationValidator() {
+>         Display.getDefault().asyncExec(new Runnable() {
+>             public void run() {
+>                 IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+>                 Shell shell = window == null ? null : window.getShell();
+>                 listener = new WindowListener(shell);
+>                 PlatformUI.getWorkbench().addWindowListener(listener);
+>             }
+>         });
+>     }
+>     
+45a125
+>         Shell shell = listener == null ? null : listener.getShell(); 
+47c127
+< 			CommonUIMessages.UIModificationValidator_ModificationMessage);
+---
+> 			CommonUIMessages.UIModificationValidator_ModificationMessage, shell);
+52a133,145
+>     /**
+>      * Disposes this UI modification validator.
+>      */
+>     public void dispose() {
+>         if (listener != null) {
+>             Display.getDefault().asyncExec(new Runnable() {
+>                 public void run() {
+>                     PlatformUI.getWorkbench().removeWindowListener(listener);
+>                 }
+>             });
+>         }
+>     }
+> 

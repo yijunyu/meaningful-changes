@@ -1,0 +1,301 @@
+package org.eclipse.gmf.runtime.diagram.core.listener;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.HashMap;
+
+import java.util.HashSet;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import java.util.Set;
+
+import java.util.WeakHashMap;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.ecore.EAnnotation;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.emf.transaction.NotificationFilter;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.DiagramDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.DiagramPlugin;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.emf.core.EventTypes;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MEditingDomain;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MFilter;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MUniversalListener;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class DiagramEventBroker extends MUniversalListener {
+    private static String LISTEN_TO_ALL_FEATURES = "*";
+    private final NotifierToKeyToListenersSetMap listeners = new NotifierToKeyToListenersSetMap ();
+    private final class NotifierToKeyToListenersSetMap {
+        private final Map listenersMap = new WeakHashMap ();
+
+        public void addListener (EObject notifier, Object key, Object listener) {
+            Map keys = (Map) listenersMap.get (notifier);
+            if (keys == null) {
+                keys = new HashMap ();
+                listenersMap.put (notifier, keys);
+            }
+            Set listenersSet = (Set) keys.get (key);
+            if (listenersSet == null) {
+                listenersSet = new HashSet ();
+                keys.put (key, listenersSet);
+            }
+            listenersSet.add (listener);
+        }
+
+        public void addListener (EObject notifier, Object listener) {
+            addListener (notifier, LISTEN_TO_ALL_FEATURES, listener);
+        }
+
+        public void removeListener (EObject notifier, Object key, Object listener) {
+            Map keys = (Map) listenersMap.get (notifier);
+            if (keys != null) {
+                Set listenersSet = (Set) keys.get (key);
+                if (listenersSet != null) {
+                    listenersSet.remove (listener);
+                    if (listenersSet.isEmpty ()) {
+                        keys.remove (key);
+                    }
+                }
+                if (keys.isEmpty ()) listenersMap.remove (notifier);
+
+            }
+        }
+
+        public Set getListeners (Object notifier, Object key) {
+            Map keys = (Map) listenersMap.get (notifier);
+            if (keys != null) {
+                Set listenersSet = (Set) keys.get (key);
+                if (listenersSet != null) {
+                    return listenersSet;
+                }
+            }
+            return Collections.EMPTY_SET;
+        }
+
+        public Set getAllListeners (Object notifier) {
+            Map keys = (Map) listenersMap.get (notifier);
+            if (keys == null || keys.isEmpty ()) {
+                return Collections.EMPTY_SET;
+            }
+            Set listenersCollection = new HashSet ();
+            Set enteries = keys.entrySet ();
+            for (Iterator iter = enteries.iterator ();
+            iter.hasNext ();) {
+                Map.Entry entry = (Map.Entry) iter.next ();
+                Set listenersSet = (Set) entry.getValue ();
+                if (listenersSet != null && ! listenersSet.isEmpty ()) listenersCollection.addAll (listenersSet);
+
+            }
+            return listenersCollection;
+        }
+
+    }
+
+    public void startListening () {
+        Trace.trace (DiagramPlugin.getInstance (), DiagramDebugOptions.EVENTS, this + "#startListening()");
+        setFilter (new MFilter.NotifierType (EObject.class, false));
+        super.startListening ();
+    }
+
+    public void stopListening () {
+        Trace.trace (DiagramPlugin.getInstance (), DiagramDebugOptions.EVENTS, this + "#stopListening()");
+        super.stopListening ();
+    }
+
+    public final void onEvent (List events) {
+        List eventArray = new ArrayList (events);
+        HashSet deletedObjects = new HashSet ();
+        for (Iterator i = eventArray.iterator ();
+        i.hasNext ();) {
+            Notification event = (Notification) i.next ();
+            if (event.getEventType () == EventTypes.UNCREATE || event.getEventType () == EventTypes.DESTROY) deletedObjects.add (event.getNotifier ());
+
+        }
+        for (Iterator i = eventArray.iterator ();
+        i.hasNext ();) {
+            Notification event = (Notification) i.next ();
+            Object eventFeature = event.getFeature ();
+            if ((event.isTouch () && event.getEventType () != Notification.RESOLVE) || NotationPackage.eINSTANCE.getView_Mutable ().equals (eventFeature)) {
+                continue;
+            }
+            Object notifier = event.getNotifier ();
+            if (notifier instanceof EObject) {
+                if (deletedObjects.contains (event.getNotifier ()) && event.getEventType () != EventTypes.UNCREATE && event.getEventType () != EventTypes.DESTROY && event.getEventType () != EventTypes.UNRESOLVE) continue;
+
+                handleElementEvent (event);
+            }
+        }
+    }
+
+    protected void fireNotification (Notification event) {
+        Collection listenerList = getInterestedNotificationListeners (event);
+        if (! listenerList.isEmpty ()) {
+            List listenersSnapShot = new ArrayList (listenerList);
+            if (! listenerList.isEmpty ()) {
+                for (Iterator listenerIT = listenersSnapShot.iterator ();
+                listenerIT.hasNext ();) {
+                    NotificationListener listener = (NotificationListener) listenerIT.next ();
+                    listener.notifyChanged (event);
+                }
+            }
+        }
+    }
+
+    public final void addNotificationListener (EObject target, NotificationListener listener) {
+        if (target != null) {
+            listeners.addListener (target, LISTEN_TO_ALL_FEATURES, listener);
+        }
+    }
+
+    public final void addNotificationListener (EObject target, EStructuralFeature key, NotificationListener listener) {
+        if (target != null) {
+            listeners.addListener (target, key, listener);
+        }
+    }
+
+    public final void removeNotificationListener (EObject target, NotificationListener listener) {
+        if (target != null) {
+            listeners.removeListener (target, LISTEN_TO_ALL_FEATURES, listener);
+        }
+    }
+
+    public final void removeNotificationListener (EObject target, Object key, NotificationListener listener) {
+        if (target != null) {
+            listeners.removeListener (target, key, listener);
+        }
+    }
+
+    public final void finalize () {
+        try {
+            stopListening ();
+        } catch (Throwable ignored) {
+        }
+    }
+
+    protected Set getNotificationListeners (Object notifier) {
+        return listeners.getListeners (notifier, LISTEN_TO_ALL_FEATURES);
+    }
+
+    protected Set getNotificationListeners (Object notifier, Object key) {
+        if (key != null) {
+            if (! key.equals (LISTEN_TO_ALL_FEATURES)) {
+                Set listenersSet = new HashSet ();
+                Collection c = listeners.getListeners (notifier, key);
+                if (c != null && ! c.isEmpty ()) listenersSet.addAll (c);
+
+                c = listeners.getListeners (notifier, LISTEN_TO_ALL_FEATURES);
+                if (c != null && ! c.isEmpty ()) listenersSet.addAll (c);
+
+                return listenersSet;
+            } else if (key.equals (LISTEN_TO_ALL_FEATURES)) {
+                return listeners.getAllListeners (notifier);
+            }
+
+        }
+        return listeners.getAllListeners (notifier);
+    }
+
+    public final static MFilter SLOT_MODIFIED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.And (new MFilter.EventType (EventTypes.SET), new MFilter.EventType (EventTypes.UNSET)));
+    public final static MFilter ELEMENT_INSERTED_INTO_SLOT = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.Or (new MFilter.EventType (EventTypes.ADD), new MFilter.EventType (EventTypes.ADD_MANY)));
+    public final static MFilter ELEMENT_REMOVED_FROM_SLOT = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.Or (new MFilter.EventType (EventTypes.REMOVE), new MFilter.EventType (EventTypes.REMOVE_MANY)));
+    public final static MFilter ELEMENT_CREATED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.EventType (EventTypes.CREATE));
+    public final static MFilter ELEMENT_UNCREATED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.EventType (EventTypes.UNCREATE));
+    public final static MFilter ELEMENT_DELETED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.EventType (EventTypes.DESTROY));
+    public final static MFilter ELEMENT_UNDELETED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.EventType (EventTypes.UNDESTROY));
+    private static DiagramEventBroker instance;
+
+    public static DiagramEventBroker getInstance () {
+        if (instance == null) {
+            instance = new DiagramEventBroker ();
+        }
+        return instance;
+    }
+
+    protected Set getInterestedNotificationListeners (Notification event) {
+        HashSet listenerSet = new HashSet ();
+        Collection c = getNotificationListeners (event.getNotifier (), event.getFeature ());
+        if (c != null) {
+            listenerSet.addAll (c);
+        }
+        EObject notifier = (EObject) event.getNotifier ();
+        if (NotationPackage.eINSTANCE.getView_Visible ().equals (event.getFeature ()) && notifier.eContainer () != null) {
+            listenerSet.addAll (getNotificationListeners (notifier.eContainer ()));
+        } else if (notifier instanceof EAnnotation) {
+            addListenersOfNotifier (listenerSet, notifier.eContainer (), event);
+        } else if (! (notifier instanceof View)) {
+            while (notifier != null && ! (notifier instanceof View)) {
+                notifier = notifier.eContainer ();
+            }
+            addListenersOfNotifier (listenerSet, notifier, event);
+        }
+
+        return listenerSet;
+    }
+
+    private void addListenersOfNotifier (Set listenerSet, EObject notifier, Notification event) {
+        if (notifier != null) {
+            Collection c = getNotificationListeners (notifier, event.getFeature ());
+            if (c != null) {
+                if (listenerSet.isEmpty ()) listenerSet.addAll (c);
+                else {
+                    Iterator i = c.iterator ();
+                    while (i.hasNext ()) {
+                        Object o = i.next ();
+                        listenerSet.add (o);
+                    }
+                }
+            }
+        }
+    }
+
+    protected void handleElementEvent (Notification event) {
+        MEditingDomain doamin = null;
+        if (! event.isTouch () && ! (doamin = MEditingDomainGetter.getMEditingDomain (event)).isUndoNotification (event) && ! doamin.isRedoNotification (event)) {
+            EObject element = (EObject) event.getNotifier ();
+            while (element != null && ! (element instanceof View)) {
+                element = element.eContainer ();
+            }
+            if (element != null) {
+                if (! NotificationFilter.READ.matches (event)) {
+                    ViewUtil.persistElement ((View) element);
+                }
+            }
+        }
+        EObject element = (EObject) event.getNotifier ();
+        if (element != null) {
+            fireNotification (event);
+        }
+    }
+
+}
+

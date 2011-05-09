@@ -1,0 +1,304 @@
+package org.eclipse.gmf.runtime.common.ui.services.dnd.drop;
+
+import java.util.ArrayList;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.jface.dialogs.ErrorDialog;
+
+import org.eclipse.swt.dnd.DND;
+
+import org.eclipse.swt.dnd.DropTargetEvent;
+
+import org.eclipse.swt.dnd.DropTargetListener;
+
+import org.eclipse.swt.dnd.Transfer;
+
+import org.eclipse.swt.dnd.TransferData;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.core.DragDropListenerService;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.core.IListenerContext;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.core.TransferAdapterService;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.internal.CommonUIServicesDNDDebugOptions;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.internal.CommonUIServicesDNDPlugin;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.internal.CommonUIServicesDNDStatusCodes;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.internal.l10n.CommonUIServicesDNDMessages;
+
+public class DelegatingDropTargetAdapter implements DropTargetListener {
+    private ITransferDropTargetListener [] adapters = null;
+    private ITransferDropTargetListener chosenAdapter = null;
+    private final DropTargetContext context;
+    private int origDropType = DND.DROP_NONE;
+    private int currentDropType = DND.DROP_NONE;
+
+    public DelegatingDropTargetAdapter (DropTargetContext aContext) {
+        super ();
+        assert null != aContext : "context information for the drop target cannot be null";
+        this.context = aContext;
+        adapters = getAllTransferAdapters ();
+    }
+
+    public void dragEnter (DropTargetEvent event) {
+        try {
+            setOrigDropType (event.detail);
+            getContext ().setCurrentTargetAndLocation (event);
+            initAdapters ();
+            setChosenAdapter (event);
+            if (getChosenAdapter () != null) {
+                getChosenAdapter ().dragEnter (event);
+            } else {
+                getContext ().dragEnter (event);
+            }
+            if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND)) {
+                String adapterChosen = getChosenAdapter () != null ? getChosenAdapter ().getClass ().getName () : "No Adapter";
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DragEnter::Event detail is " + event.detail);
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DragEnter::Chosen adapter is " + adapterChosen);
+            }
+        } catch (Throwable e) {
+            event.detail = DND.DROP_NONE;
+            handle (e, false);
+        }
+    }
+
+    public void dragLeave (DropTargetEvent event) {
+        try {
+            if (getChosenAdapter () != null) {
+                getChosenAdapter ().dragLeave (event);
+            } else {
+                getContext ().dragLeave (event);
+            }
+            if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND)) {
+                String adapterChosen = getChosenAdapter () != null ? getChosenAdapter ().getClass ().getName () : "No Adapter";
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DragLeave::Event detail is " + event.detail);
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DragLeave::Chosen adapter is " + adapterChosen);
+            }
+        } catch (Throwable e) {
+            handle (e, false);
+        }
+    }
+
+    public void dragOperationChanged (DropTargetEvent event) {
+        try {
+            setOrigDropType (event.detail);
+            getContext ().setCurrentTargetAndLocation (event);
+            setChosenAdapter (event);
+            if (getChosenAdapter () != null) {
+                getChosenAdapter ().dragOperationChanged (event);
+            } else {
+                getContext ().dragOperationChanged (event);
+            }
+            if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND)) {
+                String adapterChosen = getChosenAdapter () != null ? getChosenAdapter ().getClass ().getName () : "No Adapter";
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DragOperationChanged::Event detail is " + event.detail);
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DragOperationChanged::Chosen adapter is " + adapterChosen);
+            }
+        } catch (Throwable e) {
+            event.detail = DND.DROP_NONE;
+            handle (e, false);
+        }
+    }
+
+    public void dragOver (DropTargetEvent event) {
+        try {
+            getContext ().setCurrentTargetAndLocation (event);
+            event.detail = getOrigDropType ();
+            setChosenAdapter (event);
+            if (getChosenAdapter () != null) {
+                getChosenAdapter ().dragOver (event);
+                if (event.detail != DND.DROP_NONE) {
+                    setCurrentDropType (event.detail);
+                }
+            } else {
+                getContext ().dragOver (event);
+            }
+            if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND)) {
+                String adapterChosen = getChosenAdapter () != null ? getChosenAdapter ().getClass ().getName () : "No Adapter";
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DragOver::Event detail is " + event.detail);
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DragOver::Chosen adapter is " + adapterChosen);
+            }
+        } catch (Throwable e) {
+            event.detail = DND.DROP_NONE;
+            handle (e, false);
+        }
+    }
+
+    public void drop (DropTargetEvent event) {
+        try {
+            int oldDetail = event.detail;
+            getContext ().setCurrentTargetAndLocation (event);
+            event.detail = getCurrentDropType ();
+            setChosenAdapter (event);
+            if (getChosenAdapter () != null) {
+                getChosenAdapter ().drop (event);
+            } else {
+                event.detail = oldDetail;
+                getContext ().drop (event);
+            }
+            if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND)) {
+                String adapterChosen = getChosenAdapter () != null ? getChosenAdapter ().getClass ().getName () : "No Adapter";
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "Drop::Event detail is " + event.detail);
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "Drop::Chosen adapter is " + adapterChosen);
+            }
+        } catch (Throwable e) {
+            event.detail = DND.DROP_NONE;
+            handle (e, true);
+        }
+    }
+
+    public void dropAccept (DropTargetEvent event) {
+        try {
+            int oldDetail = event.detail;
+            getContext ().setCurrentTargetAndLocation (event);
+            event.detail = getCurrentDropType ();
+            setChosenAdapter (event);
+            if (getChosenAdapter () != null) {
+                getChosenAdapter ().dropAccept (event);
+                if (event.detail != getCurrentDropType ()) {
+                    setCurrentDropType (event.detail);
+                }
+            } else {
+                event.detail = oldDetail;
+                getContext ().dropAccept (event);
+            }
+            if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND)) {
+                String adapterChosen = getChosenAdapter () != null ? getChosenAdapter ().getClass ().getName () : "No Adapter";
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DropAccept::Event detail is " + event.detail);
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "DropAccept::Chosen adapter is " + adapterChosen);
+            }
+        } catch (Throwable e) {
+            event.detail = DND.DROP_NONE;
+            handle (e, false);
+        }
+    }
+
+    private ITransferDropTargetListener [] getAdapters () {
+        return adapters;
+    }
+
+    private DropTargetContext getContext () {
+        return context;
+    }
+
+    public Transfer [] getAllTransferAgents () {
+        if (getAdapters () == null || getAdapters ().length == 0) {
+            return null;
+        }
+        ArrayList list = new ArrayList ();
+        for (int i = 0;
+        i < getAdapters ().length; i ++) {
+            list.add (getAdapters () [i].getTransferAgent ().getTransfer ());
+        }
+        return (Transfer []) list.toArray (new Transfer [list.size ()]);
+    }
+
+    private ITransferDropTargetListener [] getAllTransferAdapters () {
+        ArrayList listOfSupportedAdapters = new ArrayList ();
+        String [] transferIds = DragDropListenerService.getInstance ().getAllTransferIds (getContext ().getActivePart ().getSite ().getId (), IListenerContext.DROP);
+        if (transferIds == null || transferIds.length == 0) {
+            return null;
+        }
+        for (int i = 0;
+        i < transferIds.length; i ++) {
+            ITransferDropTargetListener adapter = TransferAdapterService.getInstance ().getTransferDropTargetAdapter (transferIds [i]);
+            if (adapter != null) {
+                listOfSupportedAdapters.add (adapter);
+            }
+        }
+        return ! listOfSupportedAdapters.isEmpty () ? (ITransferDropTargetListener []) listOfSupportedAdapters.toArray (new ITransferDropTargetListener [listOfSupportedAdapters.size ()]) : null;
+    }
+
+    private void setChosenAdapter (DropTargetEvent event) {
+        chosenAdapter = null;
+        TransferData [] dataTypes = event.dataTypes;
+        if (dataTypes == null || dataTypes.length == 0) {
+            if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND)) {
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "setChosenAdapter::No transfer types available in the event");
+            }
+            return;
+        }
+        if (getAdapters () == null) {
+            if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND)) {
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "setChosenAdapter::No adapters registered with this target");
+            }
+            return;
+        }
+        if (getContext ().getCurrentTarget () == null) {
+            if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND)) {
+                Trace.trace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.DND, "setChosenAdapter::Current target is null");
+            }
+            return;
+        }
+        for (int i = 0;
+        i < getAdapters ().length; i ++) {
+            if (getAdapters () [i].getTransferAgent ().isSelectionType ()) {
+                if (getAdapters () [i].canSupport (event)) {
+                    chosenAdapter = getAdapters () [i];
+                    return;
+                }
+            }
+        }
+        for (int i = 0;
+        i < getAdapters ().length; i ++) {
+            if (! getAdapters () [i].getTransferAgent ().isSelectionType ()) {
+                if (getAdapters () [i].canSupport (event)) {
+                    chosenAdapter = getAdapters () [i];
+                    return;
+                }
+            }
+        }
+    }
+
+    private ITransferDropTargetListener getChosenAdapter () {
+        return chosenAdapter;
+    }
+
+    private void handle (Throwable exception, boolean displayDialog) {
+        if (Trace.shouldTrace (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.EXCEPTIONS_CATCHING)) {
+            Trace.catching (CommonUIServicesDNDPlugin.getDefault (), CommonUIServicesDNDDebugOptions.EXCEPTIONS_CATCHING, getClass (), "handle", exception);
+        }
+        IStatus status = new Status (IStatus.ERROR, CommonUIServicesDNDPlugin.getPluginId (), CommonUIServicesDNDStatusCodes.DROP_ACTION_FAILURE, CommonUIServicesDNDMessages.DelegatingDropTargetAdapter__ERROR__errorMessage, exception);
+        Log.log (CommonUIServicesDNDPlugin.getDefault (), status);
+        if (displayDialog) {
+            status = new Status (IStatus.ERROR, CommonUIServicesDNDPlugin.getPluginId (), CommonUIServicesDNDStatusCodes.DROP_ACTION_FAILURE, CommonUIServicesDNDMessages.DelegatingDropTargetAdapter_errorMessage, exception);
+            ErrorDialog.openError (getContext ().getActivePart ().getSite ().getShell (), null, null, status);
+        }
+    }
+
+    private int getOrigDropType () {
+        return origDropType;
+    }
+
+    private void setOrigDropType (int anOrigDropType) {
+        this.origDropType = anOrigDropType;
+    }
+
+    private int getCurrentDropType () {
+        return currentDropType;
+    }
+
+    private void setCurrentDropType (int aCurrentDropType) {
+        this.currentDropType = aCurrentDropType;
+    }
+
+    private void initAdapters () {
+        if (getAdapters () != null) for (int i = 0;
+        i < getAdapters ().length; i ++) {
+            getAdapters () [i].init (getContext ());
+        }
+
+    }
+
+}
+

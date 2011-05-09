@@ -1,0 +1,67 @@
+20a21,23
+> import org.eclipse.jface.text.IDocument;
+> import org.eclipse.jface.text.rules.ICharacterScanner;
+> import org.eclipse.jface.text.rules.IPartitionTokenScanner;
+25,25c28,28
+< import org.eclipse.jface.text.rules.RuleBasedPartitionScanner;
+---
+> import org.eclipse.jface.text.rules.RuleBasedScanner;
+31,31c34,34
+< public class XpandPartitionScanner extends RuleBasedPartitionScanner {
+---
+> public class XpandPartitionScanner extends RuleBasedScanner implements IPartitionTokenScanner {
+43a47,47
+> 
+45a50,56
+> 		rules.add(new MultiLineRule(XpandTokens.LT + XpandTokens.REM, XpandTokens.ENDREM + '-' + XpandTokens.RT, comment) {
+> 			@Override
+> 			public IToken evaluate(ICharacterScanner scanner) {
+> 				return super.evaluate(scanner);
+> 			}
+> 		});
+> 
+47a59,100
+> 		setRules(rules.toArray(new IPredicateRule[rules.size()]));
+> 	}
+> 
+> 	public void setPartialRange(IDocument document, int offset, int length, String contentType, int partitionOffset) {
+> 		// copied from RuleBasedPartitionScanner,
+> 		// the idea seems to be to shift range to the start of the partition
+> 		if (partitionOffset > -1) {
+> 			int delta = offset - partitionOffset;
+> 			if (delta > 0) {
+> 				super.setRange(document, partitionOffset, length + delta);
+> 				//fOffset = offset;
+> 				return;
+> 			}
+> 		} else {
+> 			System.err.println("partitionOffset <= -1");
+> 		}
+> 		super.setRange(document, offset, length);
+> 	}
+> 
+> 	@Override
+> 	public IToken nextToken() {
+> 		// copy from superclass, added reseting fOffset to initial value prior to next rule 
+> 		// invocation to protect from badly written rules (e.g. PatternRule) thad do not unread
+> 		// characters if matched partially
+> 		fTokenOffset= fOffset;
+> 		fColumn= UNDEFINED;
+> 
+> 		if (fRules != null) {
+> 			for (int i= 0; i < fRules.length; i++) {
+> 				IToken token= (fRules[i].evaluate(this));
+> 				if (!token.isUndefined()) {
+> 					return token;
+> 				} else {
+> 					// reset offset for the next rule
+> 					fOffset = fTokenOffset;
+> 				}
+> 			}
+> 		}
+> 
+> 		if (read() == EOF)
+> 			return Token.EOF;
+> 		return fDefaultReturnToken;
+48,48d58
+<         setPredicateRules(rules.toArray(new IPredicateRule[rules.size()]));

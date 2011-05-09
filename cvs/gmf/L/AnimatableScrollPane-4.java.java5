@@ -1,0 +1,83 @@
+package org.eclipse.gmf.runtime.draw2d.ui.internal.figures;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.ScrollPane;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+public class AnimatableScrollPane extends ScrollPane {
+    private AnimationModel animationModel = null;
+    private boolean expanded = true;
+    private static final long delay = 150;
+
+    private void animate () {
+        animationModel = new AnimationModel (delay, expanded);
+        animationModel.animationStarted ();
+        while (! animationModel.isFinished ()) this.step ();
+
+        animationModel = null;
+    }
+
+    public void collapse () {
+        if (expanded == false) return;
+
+        expanded = false;
+        animate ();
+    }
+
+    public void expand () {
+        if (expanded == true) return;
+
+        expanded = true;
+        animate ();
+    }
+
+    public void setExpanded (boolean value) {
+        if (expanded == value) return;
+
+        expanded = value;
+        revalidate ();
+    }
+
+    public final boolean isExpanded () {
+        return expanded;
+    }
+
+    private void step () {
+        revalidate ();
+        getUpdateManager ().performUpdate ();
+    }
+
+    public boolean isOpaque () {
+        return false;
+    }
+
+    public Dimension getPreferredSize (int wHint, int hHint) {
+        if (animationModel == null) {
+            if (expanded) return super.getPreferredSize (wHint, hHint);
+
+            return getMinimumSize (wHint, hHint);
+        }
+        Dimension pref = super.getPreferredSize (wHint, hHint);
+        Dimension min = getMinimumSize (wHint, hHint);
+        float scale = animationModel.getProgress ();
+        return pref.equals (min) ? pref : pref.getScaled (scale).expand (min.getScaled (1.0f - scale));
+    }
+
+    public void validate () {
+        if (isValid ()) return;
+
+        setValid (true);
+        layout ();
+        for (int i = 0;
+        i < getChildren ().size (); i ++) ((IFigure) getChildren ().get (i)).validate ();
+
+        if (getHorizontalScrollBarVisibility () != NEVER) getHorizontalScrollBar ().validate ();
+
+        if (getVerticalScrollBarVisibility () != NEVER) getVerticalScrollBar ().validate ();
+
+    }
+
+}
+

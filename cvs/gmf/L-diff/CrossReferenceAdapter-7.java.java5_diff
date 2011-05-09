@@ -1,0 +1,97 @@
+45,46d44
+< import org.eclipse.emf.ecore.util.EcoreUtil;
+< 
+53d50
+<     private boolean isProcessingNotification = false;
+137,139c134,164
+<             case Notification.SET :
+<             case Notification.UNSET :
+<             case Notification.REMOVE :
+---
+>             case Notification.ADD :
+>                 {
+>                     EObject newValue = (EObject) notification.getNewValue ();
+>                     if (newValue != null) {
+>                         Resource resource;
+>                         if (notifier instanceof Resource) {
+>                             resource = (Resource) notifier;
+>                         } else {
+>                             resource = ((EObject) notification.getNotifier ()).eResource ();
+>                         }
+>                         add (resource, newValue);
+>                     }
+>                     break;
+>                 } case Notification.ADD_MANY :
+>                 {
+>                     Resource resource;
+>                     if (notifier instanceof Resource) {
+>                         resource = (Resource) notifier;
+>                     } else {
+>                         resource = ((EObject) notification.getNotifier ()).eResource ();
+>                     }
+>                     Collection newValues = (Collection) notification.getNewValue ();
+>                     for (Iterator iter = newValues.iterator ();
+>                     iter.hasNext ();) {
+>                         EObject next = (EObject) iter.next ();
+>                         if (next != null) {
+>                             add (resource, next);
+>                         }
+>                     }
+>                     break;
+>                 } case Notification.REMOVE :
+171a197,211
+>     protected void add (Resource resource, EObject eObject) {
+>         CrossReferenceAdapter adapter = getExistingCrossReferenceAdapter (eObject);
+>         if (adapter != null) {
+>             for (Iterator iter = adapter.getInverseReferencers (eObject, null, null).iterator ();
+>             iter.hasNext ();) {
+>                 registerReference (((EObject) iter.next ()).eResource (), resource);
+>             }
+>         }
+>         for (Iterator i = resolve () ? eObject.eContents ().iterator () : ((InternalEList) eObject.eContents ()).basicIterator ();
+>         i.hasNext ();) {
+>             EObject notifier = (EObject) i.next ();
+>             add (resource, notifier);
+>         }
+>     }
+> 
+173,176c213
+<         for (Iterator allContents = EcoreUtil.getAllContents (Collections.singleton (eObject));
+<         allContents.hasNext ();) {
+<             EObject next = (EObject) allContents.next ();
+<             EContentsEList.FeatureIterator crossReferences = (EContentsEList.FeatureIterator) next.eCrossReferences ().iterator ();
+---
+>         EContentsEList.FeatureIterator crossReferences = (EContentsEList.FeatureIterator) (resolve () ? eObject.eCrossReferences ().iterator () : ((InternalEList) eObject.eCrossReferences ()).basicIterator ());
+184,186d220
+<                         if (eReference.getEOpposite () != null) {
+<                             deregisterReference (referencedResource, resource);
+<                         }
+190c224,226
+<             for (Iterator iter = getNonNavigableInverseReferencers (next, null, null).iterator ();
+---
+>         CrossReferenceAdapter adapter = getExistingCrossReferenceAdapter (eObject);
+>         if (adapter != null) {
+>             for (Iterator iter = adapter.getInverseReferencers (eObject, null, null).iterator ();
+194a231,235
+>         for (Iterator i = resolve () ? eObject.eContents ().iterator () : ((InternalEList) eObject.eContents ()).basicIterator ();
+>         i.hasNext ();) {
+>             EObject notifier = (EObject) i.next ();
+>             remove (resource, notifier);
+>         }
+213,218d253
+<             if (isProcessingNotification) {
+<                 for (Iterator iter = getInverseReferencers (eObject, null, null).iterator ();
+<                 iter.hasNext ();) {
+<                     registerReference (((EObject) iter.next ()).eResource (), resource);
+<                 }
+<             }
+459,467d493
+<     public final void notifyChanged (Notification notification) {
+<         try {
+<             isProcessingNotification = true;
+<             super.notifyChanged (notification);
+<         } finally {
+<             isProcessingNotification = false;
+<         }
+<     }
+< 

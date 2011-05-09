@@ -1,0 +1,136 @@
+package org.eclipse.gmf.runtime.emf.type.core;
+
+import java.net.URL;
+
+import java.util.ArrayList;
+
+import java.util.Arrays;
+
+import java.util.List;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.emf.type.core.edithelper.IEditHelper;
+
+import org.eclipse.gmf.runtime.emf.type.core.edithelper.IEditHelperAdvice;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.IEditCommandRequest;
+
+public class SpecializationType extends ElementType implements ISpecializationType {
+    private final IContainerDescriptor containerDescriptor;
+    private IElementMatcher matcher;
+    private final IElementType [] specializedTypes;
+    private String [] specializedTypeIds;
+    private final IEditHelperAdvice editHelperAdvice;
+    private IMetamodelType metamodelType;
+
+    public SpecializationType (String id, URL iconURL, String displayName, IElementType [] elementTypes, IElementMatcher matcher, IContainerDescriptor descriptor, IEditHelperAdvice editHelperAdvice) {
+        super (id, iconURL, displayName);
+        this.containerDescriptor = descriptor;
+        this.matcher = matcher;
+        this.specializedTypes = elementTypes;
+        this.editHelperAdvice = editHelperAdvice;
+    }
+
+    public SpecializationType (ISpecializationTypeDescriptor descriptor) {
+        this (descriptor.getId (), descriptor.getIconURL (), descriptor.getName (), descriptor.getSpecializedTypes (), descriptor.getMatcher (), descriptor.getContainerDescriptor (), descriptor.getEditHelperAdvice ());
+    }
+
+    public IContainerDescriptor getEContainerDescriptor () {
+        return containerDescriptor;
+    }
+
+    public IElementMatcher getMatcher () {
+        return matcher;
+    }
+
+    public IElementType [] getSpecializedTypes () {
+        return specializedTypes;
+    }
+
+    public String [] getSpecializedTypeIds () {
+        if (specializedTypeIds == null && specializedTypes != null) {
+            specializedTypeIds = new String [specializedTypes.length];
+            for (int i = 0;
+            i < specializedTypes.length; i ++) {
+                specializedTypeIds [i] = specializedTypes [i].getId ();
+            }
+        }
+        return specializedTypeIds;
+    }
+
+    public boolean isSpecializationOf (IElementType type) {
+        String [] ids = getSpecializedTypeIds ();
+        for (int i = 0;
+        i < ids.length; i ++) {
+            if (type.getId ().equals (ids [i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public IEditHelperAdvice getEditHelperAdvice () {
+        return editHelperAdvice;
+    }
+
+    public EClass getEClass () {
+        return getMetamodelType ().getEClass ();
+    }
+
+    public IMetamodelType getMetamodelType () {
+        if (metamodelType == null) {
+            for (int i = 0;
+            i < getSpecializedTypes ().length; i ++) {
+                IElementType nextElementType = getSpecializedTypes () [i];
+                if (nextElementType instanceof IMetamodelType) {
+                    metamodelType = (IMetamodelType) nextElementType;
+                    break;
+                } else if (nextElementType instanceof ISpecializationType) {
+                    metamodelType = ((ISpecializationType) nextElementType).getMetamodelType ();
+                    break;
+                }
+
+            }
+        }
+        return metamodelType;
+    }
+
+    public IEditHelper getEditHelper () {
+        return getMetamodelType ().getEditHelper ();
+    }
+
+    public ICommand getEditCommand (IEditCommandRequest request) {
+        return getEditHelper ().getEditCommand (request);
+    }
+
+    public IElementType [] getAllSuperTypes () {
+        if (super.getAllSuperTypes () == null) {
+            List result = new ArrayList ();
+            IElementType [] metamodelSupertypes = getMetamodelType ().getAllSuperTypes ();
+            result.addAll (Arrays.asList (metamodelSupertypes));
+            result.add (getMetamodelType ());
+            result.addAll (getSpecializationSupertypes (this));
+            setAllSupertypes ((IElementType []) result.toArray (new IElementType [] {}));
+        }
+        return super.getAllSuperTypes ();
+    }
+
+    private List getSpecializationSupertypes (ISpecializationType specializationType) {
+        List result = new ArrayList ();
+        IElementType [] specializationSupertypes = specializationType.getSpecializedTypes ();
+        for (int i = 0;
+        i < specializationSupertypes.length; i ++) {
+            IElementType nextType = specializationSupertypes [i];
+            if (nextType instanceof ISpecializationType) {
+                result.addAll (getSpecializationSupertypes ((ISpecializationType) nextType));
+                result.add (nextType);
+            }
+        }
+        return result;
+    }
+
+}
+

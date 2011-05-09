@@ -1,0 +1,191 @@
+2c2
+<  * Copyright (c) 2002, 2007 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2008 IBM Corporation and others.
+24d23
+< import org.eclipse.draw2d.XYLayout;
+27d25
+< import org.eclipse.gef.GraphicalEditPart;
+37d34
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.GroupEditPart;
+40d36
+< import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.IEditableEditPart;
+85a82,85
+>         List operationSet = getOperationSet();
+>         if (operationSet.isEmpty()) {
+>             return null;
+>         }
+88,89c88
+<             List elements = getOperationSet();
+<             for (Iterator iter = elements.iterator(); iter.hasNext();) {
+---
+>             for (Iterator iter = operationSet.iterator(); iter.hasNext();) {
+95,98c94,97
+<         } else if (getOperationSet().size() >= 2) {
+<             EditPart parent = getSelectionParent(getOperationSet());
+<             if (parent != null) {
+<                 Command cmd = parent.getCommand(getTargetRequest());
+---
+>         } else {
+>             EditPart targetEP = getTargetEditPartForArrangeSelection(operationSet);
+>             if (targetEP != null) {
+>                 Command cmd = targetEP.getCommand(getTargetRequest());
+106,113c105
+<     /**
+<      * Action is enabled if arrange all. If arrange selection, action is enabled
+<      * if the operation set's parent has XYLayout and there is atleast 2
+<      * siblings to arrange
+<      * 
+<      * @see org.eclipse.gef.ui.actions.EditorPartAction#calculateEnabled()
+<      */
+<     protected boolean calculateEnabled() {
+---
+>     private EditPart getTargetEditPartForArrangeSelection(List editparts) {
+115c107
+<         List operationSet = getOperationSet();
+---
+>         if (editparts.size() == 1) {
+117,120c109,113
+<         //arrange all, always enable
+<         if( isArrangeAll() && !operationSet.isEmpty()){
+<             return true;
+<         }
+---
+>             // If there is only one editpart selected, then the Arrange
+>             // Selected request gets sent to this editpart's target editpart to
+>             // allow clients to do as they wish.
+>             return ((EditPart) editparts.get(0))
+>                 .getTargetEditPart(getTargetRequest());
+122c115
+<         EditPart parentEP = getSelectionParent(operationSet);
+---
+>         } else {
+124,129c117,121
+<         // bugzilla 156733: disable this action if the parent or selected edit parts are not editable
+<         if ((parentEP instanceof IEditableEditPart)
+<                 && !((IEditableEditPart) parentEP)
+<                         .isEditModeEnabled()) {
+<             return false;
+<         }
+---
+>             // If there is more than one editpart selected, then the Arrange
+>             // Selected request gets sent to the common parent.
+>             EditPart parentEP = getSelectionParent(editparts);
+>             if (parentEP == null)
+>                 return null;
+131,137c123,126
+<         for (Iterator i = operationSet.iterator(); i.hasNext();) {
+<             Object next = i.next();
+<             if ((next instanceof IEditableEditPart)
+<                     && !((IEditableEditPart) next)
+<                             .isEditModeEnabled()) {
+<                 return false;
+<             }
+---
+>             for (int i = 1; i < editparts.size(); i++) {
+>                 EditPart part = (EditPart) editparts.get(i);
+>                 if (part instanceof ConnectionEditPart) {
+>                     continue;
+139,145c128,131
+<         
+<         //arrange selection
+<         if (operationSet.size() >= 2) {
+<             if (parentEP instanceof GraphicalEditPart) {
+<                 GraphicalEditPart parent = (GraphicalEditPart)parentEP;
+<                 if ((parent != null) &&(parent.getContentPane().getLayoutManager() instanceof XYLayout))
+<                     return true;
+---
+>                 // if there is no common parent, then Arrange Selected isn't
+>                 // supported.
+>                 if (part.getParent() != parentEP)
+>                     return null;
+147,149c133
+<         } else if (operationSet.size() == 1
+<             && operationSet.get(0) instanceof GroupEditPart) {
+<             return true;
+---
+>             return parentEP;
+151d134
+<         return false;
+162a146
+> 
+164c148
+<                 return getElementsToArrange(selection);
+---
+>                 return createOperationSetForArrangeAll(selection);
+166,169c150,151
+<             if( getDiagramEditPart() != null )              
+<                 return createOperationSet(getDiagramEditPart().getChildren());
+< 
+<             return Collections.EMPTY_LIST;
+---
+>             if (getDiagramEditPart() != null) {
+>                 return getDiagramEditPart().getChildren();
+170a153
+>             return Collections.EMPTY_LIST;
+172,173c155,159
+<         if (selection.isEmpty() ||
+<                 !(selection.get(0) instanceof IGraphicalEditPart))
+---
+>         } else {
+> 
+>             // this is the case of Arrange Selection
+>             if (selection.isEmpty()
+>                 || !(selection.get(0) instanceof IGraphicalEditPart))
+177c163,164
+<         return createOperationSet(selection);
+---
+>             return selection;
+>         }
+181,182c168,169
+<      * getSelectionParent
+<      * Utility to return the logical parent of the selection list
+---
+>      * getSelectionParent Utility to return the logical parent of the selection
+>      * list
+184,185c171,174
+<      * @param editparts List to parse for a common parent.
+<      * @return EditPart that is the parent or null if a common parent doesn't exist.
+---
+>      * @param editparts
+>      *            List to parse for a common parent.
+>      * @return EditPart that is the parent or null if a common parent doesn't
+>      *         exist.
+199,225d187
+<     private List createOperationSet(List editparts) {
+<         if (editparts == null || editparts.isEmpty())
+<             return Collections.EMPTY_LIST;
+<         
+<         EditPart parent;
+<         if (editparts.size() == 1 && editparts.get(0) instanceof GroupEditPart) {
+<              GroupEditPart groupEP = (GroupEditPart) editparts.get(0);
+<             parent = groupEP;
+<             editparts = groupEP.getChildren();
+<         } else {
+<             parent = getSelectionParent(editparts);
+<         }
+<         
+<         if (parent == null)
+<             return Collections.EMPTY_LIST;
+<         
+<         for (int i = 1; i < editparts.size(); i++) {
+<             EditPart part = (EditPart) editparts.get(i);
+<             if (part instanceof ConnectionEditPart){
+<                 continue;
+<             }
+<             if (part.getParent() != parent)
+<                 return Collections.EMPTY_LIST;
+<         }
+<         return editparts;
+<     }
+< 
+347c309
+<     private List getElementsToArrange(List selection) {
+---
+>     private List createOperationSetForArrangeAll(List selection) {
+370a333,337
+>     public String getLabel() {
+>         return isArrangeAll() ? DiagramUIActionsMessages.ArrangeAction_toolbar_ArrangeAll_ActionLabelText
+>             : DiagramUIActionsMessages.ArrangeAction_toolbar_ArrangeSelection_ActionLabelText;
+>     }
+> 

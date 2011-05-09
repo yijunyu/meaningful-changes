@@ -1,0 +1,138 @@
+1c1
+< package org.eclipse.gmf.runtime.lite.commands;
+---
+> package org.eclipse.gmf.runtime.diagram.ui.commands;
+3c3
+< import org.eclipse.draw2d.geometry.Rectangle;
+---
+> import org.eclipse.core.runtime.IAdaptable;
+5c5
+< import org.eclipse.emf.common.command.AbstractCommand;
+---
+> import org.eclipse.core.runtime.IProgressMonitor;
+7c7
+< import org.eclipse.emf.transaction.TransactionalEditingDomain;
+---
+> import org.eclipse.draw2d.geometry.Dimension;
+9c9
+< import org.eclipse.emf.transaction.util.TransactionUtil;
+---
+> import org.eclipse.draw2d.geometry.Point;
+11c11
+< import org.eclipse.gmf.runtime.notation.Bounds;
+---
+> import org.eclipse.draw2d.geometry.Rectangle;
+13c13
+< import org.eclipse.gmf.runtime.notation.Node;
+---
+> import org.eclipse.jface.util.Assert;
+15c15
+< import org.eclipse.gmf.runtime.notation.NotationFactory;
+---
+> import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+17,20c17
+< public class SetBoundsCommand extends AbstractCommand {
+<     private final Node myNode;
+<     private final Rectangle myBounds;
+<     private Rectangle myOldBounds;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.properties.Properties;
+22,26c19
+<     public SetBoundsCommand (Node node, Rectangle bounds) {
+<         super ("Set node position/size");
+<         myNode = node;
+<         myBounds = bounds;
+<     }
+---
+> import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+28,30c21
+<     public boolean canUndo () {
+<         return true;
+<     }
+---
+> import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractModelCommand;
+32,42c23
+<     protected boolean prepare () {
+<         TransactionalEditingDomain domain = TransactionUtil.getEditingDomain (myNode);
+<         if (domain != null && domain.isReadOnly (myNode.eResource ())) {
+<             return false;
+<         }
+<         if (myNode.getLayoutConstraint () == null) {
+<             myOldBounds = null;
+<             return true;
+<         } else if (myNode.getLayoutConstraint () instanceof Bounds == false) {
+<             return false;
+<         }
+---
+> import org.eclipse.gmf.runtime.notation.View;
+44,47c25,28
+<         Bounds bounds = (Bounds) myNode.getLayoutConstraint ();
+<         myOldBounds = new Rectangle (bounds.getX (), bounds.getY (), bounds.getWidth (), bounds.getHeight ());
+<         return true;
+<     }
+---
+> public class SetBoundsCommand extends AbstractModelCommand {
+>     private IAdaptable adapter;
+>     private Point location;
+>     private Dimension size;
+49,50c30,36
+<     public void redo () {
+<         execute ();
+---
+>     public SetBoundsCommand (String label, IAdaptable adapter, Rectangle bounds) {
+>         super (label, adapter);
+>         Assert.isNotNull (adapter, "view cannot be null");
+>         Assert.isNotNull (bounds, "bounds cannot be null");
+>         this.adapter = adapter;
+>         this.location = bounds.getLocation ();
+>         this.size = bounds.getSize ();
+53,54c39,44
+<     public void execute () {
+<         execute (myBounds);
+---
+>     public SetBoundsCommand (String label, IAdaptable adapter, Point location) {
+>         super (label, adapter);
+>         Assert.isNotNull (adapter, "view cannot be null");
+>         Assert.isNotNull (location, "location cannot be null");
+>         this.adapter = adapter;
+>         this.location = location;
+57,59c47,52
+<     @Override
+<     public void undo () {
+<         execute (myOldBounds);
+---
+>     public SetBoundsCommand (String label, IAdaptable adapter, Dimension size) {
+>         super (label, adapter);
+>         Assert.isNotNull (adapter, "view cannot be null");
+>         Assert.isNotNull (size, "size cannot be null");
+>         this.adapter = adapter;
+>         this.size = size;
+62,65c55,61
+<     private void execute (Rectangle rect) {
+<         if (rect == null) {
+<             myNode.setLayoutConstraint (null);
+<             return;
+---
+>     protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+>         if (adapter == null) return newErrorCommandResult ("SetBoundsCommand: viewAdapter does not adapt to IView.class");
+> 
+>         View view = (View) adapter.getAdapter (View.class);
+>         if (location != null) {
+>             ViewUtil.setPropertyValue (view, Properties.ID_POSITIONX, new Integer (location.x));
+>             ViewUtil.setPropertyValue (view, Properties.ID_POSITIONY, new Integer (location.y));
+67,70c63,65
+<         Bounds bounds = (Bounds) myNode.getLayoutConstraint ();
+<         if (bounds == null) {
+<             bounds = NotationFactory.eINSTANCE.createBounds ();
+<             myNode.setLayoutConstraint (bounds);
+---
+>         if (size != null) {
+>             ViewUtil.setPropertyValue (view, Properties.ID_EXTENTX, new Integer (size.width));
+>             ViewUtil.setPropertyValue (view, Properties.ID_EXTENTY, new Integer (size.height));
+72,75c67
+<         bounds.setX (rect.x);
+<         bounds.setY (rect.y);
+<         bounds.setWidth (rect.width);
+<         bounds.setHeight (rect.height);
+---
+>         return newOKCommandResult ();

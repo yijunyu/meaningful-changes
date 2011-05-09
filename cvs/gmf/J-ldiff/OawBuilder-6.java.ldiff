@@ -1,0 +1,72 @@
+30a31,31
+> import org.eclipse.core.runtime.SubProgressMonitor;
+44,44c45,45
+< 	private static boolean firstBuild = true; // XXX odd
+---
+> 	private boolean firstBuild = true; // XXX odd
+45a47,47
+> 	private WorkspaceModelRegistry modelRegistry;
+54a164,165
+> 	private static boolean isXtend(final IFile resource) {
+> 		return XtendResource.FILE_EXTENSION.equals(resource.getFileExtension());
+55,56d163
+< 	private static boolean isFileOfInterest(IFile file) {
+< 		return XpandResource.TEMPLATE_EXTENSION.equals(file.getFileExtension()) || XtendResource.FILE_EXTENSION.equals(file.getFileExtension());
+57,57c166,166
+< 	}
+---
+> 	}
+58,58c167,167
+< 
+---
+> 
+58a168,175
+> 	private static boolean isXpand(final IFile resource) {
+> 		return XpandResource.TEMPLATE_EXTENSION.equals(resource.getFileExtension());
+> 	}
+> 
+> 	private static boolean isFileOfInterest(IFile file) {
+> 		return isXpand(file) || isXtend(file);
+> 	}
+> 
+61,61d58
+< 		// TODO Auto-generated method stub
+63a61,64
+> 		Activator.registerResourceManager(getProject(), resourceManager);
+> 		firstBuild = true;
+> 		modelRegistry = new WorkspaceModelRegistry();
+> 		Activator.registerModelSource(modelRegistry);
+70,70d70
+< 				System.err.println("First build, kind:" + kind + " and is FULLBUILD:" + (kind == FULL_BUILD));
+109a110,110
+> 			if (isXpand(resource)) {
+110,110d109
+< 			if (XpandResource.TEMPLATE_EXTENSION.equals(resource.getFileExtension())) {
+114a115,115
+> 			} else if (isXtend(resource)) {
+115,115d114
+< 			} else if (XtendResource.FILE_EXTENSION.equals(resource.getFileExtension())) {
+131,131d130
+< 
+137a137,137
+> 		monitor.beginTask(null, 2);
+138,138c138,138
+< 		getProject().accept(new XpandResourceVisitor(monitor));
+---
+> 		getProject().accept(new XpandResourceVisitor(new SubProgressMonitor(monitor, 1)));
+138a139,140
+> 		modelRegistry.build(getProject(), new SubProgressMonitor(monitor, 1));
+> 		monitor.done();
+141a144,144
+> 		monitor.beginTask(null, 2);
+142a146,147
+> 		modelRegistry.build(getProject(), delta, new SubProgressMonitor(monitor, 1));
+> 		monitor.done();
+142,142c145,145
+< 		delta.accept(new XpandResourceVisitor(monitor));
+---
+> 		delta.accept(new XpandResourceVisitor(new SubProgressMonitor(monitor, 1)));
+160,160c177,177
+< 		private IProgressMonitor monitor;
+---
+> 		private final IProgressMonitor monitor;

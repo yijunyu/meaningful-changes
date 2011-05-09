@@ -1,0 +1,42 @@
+8a9,10
+> import org.eclipse.emf.ecore.EClass;
+> 
+22a25,26
+> import org.eclipse.gmf.gmfgraph.FigureAccessor;
+> 
+32a37,38
+> import org.eclipse.gmf.gmfgraph.RealFigure;
+> 
+117,119c123
+<             if (next.getAccessor () != null) {
+<                 ChildAccess labelAccess = next.getAccessor ();
+<             } else {
+---
+>             if (next.getAccessor () == null) {
+134c138,148
+<             myElementCopier.registerSubstitution (fd, createCustomFigure (fd, fqn));
+---
+>             final FigureDescriptor newFD = createCustomFigure (fd, fqn);
+>             myElementCopier.registerSubstitution (fd, newFD);
+>             for (ChildAccess ca : fd.getAccessors ()) {
+>                 FigureAccessor newFA = GMFGraphFactory.eINSTANCE.createFigureAccessor ();
+>                 newFA.setAccessor (ca.getAccessor ());
+>                 newFA.setTypedFigure (createReferencedFigure (ca));
+>                 ((CustomFigure) newFD.getActualFigure ()).getCustomChildren ().add (newFA);
+>                 final ChildAccess newCA = myElementCopier.xcopy (ca);
+>                 newCA.setFigure (newFA.getTypedFigure ());
+>                 newFD.getAccessors ().add (newCA);
+>             }
+167a182,193
+>     private static RealFigure createReferencedFigure (ChildAccess ca) {
+>         if (false == ca.getFigure () instanceof RealFigure) {
+>             return null;
+>         }
+>         EClass eType = ca.getFigure ().eClass ();
+>         RealFigure copy = (RealFigure) eType.getEPackage ().getEFactoryInstance ().create (eType);
+>         if (copy instanceof CustomFigure) {
+>             ((CustomFigure) copy).setQualifiedClassName (((CustomFigure) ca.getFigure ()).getQualifiedClassName ());
+>         }
+>         return copy;
+>     }
+> 

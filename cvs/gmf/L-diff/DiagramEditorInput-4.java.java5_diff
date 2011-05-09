@@ -1,0 +1,176 @@
+1c1
+< package org.eclipse.gmf.runtime.lite.parts;
+---
+> package org.eclipse.gmf.runtime.diagram.ui.parts;
+3c3
+< import org.eclipse.core.runtime.PlatformObject;
+---
+> import java.lang.ref.WeakReference;
+5c5
+< import org.eclipse.emf.common.util.URI;
+---
+> import org.eclipse.core.resources.IFile;
+7c7
+< import org.eclipse.emf.ecore.util.EcoreUtil;
+---
+> import org.eclipse.core.resources.ResourcesPlugin;
+9c9,11
+< import org.eclipse.gmf.runtime.notation.Diagram;
+---
+> import org.eclipse.core.runtime.Path;
+> 
+> import org.eclipse.emf.ecore.resource.Resource;
+13c15
+< import org.eclipse.ui.IEditorInput;
+---
+> import org.eclipse.jface.util.Assert;
+17,18c19,36
+< public class DiagramEditorInput extends PlatformObject implements IEditorInput {
+<     private final Diagram myDiagram;
+---
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+> import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.DiagramUIDebugOptions;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.DiagramUIPlugin;
+> 
+> import org.eclipse.gmf.runtime.emf.core.edit.MEditingDomain;
+> 
+> import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+> 
+> import org.eclipse.gmf.runtime.emf.core.util.EObjectUtil;
+> 
+> import org.eclipse.gmf.runtime.notation.Diagram;
+> 
+> public class DiagramEditorInput implements IDiagramEditorInput {
+>     private WeakReference diagram;
+21,22c39,40
+<         assert diagram != null;
+<         myDiagram = diagram;
+---
+>         Assert.isNotNull (diagram);
+>         setDiagram (diagram);
+26c44
+<         return myDiagram;
+---
+>         return (Diagram) diagram.get ();
+30c48
+<         return myDiagram.eResource () != null;
+---
+>         return false;
+33,37c51,52
+<     @Override
+<     public boolean equals (Object obj) {
+<         if (obj instanceof DiagramEditorInput) {
+<             DiagramEditorInput that = (DiagramEditorInput) obj;
+<             return this.getDiagram ().equals (that.getDiagram ());
+---
+>     public ImageDescriptor getImageDescriptor () {
+>         return null;
+39c54,62
+<         return false;
+---
+> 
+>     public String getQName () {
+>         final String [] name = new String [1];
+>         try {
+>             MEditingDomainGetter.getMEditingDomain (getDiagram ()).runAsRead (new MRunnable () {
+> 
+>                 public Object run () {
+>                     name [0] = EObjectUtil.getQName (getDiagram (), false);
+>                     return null;
+42,44d64
+<     @Override
+<     public int hashCode () {
+<         return getDiagram ().hashCode ();
+47,48c67,72
+<     public ImageDescriptor getImageDescriptor () {
+<         return null;
+---
+>             );
+>         } catch (Exception e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), e.getMessage (), e);
+>             name [0] = null;
+>         }
+>         return name [0];
+52c76,92
+<         return myDiagram.getName ();
+---
+>         final String [] name = new String [1];
+>         try {
+>             MEditingDomainGetter.getMEditingDomain (getDiagram ()).runAsRead (new MRunnable () {
+> 
+>                 public Object run () {
+>                     name [0] = EObjectUtil.getName (getDiagram ());
+>                     return null;
+>                 }
+> 
+>             }
+> 
+>             );
+>         } catch (Exception e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), e.getMessage (), e);
+>             name [0] = null;
+>         }
+>         return name [0];
+60c100
+<         return getName ();
+---
+>         return getQName ();
+64,65c104,150
+<         if (adapter == URI.class) {
+<             return EcoreUtil.getURI (myDiagram);
+---
+>         if (adapter == Diagram.class) return getDiagram ();
+> 
+>         if (adapter == IFile.class) return getStorageUnitFile ();
+> 
+>         return null;
+>     }
+> 
+>     public boolean equals (Object obj) {
+>         if (this == obj) return true;
+> 
+>         if (! (obj instanceof DiagramEditorInput)) return false;
+> 
+>         DiagramEditorInput other = (DiagramEditorInput) obj;
+>         if (getDiagram () != null) return getDiagram ().equals (other.getDiagram ());
+>         else return getDiagram () == other.getDiagram ();
+> 
+>     }
+> 
+>     public int hashCode () {
+>         if (getDiagram () != null) return getDiagram ().hashCode ();
+>         else return super.hashCode ();
+> 
+>     }
+> 
+>     protected void setDiagram (Diagram diagram) {
+>         this.diagram = new WeakReference (diagram);
+>     }
+> 
+>     private IFile getStorageUnitFile () {
+>         final IFile [] file = new IFile [1];
+>         try {
+>             final MEditingDomain editingDomain = MEditingDomainGetter.getMEditingDomain (getDiagram ());
+>             editingDomain.runAsRead (new MRunnable () {
+> 
+>                 public Object run () {
+>                     Resource model = getDiagram ().eResource ();
+>                     String path = editingDomain.getResourceFileName (model);
+>                     file [0] = model != null && path != null && path.length () != 0 ? ResourcesPlugin.getWorkspace ().getRoot ().getFileForLocation (new Path (path)) : null;
+>                     return null;
+>                 }
+> 
+>             }
+> 
+>             );
+>         } catch (Exception e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), e.getMessage (), e);
+>             file [0] = null;
+67c152
+<         return super.getAdapter (adapter);
+---
+>         return file [0];

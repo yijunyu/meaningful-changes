@@ -1,0 +1,76 @@
+2c2
+<  * Copyright (c) 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2005, 2006 IBM Corporation and others.
+14a15
+> import java.util.List;
+25a27,28
+> import org.eclipse.emf.transaction.impl.InternalTransaction;
+> import org.eclipse.emf.transaction.impl.InternalTransactionalEditingDomain;
+51a55,60
+> 	private static final Map options = new HashMap();	
+>     static {
+>         options.put(Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+>         options.put(Transaction.OPTION_NO_NOTIFICATIONS, Boolean.TRUE);
+>         options.put(Transaction.OPTION_NO_TRIGGERS, Boolean.TRUE);
+>     }
+70,71c79,87
+< 		node.getStyles().addAll(createStyles(node));
+< 		node.setLayoutConstraint(createLayoutConstraint());
+---
+> 		List styles = createStyles(node);
+>         if (styles.size() > 0) {
+>             node.getStyles().addAll(styles);
+>         }
+> 		
+>         LayoutConstraint layoutConstraint = createLayoutConstraint();
+>         if (layoutConstraint != null) {
+>             node.setLayoutConstraint(layoutConstraint);
+>         }
+87,91d102
+< 		Map options = new HashMap();
+< 		options.put(Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+< 		options.put(Transaction.OPTION_NO_NOTIFICATIONS, Boolean.TRUE);
+< 		options.put(Transaction.OPTION_NO_TRIGGERS, Boolean.TRUE);
+< 
+95a107,114
+>             // try to reuse the transaction
+>             if (isUnProtectedSilentTransactionInProgress(domain)){
+>                 // decorate view had to run as a silent operation other wise
+>                 // it will generate too many events
+>                 decorateView(containerView, node, semanticAdapter,
+>                     semanticHint, index, true);
+>                 
+>             }else{
+102d120
+<     
+122a141
+>         }
+176a196,222
+>      /**
+>      * Checks if the current active transaction is a unprotected amd silent
+>      * 
+>      * @param domain , the domain to use during the check
+>      * @return <code>true</code> if the current active transaction is unprotected and silent 
+>      */
+>     protected static boolean isUnProtectedSilentTransactionInProgress(TransactionalEditingDomain domain) {
+>         if (domain instanceof InternalTransactionalEditingDomain){
+>             InternalTransactionalEditingDomain internalEditingDomain = 
+>                 (InternalTransactionalEditingDomain)domain;
+>             InternalTransaction transaction = internalEditingDomain.getActiveTransaction();
+>             if (transaction!=null && !transaction.isReadOnly()) {
+>                 Object unprotectedMode = transaction.getOptions().get(Transaction.OPTION_UNPROTECTED); 
+>                 if (unprotectedMode != null && unprotectedMode == Boolean.TRUE) {
+>                     // check for silent
+>                     Object noNotificationMode = transaction.getOptions().get(Transaction.OPTION_NO_NOTIFICATIONS);
+>                     Object noTriggersMode = transaction.getOptions().get(Transaction.OPTION_NO_TRIGGERS);
+>                     if (unprotectedMode != null && noNotificationMode == Boolean.TRUE &&
+>                         noTriggersMode !=null &&  noTriggersMode == Boolean.TRUE           ) {
+>                         return true;
+>                     }
+>                 }
+>             }
+>         }
+>         return false;
+>     }
+> 	

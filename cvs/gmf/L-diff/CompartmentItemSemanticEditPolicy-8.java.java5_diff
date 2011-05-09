@@ -1,0 +1,118 @@
+3c3
+< import org.eclipse.emf.ecore.EAnnotation;
+---
+> import java.util.Iterator;
+5c5
+< import org.eclipse.emf.ecore.EObject;
+---
+> import org.eclipse.emf.ecore.EAnnotation;
+11c11,13
+< import org.eclipse.gef.commands.UnexecutableCommand;
+---
+> import org.eclipse.gmf.graphdef.editor.edit.commands.CompartmentAccessorCreateCommand;
+> 
+> import org.eclipse.gmf.graphdef.editor.edit.commands.CompartmentAccessorReorientCommand;
+13c15
+< import org.eclipse.gmf.gmfgraph.DiagramElement;
+---
+> import org.eclipse.gmf.graphdef.editor.edit.commands.DiagramElementFigureCreateCommand;
+16a19,22
+> import org.eclipse.gmf.graphdef.editor.edit.parts.CompartmentAccessorEditPart;
+> 
+> import org.eclipse.gmf.graphdef.editor.edit.parts.CompartmentVisualFacetsEditPart;
+> 
+18a25,26
+> import org.eclipse.gmf.graphdef.editor.part.GMFGraphVisualIDRegistry;
+> 
+28a37,38
+> import org.eclipse.gmf.runtime.notation.Node;
+> 
+34,35c44,53
+<         CompoundCommand cc = getDestroyEdgesCommand (req.isConfirmationRequired ());
+<         cc.add (getMSLWrapper (new DestroyElementCommand (req) {
+---
+>         CompoundCommand cc = getDestroyEdgesCommand ();
+>         addDestroyChildNodesCommand (cc);
+>         addDestroyShortcutsCommand (cc);
+>         View view = (View) getHost ().getModel ();
+>         if (view.getEAnnotation ("Shortcut") != null) {
+>             req.setElementToDestroy (view);
+>         }
+>         cc.add (getGEFWrapper (new DestroyElementCommand (req)));
+>         return cc.unwrap ();
+>     }
+37c55
+<             protected EObject getElementToDestroy () {
+---
+>     protected void addDestroyChildNodesCommand (CompoundCommand cmd) {
+41c59
+<                     return view;
+---
+>             return;
+43c61,72
+<                 return super.getElementToDestroy ();
+---
+>         for (Iterator it = view.getChildren ().iterator ();
+>         it.hasNext ();) {
+>             Node node = (Node) it.next ();
+>             switch (GMFGraphVisualIDRegistry.getVisualID (node)) {
+>                 case CompartmentVisualFacetsEditPart.VISUAL_ID :
+>                     for (Iterator cit = node.getChildren ().iterator ();
+>                     cit.hasNext ();) {
+>                         Node cnode = (Node) cit.next ();
+>                         switch (GMFGraphVisualIDRegistry.getVisualID (cnode)) {
+>                         }
+>                     }
+>                     break;
+45d73
+< 
+47,49d74
+< 
+<         ));
+<         return cc.unwrap ();
+53,56c78,79
+<         if (GMFGraphElementTypes.DiagramElementFigure_4001 == req.getElementType ()) {
+<             return req.getTarget () == null ? getCreateStartOutgoingDiagramElementFigure_4001Command (req) : null;
+<         }
+<         return super.getCreateRelationshipCommand (req);
+---
+>         Command command = req.getTarget () == null ? getStartCreateRelationshipCommand (req) : getCompleteCreateRelationshipCommand (req);
+>         return command != null ? command : super.getCreateRelationshipCommand (req);
+59,62c82,84
+<     protected Command getCreateStartOutgoingDiagramElementFigure_4001Command (CreateRelationshipRequest req) {
+<         EObject sourceEObject = req.getSource ();
+<         if (false == sourceEObject instanceof DiagramElement) {
+<             return UnexecutableCommand.INSTANCE;
+---
+>     protected Command getStartCreateRelationshipCommand (CreateRelationshipRequest req) {
+>         if (GMFGraphElementTypes.CompartmentAccessor_4003 == req.getElementType ()) {
+>             return getGEFWrapper (new CompartmentAccessorCreateCommand (req, req.getSource (), req.getTarget ()));
+64,66c86,87
+<         DiagramElement source = (DiagramElement) sourceEObject;
+<         if (! GMFGraphBaseItemSemanticEditPolicy.LinkConstraints.canCreateDiagramElementFigure_4001 (source, null)) {
+<             return UnexecutableCommand.INSTANCE;
+---
+>         if (GMFGraphElementTypes.DiagramElementFigure_4005 == req.getElementType ()) {
+>             return getGEFWrapper (new DiagramElementFigureCreateCommand (req, req.getSource (), req.getTarget ()));
+68c89
+<         return new Command () {
+---
+>         return null;
+71c92,99
+<         ;
+---
+>     protected Command getCompleteCreateRelationshipCommand (CreateRelationshipRequest req) {
+>         if (GMFGraphElementTypes.CompartmentAccessor_4003 == req.getElementType ()) {
+>             return null;
+>         }
+>         if (GMFGraphElementTypes.DiagramElementFigure_4005 == req.getElementType ()) {
+>             return null;
+>         }
+>         return null;
+75a104,105
+>             case CompartmentAccessorEditPart.VISUAL_ID :
+>                 return getGEFWrapper (new CompartmentAccessorReorientCommand (req));
+77c107
+<                 return getMSLWrapper (new DiagramElementFigureReorientCommand (req));
+---
+>                 return getGEFWrapper (new DiagramElementFigureReorientCommand (req));

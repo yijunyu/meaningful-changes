@@ -1,0 +1,162 @@
+package org.eclipse.gmf.runtime.diagram.ui.requests;
+
+import java.util.Collections;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gef.requests.CreateRequest;
+
+import org.eclipse.gef.requests.CreationFactory;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class CreateViewRequest extends CreateRequest {
+    public static class ViewDescriptor implements IAdaptable {
+        private final IAdaptable elementAdapter;
+        private final Class viewKind;
+        private final String semanticHint;
+        private final int index;
+        private View view;
+        private boolean _persisted;
+        private PreferencesHint preferencesHint;
+
+        public ViewDescriptor (IAdaptable elementAdapter, PreferencesHint preferencesHint) {
+            this (elementAdapter, Node.class, preferencesHint);
+        }
+
+        public ViewDescriptor (IAdaptable elementAdapter, Class viewkind, PreferencesHint preferencesHint) {
+            this (elementAdapter, viewkind, "", preferencesHint);
+        }
+
+        public ViewDescriptor (IAdaptable elementAdapter, Class viewkind, boolean persisted, PreferencesHint preferencesHint) {
+            this (elementAdapter, viewkind, "", persisted, preferencesHint);
+        }
+
+        public ViewDescriptor (IAdaptable elementAdapter, Class viewkind, String semanticHint, PreferencesHint preferencesHint) {
+            this (elementAdapter, viewkind, semanticHint, ViewUtil.APPEND, preferencesHint);
+        }
+
+        public ViewDescriptor (IAdaptable elementAdapter, Class viewkind, String semanticHint, boolean persisted, PreferencesHint preferencesHint) {
+            this (elementAdapter, viewkind, semanticHint, ViewUtil.APPEND, persisted, preferencesHint);
+        }
+
+        public ViewDescriptor (IAdaptable elementAdapter, Class viewKind, String factoryHint, int index, PreferencesHint preferencesHint) {
+            this (elementAdapter, viewKind, factoryHint, index, true, preferencesHint);
+        }
+
+        public ViewDescriptor (IAdaptable elementAdapter, Class viewKind, String semanticHint, int index, boolean persisted, PreferencesHint preferencesHint) {
+            Assert.isNotNull (viewKind);
+            Assert.isTrue (index >= ViewUtil.APPEND);
+            this.elementAdapter = elementAdapter;
+            this.viewKind = viewKind;
+            this.semanticHint = semanticHint;
+            this.index = index;
+            _persisted = persisted;
+            this.preferencesHint = preferencesHint;
+        }
+
+        public Object getAdapter (Class adapter) {
+            if (adapter.isInstance (view)) return view;
+
+            return null;
+        }
+
+        public void setView (View view) {
+            this.view = view;
+        }
+
+        public void setPersisted (boolean persisted) {
+            _persisted = persisted;
+        }
+
+        public IAdaptable getElementAdapter () {
+            return elementAdapter;
+        }
+
+        public Class getViewKind () {
+            return viewKind;
+        }
+
+        public String getSemanticHint () {
+            return semanticHint;
+        }
+
+        public int getIndex () {
+            return index;
+        }
+
+        public final boolean isPersisted () {
+            return _persisted;
+        }
+
+        public PreferencesHint getPreferencesHint () {
+            return preferencesHint;
+        }
+
+    }
+
+    private List viewDescriptors;
+
+    public CreateViewRequest (EObject element, PreferencesHint preferencesHint) {
+        this (new ViewDescriptor (new EObjectAdapter (element), preferencesHint));
+    }
+
+    public CreateViewRequest (ViewDescriptor viewDescriptor) {
+        this (Collections.singletonList (viewDescriptor));
+    }
+
+    public CreateViewRequest (List viewDescriptors) {
+        Assert.isNotNull (viewDescriptors);
+        this.viewDescriptors = viewDescriptors;
+        setLocation (new Point (- 1, - 1));
+    }
+
+    public CreateViewRequest (Object type, ViewDescriptor viewDescriptor) {
+        this (type, Collections.singletonList (viewDescriptor));
+    }
+
+    public CreateViewRequest (Object type, List viewDescriptors) {
+        super (type);
+        Assert.isNotNull (viewDescriptors);
+        this.viewDescriptors = viewDescriptors;
+        setLocation (new Point (- 1, - 1));
+    }
+
+    public List getViewDescriptors () {
+        return viewDescriptors;
+    }
+
+    public Object getNewObject () {
+        return getViewDescriptors ();
+    }
+
+    public Object getNewObjectType () {
+        return List.class;
+    }
+
+    protected CreationFactory getFactory () {
+        throw new UnsupportedOperationException ("The Factory mechanism is not used");
+    }
+
+    public void setFactory (CreationFactory factory) {
+        throw new UnsupportedOperationException ("The Factory mechanism is not used");
+    }
+
+}
+

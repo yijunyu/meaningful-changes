@@ -1,0 +1,256 @@
+6a7,8
+> import java.net.URL;
+> 
+15,16d16
+< import java.util.LinkedList;
+< 
+23,24d22
+< import org.eclipse.core.resources.IProject;
+< 
+27,28d24
+< import org.eclipse.core.resources.ResourcesPlugin;
+< 
+35,40d30
+< import org.eclipse.core.runtime.IStatus;
+< 
+< import org.eclipse.core.runtime.MultiStatus;
+< 
+< import org.eclipse.core.runtime.NullProgressMonitor;
+< 
+43,44d32
+< import org.eclipse.core.runtime.Status;
+< 
+47,48d34
+< import org.eclipse.emf.codegen.jet.JETEmitter;
+< 
+51,54d36
+< import org.eclipse.emf.codegen.jmerge.JControlModel;
+< 
+< import org.eclipse.emf.codegen.jmerge.JMerger;
+< 
+87,107c69
+< import org.eclipse.gmf.common.codegen.ImportUtil;
+< 
+< import org.eclipse.jdt.core.ICompilationUnit;
+< 
+< import org.eclipse.jdt.core.IPackageFragment;
+< 
+< import org.eclipse.jdt.core.IPackageFragmentRoot;
+< 
+< import org.eclipse.jdt.core.JavaCore;
+< 
+< import org.eclipse.jdt.core.JavaModelException;
+< 
+< import org.eclipse.jdt.core.ToolFactory;
+< 
+< import org.eclipse.jdt.core.formatter.CodeFormatter;
+< 
+< import org.eclipse.jface.text.Document;
+< 
+< import org.eclipse.jface.text.IDocument;
+< 
+< import org.eclipse.text.edits.TextEdit;
+---
+> import org.eclipse.gmf.common.codegen.GeneratorBase;
+109c71
+< public class Generator implements Runnable {
+---
+> public class Generator extends GeneratorBase implements Runnable {
+112,118d73
+<     private IPackageFragmentRoot myDestRoot;
+<     private IProject myDestProject;
+<     private JControlModel myJControlModel;
+<     private CodeFormatter myCodeFormatter;
+<     private IProgressMonitor myProgress;
+<     private IStatus myRunStatus = Status.CANCEL_STATUS;
+<     private List myExceptions;
+144,146c99,100
+<     public void run (IProgressMonitor progress) throws InterruptedException {
+<         setProgressMonitor (progress);
+<         doRun ();
+---
+>     protected URL getJMergeControlFile () {
+>         return myEmitters.getJMergeControlFile ();
+149,161c103,104
+<     public void run () {
+<         try {
+<             doRun ();
+<         } catch (InterruptedException ex) {
+<             myRunStatus = new Status (IStatus.CANCEL, "org.eclipse.gmf.codegen", 0, Messages.interrupted, ex);
+<         }
+<     }
+< 
+<     private void doRun () throws InterruptedException {
+<         try {
+<             setupProgressMonitor ();
+<             myExceptions = new LinkedList ();
+<             initializeEditorProject ();
+---
+>     protected void customRun () throws InterruptedException, JETException, UnexpectedBehaviourException {
+>         initializeEditorProject (myDiagram.getEditorGen ().getPlugin ().getID (), createReferencedProjectsList ());
+243,262d185
+<             if (myExceptions.isEmpty ()) {
+<                 myRunStatus = Status.OK_STATUS;
+<             } else {
+<                 IStatus [] s = (IStatus []) myExceptions.toArray (new IStatus [myExceptions.size ()]);
+<                 myRunStatus = new MultiStatus ("org.eclipse.gmf.codegen", 0, s, Messages.problems, null);
+<             }
+<         } catch (NullPointerException ex) {
+<             myRunStatus = new Status (IStatus.ERROR, "org.eclipse.gmf.codegen", 0, NullPointerException.class.getName (), ex);
+<         } catch (JETException ex) {
+<             myRunStatus = ex.getStatus ();
+<         } catch (UnexpectedBehaviourException ex) {
+<             myRunStatus = new Status (Status.ERROR, "org.eclipse.gmf.codegen", 0, Messages.unexpected, ex);
+<         } finally {
+<             myProgress.done ();
+<             myExceptions = null;
+<         }
+<     }
+< 
+<     public IStatus getRunStatus () {
+<         return myRunStatus;
+574c497
+<             IPath containerPath = myDestProject.getFullPath ().append (iconPath.removeLastSegments (1));
+---
+>             IPath containerPath = getDestProject ().getFullPath ().append (iconPath.removeLastSegments (1));
+576c499
+<             IFile f = myDestProject.getFile (iconPath);
+---
+>             IFile f = getDestProject ().getFile (iconPath);
+584c507
+<             myExceptions.add (ex.getStatus ());
+---
+>             handleException (ex);
+590,620c513
+<     private void doGenerateFile (JETEmitter emitter, IPath filePath, Object param) throws JETException, InterruptedException {
+<         assert ! myDestProject.getName ().equals (filePath.segment (0));
+<         IProgressMonitor pm = getNextStepMonitor ();
+<         try {
+<             pm.beginTask (filePath.lastSegment (), 4);
+<             IPath containerPath = myDestProject.getFullPath ().append (filePath.removeLastSegments (1));
+<             CodeGenUtil.findOrCreateContainer (containerPath, false, (IPath) null, new SubProgressMonitor (pm, 1));
+<             String genText = emitter.generate (new SubProgressMonitor (pm, 1), new Object [] {param});
+<             IFile f = myDestProject.getFile (filePath);
+<             if (f.exists ()) {
+<                 f.setContents (new ByteArrayInputStream (genText.getBytes ()), true, true, new SubProgressMonitor (pm, 1));
+<             } else {
+<                 f.create (new ByteArrayInputStream (genText.getBytes ()), true, new SubProgressMonitor (pm, 1));
+<             }
+<             f.getParent ().refreshLocal (IResource.DEPTH_ONE, new SubProgressMonitor (pm, 1));
+<         } catch (CoreException ex) {
+<             myExceptions.add (ex.getStatus ());
+<         } finally {
+<             pm.done ();
+<         }
+<     }
+< 
+<     public void setProgressMonitor (IProgressMonitor progress) {
+<         myProgress = progress;
+<     }
+< 
+<     private void setupProgressMonitor () {
+<         if (myProgress == null) {
+<             myProgress = new NullProgressMonitor ();
+<             return;
+<         }
+---
+>     protected void setupProgressMonitor () {
+626,652c519
+<         myProgress.beginTask (Messages.start, c.getTotal ());
+<     }
+< 
+<     private IProgressMonitor getNextStepMonitor () throws InterruptedException {
+<         if (myProgress.isCanceled ()) {
+<             throw new InterruptedException ();
+<         }
+<         return new SubProgressMonitor (myProgress, 1);
+<     }
+< 
+<     private void initializeEditorProject () throws UnexpectedBehaviourException, InterruptedException {
+<         myDestProject = ResourcesPlugin.getWorkspace ().getRoot ().getProject (myDiagram.getEditorGen ().getPlugin ().getID ());
+<         final Path srcPath = new Path ('/' + myDestProject.getName () + "/src");
+<         final Path projectLocation = null;
+<         final List referencedProjects = createReferencedProjectsList ();
+<         final int style = org.eclipse.emf.codegen.ecore.Generator.EMF_PLUGIN_PROJECT_STYLE;
+<         final List pluginVariables = null;
+<         final IProgressMonitor pm = getNextStepMonitor ();
+<         org.eclipse.emf.codegen.ecore.Generator.createEMFProject (srcPath, projectLocation, referencedProjects, pm, style, pluginVariables);
+<         try {
+<             myDestRoot = JavaCore.create (myDestProject).findPackageFragmentRoot (srcPath);
+<         } catch (JavaModelException ex) {
+<             throw new UnexpectedBehaviourException (ex.getMessage ());
+<         }
+<         if (myDestRoot == null) {
+<             throw new UnexpectedBehaviourException ("no source root can be found");
+<         }
+---
+>         setupProgressMonitor (Messages.start, c.getTotal ());
+655c522
+<     private List createReferencedProjectsList () {
+---
+>     protected final List createReferencedProjectsList () {
+659,722d525
+<     private void doGenerateJavaClass (JETEmitter emitter, String packageName, String className, Object input) throws InterruptedException {
+<         IProgressMonitor pm = getNextStepMonitor ();
+<         try {
+<             pm.beginTask (className, 4);
+<             final Object emitterArg = new Object [] {input, new ImportUtil (packageName)};
+<             String genText = emitter.generate (new SubProgressMonitor (pm, 1), new Object [] {emitterArg});
+<             IPackageFragment pf = myDestRoot.createPackageFragment (packageName, true, new SubProgressMonitor (pm, 1));
+<             ICompilationUnit cu = pf.getCompilationUnit (className + ".java");
+<             if (cu.exists ()) {
+<                 genText = merge (genText, cu.getSource (), new SubProgressMonitor (pm, 1));
+<             } else {
+<                 pm.worked (1);
+<             }
+<             pf.createCompilationUnit (cu.getElementName (), formatCode (genText), true, new SubProgressMonitor (pm, 1));
+<         } catch (NullPointerException ex) {
+<             myExceptions.add (new Status (IStatus.ERROR, "org.eclipse.gmf.codegen", 0, ex.getMessage (), ex));
+<         } catch (JETException ex) {
+<             myExceptions.add (ex.getStatus ());
+<         } catch (CoreException ex) {
+<             myExceptions.add (ex.getStatus ());
+<         } finally {
+<             pm.done ();
+<         }
+<     }
+< 
+<     private String merge (String generatedText, String oldContents, IProgressMonitor pm) {
+<         pm.beginTask (Messages.merge, 1);
+<         JMerger jMerge = new JMerger ();
+<         jMerge.setControlModel (getJControlModel ());
+<         jMerge.setSourceCompilationUnit (jMerge.createCompilationUnitForContents (generatedText));
+<         jMerge.setTargetCompilationUnit (jMerge.createCompilationUnitForContents (oldContents));
+<         jMerge.merge ();
+<         pm.done ();
+<         return jMerge.getTargetCompilationUnitContents ();
+<     }
+< 
+<     private String formatCode (String text) {
+<         IDocument doc = new Document (text);
+<         TextEdit edit = getCodeFormatter ().format (CodeFormatter.K_COMPILATION_UNIT, doc.get (), 0, doc.get ().length (), 0, null);
+<         try {
+<             if (edit != null) {
+<                 edit.apply (doc);
+<                 text = doc.get ();
+<             }
+<         } catch (Exception ex) {
+<             ex.printStackTrace ();
+<         }
+<         return text;
+<     }
+< 
+<     private CodeFormatter getCodeFormatter () {
+<         if (myCodeFormatter == null) {
+<             myCodeFormatter = ToolFactory.createCodeFormatter (null);
+<         }
+<         return myCodeFormatter;
+<     }
+< 
+<     private JControlModel getJControlModel () {
+<         if (myJControlModel == null) {
+<             myJControlModel = new JControlModel (myEmitters.getJMergeControlFile ().toString ());
+<         }
+<         return myJControlModel;
+<     }
+< 

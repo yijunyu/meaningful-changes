@@ -1,0 +1,64 @@
+package org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.PrinterGraphics;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderInfo;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderedImage;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.DrawableRenderedImage;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.RenderingListener;
+
+import org.eclipse.swt.graphics.Image;
+
+import org.eclipse.swt.printing.Printer;
+
+public class RenderedPrinterGraphics extends PrinterGraphics implements DrawableRenderedImage {
+
+    public boolean shouldAllowDelayRender () {
+        return false;
+    }
+
+    public RenderedPrinterGraphics (Graphics g, Printer p, boolean roundFonts) {
+        super (g, p, roundFonts);
+    }
+
+    public RenderedImage drawRenderedImage (RenderedImage srcImage, Rectangle rect, RenderingListener listener) {
+        int nNewWidth = (int) Math.round (rect.width * getPrintScale ());
+        int nNewHeight = (int) Math.round (rect.height * getPrintScale ());
+        RenderInfo info = srcImage.getRenderInfo ();
+        info.setValues (nNewWidth, nNewHeight, info.shouldMaintainAspectRatio (), false, info.getBackgroundColor (), info.getForegroundColor ());
+        RenderedImage img = srcImage.getNewRenderedImage (info);
+        Image swtImg = null;
+        try {
+            swtImg = img.getSWTImage ();
+        } catch (OutOfMemoryError e) {
+            nNewWidth = rect.width;
+            nNewHeight = rect.height;
+            info.setValues (nNewWidth, nNewHeight, info.shouldMaintainAspectRatio (), true, info.getBackgroundColor (), info.getForegroundColor ());
+            img = srcImage.getNewRenderedImage (info);
+            swtImg = img.getSWTImage ();
+        } catch (Exception ex) {
+            nNewWidth = rect.width;
+            nNewHeight = rect.height;
+            info.setValues (nNewWidth, nNewHeight, info.shouldMaintainAspectRatio (), true, info.getBackgroundColor (), info.getForegroundColor ());
+            img = srcImage.getNewRenderedImage (info);
+            swtImg = img.getSWTImage ();
+        }
+        drawImage (swtImg, 0, 0, nNewWidth, nNewHeight, rect.x, rect.y, rect.width, rect.height);
+        return img;
+    }
+
+    public Dimension getMaximumRenderSize () {
+        return null;
+    }
+
+}
+

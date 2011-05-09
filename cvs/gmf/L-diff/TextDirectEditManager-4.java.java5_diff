@@ -1,0 +1,84 @@
+2a3,4
+> import org.eclipse.draw2d.FigureUtilities;
+> 
+4a7,8
+> import org.eclipse.draw2d.geometry.Rectangle;
+> 
+10a15,28
+> import org.eclipse.gmf.runtime.common.ui.contentassist.ContentAssistantHelper;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.TextCompartmentEditPart;
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.WrapLabel;
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.l10n.Draw2dResourceManager;
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapMode;
+> 
+> import org.eclipse.gmf.runtime.gef.ui.internal.parts.TextCellEditorEx;
+> 
+> import org.eclipse.gmf.runtime.gef.ui.internal.parts.WrapTextCellEditor;
+> 
+41c59,65
+< import org.eclipse.gmf.runtime.common.ui.contentassist.ContentAssistantHelper;
+---
+> public class TextDirectEditManager extends DirectEditManager {
+>     private Color proposalPopupBackgroundColor = null;
+>     private Color proposalPopupForegroundColor = null;
+>     private boolean committed = false;
+>     private boolean listenersAttached = true;
+>     static private class TextCellEditorLocator implements CellEditorLocator {
+>         private WrapLabel wrapLabel;
+43c67,70
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.TextCompartmentEditPart;
+---
+>         public TextCellEditorLocator (WrapLabel wrapLabel) {
+>             super ();
+>             this.wrapLabel = wrapLabel;
+>         }
+45c72,74
+< import org.eclipse.gmf.runtime.draw2d.ui.figures.WrapLabel;
+---
+>         public WrapLabel getWrapLabel () {
+>             return wrapLabel;
+>         }
+47c76,85
+< import org.eclipse.gmf.runtime.draw2d.ui.internal.l10n.Draw2dResourceManager;
+---
+>         public void relocate (CellEditor celleditor) {
+>             Text text = (Text) celleditor.getControl ();
+>             Rectangle rect = getWrapLabel ().getTextBounds ().getCopy ();
+>             getWrapLabel ().translateToAbsolute (rect);
+>             if (getWrapLabel ().isTextWrapped () && getWrapLabel ().getText ().length () > 0) rect.setSize (new Dimension (text.computeSize (rect.width, SWT.DEFAULT)));
+>             else {
+>                 int avr = FigureUtilities.getFontMetrics (text.getFont ()).getAverageCharWidth ();
+>                 rect.setSize (new Dimension (text.computeSize (SWT.DEFAULT, SWT.DEFAULT)).expand (avr * 2, 0));
+>             }
+>             if (! rect.equals (new Rectangle (text.getBounds ()))) text.setBounds (rect.x, rect.y, rect.width, rect.height);
+49c87
+< import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapMode;
+---
+>         }
+51c89
+< import org.eclipse.gmf.runtime.gef.ui.parts.TextCellEditorEx;
+---
+>     }
+53,57c91,93
+< public class TextDirectEditManager extends DirectEditManager {
+<     private Color proposalPopupBackgroundColor = null;
+<     private Color proposalPopupForegroundColor = null;
+<     private boolean committed = false;
+<     private boolean listenersAttached = true;
+---
+>     public TextDirectEditManager (GraphicalEditPart source) {
+>         super (source, getTextCellEditorClass (source), new TextCellEditorLocator ((WrapLabel) source.getFigure ()));
+>     }
+62a99,106
+>     private static Class getTextCellEditorClass (GraphicalEditPart source) {
+>         assert source.getFigure () instanceof WrapLabel;
+>         WrapLabel wrapLabel = (WrapLabel) source.getFigure ();
+>         if (wrapLabel.isTextWrapped ()) return WrapTextCellEditor.class;
+> 
+>         return TextCellEditorEx.class;
+>     }
+> 

@@ -1,0 +1,174 @@
+package org.eclipse.gmf.runtime.common.ui.services.properties.extended;
+
+import java.util.Arrays;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.common.ui.dialogs.PropertiesDialog;
+
+import org.eclipse.gmf.runtime.common.ui.services.properties.PropertiesService;
+
+import org.eclipse.jface.preference.PreferenceManager;
+
+import org.eclipse.jface.preference.PreferenceNode;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.swt.widgets.Control;
+
+import org.eclipse.swt.widgets.Text;
+
+import org.eclipse.ui.dialogs.PropertyPage;
+
+import org.eclipse.ui.views.properties.IPropertyDescriptor;
+
+import org.eclipse.ui.views.properties.IPropertySource;
+
+public class PropertyPageCellEditor extends MultiButtonCellEditor {
+    private final PropertyPagePropertyDescriptor propertyDescriptor;
+
+    public PropertyPageCellEditor (Composite parent, PropertyPagePropertyDescriptor descriptor) {
+        this (parent, descriptor, SWT.NONE);
+    }
+
+    public PropertyPageCellEditor (Composite parent, PropertyPagePropertyDescriptor descriptor, int style) {
+        super (parent, style);
+        propertyDescriptor = descriptor;
+    }
+
+    private PropertyPagePropertyDescriptor getPropertyDescriptor () {
+        return propertyDescriptor;
+    }
+
+    protected Object openDialogBox (Control cellEditorWindow) {
+        PropertiesDialog dialog = new PropertiesDialog (getControl ().getShell (), new PreferenceManager ());
+        PropertyPagePropertyDescriptor realDescriptor = null;
+        if (getValue () instanceof ElementValue) {
+            Object element = ((ElementValue) getValue ()).getElement ();
+            if (element instanceof PropertyPagePropertyDescriptor) {
+                realDescriptor = (PropertyPagePropertyDescriptor) element;
+            }
+        }
+        List pages = null;
+        if (realDescriptor != null) {
+            pages = realDescriptor.createPropertyPages ();
+        } else {
+            pages = getPropertyDescriptor ().createPropertyPages ();
+        }
+        for (Iterator i = pages.iterator ();
+        i.hasNext ();) {
+            PropertyPage page = (PropertyPage) i.next ();
+            if (realDescriptor != null) {
+                final IPropertySource source = realDescriptor.getPropertySource ();
+                page.setElement (new IAdaptable () {
+
+                    public Object getAdapter (Class adapter) {
+                        if (adapter.equals (IPropertySource.class)) {
+                            return source;
+                        }
+                        return null;
+                    }
+
+                }
+
+                );
+            }
+            dialog.getPreferenceManager ().addToRoot (new PreferenceNode (StringStatics.BLANK, page));
+        }
+        dialog.create ();
+        dialog.open ();
+        for (Iterator i = pages.iterator ();
+        i.hasNext ();) {
+            PropertyPage page = (PropertyPage) i.next ();
+            IAdaptable adaptable = page.getElement ();
+            if (adaptable != null) {
+                IPropertySource source = (IPropertySource) adaptable.getAdapter (IPropertySource.class);
+                if (source instanceof IExtendedPropertySource) {
+                    Object element = ((IExtendedPropertySource) source).getElement ();
+                    IPropertySource propertySource = PropertiesService.getInstance ().getPropertySource (element);
+                    assert null != propertySource;
+                    for (Iterator j = Arrays.asList (propertySource.getPropertyDescriptors ()).iterator ();
+                    j.hasNext ();) {
+                        IPropertyDescriptor descriptor = (IPropertyDescriptor) j.next ();
+                        if (descriptor.getId ().equals (getPropertyDescriptor ().getId ())) {
+                            setValue (new ElementValue (source, propertySource.getPropertyValue (descriptor.getId ())));
+                            fireApplyEditorValue ();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    protected Text getText () {
+        return null;
+    }
+
+    public boolean isCopyEnabled () {
+        return false;
+    }
+
+    public boolean isCutEnabled () {
+        return false;
+    }
+
+    public boolean isDeleteEnabled () {
+        return false;
+    }
+
+    public boolean isPasteEnabled () {
+        return false;
+    }
+
+    public boolean isSaveAllEnabled () {
+        return false;
+    }
+
+    public boolean isSelectAllEnabled () {
+        return false;
+    }
+
+    public void performCopy () {
+    }
+
+    public void performCut () {
+    }
+
+    public void performDelete () {
+    }
+
+    public void performPaste () {
+    }
+
+    public void performSelectAll () {
+    }
+
+    protected Object getCellObjectValue () {
+        return super.doGetValue ();
+    }
+
+    protected void initButtons () {
+        IPropertyAction setAction = new IPropertyAction () {
+
+            public Object execute (Control owner) {
+                return openDialogBox (owner);
+            }
+
+        }
+
+        ;
+        addButton ("...", setAction);
+    }
+
+}
+

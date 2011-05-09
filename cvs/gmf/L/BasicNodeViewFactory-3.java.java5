@@ -1,0 +1,66 @@
+package org.eclipse.gmf.runtime.diagram.ui.view.factories;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunOption;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.notation.LayoutConstraint;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+import org.eclipse.gmf.runtime.notation.NotationFactory;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class BasicNodeViewFactory extends AbstractViewFactory {
+
+    public View createView (final IAdaptable semanticAdapter, final View containerView, final String semanticHint, final int index, boolean persisted, final PreferencesHint preferencesHint) {
+        setPreferencesHint (preferencesHint);
+        final Node node = createNode ();
+        node.getStyles ().addAll (createStyles (node));
+        node.setLayoutConstraint (createLayoutConstraint ());
+        if (requiresElement (semanticAdapter, containerView)) {
+            if (semanticAdapter == null) node.setElement (null);
+            else node.setElement ((EObject) semanticAdapter.getAdapter (EObject.class));
+
+        }
+        node.setType (semanticHint);
+        ViewUtil.insertChildView (containerView, node, index, persisted);
+        int options = MRunOption.UNCHECKED | MRunOption.SILENT;
+        MEditingDomainGetter.getMEditingDomain (containerView).runWithOptions (new MRunnable () {
+
+            public Object run () {
+                decorateView (containerView, node, semanticAdapter, semanticHint, index, true);
+                return null;
+            }
+
+        }
+
+        , options);
+        return node;
+    }
+
+    protected void decorateView (View containerView, View view, IAdaptable semanticAdapter, String semanticHint, int index, boolean persisted) {
+        initializeFromPreferences (view);
+    }
+
+    protected LayoutConstraint createLayoutConstraint () {
+        return null;
+    }
+
+    protected Node createNode () {
+        return NotationFactory.eINSTANCE.createNode ();
+    }
+
+}
+

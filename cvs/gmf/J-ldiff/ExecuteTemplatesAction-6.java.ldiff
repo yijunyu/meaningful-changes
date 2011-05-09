@@ -1,0 +1,134 @@
+19a20,20
+> import org.eclipse.emf.common.util.BasicDiagnostic;
+23a25,25
+> import org.eclipse.emf.ecore.util.Diagnostician;
+53a56,56
+> 	private GenDiagram myGenModel;
+58a62,62
+> 	// TODO Jobs
+60a65,73
+> 			loadGenModel();
+> 			assert getGenModel() != null;
+> 			IStatus isGenModelValid = validateGenModel();
+> 			if (!isGenModelValid.isOK()) {
+> 				if (!MessageDialog.openConfirm(getShell(), action.getText(), formatMessage("generatecode.badsrc", isGenModelValid))) {
+> 					return;
+> 				}
+> 			}
+> 			
+62,62c75,75
+< 			new ProgressMonitorDialog(myPart.getSite().getShell()).run(true, true, this);
+---
+> 			new ProgressMonitorDialog(getShell()).run(true, true, this);
+66,66c79,79
+< 					MessageDialogWithToggle.openInformation(getShell(), getStatusDialogTitle(), CodeGenUIPlugin.getBundleString("generatecode.ok"), CodeGenUIPlugin.getBundleString("generatecode.neveragain"), false, getPreferences(), ASK_OK);
+---
+> 					MessageDialogWithToggle.openInformation(getShell(), action.getText(), CodeGenUIPlugin.getBundleString("generatecode.ok"), CodeGenUIPlugin.getBundleString("generatecode.neveragain"), false, getPreferences(), ASK_OK);
+68,68c81,81
+< 			} else if ((myRunStatus.getSeverity() & IStatus.ERROR) != 0) {
+---
+> 			} else if (myRunStatus.matches(IStatus.ERROR)) {
+69a83,84
+> 				MessageDialog.openError(getShell(), action.getText(), formatMessage("generatecode.err", getRunStatus()));
+> 			} else if (myRunStatus.matches(IStatus.WARNING)) {
+70,71d82
+< 				MessageDialog.openError(getShell(), getStatusDialogTitle(), formatMessage("generatecode.err", getRunStatus()));
+< 			} else if ((myRunStatus.getSeverity() & IStatus.WARNING) != 0) {
+72,72c85,85
+< 				MessageDialog.openWarning(getShell(), getStatusDialogTitle(), formatMessage("generatecode.warn", getRunStatus()));
+---
+> 				MessageDialog.openWarning(getShell(), action.getText(), formatMessage("generatecode.warn", getRunStatus()));
+73,73c86,86
+< 			} else if ((myRunStatus.getSeverity() & IStatus.INFO) != 0) {
+---
+> 			} else if (myRunStatus.matches(IStatus.INFO)) {
+75,75c88,88
+< 					MessageDialogWithToggle.openInformation(getShell(), getStatusDialogTitle(), formatMessage("generatecode.info", getRunStatus()), CodeGenUIPlugin.getBundleString("generatecode.neveragain"), false, getPreferences(), ASK_INFO);
+---
+> 					MessageDialogWithToggle.openInformation(getShell(), action.getText(), formatMessage("generatecode.info", getRunStatus()), CodeGenUIPlugin.getBundleString("generatecode.neveragain"), false, getPreferences(), ASK_INFO);
+79,79d91
+< 
+80a93,94
+> 		} finally {
+> 			unloadGenModel();
+84a122,126
+> 	private GenDiagram getGenModel() {
+> 		return myGenModel;
+> 	}
+> 
+> 	private void loadGenModel() {
+84a99,99
+> 		Generator g = new Generator(getGenModel());
+85,85c127,127
+< 		URI selected = URI.createPlatformResourceURI(mySelection.getFullPath().toString());
+---
+> 		URI selected = URI.createPlatformResourceURI(mySelection.getFullPath().toString());
+86,86c128,128
+< 		ResourceSet srcResSet = new ResourceSetImpl();
+---
+> 		ResourceSet srcResSet = new ResourceSetImpl();
+87,87c129,129
+< 		Resource srcRes = srcResSet.getResource(selected, true);
+---
+> 		Resource srcRes = srcResSet.getResource(selected, true);
+88,88c130,130
+< 		GenDiagram gd = (GenDiagram) srcRes.getContents().get(0);
+---
+> 		myGenModel = (GenDiagram) srcRes.getContents().get(0);
+89a132,142
+> 	}
+> 
+> 	private void unloadGenModel() {
+> 		if (myGenModel != null && myGenModel.eResource() != null) {
+> 			myGenModel.eResource().unload();
+> 		}
+> 		myGenModel = null;
+> 	}
+> 
+> 	private IStatus validateGenModel() {
+> 		return BasicDiagnostic.toIStatus(Diagnostician.INSTANCE.validate(getGenModel()));
+89,89c131,131
+< 		gd.getEMFGenModel().reconcile();
+---
+> 		myGenModel.getEMFGenModel().reconcile();
+90,90d131
+< 		Generator g = new Generator(gd);
+94a114,114
+> 	private static String formatMessage(String bundleStringKey, IStatus status) {
+95,95d113
+< 	private String getStatusDialogTitle() {
+96,96c115,115
+< 		return CodeGenUIPlugin.getBundleString("generatecode.status.title");
+---
+> 		return CodeGenUIPlugin.formatMessage(bundleStringKey, status);
+97,98d115
+< 	}
+< 
+109,123d113
+< 	private String formatMessage(String bundleStringKey, IStatus status) {
+< 		if (status.isMultiStatus()) {
+< 			IStatus[] children = status.getChildren();
+< 			StringBuffer sb = new StringBuffer();
+< 			// don't care about too nested statuses just because will switch to
+< 			// jobs soon, with
+< 			// required support already in place
+< 			for (int i = 0; i < children.length; i++) {
+< 				sb.append(children[i].getMessage());
+< 				sb.append('\n');
+< 			}
+< 			return CodeGenUIPlugin.getBundleString(bundleStringKey, new Object[] { sb.toString() });
+< 		} else {
+< 			return CodeGenUIPlugin.getBundleString(bundleStringKey, new Object[] { status.getMessage() });
+< 		}
+129a148,148
+> 
+130,130c149,149
+< 	private static IPreferenceStore getPreferences() {
+---
+> 	private static IPreferenceStore getPreferences() {
+131,131c150,150
+< 		return CodeGenUIPlugin.getDefault().getPreferenceStore();
+---
+> 		return CodeGenUIPlugin.getDefault().getPreferenceStore();
+131a151,151
+> 	}

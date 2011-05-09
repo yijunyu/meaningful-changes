@@ -1,0 +1,311 @@
+2a3,4
+> import java.lang.ref.WeakReference;
+> 
+33,33c25,25
+< import org.eclipse.gmf.runtime.common.core.util.Trace;
+---
+> import org.eclipse.emf.common.command.Command;
+33a26,28
+> 
+> import org.eclipse.emf.common.command.CompoundCommand;
+> 
+34a41,41
+> import org.eclipse.emf.transaction.ResourceSetListenerImpl;
+35,35d40
+< import org.eclipse.gmf.runtime.diagram.core.internal.DiagramDebugOptions;
+36a43,43
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+37,39d42
+< import org.eclipse.gmf.runtime.diagram.core.internal.DiagramPlugin;
+< 
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+43,43c39,39
+< import org.eclipse.gmf.runtime.emf.core.EventTypes;
+---
+> import org.eclipse.emf.transaction.ResourceSetChangeEvent;
+44,50d39
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MEditingDomain;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MFilter;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MUniversalListener;
+< 
+55,55c51,51
+< public class DiagramEventBroker extends MUniversalListener {
+---
+> public class DiagramEventBroker extends ResourceSetListenerImpl {
+57,57c53,53
+<     private final NotifierToKeyToListenersSetMap listeners = new NotifierToKeyToListenersSetMap ();
+---
+>     private final NotifierToKeyToListenersSetMap preListeners = new NotifierToKeyToListenersSetMap ();
+57a54,55
+>     private final NotifierToKeyToListenersSetMap postListeners = new NotifierToKeyToListenersSetMap ();
+>     private static final Map instanceMap = new WeakHashMap ();
+123a122,123
+>     private DiagramEventBroker () {
+>         super (NotificationFilter.createNotifierTypeFilter (EObject.class));
+124,127d121
+<     public void startListening () {
+<         Trace.trace (DiagramPlugin.getInstance (), DiagramDebugOptions.EVENTS, this + "#startListening()");
+<         setFilter (new MFilter.NotifierType (EObject.class, false));
+<         super.startListening ();
+129a126,131
+>     public static DiagramEventBroker getInstance (TransactionalEditingDomain editingDomain) {
+>         WeakReference reference = (WeakReference) instanceMap.get (editingDomain);
+>         if (reference != null) {
+>             return (DiagramEventBroker) reference.get ();
+>         }
+>         return null;
+130,132d125
+<     public void stopListening () {
+<         Trace.trace (DiagramPlugin.getInstance (), DiagramDebugOptions.EVENTS, this + "#stopListening()");
+<         super.stopListening ();
+134a134,154
+>     public static void startListening (TransactionalEditingDomain editingDomain) {
+>         DiagramEventBroker diagramEventBroker = getInstance (editingDomain);
+>         if (diagramEventBroker == null) {
+>             diagramEventBroker = new DiagramEventBroker ();
+>             editingDomain.addResourceSetListener (diagramEventBroker);
+>             instanceMap.put (editingDomain, new WeakReference (diagramEventBroker));
+>         }
+>     }
+> 
+>     public static void stopListening (TransactionalEditingDomain editingDomain) {
+>         DiagramEventBroker diagramEventBroker = getInstance (editingDomain);
+>         if (diagramEventBroker != null) {
+>             editingDomain.removeResourceSetListener (diagramEventBroker);
+>             instanceMap.remove (editingDomain);
+>         }
+>     }
+> 
+>     public Command transactionAboutToCommit (ResourceSetChangeEvent event) {
+>         Set deletedObjects = getDeletedObjects (event);
+>         CompoundCommand cc = new CompoundCommand ();
+>         for (Iterator i = event.getNotifications ().iterator ();
+135,138d133
+<     public final void onEvent (List events) {
+<         List eventArray = new ArrayList (events);
+<         HashSet deletedObjects = new HashSet ();
+<         for (Iterator i = eventArray.iterator ();
+139a192,195
+>     private Set getDeletedObjects (ResourceSetChangeEvent event) {
+>         HashSet deletedObjects = new HashSet ();
+>         for (Iterator i = event.getNotifications ().iterator ();
+>         i.hasNext ();) {
+139a156,163
+>             final Notification notification = (Notification) i.next ();
+>             Object eventFeature = notification.getFeature ();
+>             if ((notification.isTouch () && notification.getEventType () != Notification.RESOLVE) || NotationPackage.eINSTANCE.getView_Mutable ().equals (eventFeature)) {
+>                 continue;
+>             }
+>             Object notifier = notification.getNotifier ();
+>             if (notifier instanceof EObject) {
+>                 if (deletedObjects.contains (notification.getNotifier ()) && ! isDestroyEvent (notification)) continue;
+140a197,203
+>             if (isDestroyEvent (notification)) deletedObjects.add (notification.getNotifier ());
+> 
+>         }
+>         return deletedObjects;
+>     }
+> 
+>     private boolean isDestroyEvent (Notification notification) {
+140,140c196,196
+<             Notification event = (Notification) i.next ();
+---
+>             Notification notification = (Notification) i.next ();
+141a205,208
+>     }
+> 
+>     private void fireNotification (Notification event) {
+>         Collection listenerList = getInterestedNotificationListeners (event, false);
+141,141c204,204
+<             if (event.getEventType () == EventTypes.UNCREATE || event.getEventType () == EventTypes.DESTROY) deletedObjects.add (event.getNotifier ());
+---
+>         return (notification.getEventType () == Notification.REMOVE || notification.getEventType () == Notification.REMOVE_MANY) && ((EObject) notification.getNotifier ()).eContainer () == null;
+142a165,171
+>                 Command cmd = handleTransactionAboutToCommitEvent (notification);
+>                 if (cmd != null) {
+>                     cc.append (cmd);
+>                 }
+>             }
+>         }
+>         return cc.isEmpty () ? null : cc;
+143a173,176
+> 
+>     public void resourceSetChanged (ResourceSetChangeEvent event) {
+>         Set deletedObjects = getDeletedObjects (event);
+>         for (Iterator i = event.getNotifications ().iterator ();
+144,144d172
+<         for (Iterator i = eventArray.iterator ();
+145a178,179
+>             final Notification notification = (Notification) i.next ();
+>             Object eventFeature = notification.getFeature ();
+146,147d177
+<             Notification event = (Notification) i.next ();
+<             Object eventFeature = event.getFeature ();
+148,148c180,180
+<             if ((event.isTouch () && event.getEventType () != Notification.RESOLVE) || NotationPackage.eINSTANCE.getView_Mutable ().equals (eventFeature)) {
+---
+>             if ((notification.isTouch () && notification.getEventType () != Notification.RESOLVE) || NotationPackage.eINSTANCE.getView_Mutable ().equals (eventFeature)) {
+151,151c183,183
+<             Object notifier = event.getNotifier ();
+---
+>             Object notifier = notification.getNotifier ();
+152a185,185
+>                 if (deletedObjects.contains (notification.getNotifier ()) && ! isDestroyEvent (notification)) continue;
+153,153d184
+<                 if (deletedObjects.contains (event.getNotifier ()) && event.getEventType () != EventTypes.UNCREATE && event.getEventType () != EventTypes.DESTROY && event.getEventType () != EventTypes.UNRESOLVE) continue;
+155,155c187,187
+<                 handleElementEvent (event);
+---
+>                 handleElementEvent (notification);
+160,161d191
+<     protected void fireNotification (Notification event) {
+<         Collection listenerList = getInterestedNotificationListeners (event);
+173a221,246
+>     private Command fireTransactionAboutToCommit (Notification event) {
+>         Collection listenerList = getInterestedNotificationListeners (event, true);
+>         if (! listenerList.isEmpty ()) {
+>             List listenersSnapShot = new ArrayList (listenerList);
+>             if (! listenerList.isEmpty ()) {
+>                 CompoundCommand cc = new CompoundCommand ();
+>                 for (Iterator listenerIT = listenersSnapShot.iterator ();
+>                 listenerIT.hasNext ();) {
+>                     NotificationPreCommitListener listener = (NotificationPreCommitListener) listenerIT.next ();
+>                     Command cmd = listener.transactionAboutToCommit (event);
+>                     if (cmd != null) {
+>                         cc.append (cmd);
+>                     }
+>                 }
+>                 return cc.isEmpty () ? null : cc;
+>             }
+>         }
+>         return null;
+>     }
+> 
+>     public final void addNotificationListener (EObject target, NotificationPreCommitListener listener) {
+>         if (target != null) {
+>             preListeners.addListener (target, LISTEN_TO_ALL_FEATURES, listener);
+>         }
+>     }
+> 
+175a261,266
+>             postListeners.addListener (target, key, listener);
+>         }
+>     }
+> 
+>     public final void removeNotificationListener (EObject target, NotificationPreCommitListener listener) {
+>         if (target != null) {
+176,176c267,267
+<             listeners.addListener (target, LISTEN_TO_ALL_FEATURES, listener);
+---
+>             preListeners.removeListener (target, LISTEN_TO_ALL_FEATURES, listener);
+181a249,254
+>             postListeners.addListener (target, LISTEN_TO_ALL_FEATURES, listener);
+>         }
+>     }
+> 
+>     public final void addNotificationListener (EObject target, EStructuralFeature key, NotificationPreCommitListener listener) {
+>         if (target != null) {
+182,182c255,255
+<             listeners.addListener (target, key, listener);
+---
+>             preListeners.addListener (target, key, listener);
+188a274,279
+>         }
+>     }
+> 
+>     public final void removeNotificationListener (EObject target, Object key, NotificationPreCommitListener listener) {
+>         if (target != null) {
+>             preListeners.removeListener (target, key, listener);
+188,188c273,273
+<             listeners.removeListener (target, LISTEN_TO_ALL_FEATURES, listener);
+---
+>             postListeners.removeListener (target, LISTEN_TO_ALL_FEATURES, listener);
+194,194c285,285
+<             listeners.removeListener (target, key, listener);
+---
+>             postListeners.removeListener (target, key, listener);
+199a291,295
+>             for (Iterator iter = instanceMap.keySet ().iterator ();
+>             iter.hasNext ();) {
+>                 TransactionalEditingDomain editingDomain = (TransactionalEditingDomain) iter.next ();
+>                 editingDomain.removeResourceSetListener ((DiagramEventBroker) ((WeakReference) instanceMap.get (editingDomain)).get ());
+>             }
+200,200d290
+<             stopListening ();
+205,205c300,300
+<     protected Set getNotificationListeners (Object notifier) {
+---
+>     private Set getNotificationListeners (Object notifier, boolean preCommit) {
+205a301,301
+>         NotifierToKeyToListenersSetMap listeners = preCommit ? preListeners : postListeners;
+209a306,306
+>         NotifierToKeyToListenersSetMap listeners = preCommit ? preListeners : postListeners;
+209,209c305,305
+<     protected Set getNotificationListeners (Object notifier, Object key) {
+---
+>     private Set getNotificationListeners (Object notifier, Object key, boolean preCommit) {
+227a325,325
+>     private Set getInterestedNotificationListeners (Notification event, boolean preCommit) {
+228,244d324
+<     public final static MFilter SLOT_MODIFIED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.And (new MFilter.EventType (EventTypes.SET), new MFilter.EventType (EventTypes.UNSET)));
+<     public final static MFilter ELEMENT_INSERTED_INTO_SLOT = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.Or (new MFilter.EventType (EventTypes.ADD), new MFilter.EventType (EventTypes.ADD_MANY)));
+<     public final static MFilter ELEMENT_REMOVED_FROM_SLOT = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.Or (new MFilter.EventType (EventTypes.REMOVE), new MFilter.EventType (EventTypes.REMOVE_MANY)));
+<     public final static MFilter ELEMENT_CREATED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.EventType (EventTypes.CREATE));
+<     public final static MFilter ELEMENT_UNCREATED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.EventType (EventTypes.UNCREATE));
+<     public final static MFilter ELEMENT_DELETED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.EventType (EventTypes.DESTROY));
+<     public final static MFilter ELEMENT_UNDELETED = new MFilter.And (new MFilter.NotifierType (EObject.class, false), new MFilter.EventType (EventTypes.UNDESTROY));
+<     private static DiagramEventBroker instance;
+< 
+<     public static DiagramEventBroker getInstance () {
+<         if (instance == null) {
+<             instance = new DiagramEventBroker ();
+<         }
+<         return instance;
+<     }
+< 
+<     protected Set getInterestedNotificationListeners (Notification event) {
+246,246c327,327
+<         Collection c = getNotificationListeners (event.getNotifier (), event.getFeature ());
+---
+>         Collection c = getNotificationListeners (event.getNotifier (), event.getFeature (), preCommit);
+252,252c333,333
+<             listenerSet.addAll (getNotificationListeners (notifier.eContainer ()));
+---
+>             listenerSet.addAll (getNotificationListeners (notifier.eContainer (), preCommit));
+254,254c335,335
+<             addListenersOfNotifier (listenerSet, notifier.eContainer (), event);
+---
+>             addListenersOfNotifier (listenerSet, notifier.eContainer (), event, preCommit);
+259,259c340,340
+<             addListenersOfNotifier (listenerSet, notifier, event);
+---
+>             addListenersOfNotifier (listenerSet, notifier, event, preCommit);
+265,265c346,346
+<     private void addListenersOfNotifier (Set listenerSet, EObject notifier, Notification event) {
+---
+>     private void addListenersOfNotifier (Set listenerSet, EObject notifier, Notification event, boolean preCommit) {
+267,267c348,348
+<             Collection c = getNotificationListeners (notifier, event.getFeature ());
+---
+>             Collection c = getNotificationListeners (notifier, event.getFeature (), preCommit);
+280a362,369
+>     private Command handleTransactionAboutToCommitEvent (Notification event) {
+>         EObject element = (EObject) event.getNotifier ();
+>         if (element != null) {
+>             return fireTransactionAboutToCommit (event);
+>         }
+>         return null;
+>     }
+> 
+281a371,371
+>         if (! event.isTouch ()) {
+281,281c370,370
+<     protected void handleElementEvent (Notification event) {
+---
+>     private void handleElementEvent (Notification event) {
+282,283d370
+<         MEditingDomain doamin = null;
+<         if (! event.isTouch () && ! (doamin = MEditingDomainGetter.getMEditingDomain (event)).isUndoNotification (event) && ! doamin.isRedoNotification (event)) {

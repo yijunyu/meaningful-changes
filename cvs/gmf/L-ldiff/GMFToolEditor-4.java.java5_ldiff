@@ -1,0 +1,178 @@
+10a11,14
+> import org.eclipse.emf.common.util.BasicDiagnostic;
+> 
+> import org.eclipse.emf.common.util.Diagnostic;
+> 
+12a17,18
+> import org.eclipse.emf.common.notify.Notification;
+> 
+14a21,22
+> import org.eclipse.emf.common.ui.editor.ProblemEditorPart;
+> 
+48a57,60
+> import org.eclipse.emf.common.ui.MarkerHelper;
+> 
+> import org.eclipse.emf.edit.ui.util.EditUIMarkerHelper;
+> 
+56a69,72
+> import org.eclipse.emf.ecore.util.EcoreUtil;
+> 
+> import org.eclipse.emf.ecore.util.EContentAdapter;
+> 
+72a89,92
+> import java.util.Map;
+> 
+> import java.util.LinkedHashMap;
+> 
+178a199,200
+> import org.eclipse.ui.PartInitException;
+> 
+226a249,249
+>     protected MarkerHelper markerHelper = new EditUIMarkerHelper ();
+260a284,314
+>     protected Collection removedResources = new ArrayList ();
+>     protected Collection changedResources = new ArrayList ();
+>     protected Collection savedResources = new ArrayList ();
+>     protected Map resourceToDiagnosticMap = new LinkedHashMap ();
+>     protected boolean updateProblemIndication = true;
+>     protected EContentAdapter problemIndicationAdapter = new EContentAdapter () {
+> 
+>         public void notifyChanged (Notification notification) {
+>             if (notification.getNotifier () instanceof Resource) {
+>                 switch (notification.getFeatureID (Resource.class)) {
+>                     case Resource.RESOURCE__IS_LOADED :
+>                     case Resource.RESOURCE__ERRORS :
+>                     case Resource.RESOURCE__WARNINGS :
+>                         {
+>                             Resource resource = (Resource) notification.getNotifier ();
+>                             Diagnostic diagnostic = analyzeResourceProblems ((Resource) notification.getNotifier (), null);
+>                             if (diagnostic.getSeverity () != Diagnostic.OK) {
+>                                 resourceToDiagnosticMap.put (resource, diagnostic);
+>                             } else {
+>                                 resourceToDiagnosticMap.remove (resource);
+>                             }
+>                             updateProblemIndication ();
+>                         }}
+>             } else {
+>                 super.notifyChanged (notification);
+>             }
+>         }
+> 
+>     }
+> 
+>     ;
+261,263d283
+<     Collection removedResources = new ArrayList ();
+<     Collection changedResources = new ArrayList ();
+<     Collection savedResources = new ArrayList ();
+367a419,419
+>             updateProblemIndication = false;
+375a428,474
+>                         if (! resourceToDiagnosticMap.containsKey (resource)) {
+>                             resourceToDiagnosticMap.put (resource, analyzeResourceProblems (resource, exception));
+>                         }
+>                     }
+>                 }
+>             }
+>             updateProblemIndication = true;
+>             updateProblemIndication ();
+>         }
+>     }
+> 
+>     protected void updateProblemIndication () {
+>         if (updateProblemIndication) {
+>             BasicDiagnostic diagnostic = new BasicDiagnostic (Diagnostic.OK, "org.eclipse.gmf.tooldef.edit", 0, null, new Object [] {editingDomain.getResourceSet ()});
+>             for (Iterator i = resourceToDiagnosticMap.values ().iterator ();
+>             i.hasNext ();) {
+>                 Diagnostic childDiagnostic = (Diagnostic) i.next ();
+>                 if (childDiagnostic.getSeverity () != Diagnostic.OK) {
+>                     diagnostic.add (childDiagnostic);
+>                 }
+>             }
+>             int lastEditorPage = getPageCount () - 1;
+>             if (lastEditorPage >= 0 && getEditor (lastEditorPage) instanceof ProblemEditorPart) {
+>                 ((ProblemEditorPart) getEditor (lastEditorPage)).setDiagnostic (diagnostic);
+>                 if (diagnostic.getSeverity () != Diagnostic.OK) {
+>                     setActivePage (lastEditorPage);
+>                 }
+>             } else if (diagnostic.getSeverity () != Diagnostic.OK) {
+>                 ProblemEditorPart problemEditorPart = new ProblemEditorPart ();
+>                 problemEditorPart.setDiagnostic (diagnostic);
+>                 problemEditorPart.setMarkerHelper (markerHelper);
+>                 try {
+>                     addPage (getPageCount (), problemEditorPart, getEditorInput ());
+>                     lastEditorPage ++;
+>                     setPageText (lastEditorPage, problemEditorPart.getPartName ());
+>                     setActivePage (lastEditorPage);
+>                 } catch (PartInitException exception) {
+>                     GMFToolEditPlugin.INSTANCE.log (exception);
+>                 }
+>             }
+> 
+>             if (markerHelper.hasMarkers (editingDomain.getResourceSet ())) {
+>                 markerHelper.deleteMarkers (editingDomain.getResourceSet ());
+>                 if (diagnostic.getSeverity () != Diagnostic.OK) {
+>                     try {
+>                         markerHelper.createMarkers (diagnostic);
+>                     } catch (CoreException exception) {
+529a633,653
+>             resource = editingDomain.getResourceSet ().getResource (resourceURI, true);
+>         } catch (Exception e) {
+>             exception = e;
+>             resource = editingDomain.getResourceSet ().getResource (resourceURI, false);
+>         }
+>         Diagnostic diagnostic = analyzeResourceProblems (resource, exception);
+>         if (diagnostic.getSeverity () != Diagnostic.OK) {
+>             resourceToDiagnosticMap.put (resource, analyzeResourceProblems (resource, exception));
+>         }
+>         editingDomain.getResourceSet ().eAdapters ().add (problemIndicationAdapter);
+>     }
+> 
+>     public Diagnostic analyzeResourceProblems (Resource resource, Exception exception) {
+>         if (! resource.getErrors ().isEmpty () || ! resource.getWarnings ().isEmpty ()) {
+>             BasicDiagnostic basicDiagnostic = new BasicDiagnostic (Diagnostic.ERROR, "org.eclipse.gmf.tooldef.edit", 0, getString ("_UI_CreateModelError_message", resource.getURI ()), new Object [] {exception == null ? (Object) resource : exception});
+>             basicDiagnostic.merge (EcoreUtil.computeDiagnostic (resource, true));
+>             return basicDiagnostic;
+>         } else if (exception != null) {
+>             return new BasicDiagnostic (Diagnostic.ERROR, "org.eclipse.gmf.tooldef.edit", 0, getString ("_UI_CreateModelError_message", resource.getURI ()), new Object [] {exception});
+>         } else {
+>             return Diagnostic.OK_INSTANCE;
+530a629,629
+>         ;
+530,530c628,628
+<             editingDomain.loadResource (URI.createPlatformResourceURI (modelFile.getFile ().getFullPath ().toString ()).toString ());
+---
+>         URI resourceURI = URI.createPlatformResourceURI (modelFile.getFile ().getFullPath ().toString ());
+531a631,631
+>         Resource resource = null;
+531,531c630,630
+<         } catch (Exception exception) {
+---
+>         Exception exception = null;
+532,532d630
+<             GMFToolEditPlugin.INSTANCE.log (exception);
+533a655,655
+> 
+537a660,660
+>         if (! getEditingDomain ().getResourceSet ().getResources ().isEmpty () && ! ((Resource) getEditingDomain ().getResourceSet ().getResources ().get (0)).getContents ().isEmpty ()) {
+706a830,830
+>         }
+720a845,845
+>         updateProblemIndication ();
+851,851c981,981
+<                 try {
+---
+>                         try {
+862a985,985
+>                             resourceToDiagnosticMap.put (resource, analyzeResourceProblems (resource, exception));
+862,862c984,984
+<                 } catch (Exception exception) {
+---
+>                         } catch (Exception exception) {
+863,863d984
+<                     GMFToolEditPlugin.INSTANCE.log (exception);
+869a995,995
+>         updateProblemIndication = false;
+876a1003,1004
+>         updateProblemIndication = true;
+>         updateProblemIndication ();

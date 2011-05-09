@@ -1,0 +1,200 @@
+package org.eclipse.gmf.runtime.common.ui.services.properties.extended;
+
+import java.text.MessageFormat;
+
+import java.util.ArrayList;
+
+import org.eclipse.jface.viewers.CellEditor;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.events.KeyAdapter;
+
+import org.eclipse.swt.events.KeyEvent;
+
+import org.eclipse.swt.events.SelectionAdapter;
+
+import org.eclipse.swt.events.SelectionEvent;
+
+import org.eclipse.swt.graphics.Color;
+
+import org.eclipse.swt.graphics.Font;
+
+import org.eclipse.swt.graphics.Point;
+
+import org.eclipse.swt.graphics.Rectangle;
+
+import org.eclipse.swt.widgets.Button;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.swt.widgets.Control;
+
+import org.eclipse.swt.widgets.Label;
+
+import org.eclipse.swt.widgets.Layout;
+
+import org.eclipse.swt.widgets.Text;
+
+public abstract class MultiButtonCellEditor extends CellEditor {
+    private Composite editor;
+    private Font font;
+    private Control label;
+    private ArrayList buttonList;
+    private Object value = null;
+    private class MultiButtonCellLayout extends Layout {
+
+        protected Point computeSize (Composite composite, int wHint, int hHint, boolean flushCache) {
+            if (wHint != SWT.DEFAULT && hHint != SWT.DEFAULT) {
+                return new Point (wHint, hHint);
+            }
+            int height = 0;
+            int sumWidth = 0;
+            int count = buttonList.size ();
+            for (int i = 0;
+            i < count; i ++) {
+                Point size = ((Button) buttonList.get (i)).computeSize (SWT.DEFAULT, SWT.DEFAULT, flushCache);
+                sumWidth += size.x;
+                height = Math.max (height, size.y);
+            }
+            Point labelSize = label.computeSize (SWT.DEFAULT, SWT.DEFAULT, flushCache);
+            return new Point (sumWidth, Math.max (labelSize.y, height));
+        }
+
+        protected void layout (Composite composite, boolean flushCache) {
+            Rectangle bounds = editor.getClientArea ();
+            int count = buttonList.size ();
+            int sumWidth = 0;
+            int [] widthArray = new int [count];
+            int start = 0;
+            for (int i = 0;
+            i < count; i ++) {
+                Point size = ((Button) buttonList.get (i)).computeSize (SWT.DEFAULT, SWT.DEFAULT, flushCache);
+                sumWidth += size.x;
+                widthArray [i] = size.x;
+            }
+            if (label != null) {
+                label.setBounds (0, 0, bounds.width - sumWidth, bounds.height);
+                start = bounds.width - sumWidth;
+            }
+            for (int i = 0;
+            i < count; i ++) {
+                Button button = (Button) buttonList.get (i);
+                button.setBounds (start, 0, widthArray [i], bounds.height);
+                start += widthArray [i];
+            }
+        }
+
+    }
+
+    public MultiButtonCellEditor (Composite parent) {
+        this (parent, SWT.NONE);
+    }
+
+    public MultiButtonCellEditor (Composite parent, int style) {
+        super (parent, style);
+    }
+
+    protected Control createControl (Composite parent) {
+        buttonList = new ArrayList ();
+        font = parent.getFont ();
+        Color bg = parent.getBackground ();
+        editor = new Composite (parent, getStyle ());
+        editor.setFont (font);
+        editor.setBackground (bg);
+        editor.setLayout (new MultiButtonCellLayout ());
+        if (isModifiable ()) {
+            label = (new Text (editor, SWT.LEFT));
+        } else {
+            label = (new Label (editor, SWT.LEFT));
+        }
+        label.setFont (font);
+        label.setBackground (bg);
+        updateLabel (value);
+        initButtons ();
+        assert buttonList.size () > 0 : "button list size must > 0";
+        setValueValid (true);
+        return editor;
+    }
+
+    protected boolean isModifiable () {
+        return false;
+    }
+
+    protected Object doGetValue () {
+        return value;
+    }
+
+    protected void doSetFocus () {
+        ((Button) buttonList.get (buttonList.size () - 1)).setFocus ();
+    }
+
+    protected void doSetValue (Object val) {
+        this.value = val;
+        updateLabel (val);
+    }
+
+    protected void addButton (String buttonLabel, final IPropertyAction buttonAction) {
+        Button button = new Button (editor, SWT.DOWN);
+        button.setText (buttonLabel);
+        button.setFont (font);
+        button.addSelectionListener (new SelectionAdapter () {
+
+            public void widgetSelected (SelectionEvent event) {
+                Object newValue = buttonAction.execute (editor);
+                if (newValue != null) {
+                    boolean newValidState = isCorrect (newValue);
+                    if (newValidState) {
+                        markDirty ();
+                        doSetValue (newValue);
+                    } else {
+                        setErrorMessage (MessageFormat.format (getErrorMessage (), new Object [] {newValue.toString ()}));
+                    }
+                    fireApplyEditorValue ();
+                }
+            }
+
+        }
+
+        );
+        button.addKeyListener (new KeyAdapter () {
+
+            public void keyReleased (KeyEvent e) {
+                if (e.character == '\u001b') {
+                    fireCancelEditor ();
+                }
+            }
+
+        }
+
+        );
+        buttonList.add (button);
+    }
+
+    protected void updateLabel (Object val) {
+        if (label == null) return;
+
+        String text = "";
+        if (val != null) {
+            text = val.toString ();
+        }
+        if (label instanceof Label) {
+            ((Label) label).setText (text);
+        } else if (label instanceof Text) {
+            ((Text) label).setText (text);
+        }
+
+    }
+
+    protected abstract void initButtons ();
+
+    protected Label getLabel () {
+        return (label != null && label instanceof Label) ? (Label) label : null;
+    }
+
+    protected Text getText () {
+        return (label != null && label instanceof Text) ? (Text) label : null;
+    }
+
+}
+

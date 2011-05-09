@@ -1,0 +1,137 @@
+package org.eclipse.gmf.runtime.diagram.ui.commands;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.emf.transaction.Transaction;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.emf.workspace.AbstractEMFOperation;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.jface.util.Assert;
+
+public class SetViewMutabilityCommand extends Command {
+    private List _viewAdapters = Collections.EMPTY_LIST;
+    private boolean _immutable = true;
+
+    public SetViewMutabilityCommand (IAdaptable viewAdapter, boolean immutable) {
+        this (Collections.singletonList (viewAdapter), immutable);
+    }
+
+    public SetViewMutabilityCommand (List viewAdapters, boolean immutable) {
+        super (DiagramUIMessages.SetViewMutabilityCommand_Label);
+        Assert.isNotNull (viewAdapters);
+        _viewAdapters = viewAdapters;
+        _immutable = immutable;
+    }
+
+    public static SetViewMutabilityCommand makeMutable (List viewAdapters) {
+        return new SetViewMutabilityCommand (viewAdapters, false);
+    }
+
+    public static SetViewMutabilityCommand makeMutable (IAdaptable viewAdapter) {
+        return new SetViewMutabilityCommand (viewAdapter, false);
+    }
+
+    public static SetViewMutabilityCommand makeImmutable (List viewAdapters) {
+        return new SetViewMutabilityCommand (viewAdapters, true);
+    }
+
+    public static SetViewMutabilityCommand makeImmutable (IAdaptable viewAdapter) {
+        return new SetViewMutabilityCommand (viewAdapter, true);
+    }
+
+    protected List getViewAdapters () {
+        return Collections.unmodifiableList (_viewAdapters);
+    }
+
+    public void execute () {
+        setMutability (_immutable);
+    }
+
+    private void setMutability (final boolean immutable) {
+        if (! _viewAdapters.isEmpty ()) {
+            TransactionalEditingDomain editingDomain = TransactionUtil.getEditingDomain (((IAdaptable) _viewAdapters.get (0)).getAdapter (View.class));
+            if (editingDomain != null) {
+                Map options = Collections.singletonMap (Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+                AbstractEMFOperation operation = new AbstractEMFOperation (editingDomain, StringStatics.BLANK, options) {
+
+                    protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+                        Iterator adapters = _viewAdapters.iterator ();
+                        while (adapters.hasNext ()) {
+                            IAdaptable adapter = (IAdaptable) adapters.next ();
+                            View notationView = (View) adapter.getAdapter (View.class);
+                            if (notationView != null) {
+                                notationView.setMutable (! immutable);
+                            }
+                        }
+                        return Status.OK_STATUS;
+                    }
+
+                }
+
+                ;
+                try {
+                    operation.execute (new NullProgressMonitor (), null);
+                } catch (ExecutionException e) {
+                    Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "setMutability", e);
+                    Log.warning (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "setMutability", e);
+                }
+            }
+        }
+    }
+
+    public Collection getAffectedObjects () {
+        return getViewAdapters ();
+    }
+
+    public void redo () {
+        setMutability (_immutable);
+    }
+
+    public void undo () {
+        setMutability (! _immutable);
+    }
+
+}
+

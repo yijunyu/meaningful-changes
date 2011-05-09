@@ -1,0 +1,47 @@
+17a18
+> import org.eclipse.emf.ecore.EClass;
+24a26
+> import org.eclipse.gmf.gmfgraph.FigureAccessor;
+29a32
+> import org.eclipse.gmf.gmfgraph.RealFigure;
+119,123c122
+< 			if (next.getAccessor() != null) {
+< 				// accessor
+< 				ChildAccess labelAccess = next.getAccessor();
+< 				// XXX nothing to do?
+< 			} else {
+---
+> 			if (next.getAccessor() == null) {
+125a125
+> 			// else nothing to do as child accessors will get copied as part of parent figure process
+145c145,155
+< 			myElementCopier.registerSubstitution(fd, createCustomFigure(fd, fqn));
+---
+> 			final FigureDescriptor newFD = createCustomFigure(fd, fqn);
+> 			myElementCopier.registerSubstitution(fd, newFD);
+> 			for (ChildAccess ca : fd.getAccessors()) {
+> 				FigureAccessor newFA = GMFGraphFactory.eINSTANCE.createFigureAccessor();
+> 				newFA.setAccessor(ca.getAccessor());
+> 				newFA.setTypedFigure(createReferencedFigure(ca));
+> 				((CustomFigure) newFD.getActualFigure()).getCustomChildren().add(newFA);
+> 				final ChildAccess newCA = myElementCopier.xcopy(ca);
+> 				newCA.setFigure(newFA.getTypedFigure());
+> 				newFD.getAccessors().add(newCA);
+> 			}
+148a159
+> 
+183a195,208
+> 
+> 	private static RealFigure createReferencedFigure(ChildAccess ca) {
+> 		// XXX ca.getFigure() may be FigureRef, need to revisit this usecase
+> 		if (false == ca.getFigure() instanceof RealFigure) {
+> 			return null;
+> 		}
+> 		EClass eType = ca.getFigure().eClass();
+> 		// it's just a type holder, hence no need to copy any attribute/children but type only.
+> 		RealFigure copy = (RealFigure) eType.getEPackage().getEFactoryInstance().create(eType);
+> 		if (copy instanceof CustomFigure) {
+> 			((CustomFigure) copy).setQualifiedClassName(((CustomFigure) ca.getFigure()).getQualifiedClassName());
+> 		}
+> 		return copy;
+> 	}

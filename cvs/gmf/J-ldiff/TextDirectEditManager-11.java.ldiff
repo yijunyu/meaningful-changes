@@ -1,0 +1,106 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2003 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2006 IBM Corporation and others.
+9a10,10
+>  * 	  Dmitry Stadnik (Borland) - contribution for bugzilla 135694
+14a16,17
+> import org.eclipse.draw2d.IFigure;
+> import org.eclipse.draw2d.Label;
+20a24,24
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.ITextAwareEditPart;
+45,48d48
+<  * 
+<  * To change this generated comment edit the template variable "typecomment":
+<  * Window>Preferences>Java>Templates. To enable and disable the creation of type
+<  * comments go to Window>Preferences>Java>Code Generation.
+106a107,131
+> 	private static class LabelCellEditorLocator implements CellEditorLocator {
+> 
+> 		private Label label;
+> 
+> 		public LabelCellEditorLocator(Label label) {
+> 			this.label = label;
+> 		}
+> 
+> 		public Label getLabel() {
+> 			return label;
+> 		}
+> 
+> 		public void relocate(CellEditor celleditor) {
+> 			Text text = (Text) celleditor.getControl();
+> 			Rectangle rect = getLabel().getTextBounds().getCopy();
+> 			getLabel().translateToAbsolute(rect);
+> 
+> 			int avr = FigureUtilities.getFontMetrics(text.getFont()).getAverageCharWidth();
+> 			rect.setSize(new Dimension(text.computeSize(SWT.DEFAULT, SWT.DEFAULT)).expand(avr * 2, 0));
+> 
+> 			if (!rect.equals(new Rectangle(text.getBounds())))
+> 				text.setBounds(rect.x, rect.y, rect.width, rect.height);
+> 		}
+> 	}
+> 
+113,113c138,138
+< 	public TextDirectEditManager(TextCompartmentEditPart source) {
+---
+> 	public TextDirectEditManager(ITextAwareEditPart source) {
+114,114c139,139
+< 		super(source, getTextCellEditorClass(source), 
+---
+> 		super(source, getTextCellEditorClass(source), getTextCellEditorLocator(source));
+115,115d139
+< 				new TextCellEditorLocator(source.getLabel()));
+126a151,172
+>     /**
+>      * @param source the <code>ITextAwareEditPart</code> to determine the cell editor for
+>      * @return the <code>CellEditorLocator</code> that is appropriate for the source <code>EditPart</code>
+>      */
+>     public static CellEditorLocator getTextCellEditorLocator(ITextAwareEditPart source){
+>                
+>         if (source instanceof TextCompartmentEditPart)
+>             return new TextCellEditorLocator(((TextCompartmentEditPart)source).getLabel());
+>         else {
+>             IFigure figure = source.getFigure();
+>             assert figure instanceof Label;
+>             return new LabelCellEditorLocator((Label)figure);
+>         }
+>     }
+>     
+> 	/**
+> 	 * @param source the <code>GraphicalEditPart</code> that is used to determine which
+>      * <code>CellEditor</code> class to use.
+> 	 * @return the <code>Class</code> of the <code>CellEditor</code> to use for the text editing.
+> 	 */
+> 	public static Class getTextCellEditorClass(GraphicalEditPart source){
+> 		IFigure figure = source.getFigure();
+127,128d150
+< 	private static Class getTextCellEditorClass(TextCompartmentEditPart source){
+< 		WrapLabel wrapLabel = source.getLabel();
+129a174,174
+> 		if (figure instanceof WrapLabel && ((WrapLabel) figure).isTextWrapped())
+130,130d173
+< 		if (wrapLabel.isTextWrapped())
+149,149c193,193
+< 	protected Font getScaledFont(WrapLabel label) {
+---
+> 	protected Font getScaledFont(IFigure label) {
+166a211,211
+> 		ITextAwareEditPart textEP = (ITextAwareEditPart) getEditPart();
+167,167d210
+< 		TextCompartmentEditPart textEP = (TextCompartmentEditPart) getEditPart();
+171,171c215,215
+< 		WrapLabel label = textEP.getLabel();
+---
+> 		IFigure label = textEP.getFigure();
+270a315,315
+> 		ITextAwareEditPart textEP = (ITextAwareEditPart) getEditPart();
+271,271d314
+< 		TextCompartmentEditPart textEP = (TextCompartmentEditPart) getEditPart();
+276,278d319
+< 		// Get the Text Edit Part's Figure (WrapLabel)
+< 		WrapLabel label = textEP.getLabel();
+< 		Assert.isNotNull(label);
+279a321,321
+> 		textEP.setLabelText(toEdit);
+280,280d320
+< 		label.setText(toEdit);

@@ -1,0 +1,194 @@
+5,6d4
+< import java.util.HashMap;
+< 
+11,12d8
+< import java.util.Map;
+< 
+43,48d38
+< import org.eclipse.jface.preference.IPreferenceStore;
+< 
+< import org.eclipse.jface.util.Assert;
+< 
+< import org.eclipse.swt.widgets.Display;
+< 
+64a55,56
+> import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+> 
+84a77,78
+> import org.eclipse.gmf.runtime.diagram.ui.internal.requests.CreateViewRequestFactory;
+> 
+101,102d94
+< import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+< 
+107,108d98
+< import org.eclipse.gmf.runtime.emf.ui.services.modelingassistant.ModelingAssistantService;
+< 
+112a103,104
+> import org.eclipse.gmf.runtime.emf.ui.services.modelingassistant.ModelingAssistantService;
+> 
+122a115,120
+> import org.eclipse.jface.preference.IPreferenceStore;
+> 
+> import org.eclipse.jface.util.Assert;
+> 
+> import org.eclipse.swt.widgets.Display;
+> 
+125a124,164
+>     protected class PromptAndCreateConnectionCommand extends CreateOrSelectElementCommand {
+>         private CreateConnectionRequest request;
+> 
+>         public PromptAndCreateConnectionCommand (List content, CreateConnectionRequest request) {
+>             super (CREATE_CONNECTION_COMMAND_LABEL, Display.getCurrent ().getActiveShell (), content);
+>             this.request = request;
+>         }
+> 
+>         private Command createCommand;
+> 
+>         protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+>             CommandResult cmdResult = super.doExecute (progressMonitor);
+>             if (! cmdResult.getStatus ().isOK ()) {
+>                 return cmdResult;
+>             }
+>             Command cmd = getConnectionCompleteCommand (cmdResult.getReturnValue (), getRequest ());
+>             Assert.isTrue (cmd != null && cmd.canExecute ());
+>             cmd.execute ();
+>             createCommand = cmd;
+>             return newOKCommandResult ();
+>         }
+> 
+>         protected CommandResult doUndo () {
+>             if (createCommand != null) {
+>                 createCommand.undo ();
+>             }
+>             return super.doUndo ();
+>         }
+> 
+>         protected CommandResult doRedo () {
+>             if (createCommand != null) {
+>                 createCommand.redo ();
+>             }
+>             return super.doRedo ();
+>         }
+> 
+>         private CreateConnectionRequest getRequest () {
+>             return request;
+>         }
+> 
+>     }
+438,439c477,478
+<         List allRequests = request.getAllRequests ();
+<         if (allRequests.isEmpty ()) {
+---
+>         List menuContent = getConnectionMenuContent (request);
+>         if (menuContent.isEmpty ()) {
+441,462c480,481
+<         }
+<         IGraphicalEditPart sourceEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests.get (0)).getSourceEditPart ();
+<         IGraphicalEditPart targetEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests.get (0)).getTargetEditPart ();
+<         List relTypes = request.useModelingAssistantService () ? ModelingAssistantService.getInstance ().getRelTypesOnSourceAndTarget (sourceEP, targetEP) : request.getElementTypes ();
+<         final Map connectionCmds = new HashMap ();
+<         List validRelTypes = new ArrayList ();
+<         for (Iterator iter = relTypes.iterator ();
+<         iter.hasNext ();) {
+<             IElementType type = (IElementType) iter.next ();
+<             Request createConnectionRequest = request.getRequestForType (type);
+<             if (createConnectionRequest != null) {
+<                 Command individualCmd = getHost ().getCommand (createConnectionRequest);
+<                 if (individualCmd != null && individualCmd.canExecute ()) {
+<                     connectionCmds.put (type, individualCmd);
+<                     validRelTypes.add (type);
+<                 }
+<             }
+<         }
+<         if (connectionCmds.isEmpty ()) {
+<             return null;
+<         } else if (connectionCmds.size () == 1) {
+<             return (Command) connectionCmds.values ().toArray () [0];
+---
+>         } else if (menuContent.size () == 1) {
+>             return getConnectionCompleteCommand (menuContent.get (0), request);
+464,465c483,484
+<             CreateOrSelectElementCommand selectAndCreateConnectionCmd = new CreateOrSelectElementCommand (CREATE_CONNECTION_COMMAND_LABEL, Display.getCurrent ().getActiveShell (), validRelTypes) {
+<                 private Command undoCommand;
+---
+>             return new EtoolsProxyCommand (getPromptAndCreateConnectionCommand (menuContent, request));
+>         }
+467,470d485
+<                 protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+<                     CommandResult cmdResult = super.doExecute (progressMonitor);
+<                     if (! cmdResult.getStatus ().isOK ()) {
+<                         return cmdResult;
+472,477c487,489
+<                     IElementType relationshipType = (IElementType) cmdResult.getReturnValue ();
+<                     Command cmd = (Command) connectionCmds.get (relationshipType);
+<                     Assert.isTrue (cmd != null && cmd.canExecute ());
+<                     cmd.execute ();
+<                     undoCommand = cmd;
+<                     return newOKCommandResult ();
+---
+> 
+>     protected ICommand getPromptAndCreateConnectionCommand (List content, CreateConnectionRequest request) {
+>         return new PromptAndCreateConnectionCommand (content, request);
+480,482c492,495
+<                 protected CommandResult doUndo () {
+<                     if (undoCommand != null) {
+<                         undoCommand.undo ();
+---
+>     protected Command getConnectionCompleteCommand (Object connectionType, CreateConnectionRequest request) {
+>         if (connectionType instanceof IElementType) {
+>             if (request instanceof CreateUnspecifiedTypeConnectionRequest) {
+>                 return getHost ().getCommand (((CreateUnspecifiedTypeConnectionRequest) request).getRequestForType ((IElementType) connectionType));
+484c497,498
+<                     return super.doUndo ();
+---
+>         }
+>         return null;
+487,489c501,507
+<                 protected CommandResult doRedo () {
+<                     if (undoCommand != null) {
+<                         undoCommand.redo ();
+---
+>     protected List getConnectionMenuContent (CreateConnectionRequest request) {
+>         List validRelTypes = new ArrayList ();
+>         if (request instanceof CreateUnspecifiedTypeConnectionRequest) {
+>             CreateUnspecifiedTypeConnectionRequest unspecifiedRequest = (CreateUnspecifiedTypeConnectionRequest) request;
+>             List allRequests = unspecifiedRequest.getAllRequests ();
+>             if (allRequests.isEmpty ()) {
+>                 return null;
+491c509,528
+<                     return super.doRedo ();
+---
+>             IGraphicalEditPart sourceEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests.get (0)).getSourceEditPart ();
+>             IGraphicalEditPart targetEP = (IGraphicalEditPart) ((CreateConnectionRequest) allRequests.get (0)).getTargetEditPart ();
+>             List allRelTypes = unspecifiedRequest.useModelingAssistantService () ? ModelingAssistantService.getInstance ().getRelTypesOnSourceAndTarget (sourceEP, targetEP) : unspecifiedRequest.getElementTypes ();
+>             for (Iterator iter = allRelTypes.iterator ();
+>             iter.hasNext ();) {
+>                 IElementType type = (IElementType) iter.next ();
+>                 Command individualCmd = null;
+>                 Request createConnectionRequest = unspecifiedRequest.getRequestForType (type);
+>                 if (createConnectionRequest != null) {
+>                     individualCmd = getHost ().getCommand (createConnectionRequest);
+>                 } else {
+>                     CreateConnectionViewRequest connectionRequest = CreateViewRequestFactory.getCreateConnectionRequest (type, ((IGraphicalEditPart) getHost ()).getDiagramPreferencesHint ());
+>                     connectionRequest.setSourceEditPart (null);
+>                     connectionRequest.setTargetEditPart (sourceEP);
+>                     connectionRequest.setType (RequestConstants.REQ_CONNECTION_START);
+>                     sourceEP.getCommand (connectionRequest);
+>                     connectionRequest.setSourceEditPart (sourceEP);
+>                     connectionRequest.setTargetEditPart (targetEP);
+>                     connectionRequest.setType (RequestConstants.REQ_CONNECTION_END);
+>                     individualCmd = targetEP.getCommand (connectionRequest);
+493c530,531
+< 
+---
+>                 if (individualCmd != null && individualCmd.canExecute ()) {
+>                     validRelTypes.add (type);
+495,497d532
+< 
+<             ;
+<             return new EtoolsProxyCommand (selectAndCreateConnectionCmd);
+499c534,535
+< 
+---
+>         }
+>         return validRelTypes;

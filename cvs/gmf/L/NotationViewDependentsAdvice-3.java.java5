@@ -1,0 +1,47 @@
+package org.eclipse.gmf.runtime.diagram.core.edithelpers;
+
+import java.util.Collection;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+
+import org.eclipse.gmf.runtime.emf.type.core.edithelper.AbstractEditHelperAdvice;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyDependentsRequest;
+
+import org.eclipse.gmf.runtime.notation.Edge;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class NotationViewDependentsAdvice extends AbstractEditHelperAdvice {
+
+    protected ICommand getBeforeDestroyDependentsCommand (DestroyDependentsRequest request) {
+        EObject destructee = request.getElementToDestroy ();
+        ICommand result = null;
+        Collection semanticReferencers = EMFCoreUtil.getReferencers (destructee, new EReference [] {NotationPackage.Literals.VIEW__ELEMENT});
+        result = CompositeCommand.compose (result, request.getDestroyDependentsCommand (semanticReferencers));
+        if (destructee instanceof View) {
+            Collection nodeEntryKeys = EMFCoreUtil.getReferencers (destructee, new EReference [] {NotationPackage.Literals.NODE_ENTRY__KEY});
+            result = CompositeCommand.compose (result, request.getDestroyDependentsCommand (nodeEntryKeys));
+        }
+        if (destructee instanceof Node || destructee instanceof Edge) {
+            View view = (View) destructee;
+            result = CompositeCommand.compose (result, request.getDestroyDependentsCommand (view.getSourceEdges ()));
+            result = CompositeCommand.compose (result, request.getDestroyDependentsCommand (view.getTargetEdges ()));
+        }
+        return result;
+    }
+
+}
+

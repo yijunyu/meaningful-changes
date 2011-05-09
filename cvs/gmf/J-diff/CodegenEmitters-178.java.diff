@@ -1,0 +1,100 @@
+2c2
+<  * Copyright (c) 2005, 2007 Borland Software Corporation
+---
+>  * Copyright (c) 2005, 2008 Borland Software Corporation
+16a17
+> import java.util.ArrayList;
+29,33d29
+< import org.eclipse.gmf.internal.codegen.dispatch.CachingEmitterFactory;
+< import org.eclipse.gmf.internal.codegen.dispatch.EmitterFactory;
+< import org.eclipse.gmf.internal.codegen.dispatch.EmitterFactoryImpl;
+< import org.eclipse.gmf.internal.codegen.dispatch.NoSuchTemplateException;
+< import org.eclipse.gmf.internal.codegen.dispatch.StaticTemplateRegistry;
+37d32
+< import org.eclipse.gmf.internal.common.codegen.JETEmitterAdapter;
+53,74c48,57
+< 	private static final String TEMPLATES_PLUGIN_ID = "org.eclipse.gmf.codegen"; //$NON-NLS-1$
+< 	private final EmitterFactory myFactory;
+< 	private final String[] myTemplatePath;
+< 	private ResourceManager myResourceManager;
+< 
+< 	public CodegenEmitters(boolean usePrecompiled, String templateDirectory) {
+< 		this(usePrecompiled, templateDirectory, getDefaultVariables(), new StaticTemplateRegistry(CodegenEmitters.class.getClassLoader()));
+< 	}
+< 	
+< 	public CodegenEmitters(boolean usePrecompiled, String templateDirectory, String[] variables, StaticTemplateRegistry registry) {
+< 		final URL baseURL = getTemplatesBundle().getEntry("/templates/"); //$NON-NLS-1$
+< 		final URL dynModelBase = getTemplatesBundle().getEntry("/templates-dynmodel/"); //$NON-NLS-1$
+< 		final URL dynamicURL = usePrecompiled ? null : getDynamicTemplatesURL(templateDirectory);
+< 		
+< 		myTemplatePath = new String[] { dynamicURL != null ? dynamicURL.toString() : null, baseURL.toString() };
+< 		// actually, that's new JETEmitterFactory with JETTemplateRegistry
+< 		myFactory = new CachingEmitterFactory(new EmitterFactoryImpl(getTemplatePath(), registry, usePrecompiled, variables));
+< 		
+< 		if (dynamicURL == null) {
+< 			myResourceManager = new BundleResourceManager(baseURL, dynModelBase);	
+< 		} else {
+< 			myResourceManager = new BundleResourceManager(dynamicURL, baseURL, dynModelBase);
+---
+> 	private final ResourceManager myResourceManager;
+> 	private final URL[] myLocations;
+> 
+> 	public CodegenEmitters(boolean useBaseTemplatesOnly, String templateDirectory, boolean includeDynamicModelTemplates) {
+> 		ArrayList<URL> urls = new ArrayList<URL>(5);
+> 		if (!useBaseTemplatesOnly) {
+> 			urls.add(getDynamicTemplatesURL(templateDirectory));
+> 		}
+> 		if (includeDynamicModelTemplates) {
+> 			urls.add(getTemplatesBundle().getEntry("/templates-dynmodel/")); //$NON-NLS-1$
+75a59,62
+> 		urls.add(getTemplatesBundle().getEntry("/templates/")); //$NON-NLS-1$
+> 	
+> 		myLocations = urls.toArray(new URL[urls.size()]);
+> 		myResourceManager = new BundleResourceManager(myLocations);
+94,109d80
+< 	/**
+< 	 * depends on {@link #put(StaticTemplateRegistry, String, Class) } impl - class object of
+< 	 * precompiled template serves as a key
+< 	 */
+< 	public TextEmitter retrieve(Class<?> key) throws UnexpectedBehaviourException {
+< 		try {
+< 			return new JETEmitterAdapter(myFactory.acquireEmitter(key));
+< 		} catch (NoSuchTemplateException ex) {
+< 			throw new UnexpectedBehaviourException(ex.getMessage(), ex);
+< 		}
+< 	}
+< 
+< 	private String[] getTemplatePath() {
+< 		return myTemplatePath;
+< 	}
+< 
+111c82
+< 		return Platform.getBundle(TEMPLATES_PLUGIN_ID);
+---
+> 		return Platform.getBundle("org.eclipse.gmf.codegen"); //$NON-NLS-1$
+120,121c91
+< 				String pluginID = "org.eclipse.gmf.codegen"; //$NON-NLS-1$
+< 				Platform.getLog(Platform.getBundle(pluginID)).log(new Status(IStatus.ERROR, pluginID, 0, "Incorrecct dynamic templates location", e)); //$NON-NLS-1$
+---
+> 				Platform.getLog(getTemplatesBundle()).log(new Status(IStatus.ERROR, getTemplatesBundle().getSymbolicName(), 0, "Incorrecct dynamic templates location", e)); //$NON-NLS-1$
+782c752,756
+< 		String templateLocation = JETCompiler.find(getTemplatePath(), relativePath);
+---
+> 		String[] templatesPath = new String[myLocations.length];
+> 		for (int i = 0; i < myLocations.length; i++) {
+> 			templatesPath[i] = myLocations[i].toString();
+> 		}
+> 		String templateLocation = JETCompiler.find(templatesPath, relativePath);
+792,803d765
+< 
+< 	protected static String[] getDefaultVariables(){
+< 		return new String[] {
+< 		        "org.eclipse.emf.codegen", //$NON-NLS-1$
+< 				"org.eclipse.emf.codegen.ecore", //$NON-NLS-1$
+< 				"org.eclipse.emf.common", //$NON-NLS-1$
+< 				"org.eclipse.emf.ecore", //$NON-NLS-1$
+< 				"org.eclipse.gmf.common", //$NON-NLS-1$
+< 				"org.eclipse.gmf.codegen", //$NON-NLS-1$
+< 		};
+< 	}
+< 

@@ -1,0 +1,211 @@
+package org.eclipse.gmf.graphdef.editor.edit.parts;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import org.eclipse.draw2d.ColorConstants;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.Polygon;
+
+import org.eclipse.draw2d.RectangleFigure;
+
+import org.eclipse.draw2d.StackLayout;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.emf.common.notify.Adapter;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gef.EditPolicy;
+
+import org.eclipse.gef.editpolicies.LayoutEditPolicy;
+
+import org.eclipse.gmf.gmfgraph.GMFGraphPackage;
+
+import org.eclipse.gmf.graphdef.editor.edit.policies.PointItemSemanticEditPolicy;
+
+import org.eclipse.gmf.graphdef.editor.edit.polocies.FigureContainerXYLayoutEditPolicy;
+
+import org.eclipse.gmf.graphdef.editor.sheet.ChangeTracker;
+
+import org.eclipse.gmf.graphdef.editor.sheet.MultipleTargetsFeatureTracker;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableEditPolicyEx;
+
+import org.eclipse.gmf.runtime.gef.ui.figures.DefaultSizeNodeFigure;
+
+import org.eclipse.gmf.runtime.gef.ui.figures.NodeFigure;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class PointEditPart extends AbstractPointEditPart {
+    public static final int VISUAL_ID = 3022;
+    protected IFigure contentPane;
+    protected IFigure primaryShape;
+
+    public PointEditPart (View view) {
+        super (view);
+    }
+
+    protected void createDefaultEditPolicies () {
+        super.createDefaultEditPolicies ();
+        installEditPolicy (EditPolicyRoles.SEMANTIC_ROLE, new PointItemSemanticEditPolicy ());
+        installEditPolicy (EditPolicy.LAYOUT_ROLE, createLayoutEditPolicy ());
+    }
+
+    protected LayoutEditPolicy createLayoutEditPolicy () {
+        return new FigureContainerXYLayoutEditPolicy (getMapMode ());
+    }
+
+    protected IFigure createNodeShape () {
+        PolylinePointFigure figure = new PolylinePointFigure ();
+        return primaryShape = figure;
+    }
+
+    public PolylinePointFigure getPrimaryShape () {
+        return (PolylinePointFigure) primaryShape;
+    }
+
+    protected NodeFigure createNodePlate () {
+        DefaultSizeNodeFigure result = new DefaultSizeNodeFigure (getMapMode ().DPtoLP (7), getMapMode ().DPtoLP (7));
+        result.setMinimumSize (new Dimension (0, 0));
+        return result;
+    }
+
+    public EditPolicy getPrimaryDragEditPolicy () {
+        NonResizableEditPolicyEx editPolicy = new NonResizableEditPolicyEx ();
+        return editPolicy;
+    }
+
+    protected NodeFigure createNodeFigure () {
+        NodeFigure figure = createNodePlate ();
+        figure.setLayoutManager (new StackLayout ());
+        IFigure shape = createNodeShape ();
+        figure.add (shape);
+        contentPane = setupContentPane (shape);
+        return figure;
+    }
+
+    protected IFigure setupContentPane (IFigure nodeShape) {
+        return nodeShape;
+    }
+
+    public IFigure getContentPane () {
+        if (contentPane != null) {
+            return contentPane;
+        }
+        return super.getContentPane ();
+    }
+
+    protected void handleNotificationEvent (Notification notification) {
+        Object feature = notification.getFeature ();
+        if (NotationPackage.eINSTANCE.getFillStyle_FillColor ().equals (feature)) {
+            return;
+        } else if (NotationPackage.eINSTANCE.getLineStyle_LineColor ().equals (feature)) {
+            return;
+        }
+
+        super.handleNotificationEvent (notification);
+    }
+
+    public class PolylinePointFigure extends RectangleFigure {
+
+        public PolylinePointFigure () {
+            this.setFill (false);
+            this.setOutline (false);
+            createContents ();
+        }
+
+        private void createContents () {
+            Polygon polyline0 = new Polygon ();
+            polyline0.addPoint (new Point (getMapMode ().DPtoLP (0), getMapMode ().DPtoLP (0)));
+            polyline0.addPoint (new Point (getMapMode ().DPtoLP (6), getMapMode ().DPtoLP (3)));
+            polyline0.addPoint (new Point (getMapMode ().DPtoLP (3), getMapMode ().DPtoLP (6)));
+            polyline0.setFill (true);
+            polyline0.setForegroundColor (ColorConstants.blue);
+            polyline0.setBackgroundColor (ColorConstants.blue);
+            this.add (polyline0);
+        }
+
+        private boolean myUseLocalCoordinates = true;
+
+        protected boolean useLocalCoordinates () {
+            return myUseLocalCoordinates;
+        }
+
+        protected void setUseLocalCoordinates (boolean useLocalCoordinates) {
+            myUseLocalCoordinates = useLocalCoordinates;
+        }
+
+    }
+
+    private Collection < Adapter > myDomainElementAdapters = new ArrayList < Adapter > ();
+
+    private org.eclipse.gmf.gmfgraph.Point getGmfgraphElement () {
+        View view = getNotationView ();
+        if (view == null) {
+            return null;
+        }
+        EObject element = view.getElement ();
+        if (element instanceof org.eclipse.gmf.gmfgraph.Point) {
+            org.eclipse.gmf.gmfgraph.Point modelFigureElement = (org.eclipse.gmf.gmfgraph.Point) element;
+            return modelFigureElement;
+        }
+        return null;
+    }
+
+    protected void removeSemanticListeners () {
+        org.eclipse.gmf.gmfgraph.Point modelElement = getGmfgraphElement ();
+        if (modelElement != null) {
+            modelElement.eAdapters ().removeAll (myDomainElementAdapters);
+            myDomainElementAdapters.clear ();
+        }
+        super.removeSemanticListeners ();
+    }
+
+    protected void setFigure (IFigure figure) {
+        super.setFigure (figure);
+        org.eclipse.gmf.gmfgraph.Point modelElement = getGmfgraphElement ();
+        if (modelElement != null) {
+            refreshBounds ();
+        }
+    }
+
+    public void activate () {
+        if (isActive ()) {
+            return;
+        }
+        final org.eclipse.gmf.gmfgraph.Point modelElement = getGmfgraphElement ();
+        if (modelElement == null) {
+            super.activate ();
+            return;
+        }
+        ChangeTracker refreshBoundsTracker = new ChangeTracker () {
+
+            public void modelChanged (Notification msg) {
+                refreshBounds ();
+            }
+
+        }
+
+        ;
+        myDomainElementAdapters.add (new MultipleTargetsFeatureTracker (refreshBoundsTracker, GMFGraphPackage.eINSTANCE.getPoint_X ()));
+        myDomainElementAdapters.add (new MultipleTargetsFeatureTracker (refreshBoundsTracker, GMFGraphPackage.eINSTANCE.getPoint_Y ()));
+        modelElement.eAdapters ().addAll (myDomainElementAdapters);
+        super.activate ();
+    }
+
+}
+

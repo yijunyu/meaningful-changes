@@ -1,0 +1,108 @@
+12a13,16
+> import org.eclipse.emf.common.command.Command;
+> 
+> import org.eclipse.emf.common.command.CompoundCommand;
+> 
+18a23,24
+> import org.eclipse.emf.ecore.EObject;
+> 
+24a31,34
+> import org.eclipse.emf.edit.command.SetCommand;
+> 
+> import org.eclipse.emf.edit.domain.EditingDomain;
+> 
+30a41,44
+> import org.eclipse.emf.edit.provider.ItemPropertyDescriptor;
+> 
+> import org.eclipse.emf.edit.provider.ItemPropertyDescriptorDecorator;
+> 
+34a49,60
+> import org.eclipse.emf.transaction.impl.InternalTransaction;
+> 
+> import org.eclipse.emf.transaction.impl.InternalTransactionalEditingDomain;
+> 
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> 
+> import org.eclipse.gmf.runtime.common.ui.services.properties.descriptors.ICompositeSourcePropertyDescriptor;
+> 
+> import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+> 
+> import org.eclipse.gmf.runtime.emf.core.internal.util.MSLAdapterFactoryManager;
+> 
+49,52d74
+< import org.eclipse.gmf.runtime.common.ui.services.properties.descriptors.ICompositeSourcePropertyDescriptor;
+< 
+< import org.eclipse.gmf.runtime.emf.core.internal.util.MSLAdapterFactoryManager;
+< 
+255a278,283
+>         InternalTransactionalEditingDomain editingDomain = (InternalTransactionalEditingDomain) TransactionUtil.getEditingDomain (getObject ());
+>         InternalTransaction transaction = editingDomain.getActiveTransaction ();
+>         if (transaction != null && ! transaction.isReadOnly ()) {
+>             ItemPropertyDescriptorDecorator decorator = new TransactionalOperationItemPropertyDescriptor (editingDomain, getObject (), itemPropertyDescriptor);
+>             decorator.setPropertyValue (getObject (), value);
+>         } else {
+257a286
+>     }
+279a309,370
+>     protected class TransactionalOperationItemPropertyDescriptor extends ItemPropertyDescriptorDecorator {
+>         private final EditingDomain editingDomain;
+> 
+>         public TransactionalOperationItemPropertyDescriptor (EditingDomain editingDomain, Object object, IItemPropertyDescriptor itemPropertyDescriptor) {
+>             super (object, itemPropertyDescriptor);
+>             this.editingDomain = editingDomain;
+>         }
+> 
+>         public void setPropertyValue (Object thisObject, Object newValue) {
+>             if (editingDomain == null) {
+>                 itemPropertyDescriptor.setPropertyValue (thisObject, newValue);
+>                 return;
+>             }
+>             EObject eObject = (EObject) this.object;
+>             Object owner = null;
+>             if (getItemDescriptor () instanceof ItemPropertyDescriptor) {
+>                 owner = ((ItemPropertyDescriptor) getItemDescriptor ()).getCommandOwner ();
+>             }
+>             Object commandOwner = (owner != null) ? owner : eObject;
+>             Object featureObject = getFeature (eObject);
+>             if (featureObject instanceof EReference []) {
+>                 EReference [] parentReferences = (EReference []) featureObject;
+>                 Command removeCommand = null;
+>                 for (int i = 0;
+>                 i < parentReferences.length; ++ i) {
+>                     Object formerValue = eObject.eGet (parentReferences [i]);
+>                     if (formerValue != null) {
+>                         final EReference parentReference = parentReferences [i];
+>                         if (formerValue == newValue) {
+>                             return;
+>                         } else if (parentReference.getEType ().isInstance (newValue)) {
+>                             SetCommand.create (editingDomain, commandOwner, parentReference, newValue).execute ();
+>                             return;
+>                         } else {
+>                             removeCommand = SetCommand.create (editingDomain, commandOwner, parentReference, null);
+>                             break;
+>                         }
+> 
+>                     }
+>                 }
+>                 for (int i = 0;
+>                 i < parentReferences.length; ++ i) {
+>                     final EReference parentReference = parentReferences [i];
+>                     if (parentReference.getEType ().isInstance (newValue)) {
+>                         if (removeCommand != null) {
+>                             final CompoundCommand compoundCommand = new CompoundCommand (CompoundCommand.LAST_COMMAND_ALL);
+>                             compoundCommand.append (removeCommand);
+>                             compoundCommand.append (SetCommand.create (editingDomain, commandOwner, parentReference, newValue));
+>                             compoundCommand.execute ();
+>                         } else {
+>                             SetCommand.create (editingDomain, commandOwner, parentReference, newValue).execute ();
+>                         }
+>                         break;
+>                     }
+>                 }
+>             } else {
+>                 SetCommand.create (editingDomain, commandOwner, featureObject, newValue).execute ();
+>             }
+>         }
+> 
+>     }
+> 

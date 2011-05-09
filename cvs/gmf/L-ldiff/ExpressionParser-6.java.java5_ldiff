@@ -1,0 +1,65 @@
+4a9,9
+> import java.util.regex.Matcher;
+5,5d8
+< import org.eclipse.gmf.internal.xpand.expression.ast.*;
+6,6c10,10
+< 
+---
+> 
+6a11,11
+> import java.util.regex.Pattern;
+7,7d10
+< import java.util.Collections;
+8a13,18
+> import org.eclipse.gmf.internal.xpand.util.ParserException.ErrorLocationInfo;
+> 
+> import org.eclipse.gmf.internal.xpand.expression.ast.*;
+> 
+> import java.util.Collections;
+> 
+8,8c12,12
+< 
+---
+> 
+131a138,138
+>             resetErrors ();
+147a155,193
+>     public ErrorLocationInfo [] getErrors () {
+>         return errors.toArray (new ErrorLocationInfo [errors.size ()]);
+>     }
+> 
+>     private void resetErrors () {
+>         errors.clear ();
+>     }
+> 
+>     private final List < ErrorLocationInfo > errors = new LinkedList < ErrorLocationInfo > ();
+> 
+>     @Override
+>     public void reportError (int errorCode, String locationInfo, int leftToken, int rightToken, String tokenText) {
+>         final int leftTokenLine = getLine (leftToken);
+>         final int leftTokenColumn = getColumn (leftToken);
+>         final int rightTokenLine = getEndLine (rightToken);
+>         final int rightTokenColumn = getEndColumn (rightToken);
+>         final String msg = tokenText + errorMsgText [errorCode];
+>         errors.add (new ErrorLocationInfo (msg, leftTokenLine, leftTokenColumn, rightTokenLine, rightTokenColumn));
+>         super.reportError (errorCode, locationInfo, leftToken, rightToken, tokenText);
+>     }
+> 
+>     @Override
+>     public void reportError (int errorCode, String locationInfo, String tokenText) {
+>         try {
+>             Matcher m = Pattern.compile ("[^:]+:(\\d+):(\\d+):(\\d+):(\\d+):.*").matcher (locationInfo);
+>             boolean t = m.matches ();
+>             assert t;
+>             final int leftTokenLine = getLine (Integer.parseInt (m.group (1)));
+>             final int leftTokenColumn = getColumn (Integer.parseInt (m.group (2)));
+>             final int rightTokenLine = getEndLine (Integer.parseInt (m.group (3)));
+>             final int rightTokenColumn = getEndColumn (Integer.parseInt (m.group (4)));
+>             final String msg = tokenText + errorMsgText [errorCode];
+>             errors.add (new ErrorLocationInfo (msg, leftTokenLine, leftTokenColumn, rightTokenLine, rightTokenColumn));
+>         } catch (Exception ex) {
+>             errors.add (new ErrorLocationInfo (tokenText + errorMsgText [errorCode]));
+>         }
+>         super.reportError (errorCode, locationInfo, tokenText);
+>     }
+> 

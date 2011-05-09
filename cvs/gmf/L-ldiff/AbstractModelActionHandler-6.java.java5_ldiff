@@ -1,0 +1,50 @@
+4a5,6
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> 
+17,18d18
+< import org.eclipse.emf.workspace.AbstractEMFOperation;
+< 
+67a68,68
+>             Runnable runnable = new Runnable () {
+68,68d67
+<             AbstractEMFOperation operation = new AbstractEMFOperation (getEditingDomain (), getLabel ()) {
+69a70,70
+>                 public void run () {
+70,70d69
+<                 protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+72,72d71
+<                     return getStatus ();
+75,75d73
+<                 ;
+78a77,82
+>             WriteCommand write = new WriteCommand (getEditingDomain (), getLabel (), getActionManager ().getOperationHistory (), runnable) {
+> 
+>                 public IStatus getStatus () {
+>                     return AbstractModelActionHandler.this.getStatus ();
+>                 }
+> 
+78a107,112
+>     protected IStatus execute (IUndoableOperation operation, IProgressMonitor progressMonitor, IAdaptable info) {
+>         try {
+>             setStatus (getActionManager ().getOperationHistory ().execute (operation, progressMonitor, info));
+>         } catch (ExecutionException e) {
+>             setStatus (new Status (Status.ERROR, MslUIPlugin.getPluginId (), MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getLocalizedMessage (), e));
+>             Trace.catching (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", e);
+79,82d106
+<             try {
+<                 getActionManager ().getOperationHistory ().execute (operation, new NullProgressMonitor (), null);
+<             } catch (ExecutionException e) {
+<                 Trace.catching (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", e);
+83a114,117
+>         }
+>         return getStatus ();
+>     }
+> 
+83,83c113,113
+<                 Log.error (MslUIPlugin.getDefault (), MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getLocalizedMessage (), e);
+---
+>             Log.error (MslUIPlugin.getDefault (), MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getLocalizedMessage (), e);
+84a84,86
+> 
+>             ;
+>             execute (write, new NullProgressMonitor (), null);

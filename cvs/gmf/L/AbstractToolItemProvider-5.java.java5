@@ -1,0 +1,128 @@
+package org.eclipse.gmf.tooldef.provider;
+
+import java.util.Collection;
+
+import java.util.List;
+
+import org.eclipse.emf.common.notify.AdapterFactory;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.common.util.ResourceLocator;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.emf.edit.provider.ComposeableAdapterFactory;
+
+import org.eclipse.emf.edit.provider.IEditingDomainItemProvider;
+
+import org.eclipse.emf.edit.provider.IItemLabelProvider;
+
+import org.eclipse.emf.edit.provider.IItemPropertyDescriptor;
+
+import org.eclipse.emf.edit.provider.IItemPropertySource;
+
+import org.eclipse.emf.edit.provider.IStructuredItemContentProvider;
+
+import org.eclipse.emf.edit.provider.ITreeItemContentProvider;
+
+import org.eclipse.emf.edit.provider.ItemPropertyDescriptor;
+
+import org.eclipse.emf.edit.provider.ItemProviderAdapter;
+
+import org.eclipse.emf.edit.provider.ViewerNotification;
+
+import org.eclipse.gmf.tooldef.AbstractTool;
+
+import org.eclipse.gmf.tooldef.GMFToolFactory;
+
+import org.eclipse.gmf.tooldef.GMFToolPackage;
+
+public class AbstractToolItemProvider extends ItemProviderAdapter implements IEditingDomainItemProvider, IStructuredItemContentProvider, ITreeItemContentProvider, IItemLabelProvider, IItemPropertySource {
+
+    public AbstractToolItemProvider (AdapterFactory adapterFactory) {
+        super (adapterFactory);
+    }
+
+    @Override
+    public List < IItemPropertyDescriptor > getPropertyDescriptors (Object object) {
+        if (itemPropertyDescriptors == null) {
+            super.getPropertyDescriptors (object);
+            addTitlePropertyDescriptor (object);
+            addDescriptionPropertyDescriptor (object);
+        }
+        return itemPropertyDescriptors;
+    }
+
+    protected void addTitlePropertyDescriptor (Object object) {
+        itemPropertyDescriptors.add (createItemPropertyDescriptor (((ComposeableAdapterFactory) adapterFactory).getRootAdapterFactory (), getResourceLocator (), getString ("_UI_AbstractTool_title_feature"), getString ("_UI_PropertyDescriptor_description", "_UI_AbstractTool_title_feature", "_UI_AbstractTool_type"), GMFToolPackage.eINSTANCE.getAbstractTool_Title (), true, false, false, ItemPropertyDescriptor.GENERIC_VALUE_IMAGE, null, null));
+    }
+
+    protected void addDescriptionPropertyDescriptor (Object object) {
+        itemPropertyDescriptors.add (createItemPropertyDescriptor (((ComposeableAdapterFactory) adapterFactory).getRootAdapterFactory (), getResourceLocator (), getString ("_UI_AbstractTool_description_feature"), getString ("_UI_PropertyDescriptor_description", "_UI_AbstractTool_description_feature", "_UI_AbstractTool_type"), GMFToolPackage.eINSTANCE.getAbstractTool_Description (), true, false, false, ItemPropertyDescriptor.GENERIC_VALUE_IMAGE, null, null));
+    }
+
+    @Override
+    public Collection < ? extends EStructuralFeature > getChildrenFeatures (Object object) {
+        if (childrenFeatures == null) {
+            super.getChildrenFeatures (object);
+            childrenFeatures.add (GMFToolPackage.eINSTANCE.getAbstractTool_SmallIcon ());
+            childrenFeatures.add (GMFToolPackage.eINSTANCE.getAbstractTool_LargeIcon ());
+        }
+        return childrenFeatures;
+    }
+
+    @Override
+    protected EStructuralFeature getChildFeature (Object object, Object child) {
+        return super.getChildFeature (object, child);
+    }
+
+    @Override
+    public String getText (Object object) {
+        String label = ((AbstractTool) object).getTitle ();
+        return label == null || label.length () == 0 ? getString ("_UI_AbstractTool_type") : getString ("_UI_AbstractTool_type") + " " + label;
+    }
+
+    @Override
+    public void notifyChanged (Notification notification) {
+        updateChildren (notification);
+        switch (notification.getFeatureID (AbstractTool.class)) {
+            case GMFToolPackage.ABSTRACT_TOOL__TITLE :
+            case GMFToolPackage.ABSTRACT_TOOL__DESCRIPTION :
+                fireNotifyChanged (new ViewerNotification (notification, notification.getNotifier (), false, true));
+                return;
+            case GMFToolPackage.ABSTRACT_TOOL__SMALL_ICON :
+            case GMFToolPackage.ABSTRACT_TOOL__LARGE_ICON :
+                fireNotifyChanged (new ViewerNotification (notification, notification.getNotifier (), true, false));
+                return;
+        }
+        super.notifyChanged (notification);
+    }
+
+    @Override
+    protected void collectNewChildDescriptors (Collection < Object > newChildDescriptors, Object object) {
+        super.collectNewChildDescriptors (newChildDescriptors, object);
+        newChildDescriptors.add (createChildParameter (GMFToolPackage.eINSTANCE.getAbstractTool_SmallIcon (), GMFToolFactory.eINSTANCE.createDefaultImage ()));
+        newChildDescriptors.add (createChildParameter (GMFToolPackage.eINSTANCE.getAbstractTool_SmallIcon (), GMFToolFactory.eINSTANCE.createBundleImage ()));
+        newChildDescriptors.add (createChildParameter (GMFToolPackage.eINSTANCE.getAbstractTool_LargeIcon (), GMFToolFactory.eINSTANCE.createDefaultImage ()));
+        newChildDescriptors.add (createChildParameter (GMFToolPackage.eINSTANCE.getAbstractTool_LargeIcon (), GMFToolFactory.eINSTANCE.createBundleImage ()));
+    }
+
+    @Override
+    public String getCreateChildText (Object owner, Object feature, Object child, Collection < ? > selection) {
+        Object childFeature = feature;
+        Object childObject = child;
+        boolean qualify = childFeature == GMFToolPackage.eINSTANCE.getAbstractTool_SmallIcon () || childFeature == GMFToolPackage.eINSTANCE.getAbstractTool_LargeIcon ();
+        if (qualify) {
+            return getString ("_UI_CreateChild_text2", new Object [] {getTypeText (childObject), getFeatureText (childFeature), getTypeText (owner)});
+        }
+        return super.getCreateChildText (owner, feature, child, selection);
+    }
+
+    @Override
+    public ResourceLocator getResourceLocator () {
+        return GMFToolEditPlugin.INSTANCE;
+    }
+
+}
+

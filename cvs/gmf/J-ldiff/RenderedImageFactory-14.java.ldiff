@@ -1,0 +1,51 @@
+2,2c2,2
+<  * Copyright (c) 2004, 2007 IBM Corporation and others.
+---
+>  * Copyright (c) 2004, 2008 IBM Corporation and others.
+124,124c209,209
+<             return getInstance(buffer, info);
+---
+>             return getInstance(buffer, info, szFilePath);
+139a140,177
+>      * @param buffer
+>      *            byte[] array containing an cached SVG image file.
+>      * @param info
+>      *            object containing information about the size and general data
+>      *            regarding how the image will be rendered.
+>      * @param url the url of the image (filename url - should be there for SVG, since it may have external references)
+>      * @return <code>RenderedImage</code> instance with the size dimensions
+>      *         requested.
+>      * @since 2.1
+>      */
+>     public static RenderedImage getInstance(byte [] buffer, RenderInfo info, String url) {
+>         Adler32 checksum = new Adler32();
+>         checksum.update(buffer);
+>         final RenderedImageKey key = new RenderedImageKey(info, checksum.getValue(), null, url);
+>         WeakReference ref = (WeakReference) instanceMap.get(key);
+>         RenderedImage image = null;
+>         if (ref != null)
+>             image = (RenderedImage) (((WeakReference) instanceMap.get(key))
+>                 .get());
+>         else
+>             image = autodetectImage(buffer, key);
+> 
+> 		// Bugzilla 208374
+> 		if (image == null) {
+> 			// Remove entry holding null reference.
+> 			instanceMap.remove(key);
+> 			// Recreate entry using buffer.
+> 			image = getInstance(buffer);
+> 		}
+> 
+>         return image;
+>     	
+>     }
+> 
+>     /**
+>      * getInstance static constructor method for retrieving the appropriate
+>      * instance of the immutable class <code>RenderedImage</code>.
+>      * 
+171,171c124,124
+<             return getInstance(buffer, info);
+---
+>             return getInstance(buffer, info, theURL.toString());

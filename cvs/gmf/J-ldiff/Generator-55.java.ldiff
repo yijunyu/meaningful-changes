@@ -1,0 +1,1549 @@
+2,2c2,2
+<  * Copyright (c) 2005, 2007 Borland Software Corporation
+---
+>  * Copyright (c) 2005 Borland Software Corporation
+12,12c12,12
+< package org.eclipse.gmf.internal.codegen.lite;
+---
+> package org.eclipse.gmf.codegen.util;
+13a14,15
+> import java.io.ByteArrayInputStream;
+> import java.lang.ref.SoftReference;
+14,14d13
+< import java.lang.reflect.InvocationTargetException;
+15,15c16,16
+< import java.util.HashSet;
+---
+> import java.util.Collection;
+15a17,17
+> import java.util.Collections;
+18,18c19,19
+< import java.util.Set;
+---
+> import java.util.LinkedList;
+19a22,30
+> import org.eclipse.core.resources.IFile;
+> import org.eclipse.core.resources.IProject;
+> import org.eclipse.core.resources.IResource;
+> import org.eclipse.core.resources.ResourcesPlugin;
+> import org.eclipse.core.runtime.CoreException;
+> import org.eclipse.core.runtime.IPath;
+> import org.eclipse.core.runtime.IProgressMonitor;
+> import org.eclipse.core.runtime.IStatus;
+> import org.eclipse.core.runtime.MultiStatus;
+22a33,37
+> import org.eclipse.core.runtime.Status;
+> import org.eclipse.core.runtime.SubProgressMonitor;
+> import org.eclipse.emf.codegen.jet.JETEmitter;
+> import org.eclipse.emf.codegen.jet.JETException;
+> import org.eclipse.emf.codegen.jmerge.JControlModel;
+23,23d32
+< import org.eclipse.emf.common.util.EList;
+24,24c38,38
+< import org.eclipse.gmf.codegen.gmfgen.GMFGenPackage;
+---
+> import org.eclipse.emf.codegen.jmerge.JMerger;
+25,27d38
+< import org.eclipse.gmf.codegen.gmfgen.GenApplication;
+< import org.eclipse.gmf.codegen.gmfgen.GenChildLabelNode;
+< import org.eclipse.gmf.codegen.gmfgen.GenChildSideAffixedNode;
+30,30c51,51
+< import org.eclipse.gmf.codegen.gmfgen.GenContainerBase;
+---
+> import org.eclipse.gmf.codegen.gmfgen.GenTopLevelNode;
+31,31d51
+< import org.eclipse.gmf.codegen.gmfgen.GenCustomPropertyTab;
+33a40,40
+> import org.eclipse.gmf.codegen.gmfgen.GenChildContainer;
+34,36d39
+< import org.eclipse.gmf.codegen.gmfgen.GenExpressionInterpreter;
+< import org.eclipse.gmf.codegen.gmfgen.GenExpressionProviderBase;
+< import org.eclipse.gmf.codegen.gmfgen.GenExpressionProviderContainer;
+37,37c41,41
+< import org.eclipse.gmf.codegen.gmfgen.GenLanguage;
+---
+> import org.eclipse.gmf.codegen.gmfgen.GenChildNode;
+39a53,55
+> import org.eclipse.jdt.core.ICompilationUnit;
+> import org.eclipse.jdt.core.IPackageFragment;
+> import org.eclipse.jdt.core.IPackageFragmentRoot;
+40a57,62
+> import org.eclipse.jdt.core.JavaModelException;
+> import org.eclipse.jdt.core.ToolFactory;
+> import org.eclipse.jdt.core.formatter.CodeFormatter;
+> import org.eclipse.jface.text.Document;
+> import org.eclipse.jface.text.IDocument;
+> import org.eclipse.text.edits.TextEdit;
+40,40c56,56
+< import org.eclipse.gmf.codegen.gmfgen.GenNavigatorChildReference;
+---
+> import org.eclipse.jdt.core.JavaCore;
+43,43c46,46
+< import org.eclipse.gmf.codegen.gmfgen.GenPreferencePage;
+---
+> import org.eclipse.gmf.codegen.gmfgen.GenExternalNodeLabel;
+44,46d46
+< import org.eclipse.gmf.codegen.gmfgen.GenPropertyTab;
+< import org.eclipse.gmf.codegen.gmfgen.GenStandardPreferencePage;
+< import org.eclipse.gmf.codegen.gmfgen.OpenDiagramBehaviour;
+48,51d52
+< import org.eclipse.gmf.common.codegen.ImportAssistant;
+< import org.eclipse.gmf.internal.common.codegen.GeneratorBase;
+< import org.eclipse.gmf.internal.common.codegen.TextEmitter;
+< import org.eclipse.gmf.internal.common.codegen.TextMerger;
+54,54c65,65
+<  * Invokes templates to populate diagram editor project.
+---
+>  * Invokes JET templates to populate diagram editor project.
+54a66,66
+>  * 
+55,55d65
+<  * TODO reuse fullRT.Generator as much as possible
+58,58c69,69
+< public class Generator extends GeneratorBase implements Runnable {
+---
+> public class Generator implements Runnable {
+59,60d69
+< 
+< 	private final GenEditorGenerator myEditorGen; 
+63a73,86
+> 	// myDestRoot.getJavaProject().getElementName() == myDestProject.getName()
+> 	private IPackageFragmentRoot myDestRoot;
+> 
+> 	private IProject myDestProject;
+> 
+> 	private JControlModel myJControlModel;
+> 
+> 	private CodeFormatter myCodeFormatter;
+> 
+> 	private IProgressMonitor myProgress;
+> 
+> 	private IStatus myRunStatus = Status.CANCEL_STATUS;
+> 	private List/*<IStatus>*/ myExceptions;
+> 
+64a88,89
+> 
+> 	private static SoftReference/*<CodegenEmitters>*/ myCachedEmitters; 
+64,64c87,87
+< 	private final CodegenEmitters myEmitters;
+---
+> 	private CodegenEmitters myEmitters;
+67,67c92,92
+< 		this(genModel, Activator.getInstance().getEmitters(genModel));
+---
+> 		this(genModel.getDiagram());
+69a95,103
+> 	/**
+> 	 * @deprecated use {@link #Generator(GenEditorGenerator) } instead
+> 	 */
+> 	public Generator(GenDiagram diagram) {
+> 		myDiagram = diagram;
+> 		CodegenEmitters old = myCachedEmitters == null ? null : (CodegenEmitters) myCachedEmitters.get();
+> 		if (old == null) {
+> 			myEmitters = new CodegenEmitters(true);
+> 			myCachedEmitters = new SoftReference(myEmitters);
+69a821,821
+> 	private void generatePluginProperties() throws JETException, InterruptedException {
+70,90d820
+< 	public Generator(GenEditorGenerator genModel, CodegenEmitters emitters) {
+< 		assert genModel != null && emitters != null;
+< 		myDiagram = genModel.getDiagram();
+< 		myEditorGen = genModel;
+< 		myEmitters = emitters;
+< 	}
+< 
+< 	@Override
+< 	protected TextMerger createMergeService() {
+< 		return myEmitters.createMergeService();
+< 	}
+< 
+< 	@SuppressWarnings("unchecked")
+< 	protected void customRun() throws InterruptedException, UnexpectedBehaviourException {
+< 		final String pluginID = myEditorGen.getPlugin().getID();
+< 		final Path examplaryLocation = new Path(myEditorGen.getDomainGenModel().getModelDirectory());
+< 		initializeEditorProject(pluginID, guessNewProjectLocation(examplaryLocation, pluginID));
+< 
+< 		doGenerateFile(myEmitters.getManifestGenerator(), new Path("META-INF/MANIFEST.MF"), new Object[] { myEditorGen.getPlugin() });
+< 		doGenerateFile(myEmitters.getBuildPropertiesGenerator(), new Path("build.properties"), new Object[] { myEditorGen.getPlugin() });
+< 		doGenerateFile(myEmitters.getPluginXML(), new Path("plugin.xml"), new Object[] { myEditorGen.getPlugin() });
+91,91c822,822
+< 		doGenerateFile(myEmitters.getPluginPropertiesGenerator(), new Path("plugin.properties"), new Object[] { myEditorGen.getPlugin() });
+---
+> 		doGenerateFile(myEmitters.getPluginPropertiesEmitter(), new Path("plugin.properties"), myDiagram.getEditorGen().getPlugin());
+92,105d822
+< 
+< 		internalGenerateJavaClass(myEmitters.getCreationWizardGenerator(), myDiagram.getCreationWizardQualifiedClassName(), myDiagram);
+< 		internalGenerateJavaClass(myEmitters.getCreationWizardPageGenerator(), myDiagram.getCreationWizardPageQualifiedClassName(), myDiagram);
+< 		internalGenerateJavaClass(myEmitters.getPluginGenerator(), myEditorGen.getPlugin().getActivatorQualifiedClassName(), myEditorGen.getPlugin());
+< 		internalGenerateJavaClass(myEmitters.getInitDiagramFileActionGenerator(), myDiagram.getInitDiagramFileActionQualifiedClassName(), myDiagram);
+< 		internalGenerateJavaClass(myEmitters.getModelElementSelectionPageEmitter(), myEmitters.getModelElementSelectionPageQualifiedNameEmitter(), myDiagram);
+< 		internalGenerateJavaClass(myEmitters.getNewDiagramFileWizardGenerator(), myDiagram.getNewDiagramFileWizardQualifiedClassName(), myDiagram);
+< 		if (myEditorGen.getApplication() != null) {
+< 			internalGenerateJavaClass(myEmitters.getURISelectorPageGenerator(), myEmitters.getURISelectorPageQualifiedClassNameGenerator(), myDiagram);
+< 		}
+< 		if (myDiagram.generateCreateShortcutAction()) {
+< 			internalGenerateJavaClass(myEmitters.getCreateShortcutActionEmitter(), myDiagram.getCreateShortcutActionQualifiedClassName(), myDiagram);
+< 			if (myEditorGen.getApplication() != null) {
+< 				internalGenerateJavaClass(myEmitters.getShortcutCreationWizardEmitter(), myEmitters.getShortcutCreationWizardQualifiedClassNameEmitter(), myDiagram);
+106a105,105
+> 			myEmitters = old;
+106a764,768
+> 		doGenerateJavaClass(
+> 				myEmitters.getElementChooserEmitter(),
+> 				myDiagram.getEditorPackageName(), 
+> 				myDiagram.getElementChooserClassName(),
+> 				myDiagram
+107,107d763
+< 				internalGenerateJavaClass(myEmitters.getElementChooserEmitter(), myDiagram.getElementChooserQualifiedClassName(), myDiagram);
+108,108c769,769
+< 			}
+---
+> 			);
+109,116d769
+< 		}
+< 		if (myDiagram.generateShortcutIcon()) {
+< 			internalGenerateJavaClass(myEmitters.getShortcutProviderEmitter(), myEmitters.getShortcutProviderQualifiedClassNameEmitter(), myDiagram);
+< 			internalGenerateJavaClass(myEmitters.getCreateShortcutNodeCommandEmitter(), myEmitters.getCreateShortcutNodeCommandQualifiedClassNameEmitter(), myDiagram);
+< 			internalGenerateJavaClass(myEmitters.getCreateShortcutEdgeCommandEmitter(), myEmitters.getCreateShortcutEdgeCommandQualifiedClassNameEmitter(), myDiagram);
+< 			generateShortcutIcon();
+< 			if (myEditorGen.getApplication() == null) {
+< 				internalGenerateJavaClass(myEmitters.getShortcutPropertyTesterEmitter(), myDiagram.getShortcutPropertyTesterQualifiedClassName(), myDiagram);
+118a801,805
+> 			myEmitters.getPreferencesInitializerEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getPreferenceInitializerClassName(),
+> 			myDiagram
+> 		);
+119,120d800
+< 		internalGenerateJavaClass(myEmitters.getLoadResourceActionGenerator(), myDiagram.getLoadResourceActionQualifiedClassName(), myDiagram);
+< 		internalGenerateJavaClass(myEmitters.getElementTypesGenerator(), myDiagram.getElementTypesQualifiedClassName(), myDiagram);
+121a109,111
+> 	public void run(IProgressMonitor progress) throws InterruptedException {
+> 		setProgressMonitor(progress);
+> 		doRun();
+122,126d108
+< 		internalGenerateJavaClass(myEmitters.getActionBarContributorGenerator(), myEditorGen.getEditor().getActionBarContributorQualifiedClassName(), myEditorGen.getEditor());
+< 		internalGenerateJavaClass(myEmitters.getDiagramEditorUtilGenerator(), myDiagram.getDiagramEditorUtilQualifiedClassName(), myDiagram);
+< 		internalGenerateJavaClass(myEmitters.getEditorGenerator(), myEditorGen.getEditor().getQualifiedClassName(), myEditorGen.getEditor());
+< 		if (myEditorGen.getEditor().isEclipseEditor()) {
+< 			internalGenerateJavaClass(myEmitters.getMatchingStrategyEmitter(), myDiagram.getMatchingStrategyQualifiedClassName(), myDiagram);
+127a113,118
+> 
+> 	public void run() {
+> 		try {
+> 			doRun();
+> 		} catch (InterruptedException ex) {
+> 			myRunStatus = new Status(IStatus.CANCEL, "org.eclipse.gmf.codegen", 0, Messages.interrupted, ex);
+128,129d112
+< 		if (myEditorGen.getApplication() == null && !myEditorGen.getEditor().isEclipseEditor()) {
+< 			internalGenerateJavaClass(myEmitters.getOpenDiagramInViewActionGenerator(), myEmitters.getOpenDiagramInViewActionQualifiedClassNameGenerator(), myEditorGen.getEditor());
+130a673,673
+> 	private void generatePalette() throws JETException, InterruptedException {
+131a675,681
+> 			return;
+> 		}
+> 		doGenerateJavaClass(
+> 			myEmitters.getPaletteEmitter(),
+> 			myDiagram.getPalette().getPackageName(),
+> 			myDiagram.getPalette().getFactoryClassName(),
+> 			myDiagram
+131,131c674,674
+< 		if (myDiagram.getPalette() != null) {
+---
+> 		if (myDiagram.getPalette() == null) {
+132,132d674
+< 			internalGenerateJavaClass(myEmitters.getPaletteFactoryGenerator(), myDiagram.getPalette().getFactoryQualifiedClassName(), myDiagram.getPalette());
+133a510,512
+> 			myDiagram.getStructuralFeaturesParserClassName(),
+> 			myDiagram
+> 		);
+134,138d509
+< 		internalGenerateJavaClass(myEmitters.getEditPartFactoryGenerator(), myDiagram.getEditPartFactoryQualifiedClassName(), myDiagram);
+< 		internalGenerateJavaClass(myEmitters.getDiagramEditPartGenerator(), myDiagram.getEditPartQualifiedClassName(), myDiagram);
+< 		HashSet<OpenDiagramBehaviour> openDiagramBehaviors = new HashSet<OpenDiagramBehaviour>();
+< 		generateBehaviors(myDiagram, openDiagramBehaviors);
+< 		generateLayoutEditPolicy(myDiagram);
+140,140d121
+< 		if (myDiagram.isValidationEnabled() || myEditorGen.hasAudits()) {
+142,143d183
+< 			if (myDiagram.getEditorGen().getApplication() == null) {
+< 				//Strictly non-RCP stuff
+145a186,224
+> 
+> 			// editor
+> 			generateInitDiagramFileAction();
+> 			generatePalette();
+> 			generateDiagramEditorUtil();
+> 			generateDiagramFileCreator();
+> 			generateVisualIDRegistry();
+> 			generateCreationWizard();
+> 			generateCreationWizardPage();
+> 			generateEditor();
+> 			generateCreateShortcutAction();
+> 			generateLoadResourceAction();
+> 			generateElementChooser();
+> 			generateDocumentProvider();
+> 			generateActionBarContributor();
+> 			generateMatchingStrategy();
+> 			generatePreferencesInitializer();
+> 			generatePluginClass();
+> 			generateBundleManifest();
+> 			generatePluginProperties();
+> 			generatePluginXml();
+> 			generateBuildProperties();
+> 			generateShortcutIcon();
+> 
+> 			if (myExceptions.isEmpty()) {
+> 				myRunStatus = Status.OK_STATUS;
+> 			} else {
+> 				IStatus[] s = (IStatus[]) myExceptions.toArray(new IStatus[myExceptions.size()]);
+> 				myRunStatus = new MultiStatus("org.eclipse.gmf.codegen", 0, s, Messages.problems, null);
+> 			}
+> 		} catch (NullPointerException ex) {
+> 			myRunStatus = new Status(IStatus.ERROR, "org.eclipse.gmf.codegen", 0, NullPointerException.class.getName(), ex);
+> 		} catch (JETException ex) {
+> 			myRunStatus = ex.getStatus();
+> 		} catch (UnexpectedBehaviourException ex) {
+> 			myRunStatus = new Status(Status.ERROR, "org.eclipse.gmf.codegen", 0, Messages.unexpected, ex);
+> 		} finally {
+> 			myProgress.done();
+> 			myExceptions = null;
+147,148d225
+< 		if (myDiagram.getEditorGen().getMetrics() != null) {
+< 			generateMetricProvider();
+150a228,233
+> 	/**
+> 	 * Provides information about success/failures during {@link #run()}
+> 	 * @return state of the generator run, or CANCEL if generator was not yet run.
+> 	 */
+> 	public IStatus getRunStatus() {
+> 		return myRunStatus;
+151,158d227
+< 		for (GenNode next : (List<? extends GenNode>) myDiagram.getAllNodes()) {
+< 			if (!(next instanceof GenChildLabelNode)) {
+< 				internalGenerateJavaClass(myEmitters.getNodeEditPartGenerator(), next.getEditPartQualifiedClassName(), next);
+< 				generateGraphicalEditPolicy(next);
+< 				for (Iterator it2 = next.getLabels().iterator(); it2.hasNext();) {
+< 					final GenNodeLabel label = (GenNodeLabel) it2.next();
+< 					internalGenerateJavaClass(myEmitters.getNodeLabelEditPartGenerator(), label.getEditPartQualifiedClassName(), label);
+< 					internalGenerateJavaClass(myEmitters.getViewFactoryGenerator(), label.getNotationViewFactoryQualifiedClassName(), label);
+159a235,245
+> 
+> 	private void generateNode(GenNode node) throws JETException, InterruptedException {
+> 		generateNodeEditPart(node);
+> 		for (Iterator labels = node.getLabels().iterator(); labels.hasNext();) {
+> 			GenNodeLabel label = (GenNodeLabel) labels.next();
+> 			if (label instanceof GenExternalNodeLabel) {
+> 				GenExternalNodeLabel extLabel = (GenExternalNodeLabel) label;
+> 				generateExternalNodeLabelEditPart(extLabel);
+> 				generateExternalNodeLabelViewFactory(extLabel);
+> 				generateExternalNodeLabelTextEditPart(extLabel);
+> 				generateExternalNodeLabelTextViewFactory(extLabel);
+160a247,248
+> 				generateNodeLabelEditPart(label);
+> 				generateNodeLabelTextViewFactory(label);
+161,161d246
+< 				internalGenerateJavaClass(myEmitters.getChildNodeEditPartGenerator(), next.getEditPartQualifiedClassName(), next);
+163,173d249
+< 			internalGenerateJavaClass(myEmitters.getViewFactoryGenerator(), next.getNotationViewFactoryQualifiedClassName(), next);
+< 			generateBehaviors(next, openDiagramBehaviors);
+< 			generateCommands(next);
+< 			generateComponentEditPolicy(next);
+< 			boolean shouldGenerateLayoutEditPolicy = false;
+< 			boolean shouldGenerateSideAffixedLayoutEditPolicy = false;
+< 			for (GenNode nextChild : next.getChildNodes()) {
+< 				if (nextChild instanceof GenChildSideAffixedNode) {
+< 					shouldGenerateSideAffixedLayoutEditPolicy = true;
+< 				} else {
+< 					shouldGenerateLayoutEditPolicy = true;
+174a251,253
+> 		generateChildContainer(node);
+> 		generateNodeGraphicalNodeEditPolicy(node);
+> 		generateNodeItemSemanticEditPolicy(node);
+175a255,259
+> 
+> 	private void generateListContainerNode(GenNode child) throws JETException, InterruptedException {
+> 		generateListContainerNodeEditPart(child);
+> 		generateNodeItemSemanticEditPolicy(child);
+> 		generateViewFactory(child);
+176,177d254
+< 			if (shouldGenerateLayoutEditPolicy) {
+< 				generateLayoutEditPolicy(next);
+178a261,265
+> 	
+> 	private void generateCompartment(GenCompartment compartment) throws JETException, InterruptedException {
+> 		generateCompartmentEditPart(compartment);
+> 		generateCompartmentItemSemanticEditPolicy(compartment);
+> 		generateChildContainer(compartment);
+179,180d260
+< 			if (shouldGenerateSideAffixedLayoutEditPolicy) {
+< 				generateSideAffixedLayoutEditPolicy(next);
+181a267,270
+> 	
+> 	private void generateChildContainer(GenChildContainer childContainer) throws JETException, InterruptedException {
+> 		generateViewFactory(childContainer);
+> 		generateChildContainerCanonicalEditPolicy(childContainer);
+182a272,281
+> 
+> 	// commands
+> 
+> 	private void generateReorientConnectionViewCommand() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getReorientConnectionViewCommandEmitter(),
+> 			myDiagram.getEditCommandsPackageName(),
+> 			myDiagram.getReorientConnectionViewCommandClassName(),
+> 			myDiagram
+> 		);
+183,187d271
+< 		for (GenLink next : (List<? extends GenLink>) myDiagram.getLinks()) {
+< 			internalGenerateJavaClass(myEmitters.getLinkEditPartGenerator(), next.getEditPartQualifiedClassName(), next);
+< 			generateGraphicalEditPolicy(next);
+< 			if (next.getLabels().size() > 0) {
+< 				generateConnectionEndpointEditPolicy(next);
+188a283,292
+> 
+> 	// parts
+> 
+> 	private void generateDiagramEditPart() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getDiagramEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			myDiagram.getEditPartClassName(),
+> 			myDiagram
+> 		);
+189,191d282
+< 			for (GenLinkLabel label : (List<? extends GenLinkLabel>) next.getLabels()) {
+< 				internalGenerateJavaClass(myEmitters.getLinkLabelEditPartGenerator(), label.getEditPartQualifiedClassName(), label);
+< 				internalGenerateJavaClass(myEmitters.getViewFactoryGenerator(), label.getNotationViewFactoryQualifiedClassName(), label);
+192a294,301
+> 
+> 	private void generateDiagramExternalNodeLabelEditPart() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getDiagramExternalNodeLabelEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			myDiagram.getBaseExternalNodeLabelEditPartClassName(),
+> 			myDiagram
+> 		);
+193,196d293
+< 			internalGenerateJavaClass(myEmitters.getViewFactoryGenerator(), next.getNotationViewFactoryQualifiedClassName(), next);
+< 			generateBehaviors(next, openDiagramBehaviors);
+< 			generateCommands(next);
+< 			generateComponentEditPolicy(next);
+197a122,156
+> 	private void doRun() throws InterruptedException {
+> 		try {
+> 			setupProgressMonitor();
+> 			myExceptions = new LinkedList/*<IStatus>*/();
+> 			initializeEditorProject();
+> 
+> 			// commands
+> 			generateReorientConnectionViewCommand();
+> 
+> 			// edit parts, edit policies and providers
+> 			generateSemanticHints();
+> 			generateAbstractParser();
+> 			generateStructuralFeatureParser();
+> 			generateStructuralFeaturesParser();
+> 			generateBaseItemSemanticEditPolicy();
+> 			generateBaseGraphicalNodeEditPolicy();
+> 			generateReferenceConnectionEditPolicy();
+> 			generateDiagramCanonicalEditPolicy();
+> 			generateDiagramItemSemanticEditPolicy();
+> 			for (Iterator nodes = myDiagram.getTopLevelNodes().iterator(); nodes.hasNext();) {
+> 				GenTopLevelNode node = (GenTopLevelNode) nodes.next();
+> 				generateNode(node);
+> 			}
+> 			for (Iterator nodes = myDiagram.getChildNodes().iterator(); nodes.hasNext();) {
+> 				GenChildNode node = (GenChildNode) nodes.next();
+> 				if (node.isListContainerEntry()) {
+> 					generateListContainerNode(node);
+> 				} else {
+> 					generateNode(node);
+> 				}
+> 			}
+> 			for (Iterator compartments = myDiagram.getCompartments().iterator(); compartments.hasNext();) {
+> 				GenCompartment compartment = (GenCompartment) compartments.next();
+> 				generateCompartment(compartment);
+> 			}
+198,198c157,157
+< 		for (Iterator it = myDiagram.getCompartments().iterator(); it.hasNext(); ) {
+---
+> 			for (Iterator it = myDiagram.getLinks().iterator(); it.hasNext();) {
+198a158,159
+> 				final GenLink next = (GenLink) it.next();
+> 				generateViewFactory(next);
+199,201d157
+< 			final GenCompartment next = (GenCompartment) it.next();
+< 			internalGenerateJavaClass(myEmitters.getCompartmentEditPartGenerator(), next.getEditPartQualifiedClassName(), next);
+< 			internalGenerateJavaClass(myEmitters.getViewFactoryGenerator(), next.getNotationViewFactoryQualifiedClassName(), next);
+202,202c160,160
+< 			generateLayoutEditPolicy(next);
+---
+> 				generateLinkEditPart(next);
+202a161,182
+> 				generateLinkItemSemanticEditPolicy(next);
+> 				for (Iterator labels = next.getLabels().iterator(); labels.hasNext();) {
+> 					GenLinkLabel label = (GenLinkLabel) labels.next();
+> 					generateLinkLabelEditPart(label);
+> 					generateLinkLabelTextEditPart(label);
+> 					generateLinkLabelViewFactory(label);
+> 					generateLinkLabelTextViewFactory(label);
+> 				}
+> 			}
+> 			generateViewFactory(myDiagram);
+> 			generateDiagramEditPart();
+> 			generateDiagramExternalNodeLabelEditPart();
+> 			generateEditPartFactory();
+> 			generateElementTypes();
+> 			generateViewProvider();
+> 			generateEditPartProvider();
+> 			generateMetamodelSupportProvider();
+> 			generateModelingAssistantProvider();
+> 			generatePropertyProvider();
+> 			generateIconProvider();
+> 			generateParserProvider();
+> 			if(myDiagram.isValidationEnabled()) {
+203a519,521
+> 			myDiagram.getSemanticHintsClassName(),
+> 			myDiagram
+> 		);
+203a312,319
+> 
+> 	private void generateNodeLabelEditPart(GenNodeLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getNodeLabelEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			label.getEditPartClassName(),
+> 			label
+> 		);
+204,208d518
+< 		internalGenerateJavaClass(myEmitters.getViewFactoryGenerator(), myDiagram.getNotationViewFactoryQualifiedClassName(), myDiagram);
+< 		internalGenerateJavaClass(myEmitters.getDomainElementInitializerGenerator(), myEmitters.getDomainElementInitializerQualifiedNameGenerator(), myDiagram);
+< 		internalGenerateJavaClass(myEmitters.getVisualIDRegistryGenerator(), myDiagram.getVisualIDRegistryQualifiedClassName(), myDiagram);
+< 		if(myDiagram.getEditorGen().getExpressionProviders() != null) {
+< 			generateExpressionProviders();
+209a321,328
+> 
+> 	private void generateExternalNodeLabelEditPart(GenExternalNodeLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getExternalNodeLabelEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			label.getEditPartClassName(),
+> 			label
+> 		);
+210,213d320
+< 		if (isPathInsideGenerationTarget(myDiagram.getCreationWizardIconPathX())) {
+< 			// at the moment this may produce path that reference generated icon file, thus
+< 			// skip generation if the path is relative
+< 			generateDiagramIcon(myDiagram.getCreationWizardIconPathX());
+214a330,337
+> 
+> 	private void generateExternalNodeLabelTextEditPart(GenExternalNodeLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getExternalNodeLabelTextEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			label.getTextEditPartClassName(),
+> 			label
+> 		);
+215,218d329
+< 		if (isPathInsideGenerationTarget(myEditorGen.getEditor().getIconPathX())) {
+< 			// at the moment this may produce path that reference generated icon file, thus
+< 			// skip generation if the path is relative
+< 			generateDiagramIcon(myEditorGen.getEditor().getIconPathX());
+219a339,346
+> 
+> 	private void generateListContainerNodeEditPart(GenNode genChildNode) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getChildNodeEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			genChildNode.getEditPartClassName(),
+> 			genChildNode
+> 		);
+220,236d338
+< 		generateWizardBanner();
+< 		if (myEditorGen.getApplication() == null && myEditorGen.getNavigator() != null) {
+< 			generateNavigatorContentProvider();
+< 			generateNavigatorLabelProvider();
+< 			generateNavigatorLinkHelper();
+< 			generateNavigatorSorter();
+< 			generateNavigatorActionProvider();
+< 			generateAbstractNavigatorItem();
+< 			generateNavigatorGroup();
+< 			generateNavigatorItem();
+< 			generateNavigatorGroupIcons();
+< 			if (myEditorGen.getDomainGenModel() != null && myEditorGen.getNavigator().isGenerateDomainModelNavigator()) {
+< 				generateDomainNavigatorContentProvider();
+< 				generateDomainNavigatorLabelProvider();
+< 				generateDomainNavigatorItem();
+< 				generateDomainModelElementTester();
+< 				generateURIEditorInputTester();
+237a348,355
+> 	
+> 	private void generateCompartmentEditPart(GenCompartment genCompartment) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getCompartmentEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			genCompartment.getEditPartClassName(),
+> 			genCompartment
+> 		);
+239,240d356
+< 		if (myEditorGen.getPropertySheet() != null) {
+< 			generatePropertySheetSections();
+241a366,373
+> 
+> 	private void generateLinkLabelEditPart(GenLinkLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getLinkLabelEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			label.getEditPartClassName(),
+> 			label
+> 		);
+242,244d365
+< 		generateApplication();
+< 		generatePreferences();
+< 		generateExternalizationSupport();
+246a376,382
+> 	private void generateLinkLabelTextEditPart(GenLinkLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getLinkLabelTextEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			label.getTextEditPartClassName(),
+> 			label
+> 		);
+247,250d375
+< 	private static boolean isPathInsideGenerationTarget(String path) {
+< 		assert path != null;
+< 		Path p = new Path(path);
+< 		return !p.isAbsolute() && !p.segment(0).equals(".."); //$NON-NLS-1$
+252a385,389
+> 	private void generateEditPartFactory() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getEditPartFactoryEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			myDiagram.getEditPartFactoryClassName(),
+253,259d384
+< 	@SuppressWarnings("unchecked")
+< 	private void generateExpressionProviders() throws UnexpectedBehaviourException, InterruptedException {
+< 		GenExpressionProviderContainer providerContainer = myEditorGen.getExpressionProviders();
+< 		internalGenerateJavaClass(
+< 			myEmitters.getAbstractExpressionEmitter(),
+< 			providerContainer.getExpressionsPackageName(), 
+< 			providerContainer.getAbstractExpressionClassName(),
+262,269d391
+< 
+< 		for (GenExpressionProviderBase nextProvider : (List<? extends GenExpressionProviderBase>) providerContainer.getProviders()) {
+< 			if(nextProvider instanceof GenExpressionInterpreter) {
+< 				TextEmitter providerEmitter = null;
+< 				if(GenLanguage.OCL_LITERAL.equals(nextProvider.getLanguage())) {
+< 					providerEmitter = myEmitters.getOCLExpressionFactoryEmitter();
+< 				} else if(GenLanguage.REGEXP_LITERAL.equals(nextProvider.getLanguage()) || GenLanguage.NREGEXP_LITERAL.equals(nextProvider.getLanguage())) {
+< 					providerEmitter = myEmitters.getRegexpExpressionFactoryEmitter();
+270a393,402
+> 
+> 	// edit policies
+> 
+> 	private void generateBaseItemSemanticEditPolicy() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getBaseItemSemanticEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			myDiagram.getBaseItemSemanticEditPolicyClassName(),
+> 			myDiagram
+> 		);
+271,277d392
+< 				GenExpressionInterpreter interpreter = (GenExpressionInterpreter)nextProvider;
+< 				if(providerEmitter != null) {
+< 					internalGenerateJavaClass(
+< 							providerEmitter,
+< 							providerContainer.getExpressionsPackageName(),
+< 							interpreter.getClassName(),
+< 							interpreter);
+278a404,411
+> 
+> 	private void generateBaseGraphicalNodeEditPolicy() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getBaseGraphicalNodeEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			myDiagram.getBaseGraphicalNodeEditPolicyClassName(),
+> 			myDiagram
+> 		);
+279a413,420
+> 
+> 	private void generateReferenceConnectionEditPolicy() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getReferenceConnectionEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			myDiagram.getReferenceConnectionEditPolicyClassName(),
+> 			myDiagram
+> 		);
+280a422,429
+> 
+> 	private void generateDiagramCanonicalEditPolicy() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getDiagramCanonicalEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			myDiagram.getCanonicalEditPolicyClassName(),
+> 			myDiagram
+> 		);
+282a432,438
+> 	private void generateChildContainerCanonicalEditPolicy(GenChildContainer genContainer) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getChildContainerCanonicalEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			genContainer.getCanonicalEditPolicyClassName(),
+> 			genContainer
+> 		);
+283,284d431
+< 	private void generateShortcutIcon() throws UnexpectedBehaviourException, InterruptedException {
+< 		doGenerateBinaryFile(myEmitters.getShortcutImageEmitter(), new Path("icons/shortcut.gif"), null); //$NON-NLS-1$
+286a441,447
+> 	private void generateDiagramItemSemanticEditPolicy() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getDiagramItemSemanticEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			myDiagram.getItemSemanticEditPolicyClassName(),
+> 			myDiagram
+> 		);
+287,291d440
+< 	private void generateDiagramIcon(String path) throws UnexpectedBehaviourException, InterruptedException {
+< 		// use genModel.prefix if available to match colors of model icons and diagram icons
+< 		// @see GenPackageImpl#generateEditor - it passes prefix to ModelGIFEmitter 
+< 		Object[] args = new Object[] {myDiagram.getDomainDiagramElement() == null ? myEditorGen.getDiagramFileExtension() : myDiagram.getDomainDiagramElement().getGenPackage().getPrefix() };
+< 		doGenerateBinaryFile(myEmitters.getDiagramIconEmitter(), new Path(path), args);
+293a450,456
+> 	private void generateCompartmentItemSemanticEditPolicy(GenCompartment genCompartment) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getCompartmentItemSemanticEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			genCompartment.getItemSemanticEditPolicyClassName(),
+> 			genCompartment
+> 		);
+294,301d449
+< 	private void generateWizardBanner() throws UnexpectedBehaviourException, InterruptedException {
+< 		// @see GenPackageImpl#generateEditor - it passes prefix to ModelWizardGIFEmitter
+< 		try {
+< 			Object[] args = new Object[] {myEmitters.getWizardBannerStemEmitter().generate(new NullProgressMonitor(), new Object[] {myDiagram}) };
+< 			String path = myEmitters.getWizardBannerLocationEmitter().generate(new NullProgressMonitor(), new Object[] {myDiagram});
+< 			doGenerateBinaryFile(myEmitters.getWizardBannerImageEmitter(), new Path(path), args);
+< 		} catch (InvocationTargetException e) {
+< 			handleException(e);
+302a458,465
+> 
+> 	private void generateNodeGraphicalNodeEditPolicy(GenNode genNode) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getNodeGraphicalNodeEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			genNode.getGraphicalNodeEditPolicyClassName(),
+> 			genNode
+> 		);
+305,309d467
+< 	private void generateBehaviors(GenCommonBase element, HashSet<OpenDiagramBehaviour> generatedBehaviors) throws UnexpectedBehaviourException, InterruptedException {
+< 		for (OpenDiagramBehaviour behaviour : element.getBehaviour(OpenDiagramBehaviour.class)) {
+< 			if (!generatedBehaviors.contains(behaviour)) {
+< 				generatedBehaviors.add(behaviour);
+< 				generateOpenDiagramEditPolicy(behaviour);
+311a485,494
+> 
+> 	// providers
+> 
+> 	private void generateAbstractParser() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getAbstractParserEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getAbstractParserClassName(),
+> 			myDiagram
+> 		);
+313a497,497
+> 	private void generateStructuralFeatureParser() throws JETException, InterruptedException {
+314,314d496
+< 	private void generateValidationProvider() throws UnexpectedBehaviourException, InterruptedException {
+315,315c498,498
+< 		internalGenerateJavaClass(
+---
+> 		doGenerateJavaClass(
+316,316c499,499
+< 			myEmitters.getValidationProviderGenerator(),
+---
+> 			myEmitters.getStructuralFeatureParserEmitter(),
+317a723,725
+> 			myEmitters.getCreationWizardPageEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getCreationWizardPageClassName(),
+318,318d722
+< 			myDiagram.getValidationProviderClassName(),
+319,319c726,726
+< 			myDiagram);
+---
+> 			myDiagram
+320,320d726
+< 		internalGenerateJavaClass(myEmitters.getValidateActionGenerator(), myEmitters.getValidateActionQualifiedNameGenerator(), myDiagram);
+322a599,600
+> 	private void generateMarkerNavigationProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+323,324d598
+< 	private void generateMarkerNavigationProvider() throws UnexpectedBehaviourException, InterruptedException {
+< 		internalGenerateJavaClass(
+325,325c601,601
+< 			myEmitters.getMarkerNavigationProviderEmitter(), 
+---
+> 			myEmitters.getMarkerNavigationProviderEmitter(),
+325a602,604
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getMarkerNavigationProviderClassName(),
+> 			myDiagram);
+326a501,501
+> 			myDiagram.getStructuralFeatureParserClassName(),
+327,327d500
+< 			myDiagram.getMarkerNavigationProviderClassName(), 
+328,328c502,502
+< 			myDiagram);
+---
+> 			myDiagram
+328a503,503
+> 		);
+330a506,506
+> 	private void generateStructuralFeaturesParser() throws JETException, InterruptedException {
+331,331d505
+< 	private void generateMetricProvider() throws UnexpectedBehaviourException, InterruptedException {
+332,332c507,507
+< 		internalGenerateJavaClass(
+---
+> 		doGenerateJavaClass(
+333,333c508,508
+< 			myEmitters.getMetricProviderEmitter(),
+---
+> 			myEmitters.getStructuralFeaturesParserEmitter(),
+334a792,794
+> 			myEmitters.getMatchingStrategyEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getMatchingStrategyClassName(),
+335,335d791
+< 			myDiagram.getMetricProviderClassName(),
+336a796,796
+> 		);
+336,336c795,795
+< 			myDiagram);
+---
+> 			myDiagram
+337,337d795
+< 		internalGenerateJavaClass(myEmitters.getMetricsActionEmitter(), myEmitters.getMetricsActionQualifiedNameEmitter(), myDiagram);
+339a524,530
+> 	private void generateElementTypes() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getElementTypesEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getElementTypesClassName(),
+> 			myDiagram
+> 		);
+340,341d523
+< 	private void generateOpenDiagramEditPolicy(OpenDiagramBehaviour behaviour) throws UnexpectedBehaviourException, InterruptedException {
+< 		internalGenerateJavaClass(myEmitters.getOpenDiagramEditPolicyEmitter(), behaviour.getEditPolicyQualifiedClassName(), behaviour);
+343a533,539
+> 	private void generateViewProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getViewProviderEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getNotationViewProviderClassName(),
+> 			myDiagram
+> 		);
+344,344c468,468
+< 	private void generateCommands(GenNode genNode) throws UnexpectedBehaviourException, InterruptedException {
+---
+> 	private void generateNodeItemSemanticEditPolicy(GenNode genNode) throws JETException, InterruptedException {
+344a469,474
+> 		doGenerateJavaClass(
+> 			myEmitters.getNodeItemSemanticEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			genNode.getItemSemanticEditPolicyClassName(),
+> 			genNode
+> 		);
+345,346d468
+< 		if (!genNode.getDomainMetaClass().isAbstract()) {
+< 			internalGenerateJavaClass(myEmitters.getCreateNodeCommandEmitter(), myEmitters.getCreateNodeCommandQualifiedClassNameEmitter(), genNode);
+347a541,548
+> 
+> 	private void generateEditPartProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getEditPartProviderEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getEditPartProviderClassName(),
+> 			myDiagram
+> 		);
+348,349d540
+< 		internalGenerateJavaClass(myEmitters.getAddNodeCommandEmitter(), myEmitters.getAddNodeCommandQualifiedClassNameEmitter(), genNode);
+< 		internalGenerateJavaClass(myEmitters.getCloneNodeCommandEmitter(), myEmitters.getCloneNodeCommandQualifiedClassNameEmitter(), genNode);
+351a833,834
+> 	private void generateShortcutIcon() throws InterruptedException {
+> 		if (!myDiagram.generateShortcutIcon()) {
+351a551,556
+> 	private void generateMetamodelSupportProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getMetamodelSupportProviderEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getMetamodelSupportProviderClassName(),
+> 			myDiagram);
+352,353d832
+< 	private void generateCommands(GenLink genLink) throws UnexpectedBehaviourException, InterruptedException {
+< 		if (!genLink.isViewDirectionAlignedWithModel()) {
+354,354c835,835
+< 			return;
+---
+> 			return;
+355a558,564
+> 
+> 	private void generateModelingAssistantProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getModelingAssistantProviderEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getModelingAssistantProviderClassName(),
+> 			myDiagram);
+356,359d557
+< 		internalGenerateJavaClass(myEmitters.getCreateLinkStartCommandEmitter(), myEmitters.getCreateLinkStartCommandQualifiedClassNameEmitter(), genLink);
+< 		internalGenerateJavaClass(myEmitters.getCreateLinkCompleteCommandEmitter(), myEmitters.getCreateLinkCompleteCommandQualifiedClassNameEmitter(), genLink);
+< 		internalGenerateJavaClass(myEmitters.getReconnectLinkSourceCommandEmitter(), myEmitters.getReconnectLinkSourceCommandQualifiedClassNameEmitter(), genLink);
+< 		internalGenerateJavaClass(myEmitters.getReconnectLinkTargetCommandEmitter(), myEmitters.getReconnectLinkTargetCommandQualifiedClassNameEmitter(), genLink);
+361a567,572
+> 	private void generatePropertyProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getPropertyProviderEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getPropertyProviderClassName(),
+> 			myDiagram);
+362,363d566
+< 	private void generateLayoutEditPolicy(GenContainerBase containerBase) throws InterruptedException, UnexpectedBehaviourException {
+< 		internalGenerateJavaClass(myEmitters.getLayoutEditPolicyEmitter(), myEmitters.getLayoutEditPolicyQualifiedClassNameEmitter(), containerBase);
+365a575,580
+> 	private void generateIconProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getIconProviderEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getIconProviderClassName(),
+> 			myDiagram);
+366,367d574
+< 	private void generateSideAffixedLayoutEditPolicy(GenNode node) throws InterruptedException, UnexpectedBehaviourException {
+< 		internalGenerateJavaClass(myEmitters.getSideAffixedLayoutEditPolicyEmitter(), myEmitters.getSideAffixedLayoutEditPolicyQualifiedClassNameEmitter(), node);
+369a303,303
+> 
+369a583,588
+> 	private void generateParserProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getParserProviderEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getParserProviderClassName(),
+> 			myDiagram);
+370a305,310
+> 		doGenerateJavaClass(
+> 			myEmitters.getNodeEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			genNode.getEditPartClassName(),
+> 			genNode
+> 		);
+370,370c304,304
+< 	private void generateGraphicalEditPolicy(GenNode genNode) throws InterruptedException, UnexpectedBehaviourException {
+---
+> 	private void generateNodeEditPart(GenNode genNode) throws JETException, InterruptedException {
+371,371d304
+< 		internalGenerateJavaClass(myEmitters.getGraphicalEditPolicyEmitter(), genNode.getGraphicalNodeEditPolicyQualifiedClassName(), genNode);
+373a591,596
+> 	private void generateValidationProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getValidationProviderEmitter(),
+> 			myDiagram.getProvidersPackageName(),
+> 			myDiagram.getValidationProviderClassName(),
+> 			myDiagram);
+373a357,357
+> 
+374,374c358,358
+< 	private void generateGraphicalEditPolicy(GenLink genLink) throws InterruptedException, UnexpectedBehaviourException {
+---
+> 	private void generateLinkEditPart(GenLink genLink) throws JETException, InterruptedException {
+374a359,364
+> 		doGenerateJavaClass(
+> 			myEmitters.getLinkEditPartEmitter(),
+> 			myDiagram.getEditPartsPackageName(),
+> 			genLink.getEditPartClassName(),
+> 			genLink
+> 		);
+375,375d358
+< 		internalGenerateJavaClass(myEmitters.getGraphicalEditPolicyEmitter(), myEmitters.getGraphicalEditPolicyQualifiedClassNameEmitter(), genLink);
+377a607,608
+> 	// notation view factories
+> 
+378,378c609,609
+< 	private void generateComponentEditPolicy(GenCommonBase genElement) throws InterruptedException, UnexpectedBehaviourException {
+---
+> 	private void generateViewFactory(GenCommonBase genElement) throws JETException, InterruptedException {
+378a610,615
+> 		doGenerateJavaClass(
+> 			myEmitters.getViewFactoryEmitter(),
+> 			myDiagram.getNotationViewFactoriesPackageName(),
+> 			genElement.getNotationViewFactoryClassName(),
+> 			genElement
+> 		);
+379,379d609
+< 		internalGenerateJavaClass(myEmitters.getComponentEditPolicyEmitter(), myEmitters.getComponentEditPolicyQualifiedClassNameEmitter(), genElement);
+381a476,476
+> 
+382a478,483
+> 		doGenerateJavaClass(
+> 			myEmitters.getLinkItemSemanticEditPolicyEmitter(),
+> 			myDiagram.getEditPoliciesPackageName(),
+> 			genLink.getItemSemanticEditPolicyClassName(),
+> 			genLink
+> 		);
+382,382c477,477
+< 	private void generateConnectionEndpointEditPolicy(GenLink genLink) throws InterruptedException, UnexpectedBehaviourException {
+---
+> 	private void generateLinkItemSemanticEditPolicy(GenLink genLink) throws JETException, InterruptedException {
+383,383d477
+< 		internalGenerateJavaClass(myEmitters.getConnectionEndpointEditPolicyEmitter(), myEmitters.getConnectionEndpointEditPolicyQualifiedClassNameEmitter(), genLink);
+385a618,623
+> 	private void generateLinkLabelViewFactory(GenLinkLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getLabelViewFactoryEmitter(),
+> 			myDiagram.getNotationViewFactoriesPackageName(),
+> 			label.getNotationViewFactoryClassName(),
+> 			label
+386,391d617
+< 	private void generateNavigatorContentProvider() throws InterruptedException {
+< 		internalGenerateJavaClass(
+< 				myEmitters.getNavigatorContentProviderEmitter(),
+< 				myEditorGen.getNavigator().getPackageName(),
+< 				myEditorGen.getNavigator().getContentProviderClassName(),
+< 				myEditorGen.getNavigator()
+394a627,633
+> 	private void generateLinkLabelTextViewFactory(GenLinkLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getLabelTextViewFactoryEmitter(),
+> 			myDiagram.getNotationViewFactoriesPackageName(),
+> 			label.getTextNotationViewFactoryClassName(),
+> 			label
+> 		);
+395,395c515,515
+< 	private void generateDomainNavigatorContentProvider() throws InterruptedException {
+---
+> 	private void generateSemanticHints() throws JETException, InterruptedException {
+395a516,517
+> 		doGenerateJavaClass(
+> 			myEmitters.getSemanticHintsEmitter(),
+396,396d515
+< 		doGenerateJavaClass(myEmitters.getDomainNavigatorContentProviderEmitter(), myEditorGen.getNavigator().getDomainContentProviderQualifiedClassName(), myEditorGen.getNavigator());
+398a636,642
+> 	private void generateExternalNodeLabelViewFactory(GenExternalNodeLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getLabelViewFactoryEmitter(),
+> 			myDiagram.getNotationViewFactoriesPackageName(),
+> 			label.getNotationViewFactoryClassName(),
+> 			label
+> 		);
+399,400d635
+< 	private void generateDomainNavigatorLabelProvider() throws InterruptedException {
+< 		doGenerateJavaClass(myEmitters.getDomainNavigatorLabelProviderEmitter(), myEditorGen.getNavigator().getDomainLabelProviderQualifiedClassName(), myEditorGen.getNavigator());
+402a645,651
+> 	private void generateExternalNodeLabelTextViewFactory(GenExternalNodeLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getLabelTextViewFactoryEmitter(),
+> 			myDiagram.getNotationViewFactoriesPackageName(),
+> 			label.getTextNotationViewFactoryClassName(),
+> 			label
+> 		);
+403,404d644
+< 	private void generateDomainNavigatorItem() throws InterruptedException {
+< 		doGenerateJavaClass(myEmitters.getDomainNavigatorItemEmitter(), myEditorGen.getNavigator().getDomainNavigatorItemQualifiedClassName(), myEditorGen.getNavigator());
+406a654,660
+> 	private void generateNodeLabelTextViewFactory(GenNodeLabel label) throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getLabelTextViewFactoryEmitter(),
+> 			myDiagram.getNotationViewFactoriesPackageName(),
+> 			label.getNotationViewFactoryClassName(),
+> 			label
+> 		);
+407,408d653
+< 	private void generateDomainModelElementTester() throws InterruptedException {
+< 		doGenerateJavaClass(myEmitters.getDomainModelElementTesterEmitter(), myEditorGen.getNavigator().getDomainModelElementTesterQualifiedClassName(), myEditorGen.getNavigator());
+410a663,670
+> 	// editor
+> 
+> 	private void generateInitDiagramFileAction() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getInitDiagramFileActionEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getInitDiagramFileActionClassName(),
+> 			myDiagram);
+411,412d662
+< 	private void generateURIEditorInputTester() throws InterruptedException {
+< 		doGenerateJavaClass(myEmitters.getURIEditorInputTesterEmitter(), myEditorGen.getNavigator().getUriInputTesterQualifiedClassName(), myEditorGen.getNavigator());
+415,420d672
+< 	private void generateNavigatorLabelProvider() throws InterruptedException, UnexpectedBehaviourException {
+< 		internalGenerateJavaClass(
+< 				myEmitters.getNavigatorLabelProviderEmitter(),
+< 				myEditorGen.getNavigator().getPackageName(),
+< 				myEditorGen.getNavigator().getLabelProviderClassName(),
+< 				myEditorGen.getNavigator()
+423a685,691
+> 	private void generateDiagramEditorUtil() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getDiagramEditorUtilEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getDiagramEditorUtilClassName(),
+> 			myDiagram
+> 		);
+423a759,761
+> 	
+> 	private void generateElementChooser() throws JETException, InterruptedException {
+> 		if (!myDiagram.generateCreateShortcutAction()) {
+424,425d758
+< 	private void generateNavigatorLinkHelper() throws InterruptedException {
+< 		if (!myEditorGen.getEditor().isEclipseEditor()) {
+426,426c762,762
+< 			return;
+---
+> 			return;
+427a693,699
+> 
+> 	private void generateDiagramFileCreator() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getDiagramFileCreatorEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getDiagramFileCreatorClassName(),
+> 			myDiagram
+428,432d692
+< 		internalGenerateJavaClass(
+< 				myEmitters.getNavigatorLinkHelperEmitter(),
+< 				myEditorGen.getNavigator().getPackageName(),
+< 				myEditorGen.getNavigator().getLinkHelperClassName(), 
+< 				myEditorGen.getNavigator()
+435a703,708
+> 	private void generateVisualIDRegistry() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getVisualIDRegistryEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getVisualIDRegistryClassName(),
+> 			myDiagram
+436,441d702
+< 	private void generateNavigatorSorter() throws InterruptedException, UnexpectedBehaviourException {
+< 		internalGenerateJavaClass(
+< 				myEmitters.getNavigatorSorterEmitter(),
+< 				myEditorGen.getNavigator().getPackageName(),
+< 				myEditorGen.getNavigator().getSorterClassName(), 
+< 				myEditorGen.getNavigator()
+444a712,717
+> 	private void generateCreationWizard() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getCreationWizardEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getCreationWizardClassName(),
+> 			myDiagram
+445,450d711
+< 	private void generateNavigatorActionProvider() throws InterruptedException, UnexpectedBehaviourException {
+< 		internalGenerateJavaClass(
+< 				myEmitters.getNavigatorActionProviderEmitter(),
+< 				myEditorGen.getNavigator().getPackageName(),
+< 				myEditorGen.getNavigator().getActionProviderClassName(), 
+< 				myEditorGen.getNavigator()
+454,454c721,721
+< 	private void generateAbstractNavigatorItem() throws InterruptedException, UnexpectedBehaviourException {
+---
+> 	private void generateCreationWizardPage() throws JETException, InterruptedException {
+456,459d722
+< 				myEmitters.getAbstractNavigatorItemEmitter(),
+< 				myEditorGen.getNavigator().getPackageName(),
+< 				myEditorGen.getNavigator().getAbstractNavigatorItemClassName(),
+< 				myEditorGen.getNavigator()
+462a730,735
+> 	private void generateEditor() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getEditorEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getEditorClassName(),
+> 			myDiagram
+463,468d729
+< 	private void generateNavigatorGroup() throws InterruptedException {
+< 		internalGenerateJavaClass(
+< 				myEmitters.getNavigatorGroupEmitter(),
+< 				myEditorGen.getNavigator().getPackageName(),
+< 				myEditorGen.getNavigator().getNavigatorGroupClassName(),
+< 				myEditorGen.getNavigator()
+471a739,747
+> 	private void generateCreateShortcutAction() throws JETException, InterruptedException {
+> 		if (!myDiagram.generateCreateShortcutAction()) {
+> 			return;
+> 		}
+> 		doGenerateJavaClass(
+> 				myEmitters.getCreateShortcutActionEmitter(),
+> 				myDiagram.getEditorPackageName(), 
+> 				myDiagram.getCreateShortcutActionClassName(),
+> 				myDiagram
+472,477d738
+< 	private void generateNavigatorItem() throws InterruptedException {
+< 		internalGenerateJavaClass(
+< 				myEmitters.getNavigatorItemEmitter(),
+< 				myEditorGen.getNavigator().getPackageName(),
+< 				myEditorGen.getNavigator().getNavigatorItemClassName(),
+< 				myEditorGen.getNavigator()
+480a751,757
+> 	private void generateLoadResourceAction() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 				myEmitters.getLoadResourceActionEmitter(),
+> 				myDiagram.getEditorPackageName(), 
+> 				myDiagram.getLoadResourceActionClassName(),
+> 				myDiagram
+> 			);
+481,486d750
+< 	@SuppressWarnings("unchecked")
+< 	private void generateNavigatorGroupIcons() throws InterruptedException, UnexpectedBehaviourException {
+< 		Set<String> groupIcons = new HashSet<String>();
+< 		for (GenNavigatorChildReference nextReference : (List<? extends GenNavigatorChildReference>) myEditorGen.getNavigator().getChildReferences()) {
+< 			if (nextReference.getGroupIcon() != null && nextReference.getGroupIcon().length() > 0) {
+< 				groupIcons.add(nextReference.getGroupIcon());
+489,490d763
+< 		for (String iconPath : groupIcons) {
+< 			generateGroupIcon(new Path(iconPath));
+491a771,778
+> 	
+> 	private void generateDocumentProvider() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getDocumentProviderEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getDocumentProviderClassName(),
+> 			myDiagram
+> 		);
+493a781,787
+> 	private void generateActionBarContributor() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getActionBarContributorEmitter(),
+> 			myDiagram.getEditorPackageName(),
+> 			myDiagram.getActionBarContributorClassName(),
+> 			myDiagram
+> 		);
+494,495d780
+< 	private void generateGroupIcon(Path groupIconPath) throws InterruptedException, UnexpectedBehaviourException {
+< 		doGenerateBinaryFile(myEmitters.getGroupIconEmitter(), groupIconPath, null);	
+498,500d789
+< 	@SuppressWarnings("unchecked")
+< 	protected void generatePropertySheetSections() throws UnexpectedBehaviourException, InterruptedException {
+< 		if (myEditorGen.getPropertySheet().isNeedsCaption()) {
+502,504d791
+< 				myEmitters.getPropertySheetLabelProviderEmitter(), 
+< 				myEditorGen.getPropertySheet().getLabelProviderQualifiedClassName(), 
+< 				myEditorGen.getPropertySheet());
+505a798,799
+> 
+> 	private void generatePreferencesInitializer() throws JETException, InterruptedException {
+506,507d797
+< 		for (GenPropertyTab tab : (List<? extends GenPropertyTab>) myEditorGen.getPropertySheet().getTabs()) {
+< 			if (tab instanceof GenCustomPropertyTab) {
+509,511d800
+< 					myEmitters.getPropertySectionEmitter(),
+< 					((GenCustomPropertyTab) tab).getQualifiedClassName(),
+< 					tab);
+512a807,814
+> 
+> 	private void generatePluginClass() throws JETException, InterruptedException {
+> 		doGenerateJavaClass(
+> 			myEmitters.getPluginClassEmitter(),
+> 			myDiagram.getEditorPackageName(), 
+> 			myDiagram.getEditorGen().getPlugin().getActivatorClassName(),
+> 			myDiagram.getEditorGen().getPlugin()
+> 		);
+513a816,818
+> 
+> 	private void generatePluginXml() throws JETException, InterruptedException {
+> 		doGenerateFile(myEmitters.getPluginXmlEmitter(), new Path("plugin.xml"), myDiagram.getEditorGen().getPlugin());
+516,523d820
+< 	private void generateApplication() throws UnexpectedBehaviourException, InterruptedException {
+< 		GenApplication application = myEditorGen.getApplication();
+< 		if (application != null) {
+< 			doGenerateJavaClass(myEmitters.getApplicationEmitter(), application.getQualifiedClassName(), application);
+< 			doGenerateJavaClass(myEmitters.getActionBarAdvisorEmitter(), application.getActionBarAdvisorQualifiedClassName(), application);
+< 			doGenerateJavaClass(myEmitters.getPerspectiveEmitter(), application.getPerspectiveQualifiedClassName(), application);
+< 			doGenerateJavaClass(myEmitters.getWorkbenchAdvisorEmitter(), application.getWorkbenchAdvisorQualifiedClassName(), application);
+< 			doGenerateJavaClass(myEmitters.getWorkbenchWindowAdvisorEmitter(), application.getWorkbenchWindowAdvisorQualifiedClassName(), application);
+524a824,826
+> 
+> 	private void generateBundleManifest() throws JETException, InterruptedException {
+> 		doGenerateFile(myEmitters.getBundleManifestEmitter(), new Path("META-INF/MANIFEST.MF"), myDiagram.getEditorGen().getPlugin());
+526a829,830
+> 	private void generateBuildProperties() throws JETException, InterruptedException {
+> 		doGenerateFile(myEmitters.getBuildPropertiesEmitter(), new Path("build.properties"), myDiagram);
+527,527c790,790
+< 	private void generatePreferences() throws UnexpectedBehaviourException, InterruptedException {
+---
+> 	private void generateMatchingStrategy() throws JETException, InterruptedException {
+528,528d790
+< 		generatePreferences(myDiagram.getPreferencePages());
+531,534d832
+< 	private void generatePreferences(EList<GenPreferencePage> pages) throws UnexpectedBehaviourException, InterruptedException {
+< 		for (GenPreferencePage preferencePage : pages) {
+< 			if (preferencePage instanceof GenStandardPreferencePage) {
+< 				generatePreferencePage((GenStandardPreferencePage) preferencePage);
+535a837,847
+> 		Path iconPath = new Path("icons/shortcut.gif");
+> 		IProgressMonitor pm = getNextStepMonitor();
+> 		try {
+> 			pm.beginTask(iconPath.lastSegment(), 3);
+> 			IPath containerPath = myDestProject.getFullPath().append(iconPath.removeLastSegments(1));
+> 			CodeGenUtil.findOrCreateContainer(containerPath, false, (IPath) null, new SubProgressMonitor(pm, 1));
+> 			IFile f = myDestProject.getFile(iconPath);
+> 			if (f.exists()) {
+> 				f.setContents(new ByteArrayInputStream(myEmitters.getShortcutImageEmitter().generateGif()), true, true, new SubProgressMonitor(pm, 1));
+> 			} else {
+> 				f.create(new ByteArrayInputStream(myEmitters.getShortcutImageEmitter().generateGif()), true, new SubProgressMonitor(pm, 1));
+536,536d836
+< 			generatePreferences(preferencePage.getChildren());
+537a849,853
+> 			f.getParent().refreshLocal(IResource.DEPTH_ONE, new SubProgressMonitor(pm, 1));
+> 		} catch (CoreException ex) {
+> 			myExceptions.add(ex.getStatus());
+> 		} finally {
+> 			pm.done();
+539a856,885
+> 	}
+> 	
+> 	/**
+> 	 * Generate ordinary file. No merge is performed at the moment.
+> 	 * @param emitter template to use
+> 	 * @param filePath - project-relative path to file, e.g. META-INF/MANIFEST.MF
+> 	 * @param param TODO
+> 	 * @throws JETException
+> 	 * @throws InterruptedException
+> 	 */
+> 	private void doGenerateFile(JETEmitter emitter, IPath filePath, Object param) throws JETException, InterruptedException {
+> 		assert !myDestProject.getName().equals(filePath.segment(0));
+> 		IProgressMonitor pm = getNextStepMonitor();
+> 		try {
+> 			pm.beginTask(filePath.lastSegment(), 4);
+> 			IPath containerPath = myDestProject.getFullPath().append(filePath.removeLastSegments(1));
+> 			CodeGenUtil.findOrCreateContainer(containerPath, false, (IPath) null, new SubProgressMonitor(pm, 1));
+> 			String genText = emitter.generate(new SubProgressMonitor(pm, 1), new Object[] { param });
+> 			IFile f = myDestProject.getFile(filePath);
+> 			// FIXME merge!
+> 			if (f.exists()) {
+> 				f.setContents(new ByteArrayInputStream(genText.getBytes()), true, true, new SubProgressMonitor(pm, 1));
+> 			} else {
+> 				f.create(new ByteArrayInputStream(genText.getBytes()), true, new SubProgressMonitor(pm, 1));
+> 			}
+> 			f.getParent().refreshLocal(IResource.DEPTH_ONE, new SubProgressMonitor(pm, 1));
+> 		} catch (CoreException ex) {
+> 			myExceptions.add(ex.getStatus());
+> 		} finally {
+> 			pm.done();
+540,548d855
+< 	private void generatePreferencePage(GenStandardPreferencePage preferencePage) throws UnexpectedBehaviourException, InterruptedException {
+< 		switch (preferencePage.getKind()) {
+< 		case APPEARANCE_LITERAL:
+< 			internalGenerateJavaClass(myEmitters.getAppearancePreferencePageEmitter(), myEmitters.getAppearancePreferencePageQualifiedClassNameEmitter(), myDiagram);
+< 			break;
+< 		case GENERAL_LITERAL:
+< 			internalGenerateJavaClass(myEmitters.getGeneralPreferencePageEmitter(), myEmitters.getGeneralPreferencePageQualifiedClassNameEmitter(), myDiagram);
+< 			break;
+< 		//TODO support more standard preference pages.
+551a889,894
+> 	/**
+> 	 * Optionally, specify progressMonitor to use. Should be called prior to {@link #run()}
+> 	 * @param progress
+> 	 */
+> 	public void setProgressMonitor(IProgressMonitor progress) {
+> 		myProgress = progress;
+552,556d888
+< 	private void generateExternalizationSupport() throws UnexpectedBehaviourException, InterruptedException {
+<         String packageName = myEditorGen.getEditor().getPackageName();
+<         String messagesClassName = "Messages";
+<         doGenerateJavaClass(myEmitters.getExternalizeEmitter(), packageName, messagesClassName, new Object[] { myEditorGen });
+<         doGenerateFile(myEmitters.getMessagesEmitter(), new Path(messagesClassName.toLowerCase()+".properties"), new Object[] { myEditorGen });
+558a897,901
+> 	private void setupProgressMonitor() {
+> 		if (myProgress == null) {
+> 			myProgress = new NullProgressMonitor();
+> 			return;
+> 			// no need to set it up
+559,560d896
+< 	private void internalGenerateJavaClass(TextEmitter emitter, String qualifiedClassName, Object argument) throws InterruptedException {
+< 		internalGenerateJavaClass(emitter, CodeGenUtil.getPackageName(qualifiedClassName), CodeGenUtil.getSimpleClassName(qualifiedClassName), argument);
+561a903,928
+> 		Counter c = new Counter(myDiagram);
+> 		c.setAdditionalOperations(8); // init, palette, editor, plugin.xml, etc
+> 		c.setOperationsPerNode(2);
+> 		c.setOperationsPerListContainerNode(1);
+> 		c.setOperationsPerLink(2);
+> 		myProgress.beginTask(Messages.start, c.getTotal());
+> 	}
+> 
+> 	private IProgressMonitor getNextStepMonitor() throws InterruptedException {
+> 		if (myProgress.isCanceled()) {
+> 			throw new InterruptedException();
+> 		}
+> 		return new SubProgressMonitor(myProgress, 1);
+> 	}
+> 
+> 	private void initializeEditorProject() throws UnexpectedBehaviourException, InterruptedException {
+> 		myDestProject = ResourcesPlugin.getWorkspace().getRoot().getProject(myDiagram.getEditorGen().getPlugin().getID());
+> 		final Path srcPath = new Path('/' + myDestProject.getName() + "/src"); //$NON-NLS-1$
+> 		final Path projectLocation = null; // use default
+> 		final List referencedProjects = createReferencedProjectsList();
+> 		final int style = org.eclipse.emf.codegen.ecore.Generator.EMF_PLUGIN_PROJECT_STYLE;
+> 		// pluginVariables is NOT used when style is EMF_PLUGIN_PROJECT_STYLE
+> 		final List pluginVariables = null;
+> 		final IProgressMonitor pm = getNextStepMonitor();
+> 
+> 		org.eclipse.emf.codegen.ecore.Generator.createEMFProject(srcPath, projectLocation, referencedProjects, pm, style, pluginVariables);
+563,564d929
+< 	private void internalGenerateJavaClass(TextEmitter emitter, TextEmitter qualifiedClassNameEmitter, Object argument) throws InterruptedException {
+< 		String qualifiedClassName = null;
+565a931,936
+> 			myDestRoot = JavaCore.create(myDestProject).findPackageFragmentRoot(srcPath);
+> 		} catch (JavaModelException ex) {
+> 			throw new UnexpectedBehaviourException(ex.getMessage());
+> 		}
+> 		if (myDestRoot == null) {
+> 			throw new UnexpectedBehaviourException("no source root can be found");
+566,570d930
+< 			qualifiedClassName = qualifiedClassNameEmitter.generate(new NullProgressMonitor(), new Object[] {argument});
+< 		} catch (InvocationTargetException e) {
+< 			handleException(e);
+< 		} catch (UnexpectedBehaviourException e) {
+< 			handleException(e);
+571a938,941
+> 	}
+> 
+> 	private List createReferencedProjectsList() {
+> 		return Collections.EMPTY_LIST;
+572,572d937
+< 		internalGenerateJavaClass(emitter, qualifiedClassName, argument);
+575a945,947
+> 	 * NOTE: potential problem - packageName and className should match those specified in 
+> 	 * the template. Besides, getQualifiedXXX helpers in diagram GenModel should also correctly
+> 	 * return qualified class names.  
+576,576d944
+< 	 * Passes initialized ImportManager as second template argument
+577a949,1061
+> 	private void doGenerateJavaClass(JETEmitter emitter, String packageName, String className, Object input) throws InterruptedException {
+> 		IProgressMonitor pm = getNextStepMonitor();
+> 		try {
+> 			pm.beginTask(className, 4);
+> 			String genText = emitter.generate(new SubProgressMonitor(pm, 1), new Object[] { input });
+> 			IPackageFragment pf = myDestRoot.createPackageFragment(packageName, true, new SubProgressMonitor(pm, 1));
+> 			ICompilationUnit cu = pf.getCompilationUnit(className + ".java"); //$NON-NLS-1$
+> 			if (cu.exists()) {
+> 				genText = merge(genText, cu.getSource(), new SubProgressMonitor(pm, 1));
+> 			} else {
+> 				pm.worked(1);
+> 			}
+> 			pf.createCompilationUnit(cu.getElementName(), formatCode(genText), true, new SubProgressMonitor(pm, 1));
+> 		} catch (NullPointerException ex) {
+> 			myExceptions.add(new Status(IStatus.ERROR, "org.eclipse.gmf.codegen", 0, ex.getMessage(), ex));
+> 		} catch (JETException ex) {
+> 			myExceptions.add(ex.getStatus());
+> 		} catch (CoreException ex) {
+> 			myExceptions.add(ex.getStatus());		
+> 		} finally {
+> 			pm.done();
+> 		}
+> 	}
+> 
+> 	private String merge(String generatedText, String oldContents, IProgressMonitor pm) {
+> 		pm.beginTask(Messages.merge, 1);
+> 		JMerger jMerge = new JMerger();
+> 		jMerge.setControlModel(getJControlModel());
+> 		jMerge.setSourceCompilationUnit(jMerge.createCompilationUnitForContents(generatedText));
+> 		jMerge.setTargetCompilationUnit(jMerge.createCompilationUnitForContents(oldContents));
+> 		jMerge.merge();
+> 		pm.done();
+> 		return jMerge.getTargetCompilationUnitContents();
+> 	}
+> 
+> 	private String formatCode(String text) {
+> 		IDocument doc = new Document(text);
+> 		TextEdit edit = getCodeFormatter().format(CodeFormatter.K_COMPILATION_UNIT, doc.get(), 0, doc.get().length(), 0, null);
+> 
+> 		try {
+> 			// check if text formatted successfully 
+> 			if(edit != null) {
+> 				edit.apply(doc);
+> 				text = doc.get();				
+> 			}		
+> 		} catch (Exception ex) {
+> 			ex.printStackTrace();
+> 		}
+> 		return text;
+> 	}
+> 
+> 	private CodeFormatter getCodeFormatter() {
+> 		if (myCodeFormatter == null) {
+> 			myCodeFormatter = ToolFactory.createCodeFormatter(null);
+> 		}
+> 		return myCodeFormatter;
+> 	}
+> 
+> 	private JControlModel getJControlModel() {
+> 		if (myJControlModel == null) {
+> 			myJControlModel = new JControlModel(myEmitters.getJMergeControlFile().toString());
+> 		}
+> 		return myJControlModel;
+> 	}
+> 
+> 	private static final class Counter {
+> 		private final GenDiagram myDiagram;
+> 		private int myOpsPerNode = 1;
+> 		private int myOpsPerLink = 1;
+> 		private int myOpsPerListContainerNode = 1;
+> 		private int myAdditionalOps = 0;
+> 		private int myOpsPerCompartment = 1;
+> 
+> 		Counter(GenDiagram diagram) {
+> 			myDiagram = diagram;
+> 		}
+> 
+> 		public void setOperationsPerNode(int opsPerNode) {
+> 			 myOpsPerNode = opsPerNode;
+> 		}
+> 		public void setOperationsPerLink(int opsPerLink) {
+> 			myOpsPerLink = opsPerLink;
+> 		}
+> 		public void setOperationsPerListContainerNode(int opsPerChild) {
+> 			myOpsPerListContainerNode = opsPerChild;
+> 		}
+> 		public void setOperationsPerCompartment(int opsPerCompartment) {
+> 			myOpsPerCompartment = opsPerCompartment;
+> 		}
+> 		public void setAdditionalOperations(int additionalOps) {
+> 			myAdditionalOps = additionalOps;
+> 		}
+> 		public int getTotal() {
+> 			int rv = myAdditionalOps;
+> 			rv += myDiagram.getTopLevelNodes().size() * myOpsPerNode;
+> 			rv += getChildNodesCount(myDiagram.getChildNodes());
+> 			rv += myDiagram.getCompartments().size() * myOpsPerCompartment;
+> 			rv += myDiagram.getLinks().size() * myOpsPerLink;
+> 			return rv;  
+> 		}
+> 
+> 		private int getChildNodesCount(Collection nodes) {
+> 			int counter = 0;
+> 			for (Iterator it = nodes.iterator(); it.hasNext();) {
+> 				GenChildNode nextNode = (GenChildNode) it.next();
+> 				if (nextNode.isListContainerEntry()) {
+> 					counter += myOpsPerNode;
+> 				} else {
+> 					counter += myOpsPerListContainerNode;
+> 				}
+> 			}
+> 			return counter;
+> 		}
+578,594d948
+< 	private void internalGenerateJavaClass(TextEmitter emitter, String packageName, String className, Object argument) throws InterruptedException {
+< 		ImportAssistant importUtil = createImportAssistant(packageName, className);
+< 		doGenerateJavaClass(emitter, packageName, className, argument, importUtil);
+< 	}
+< 
+< 	protected void setupProgressMonitor() {
+< 		Counter c = new Counter();
+< 		c.registerFactor(GMFGenPackage.eINSTANCE.getGenNode(), 2);
+< 		c.registerFactor(GMFGenPackage.eINSTANCE.getGenCompartment(), 2);
+< 		c.registerFactor(GMFGenPackage.eINSTANCE.getGenLink(), 2);
+< 		c.registerFactor(GMFGenPackage.eINSTANCE.getGenNodeLabel(), 2);
+< 		c.registerFactor(GMFGenPackage.eINSTANCE.getGenLinkLabel(), 2);
+< 		int total = c.getTotal(myDiagram);
+< 		total++; // init
+< 		total += 4; // text files
+< 		total += 15; // out-of-cycle doGenerateJava... <- genDiagram + genEditor
+< 		setupProgressMonitor(null, total);

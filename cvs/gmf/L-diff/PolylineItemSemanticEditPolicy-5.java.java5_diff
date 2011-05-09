@@ -1,0 +1,100 @@
+3c3
+< import org.eclipse.gef.commands.Command;
+---
+> import java.util.ArrayList;
+5c5
+< import org.eclipse.gmf.runtime.emf.type.core.commands.DestroyElementCommand;
+---
+> import java.util.Collection;
+7c7
+< import org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest;
+---
+> import java.util.Collections;
+9c9
+< import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest;
+---
+> import java.util.Iterator;
+13c13
+< import org.eclipse.emf.ecore.EAnnotation;
+---
+> import org.eclipse.gef.EditPart;
+15c15,17
+< import org.eclipse.gmf.runtime.notation.View;
+---
+> import org.eclipse.gef.commands.Command;
+> 
+> import org.eclipse.gef.commands.CompoundCommand;
+20a23,24
+> import org.eclipse.gmf.gmfgraph.FigureHandle;
+> 
+22a27,28
+> import org.eclipse.gmf.graphdef.editor.edit.parts.PolylineEditPart;
+> 
+24a31,34
+> import org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.commands.DestroyElementCommand;
+> 
+26a37,40
+> import org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest;
+> 
+28a43,46
+> import org.eclipse.gmf.runtime.notation.Edge;
+> 
+> import org.eclipse.gmf.runtime.notation.View;
+> 
+32,34c50,51
+<         return getMSLWrapper (new DestroyElementCommand (req) {
+< 
+<             protected EObject getElementToDestroy () {
+---
+>         CompoundCommand cc = new CompoundCommand ();
+>         Collection allEdges = new ArrayList ();
+36,40c53,60
+<                 EAnnotation annotation = view.getEAnnotation ("Shortcut");
+<                 if (annotation != null) {
+<                     return view;
+<                 }
+<                 return super.getElementToDestroy ();
+---
+>         allEdges.addAll (view.getSourceEdges ());
+>         allEdges.addAll (view.getTargetEdges ());
+>         for (Iterator it = allEdges.iterator ();
+>         it.hasNext ();) {
+>             Edge nextEdge = (Edge) it.next ();
+>             EditPart nextEditPart = (EditPart) getHost ().getViewer ().getEditPartRegistry ().get (nextEdge);
+>             EditCommandRequestWrapper editCommandRequest = new EditCommandRequestWrapper (new DestroyElementRequest (((PolylineEditPart) getHost ()).getEditingDomain (), req.isConfirmationRequired ()), Collections.EMPTY_MAP);
+>             cc.add (nextEditPart.getCommand (editCommandRequest));
+42,45c62,63
+< 
+<         }
+< 
+<         );
+---
+>         cc.add (getMSLWrapper (new DestroyElementCommand (req)));
+>         return cc;
+50c68
+<             return req.getTarget () == null ? null : getCreateCompleteIncomingDiagramElement_Figure4001Command (req);
+---
+>             return req.getTarget () == null ? null : getCreateCompleteIncomingDiagramElementFigure_4001Command (req);
+55,56c73,76
+<     protected Command getCreateCompleteIncomingDiagramElement_Figure4001Command (CreateRelationshipRequest req) {
+<         if (! (req.getSource () instanceof DiagramElement)) {
+---
+>     protected Command getCreateCompleteIncomingDiagramElementFigure_4001Command (CreateRelationshipRequest req) {
+>         EObject sourceEObject = req.getSource ();
+>         EObject targetEObject = req.getTarget ();
+>         if (false == sourceEObject instanceof DiagramElement || false == targetEObject instanceof FigureHandle) {
+59,60c79,81
+<         DiagramElement element = (DiagramElement) req.getSource ();
+<         if (element.getFigure () != null) {
+---
+>         DiagramElement source = (DiagramElement) sourceEObject;
+>         FigureHandle target = (FigureHandle) targetEObject;
+>         if (! GMFGraphBaseItemSemanticEditPolicy.LinkConstraints.canCreateDiagramElementFigure_4001 (source, target)) {
+63c84
+<         SetRequest setReq = new SetRequest (req.getSource (), GMFGraphPackage.eINSTANCE.getDiagramElement_Figure (), req.getTarget ());
+---
+>         SetRequest setReq = new SetRequest (sourceEObject, GMFGraphPackage.eINSTANCE.getDiagramElement_Figure (), target);

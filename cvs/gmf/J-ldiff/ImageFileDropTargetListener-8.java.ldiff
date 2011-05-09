@@ -1,0 +1,120 @@
+2,2c2,2
+<  * Copyright (c) 2005, 2007 IBM Corporation and others.
+---
+>  * Copyright (c) 2005, 2008 IBM Corporation and others.
+22,23d21
+< import org.eclipse.jface.util.LocalSelectionTransfer;
+< import org.eclipse.jface.viewers.ISelection;
+28,28d25
+< import org.eclipse.swt.dnd.TransferData;
+54,62d50
+< 		/*  Get the selection from the transfer agent */
+< 		TransferData[] data = getCurrentEvent().dataTypes;
+< 		List fileList = new ArrayList();
+< 		
+< 		for (int i=0; i < data.length; i++) {
+< 			
+< 			if (FileTransfer.getInstance().isSupportedType(data[i])) {
+< 				// FileTransfers from the PE are supported, but an 
+< 				// SWT exception is thrown when using nativeToJava call.
+64a72,72
+>                         getCurrentEvent().currentDataType);
+64,64c71,71
+< 					Object files = FileTransfer.getInstance().nativeToJava(data[i]);
+---
+>                 Object files = FileTransfer.getInstance().nativeToJava(
+65a74,74
+>                     insertFileNamesFromStringArray(filesList, (String[]) files);
+66,68d73
+< 						String[] fileStrings = (String[])files;
+< 						for	(int j=0; j<fileStrings.length; j++)
+< 							fileList.add(fileStrings[j]);
+71,72d76
+< 					continue;
+< 				}
+75a81,82
+>         if (filesList.size() > 0) {
+>             return filesList;
+76,80d80
+< 		if (fileList.size() == 0) {
+< 			ISelection selection = null;
+< 	        
+< 	        if (LocalSelectionTransfer.getTransfer().getSelection() != null) {
+< 	        	selection = LocalSelectionTransfer.getTransfer().getSelection();
+82a51,60
+>         List<String> filesList = new ArrayList<String>();
+>         if (getCurrentEvent().data instanceof String[]) {
+>             insertFileNamesFromStringArray(filesList,
+>                     (String[]) getCurrentEvent().data);
+>         } else if (getCurrentEvent().data instanceof IStructuredSelection) {
+> 			Object[] array = ((IStructuredSelection)getCurrentEvent().data).toArray();
+> 			for (int j = 0; j < array.length; j++) {
+> 				if (array[j] instanceof IFile) {
+> 					IFile dropFile = (IFile)array[j];
+> 					filesList.add(dropFile.getLocation().toOSString());
+83,92d50
+< 			if (selection instanceof IStructuredSelection
+< 	            && !selection.isEmpty()) {
+<             
+< 				/* Get the array of objects in the selection */
+< 				Object[] array = ((IStructuredSelection)selection).toArray();
+< 				for (int j = 0; j < array.length; j++) {
+< 					if (array[j] instanceof IFile) {
+< 						IFile dropFile = (IFile)array[j];
+< 						fileList.add(dropFile.getLocation().toOSString());
+< 					}
+93a62,69
+> 			}
+>         	
+>         } else {
+>         	/*
+>         	 * No needs to check if transfered data we're looking at is FileTransfer type data.
+>         	 * This drop target listener is invoked as <code>DelegatingDropAdapter</code>, hence
+>         	 * if we get here the transfer is supported for the DropTargetEvent#currentDataType 
+>         	 */
+93,93c61,61
+< 				}
+---
+> 				}
+95a88,90
+>     private void insertFileNamesFromStringArray(List<String> filesList, String[] fileNames) {
+>         for (int i = 0; i < fileNames.length; i++) {
+>             filesList.add(fileNames[i]);
+96,96c105,105
+<             return fileList;
+---
+>                 return true;
+98,101d76
+< 		
+< 		if (fileList.size() > 0)
+< 			return fileList;
+< 		
+102,102c77,77
+< 		return null;
+---
+>                 return null;
+114,114d102
+< 			List dropObjects = getDropObjectsRequest().getObjects();
+116a85,85
+>         return null;
+117,118d84
+< 				return dropObjects != null && !dropObjects.isEmpty();
+< 				
+124,124d110
+< 				if (dropObjects == null || dropObjects.isEmpty()
+125,125c111,111
+< 						|| target == null) {
+---
+>                 if (target == null) {
+133a120,130
+> 	/* (non-Javadoc)
+> 	 * @see org.eclipse.gmf.runtime.diagram.ui.parts.DiagramDropTargetListener#isDataTransfered()
+> 	 */
+> 	protected boolean isDataTransfered() {
+> 		/*
+> 		 * The data transfer occurs at the drop time on Linux, hence data is transfered when the request
+> 		 * has some objects that are being dropped.
+> 		 */
+> 		return super.isDataTransfered() && !getDropObjectsRequest().getObjects().isEmpty();
+> 	}
+> 

@@ -1,0 +1,151 @@
+18,18d17
+< import java.util.LinkedList;
+34,34c33,33
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.ListCompartmentEditPart;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.IPrimaryEditPart;
+35,35c34,34
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.ShapeCompartmentEditPart;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.ISurfaceEditPart;
+91a141,149
+> 	private void getSelectableChildrenNodes(EditPart editpart, List retval) {
+> 		Iterator iter = editpart.getChildren().iterator();
+> 		while( iter.hasNext() ) {
+> 			EditPart child = (EditPart)iter.next();
+> 			getSelectableNodesInside(child, false, retval);
+> 		}
+> 	}
+> 
+> 	/**
+92,92c150,150
+< 	 * This method searches an edit part for a child that is a border item edit part
+---
+> 	 * This method searches an edit part for a child that is a border item edit part
+93a152,152
+> 	 * @param set to be modified of border item edit parts that are direct children of the parent
+93,93c151,151
+< 	 * @param parent part needed to search
+---
+> 	 * @param parent part needed to search
+94,94d151
+< 	 * @return list of border item edit parts that are direct children of the parent
+95a154,154
+> 	private void getBorderItemEditParts(EditPart parent, Set retval) {
+95,95c153,153
+< 	 */
+---
+> 	 */
+96,97d153
+< 	private List getBorderItemEditParts(EditPart parent) {
+< 		List list = new LinkedList();
+98,98c155,155
+< 		
+---
+> 		
+99,99d155
+< 		
+100,100c156,156
+< 		Iterator iter = parent.getChildren().iterator();
+---
+> 		Iterator iter = parent.getChildren().iterator();
+101,101c157,157
+< 		while(iter.hasNext()) {
+---
+> 		while(iter.hasNext()) {
+102,102c158,158
+< 			EditPart child = (EditPart)iter.next();
+---
+> 			EditPart child = (EditPart)iter.next();
+103,103c159,159
+< 			if( child instanceof BorderItemEditPart ) {
+---
+> 			if( child instanceof BorderItemEditPart ) {
+103a160,161
+> 				retval.add(child);
+> 				retval.addAll(child.getChildren());
+104,105d159
+< 				list.add(child);
+< 				list.addAll(child.getChildren());
+106a163,163
+> 			getBorderItemEditParts(child, retval);
+106,106c162,162
+< 			}
+---
+> 			}
+107,107d162
+< 			list.addAll( getBorderItemEditParts(child) );
+108,108c164,164
+< 		}
+---
+> 		}
+109,116d164
+< 		
+< 		if( list.isEmpty() )
+< 			return Collections.EMPTY_LIST;
+< 		
+< 		return list;
+< 	}
+< 
+< 	/**
+126a101,103
+> 		List retval = new ArrayList();
+> 		getSelectableNodesInside(editpart, true, retval);
+> 		return retval;
+127,138d100
+< 		if (editpart instanceof DiagramEditPart
+< 			|| editpart instanceof ShapeCompartmentEditPart
+< 			|| editpart instanceof ListCompartmentEditPart) {
+< 			
+< 			List list = new LinkedList();
+< 
+< 			Iterator iter = editpart.getChildren().iterator();
+< 			while( iter.hasNext() ) {
+< 				EditPart child = (EditPart)iter.next();
+< 				list.add( child );
+< 				if (!(editpart instanceof DiagramEditPart))
+< 					list.addAll( getBorderItemEditParts( child ) );
+140a106,113
+> 	/**
+> 	 * Determines the candidate list of node editparts for selection
+> 	 * 
+> 	 * @param editpart
+> 	 * @param topLevel <code>boolean</code> is this the initial entry point into the recursive method.
+> 	 * @param retval <code>List</code> to modify
+> 	 */
+> 	private void getSelectableNodesInside(EditPart editpart, boolean topLevel, List retval) {
+141,142d105
+< 			return list;
+< 		}
+143a115,119
+> 		if ( editpart instanceof ISurfaceEditPart) {
+> 			getSelectableChildrenNodes(editpart, retval);
+> 		}
+> 		else if (editpart instanceof IPrimaryEditPart) {
+> 			if (topLevel) {
+148a125,125
+> 						getSelectableNodesInside(source, true, retval);
+149,150d124
+< 				List list = new ArrayList();
+< 				list.addAll(getSelectableNodes(source));
+151a127,137
+> 							getSelectableNodesInside(target, true, retval);
+> 					}
+> 				}
+> 				else
+> 					getSelectableNodesInside(editpart.getParent(), true, retval);
+> 			}
+> 			else {
+> 				if (editpart.isSelectable())
+> 					retval.add(editpart);
+> 				getSelectableChildrenNodes(editpart, retval);
+> 			}
+152,153d126
+< 					list.addAll(getSelectableNodes(target));
+< 				return list;
+157,157d140
+< 		return getSelectableNodes(editpart.getParent());
+172a180,180
+> 			getBorderItemEditParts((EditPart)li.next(), connnectableEditParts);
+173,173d179
+< 			connnectableEditParts.addAll(getBorderItemEditParts((EditPart)li.next()));

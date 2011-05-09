@@ -1,0 +1,265 @@
+5,6d4
+< import java.util.Collections;
+< 
+9,16d6
+< import java.util.LinkedList;
+< 
+< import java.util.List;
+< 
+< import java.util.ListIterator;
+< 
+< import org.eclipse.draw2d.Bendpoint;
+< 
+23,24d12
+< import org.eclipse.draw2d.FreeformLayout;
+< 
+33,34d20
+< import org.eclipse.draw2d.geometry.Ray;
+< 
+43,44d28
+< import org.eclipse.gmf.runtime.draw2d.ui.geometry.PointListUtilities;
+< 
+183,198c167,173
+<         List bendpoints = (List) getConstraint (conn);
+<         if (bendpoints == null) bendpoints = Collections.EMPTY_LIST;
+< 
+<         PointList points = new PointList (bendpoints.size ());
+<         for (int i = 0;
+<         i < bendpoints.size (); i ++) {
+<             Bendpoint bp = (Bendpoint) bendpoints.get (i);
+<             points.addPoint (bp.getLocation ());
+<         }
+<         if (bendpoints.size () == 0) {
+<             Point r1 = conn.getSourceAnchor ().getReferencePoint ().getCopy ();
+<             conn.translateToRelative (r1);
+<             points.addPoint (r1);
+<             Point r2 = conn.getTargetAnchor ().getReferencePoint ().getCopy ();
+<             conn.translateToRelative (r2);
+<             points.addPoint (r2);
+---
+>         PointList points = new PointList ();
+>         if (isAvoidingObstructions (conn)) {
+>             points = RouterHelper.getInstance ().routeAroundObstructions (conn);
+>         } else if (isClosestDistance (conn)) {
+>             points = RouterHelper.getInstance ().routeClosestDistance (conn);
+>         } else {
+>             points = RouterHelper.getInstance ().routeFromConstraint (conn);
+200d174
+<         if (isClosestDistance (conn)) closestDistanceRouting (points);
+203,204d176
+<         if (isAvoidingObstructions (conn)) avoidObstructionsRouting (conn, points);
+< 
+208,224d179
+<     protected void closestDistanceRouting (PointList newLine) {
+<         Point ptOrig = new Point (newLine.getFirstPoint ());
+<         Point ptTerm = new Point (newLine.getLastPoint ());
+<         newLine.removeAllPoints ();
+<         newLine.addPoint (ptOrig);
+<         newLine.addPoint (ptTerm);
+<     }
+< 
+<     protected void avoidObstructionsRouting (Connection conn, PointList newLine) {
+<         boolean bSkipNormalization = routeThroughObstructions (conn, newLine);
+<         int dwSaveRouterFlags = routerFlags;
+<         if (bSkipNormalization) routerFlags |= ObliqueRouter.ROUTER_FLAG_SKIPNORMALIZATION;
+< 
+<         routeLine (conn, 0, newLine);
+<         routerFlags = dwSaveRouterFlags;
+<     }
+< 
+282,441c237
+<         if (newLine.size () <= 1) return;
+< 
+<         Point ptS2 = newLine.getPoint (1);
+<         Point ptAbsS2 = new Point (ptS2);
+<         conn.translateToAbsolute (ptAbsS2);
+<         if (newLine.size () == 2) ptAbsS2 = conn.getTargetAnchor ().getReferencePoint ();
+< 
+<         Point ptAbsS1 = conn.getSourceAnchor ().getLocation (ptAbsS2);
+<         Point ptS1 = new Point (ptAbsS1);
+<         conn.translateToRelative (ptS1);
+<         Point ptE2 = newLine.getPoint (newLine.size () - 2);
+<         Point ptAbsE2 = new Point (ptE2);
+<         conn.translateToAbsolute (ptAbsE2);
+<         if (newLine.size () == 2) ptAbsE2 = ptAbsS1;
+< 
+<         Point ptE1 = new Point (conn.getTargetAnchor ().getLocation (ptAbsE2));
+<         conn.translateToRelative (ptE1);
+<         newLine.setPoint (ptS1, 0);
+<         newLine.setPoint (ptE1, newLine.size () - 1);
+<         if (newLine.size () != 2) {
+<             ptS2 = ptAbsS2;
+<             conn.translateToRelative (ptS2);
+<             newLine.setPoint (ptS2, 1);
+<             ptE2 = ptAbsE2;
+<             conn.translateToRelative (ptE2);
+<             newLine.setPoint (ptE2, newLine.size () - 2);
+<         }
+<     }
+< 
+<     protected final static int ROUTER_OBSTRUCTION_BUFFER = 12;
+< 
+<     protected List collapseRects (List collectRect, int inflate) {
+<         if (collectRect.size () == 0) return new LinkedList ();
+< 
+<         Rectangle rCompare = new Rectangle ((Rectangle) collectRect.remove (0));
+<         List collapsedRects = collapseRects (rCompare, collectRect, inflate);
+<         collapsedRects.add (rCompare);
+<         return collapsedRects;
+<     }
+< 
+<     private List collapseRects (Rectangle rCompare, List collectRect, int inflate) {
+<         List newCollect = new LinkedList ();
+<         Rectangle rCompare1 = new Rectangle (rCompare);
+<         boolean intersectionOccurred = false;
+<         ListIterator listIter = collectRect.listIterator ();
+<         while (listIter.hasNext ()) {
+<             Rectangle rCompare2 = new Rectangle ((Rectangle) listIter.next ());
+<             Rectangle rExpandRect1 = new Rectangle (rCompare1);
+<             Rectangle rExpandRect2 = new Rectangle (rCompare2);
+<             rExpandRect1.expand (inflate, inflate);
+<             rExpandRect2.expand (inflate, inflate);
+<             if (rExpandRect1.intersects (rExpandRect2)) {
+<                 rCompare1.union (rCompare2);
+<                 intersectionOccurred = true;
+<             } else {
+<                 newCollect.add (rCompare2);
+<             }
+<         }
+<         rCompare.setBounds (rCompare1);
+<         if (newCollect.size () > 0) {
+<             if (intersectionOccurred) {
+<                 return collapseRects (rCompare, newCollect, inflate);
+<             } else {
+<                 Rectangle rFirst = new Rectangle ((Rectangle) newCollect.remove (0));
+<                 List finalCollapse = collapseRects (rFirst, newCollect, inflate);
+<                 finalCollapse.add (rFirst);
+<                 return finalCollapse;
+<             }
+<         } else {
+<             return newCollect;
+<         }
+<     }
+< 
+<     protected boolean routeThroughObstructions (Connection conn, PointList newLine) {
+<         boolean bRet = false;
+<         Point infimumPoint = PointListUtilities.getPointsInfimum (newLine);
+<         Point supremumPoint = PointListUtilities.getPointsSupremum (newLine);
+<         Ray diameter = new Ray (infimumPoint, supremumPoint);
+<         Rectangle rPoly = new Rectangle (infimumPoint.x, infimumPoint.y, diameter.x, diameter.y);
+<         List collectObstructs = new LinkedList ();
+<         IFigure parent = getContainerFigure (conn);
+<         if (parent == null) return false;
+< 
+<         Point ptRef = conn.getSourceAnchor ().getReferencePoint ();
+<         conn.translateToRelative (ptRef);
+<         newLine.setPoint (ptRef, 0);
+<         ptRef = conn.getTargetAnchor ().getReferencePoint ();
+<         conn.translateToRelative (ptRef);
+<         newLine.setPoint (ptRef, newLine.size () - 1);
+<         Rectangle rBoundingRect = new Rectangle (parent.getBounds ());
+<         parent.translateToAbsolute (rBoundingRect);
+<         conn.translateToRelative (rBoundingRect);
+<         if (rPoly.width > rPoly.height) {
+<             rPoly.y = rBoundingRect.y;
+<             rPoly.setSize (rPoly.width, rBoundingRect.height);
+<         } else {
+<             rPoly.x = rBoundingRect.x;
+<             rPoly.setSize (rBoundingRect.width, rPoly.height);
+<         }
+<         List children = parent.getChildren ();
+<         for (int i = 0;
+<         i < children.size (); i ++) {
+<             IFigure child = (IFigure) children.get (i);
+<             if (! child.equals (conn.getSourceAnchor ().getOwner ()) && ! child.equals (conn.getTargetAnchor ().getOwner ())) {
+<                 Rectangle rObstruct = new Rectangle (child.getBounds ());
+<                 child.translateToAbsolute (rObstruct);
+<                 conn.translateToRelative (rObstruct);
+<                 rObstruct.expand (1, 1);
+<                 if (rPoly.intersects (rObstruct)) {
+<                     collectObstructs.add (rObstruct);
+<                     bRet = true;
+<                 }
+<             }
+<         }
+<         if (collectObstructs.size () > 0) {
+<             Dimension buffer = new Dimension (ROUTER_OBSTRUCTION_BUFFER + 1, 0);
+<             if (! isFeedback (conn)) buffer = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (buffer);
+< 
+<             final int inflate = buffer.width;
+<             List collapsedRects = collapseRects (collectObstructs, inflate);
+<             collectObstructs.clear ();
+<             boolean bRouted = true;
+<             while (bRouted && ! collapsedRects.isEmpty ()) {
+<                 ListIterator listIter = collapsedRects.listIterator ();
+<                 bRouted = false;
+<                 while (listIter.hasNext ()) {
+<                     Rectangle rObstruct = (Rectangle) listIter.next ();
+<                     PointList routedPoly = PointListUtilities.routeAroundRect (newLine, rObstruct, 0, false, inflate);
+<                     if (routedPoly != null) {
+<                         bRouted = true;
+<                         newLine.removeAllPoints ();
+<                         newLine.addAll (routedPoly);
+<                     } else collectObstructs.add (rObstruct);
+< 
+<                 }
+<                 List tempList = collapsedRects;
+<                 collapsedRects = collectObstructs;
+<                 tempList.clear ();
+<                 collectObstructs = tempList;
+<                 if (bRouted && ! collapsedRects.isEmpty ()) resetEndPointsToEdge (conn, newLine);
+< 
+<             }
+<         }
+<         return bRet;
+<     }
+< 
+<     private IFigure getContainerFigure (Connection conn) {
+<         IFigure sourceContainer = findContainerFigure (conn.getSourceAnchor ().getOwner ());
+<         IFigure targetContainer = findContainerFigure (conn.getTargetAnchor ().getOwner ());
+<         if (sourceContainer == targetContainer) return sourceContainer;
+< 
+<         return null;
+<     }
+< 
+<     private IFigure findContainerFigure (IFigure fig) {
+<         if (fig == null) return null;
+< 
+<         if (fig.getLayoutManager () instanceof FreeformLayout) return fig;
+< 
+<         return findContainerFigure (fig.getParent ());
+---
+>         RouterHelper.getInstance ().resetEndPointsToEdge (conn, newLine);
+488c284
+<         if (! isFeedback (conn)) selfrelsizeincr = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (selfrelsizeincr);
+---
+>         if (! RouterHelper.getInstance ().isFeedback (conn)) selfrelsizeincr = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (selfrelsizeincr);
+549c345
+<         if (! isFeedback (conn)) selfrelsizeinit = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (selfrelsizeinit);
+---
+>         if (! RouterHelper.getInstance ().isFeedback (conn)) selfrelsizeinit = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (selfrelsizeinit);
+573c369
+<         if (! isFeedback (conn)) selfrelsizeinit = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (selfrelsizeinit);
+---
+>         if (! RouterHelper.getInstance ().isFeedback (conn)) selfrelsizeinit = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (selfrelsizeinit);
+594c390
+<         if (! isFeedback (conn)) selfrelsizeinit = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (selfrelsizeinit);
+---
+>         if (! RouterHelper.getInstance ().isFeedback (conn)) selfrelsizeinit = (Dimension) MapModeUtil.getMapMode (conn).DPtoLP (selfrelsizeinit);
+608a405
+>         RouterHelper.getInstance ().remove (connection);
+612,616c409,416
+<     protected boolean isFeedback (Connection conn) {
+<         Dimension dim = new Dimension (100, 100);
+<         Dimension dimCheck = dim.getCopy ();
+<         conn.translateToRelative (dimCheck);
+<         return dim.equals (dimCheck);
+---
+>     public void invalidate (Connection connection) {
+>         super.invalidate (connection);
+>         RouterHelper.getInstance ().invalidate (connection);
+>     }
+> 
+>     public void setConstraint (Connection connection, Object constraint) {
+>         super.setConstraint (connection, constraint);
+>         RouterHelper.getInstance ().setConstraint (connection, constraint);

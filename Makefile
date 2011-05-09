@@ -12,6 +12,7 @@ program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:source/%=result/%)
+results+=$(source:source/v/%=result/verilog2/%)
 example+=$(results)
 target+=$(bin)/normc $(bin)/api_clone_javac $(program) $(results)
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
@@ -64,8 +65,6 @@ $(package): README.html $(program) $(norm) $(source) $(target) cvs
 	tar xfz $@ -C $(dir $(package))
 
 source/norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm
-	touch -f $@
-source/norm/problem.norm : Txl/problem.grm
 	touch -f $@
 
 clean:

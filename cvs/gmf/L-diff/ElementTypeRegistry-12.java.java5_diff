@@ -1,0 +1,204 @@
+94a95,100
+>         IClientContext clientContext = ClientContextManager.getInstance ().getBinding (type);
+>         return getEditHelperAdvice (type, clientContext);
+>     }
+> 
+>     public IEditHelperAdvice [] getEditHelperAdvice (IElementType type, IClientContext clientContext) {
+>         IClientContext context = (clientContext == null) ? ClientContextManager.getDefaultClientContext () : clientContext;
+96,97c102,103
+<         MetamodelTypeDescriptor metamodelType = (eClass != null) ? getMetamodelTypeDescriptor (eClass) : null;
+<         List result = specializationTypeRegistry.getEditHelperAdvice (type, metamodelType);
+---
+>         MetamodelTypeDescriptor metamodelType = (eClass != null) ? getMetamodelTypeDescriptor (eClass, context) : null;
+>         List result = specializationTypeRegistry.getEditHelperAdvice (type, metamodelType, context);
+101c107
+<     public IEditHelperAdvice [] getEditHelperAdvice (EObject eObject) {
+---
+>     public IEditHelperAdvice [] getEditHelperAdvice (EObject eObject, IClientContext clientContext) {
+103c109
+<         MetamodelTypeDescriptor desc = getMetamodelTypeDescriptor (eObject);
+---
+>         MetamodelTypeDescriptor desc = getMetamodelTypeDescriptor (eObject, clientContext);
+105c111
+<             result = specializationTypeRegistry.getEditHelperAdvice (eObject, DefaultMetamodelType.getDescriptorInstance ());
+---
+>             result = specializationTypeRegistry.getEditHelperAdvice (eObject, DefaultMetamodelType.getDescriptorInstance (), clientContext);
+107c113
+<             result = specializationTypeRegistry.getEditHelperAdvice (eObject, desc);
+---
+>             result = specializationTypeRegistry.getEditHelperAdvice (eObject, desc, clientContext);
+111a118,122
+>     public IEditHelperAdvice [] getEditHelperAdvice (EObject eObject) {
+>         IClientContext clientContext = ClientContextManager.getInstance ().getClientContextFor (eObject);
+>         return getEditHelperAdvice (eObject, clientContext);
+>     }
+> 
+116a128,147
+>         } else if (o instanceof IEditHelperContext) {
+>             IEditHelperContext editHelperContext = (IEditHelperContext) o;
+>             IClientContext clientContext = editHelperContext.getClientContext ();
+>             IElementType elementType = editHelperContext.getElementType ();
+>             EObject eObject = editHelperContext.getEObject ();
+>             if (clientContext != null) {
+>                 if (elementType != null) {
+>                     return getEditHelperAdvice (elementType, clientContext);
+>                 } else if (eObject != null) {
+>                     return getEditHelperAdvice (eObject, clientContext);
+>                 }
+> 
+>             } else {
+>                 if (elementType != null) {
+>                     return getEditHelperAdvice (elementType);
+>                 } else if (eObject != null) {
+>                     return getEditHelperAdvice (eObject);
+>                 }
+> 
+>             }
+122c153
+<     public IElementType [] getContainedTypes (EObject eContainer, EReference reference) {
+---
+>     public IElementType [] getContainedTypes (EObject eContainer, EReference reference, IClientContext clientContext) {
+129c160
+<             List metamodelTypeDescriptors = getMetamodelTypeDescriptors (types);
+---
+>             List metamodelTypeDescriptors = getMetamodelTypeDescriptors (types, clientContext);
+136c167
+<                     Collection specializationDescriptors = specializationTypeRegistry.getMatchingSpecializations (nextMetamodelTypeDescriptor, eContainer, reference);
+---
+>                     Collection specializationDescriptors = specializationTypeRegistry.getMatchingSpecializations (nextMetamodelTypeDescriptor, eContainer, reference, clientContext);
+150a182,186
+>     public IElementType [] getContainedTypes (EObject eContainer, EReference reference) {
+>         IClientContext clientContext = ClientContextManager.getInstance ().getClientContextFor (eContainer);
+>         return getContainedTypes (eContainer, reference, clientContext);
+>     }
+> 
+164,165c200,201
+<     private IMetamodelType getMetamodelType (EClass eClass) {
+<         MetamodelTypeDescriptor descriptor = getMetamodelTypeDescriptor (eClass);
+---
+>     private IMetamodelType getMetamodelType (EClass eClass, IClientContext context) {
+>         MetamodelTypeDescriptor descriptor = getMetamodelTypeDescriptor (eClass, context);
+172,173c208,209
+<     private IMetamodelType getMetamodelType (EObject eObject) {
+<         return getMetamodelType (eObject.eClass ());
+---
+>     private IMetamodelType getMetamodelType (EObject eObject, IClientContext clientContext) {
+>         return getMetamodelType (eObject.eClass (), clientContext);
+180a217,231
+>         } else if (o instanceof IEditHelperContext) {
+>             IEditHelperContext editHelperContext = (IEditHelperContext) o;
+>             IElementType elementType = editHelperContext.getElementType ();
+>             if (elementType != null) {
+>                 return elementType;
+>             }
+>             IClientContext clientContext = editHelperContext.getClientContext ();
+>             EObject eObject = editHelperContext.getEObject ();
+>             if (eObject != null) {
+>                 if (clientContext != null) {
+>                     return getElementType (eObject, clientContext);
+>                 } else {
+>                     return getElementType (eObject);
+>                 }
+>             }
+187c238,242
+<         IElementType result = getMetamodelType (eClass);
+---
+>         return getElementType (eClass, null);
+>     }
+> 
+>     public IElementType getElementType (EClass eClass, IClientContext clientContext) {
+>         IElementType result = getMetamodelType (eClass, clientContext);
+195c250,255
+<         IElementType result = getMetamodelType (eObject);
+---
+>         IClientContext clientContext = ClientContextManager.getInstance ().getClientContextFor (eObject);
+>         return getElementType (eObject, clientContext);
+>     }
+> 
+>     public IElementType getElementType (EObject eObject, IClientContext clientContext) {
+>         IElementType result = getMetamodelType (eObject, clientContext);
+202,203c262,263
+<     private MetamodelTypeDescriptor getMetamodelTypeDescriptor (EObject eObject) {
+<         return getMetamodelTypeDescriptor (eObject.eClass ());
+---
+>     private MetamodelTypeDescriptor getMetamodelTypeDescriptor (EObject eObject, IClientContext context) {
+>         return getMetamodelTypeDescriptor (eObject.eClass (), context);
+206,208c266,276
+<     private MetamodelTypeDescriptor getMetamodelTypeDescriptor (EClass eClass) {
+<         MetamodelTypeDescriptor descriptor = (MetamodelTypeDescriptor) metamodelTypeDescriptorsByEClass.get (eClass);
+<         if (descriptor != null) {
+---
+>     private MetamodelTypeDescriptor getMetamodelTypeDescriptor (EClass eClass, IClientContext context) {
+>         IClientContext clientContext = context;
+>         if (clientContext == null) {
+>             clientContext = ClientContextManager.getDefaultClientContext ();
+>         }
+>         Collection descriptors = (Collection) metamodelTypeDescriptorsByEClass.get (eClass);
+>         if (descriptors != null) {
+>             for (Iterator i = descriptors.iterator ();
+>             i.hasNext ();) {
+>                 MetamodelTypeDescriptor descriptor = (MetamodelTypeDescriptor) i.next ();
+>                 if (clientContext.includes (descriptor)) {
+209a278,279
+>                 }
+>             }
+215,217c285,293
+<                 MetamodelTypeDescriptor typeDescriptor = (MetamodelTypeDescriptor) metamodelTypeDescriptorsByEClass.get (nextEClass);
+<                 if (typeDescriptor != null) {
+<                     return typeDescriptor;
+---
+>                 descriptors = (Collection) metamodelTypeDescriptorsByEClass.get (nextEClass);
+>                 if (descriptors != null) {
+>                     for (Iterator j = descriptors.iterator ();
+>                     j.hasNext ();) {
+>                         MetamodelTypeDescriptor descriptor = (MetamodelTypeDescriptor) j.next ();
+>                         if (clientContext.includes (descriptor)) {
+>                             return descriptor;
+>                         }
+>                     }
+224c300
+<     public IElementType [] getAllTypesMatching (EObject eObject) {
+---
+>     public IElementType [] getAllTypesMatching (EObject eObject, IClientContext clientContext) {
+226c302
+<         IMetamodelType metamodelType = getMetamodelType (eObject);
+---
+>         IMetamodelType metamodelType = getMetamodelType (eObject, clientContext);
+229c305
+<             MetamodelTypeDescriptor desc = getMetamodelTypeDescriptor (eObject);
+---
+>             MetamodelTypeDescriptor desc = getMetamodelTypeDescriptor (eObject, clientContext);
+233c309
+<                 specializations = specializationTypeRegistry.getSpecializationDescriptorsMatching (eObject, desc);
+---
+>                 specializations = specializationTypeRegistry.getSpecializationDescriptorsMatching (eObject, desc, clientContext);
+253a330,334
+>     public IElementType [] getAllTypesMatching (EObject eObject) {
+>         IClientContext clientContext = ClientContextManager.getInstance ().getClientContextFor (eObject);
+>         return getAllTypesMatching (eObject, clientContext);
+>     }
+> 
+274c355
+<         if (metamodelType == null || getType (metamodelType.getId ()) != null || metamodelTypeDescriptorsByEClass.containsKey (metamodelType.getEClass ())) {
+---
+>         if (metamodelType == null || getType (metamodelType.getId ()) != null) {
+345,346c426,429
+<         if (metamodelTypeDescriptorsByEClass.containsKey (eClass)) {
+<             return false;
+---
+>         Collection descriptors = (Collection) metamodelTypeDescriptorsByEClass.get (eClass);
+>         if (descriptors == null) {
+>             descriptors = new ArrayList ();
+>             metamodelTypeDescriptorsByEClass.put (eClass, descriptors);
+348c431
+<         metamodelTypeDescriptorsByEClass.put (eClass, typeDescriptor);
+---
+>         descriptors.add (typeDescriptor);
+366c449
+<     private List getMetamodelTypeDescriptors (Set eClasses) {
+---
+>     private List getMetamodelTypeDescriptors (Set eClasses, IClientContext context) {
+371c454
+<             MetamodelTypeDescriptor metamodelTypeDescriptor = (MetamodelTypeDescriptor) metamodelTypeDescriptorsByEClass.get (nextType);
+---
+>             MetamodelTypeDescriptor metamodelTypeDescriptor = getMetamodelTypeDescriptor (nextType, context);

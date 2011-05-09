@@ -1,0 +1,144 @@
+package org.eclipse.gmf.runtime.diagram.ui.parts;
+
+import java.lang.ref.WeakReference;
+
+import org.eclipse.core.resources.IFile;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.transaction.RunnableWithResult;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+
+import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.jface.resource.ImageDescriptor;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.ui.IPersistableElement;
+
+public class DiagramEditorInput implements IDiagramEditorInput {
+    private WeakReference diagram;
+
+    public DiagramEditorInput (Diagram diagram) {
+        Assert.isNotNull (diagram);
+        setDiagram (diagram);
+    }
+
+    public Diagram getDiagram () {
+        return (Diagram) diagram.get ();
+    }
+
+    public boolean exists () {
+        return false;
+    }
+
+    public ImageDescriptor getImageDescriptor () {
+        return null;
+    }
+
+    public String getQName () {
+        try {
+            return (String) TransactionUtil.getEditingDomain (getDiagram ()).runExclusive (new RunnableWithResult.Impl () {
+
+                public void run () {
+                    setResult (EMFCoreUtil.getQualifiedName (getDiagram (), false));
+                }
+
+            }
+
+            );
+        } catch (Exception e) {
+            Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), e.getMessage (), e);
+            return null;
+        }
+    }
+
+    public String getName () {
+        try {
+            return (String) TransactionUtil.getEditingDomain (getDiagram ()).runExclusive (new RunnableWithResult.Impl () {
+
+                public void run () {
+                    setResult (EMFCoreUtil.getName (getDiagram ()));
+                }
+
+            }
+
+            );
+        } catch (Exception e) {
+            Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), e.getMessage (), e);
+            return null;
+        }
+    }
+
+    public IPersistableElement getPersistable () {
+        return null;
+    }
+
+    public String getToolTipText () {
+        return getQName ();
+    }
+
+    public Object getAdapter (Class adapter) {
+        if (adapter == Diagram.class) return getDiagram ();
+
+        if (adapter == IFile.class) return getStorageUnitFile ();
+
+        return null;
+    }
+
+    public boolean equals (Object obj) {
+        if (this == obj) return true;
+
+        if (! (obj instanceof DiagramEditorInput)) return false;
+
+        DiagramEditorInput other = (DiagramEditorInput) obj;
+        if (getDiagram () != null) return getDiagram ().equals (other.getDiagram ());
+        else return getDiagram () == other.getDiagram ();
+
+    }
+
+    public int hashCode () {
+        if (getDiagram () != null) return getDiagram ().hashCode ();
+        else return super.hashCode ();
+
+    }
+
+    protected void setDiagram (Diagram diagram) {
+        this.diagram = new WeakReference (diagram);
+    }
+
+    private IFile getStorageUnitFile () {
+        try {
+            final TransactionalEditingDomain editingDomain = TransactionUtil.getEditingDomain (getDiagram ());
+            return (IFile) editingDomain.runExclusive (new RunnableWithResult.Impl () {
+
+                public void run () {
+                    Resource model = getDiagram ().eResource ();
+                    setResult (model != null ? WorkspaceSynchronizer.getFile (model) : null);
+                }
+
+            }
+
+            );
+        } catch (Exception e) {
+            Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), e.getMessage (), e);
+            return null;
+        }
+    }
+
+}
+

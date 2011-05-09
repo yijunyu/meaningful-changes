@@ -1,0 +1,302 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2007 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2005 IBM Corporation and others.
+19,19c41,41
+< import org.eclipse.core.runtime.Assert;
+---
+> import org.eclipse.jface.util.Assert;
+21,21d19
+< import org.eclipse.draw2d.AutomaticRouter;
+25,26d22
+< import org.eclipse.draw2d.ConnectionAnchor;
+< import org.eclipse.draw2d.geometry.Dimension;
+29,29d24
+< import org.eclipse.draw2d.geometry.PrecisionPoint;
+30,30c25,25
+< import org.eclipse.draw2d.geometry.PrecisionRectangle;
+---
+> import org.eclipse.draw2d.geometry.Rectangle;
+37,37d31
+< import org.eclipse.gef.handles.BendpointCreationHandle;
+40,40c37,37
+< import org.eclipse.gmf.runtime.draw2d.ui.figures.FigureUtilities;
+---
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.routers.OrthogonalRouterUtilities;
+46,46d39
+< import org.eclipse.gmf.runtime.gef.ui.internal.handles.BendpointMoveHandleEx;
+158,158c152,152
+< 				new BendpointMoveHandleEx(
+---
+> 				new BendpointMoveHandle(
+342,342c336,336
+< 			//OrthogonalRouterUtilities.resetEndPointsToCenter(getConnection(), pts);
+---
+> 			OrthogonalRouterUtilities.resetEndPointsToCenter(getConnection(), pts);
+565,565c559,559
+< 			if (REQ_CREATE_BENDPOINT.equals(request.getType())) {
+---
+> 			if (REQ_CREATE_BENDPOINT.equals(request.getType())
+565a560,560
+> 				|| REQ_MOVE_BENDPOINT.equals(request.getType())) {
+567,568d561
+< 			} else if (REQ_MOVE_BENDPOINT.equals(request.getType())) {
+< 				showMoveOrthogonalBenspointFeedback((BendpointRequest) request);
+569a819,819
+> 
+570,570d818
+< 			
+644,644c636,636
+< 		PrecisionRectangle startRect =
+---
+> 		Rectangle startRect =
+644a637,638
+> 			new Rectangle(
+> 				getConnection().getSourceAnchor().getOwner().getBounds());
+645,645d636
+< 			new PrecisionRectangle(FigureUtilities.getAnchorableFigureBounds(getConnection().getSourceAnchor().getOwner()));
+647a642,644
+> 		if (getLineSegMode().equals(LineMode.ORTHOGONAL_CONSTRAINED))
+> 			startRect.expand(MapModeUtil.getMapMode(getConnection()).DPtoLP(-2), 
+> 							MapModeUtil.getMapMode(getConnection()).DPtoLP(-2));
+648,654d641
+< 		if (getLineSegMode().equals(LineMode.ORTHOGONAL_CONSTRAINED)) {
+< 			if (line.isHorizontal()) {
+< 				startRect.shrink(0, 2);
+< 			} else {
+< 				startRect.shrink(2, 0);
+< 			}
+< 		}
+655a646,646
+> 		if (!startRect.contains(line.getOrigin())) {
+655,655c645,645
+< 		
+---
+> 		
+657,661d641
+< 		/*
+< 		 * Rectangle needs to be expanded by the "odd" number below because the number after
+< 		 * translations could be N.999999999... 
+< 		 */
+< 		if (!startRect.expand(0.000001, 0.000001).contains(new PrecisionPoint(line.getOrigin()))) {
+670,670c655,655
+< 	* Utility method to determine if the constraint needs to be adjusted because the line is
+---
+> 	* Utility method to determine if the constraint needs to be adjusted becauase the line is
+679,679c664,664
+< 		PrecisionRectangle endRect =
+---
+> 		Rectangle endRect =
+679a665,666
+> 			new Rectangle(
+> 				getConnection().getTargetAnchor().getOwner().getBounds());
+680,680d664
+< 			new PrecisionRectangle(FigureUtilities.getAnchorableFigureBounds(getConnection().getTargetAnchor().getOwner()));
+683,694d668
+< 		if (getLineSegMode().equals(LineMode.ORTHOGONAL_CONSTRAINED)) {
+< 			if (line.isHorizontal()) {
+< 				endRect.shrink(0, 2);
+< 			} else {
+< 				endRect.shrink(2, 0);
+< 			}
+< 		}
+< 		
+< 		/*
+< 		 * Rectangle needs to be expanded by the "odd" number below because the number after
+< 		 * translations could be N.999999999... 
+< 		 */
+695a670,674
+> 		if (getLineSegMode().equals(LineMode.ORTHOGONAL_CONSTRAINED))
+> 			endRect.expand(MapModeUtil.getMapMode(getConnection()).DPtoLP(-2), 
+> 						MapModeUtil.getMapMode(getConnection()).DPtoLP(-2)); 
+> 		
+> 		if (!endRect.contains(line.getTerminus())) {
+696,696d669
+< 		if (!endRect.expand(0.00001, 0.00001).contains(new PrecisionPoint(line.getTerminus()))) {
+723a702,703
+> 	* Method showOutsideSourceFeedback.
+> 	* Adds a bendpoint to the beginning of the constraint.
+724,724d701
+< 	 * Draws feedback for moving a bend point of a rectilinear connection
+725a705,705
+> 	* @param constraint List of bendpoints that the source point will be added too.
+726,726d704
+< 	 * @param request Benndpoint request
+727a707,710
+> 	protected void showOutsideSourceFeedback(List constraint) {
+> 		Point ptAdd = ((Bendpoint) constraint.get(0)).getLocation();
+> 		Bendpoint bp = new AbsoluteBendpoint(ptAdd);
+> 		constraint.add(0, bp);
+728,730d706
+< 	private void showMoveOrthogonalBenspointFeedback(BendpointRequest request) {
+< 		if (getFeedbackState().originalConstraint == null) {
+< 			saveOriginalConstraint();
+732a713,724
+> 	/**
+> 	* Method showOutsideTargetFeedback.
+> 	* Adds a bendpoint to the end of the constraint.
+> 	* 
+> 	* @param constraint List of bendpoints that the target point will be added too.
+> 	*/
+> 	protected void showOutsideTargetFeedback(List constraint) {
+> 		Point ptAdd =
+> 			((Bendpoint) constraint.get(constraint.size() - 1))
+> 				.getLocation();
+> 		Bendpoint bp = new AbsoluteBendpoint(ptAdd);
+> 		constraint.add(constraint.size() - 1, bp);
+733,756d712
+< 		Point ptLoc = new Point(request.getLocation());
+< 		List constraint = (List)
+< 			getConnection().getRoutingConstraint();
+< 		
+< 		getConnection().translateToRelative(ptLoc);
+< 		
+< 		int index =
+< 		getFeedbackState().isOutsideSource ? request.getIndex() + 1 : request.getIndex();
+< 		
+< 		Point previous = ((Bendpoint)constraint.get(index - 1)).getLocation();
+< 		Point moving = ((Bendpoint)constraint.get(index)).getLocation();
+< 		Point next = ((Bendpoint)constraint.get(index + 1)).getLocation();
+< 		
+< 		LineSeg originalFirst = new LineSeg(previous.getCopy(), moving.getCopy());
+< 		LineSeg originalSecond = new LineSeg(moving.getCopy(), next.getCopy());
+< 		
+< 		Dimension diff = ptLoc.getDifference(moving);
+< 		
+< 		if (originalFirst.isHorizontal()) {
+< 			previous.y += diff.height;
+< 			next.x += diff.width;
+< 		} else {
+< 			previous.x += diff.width;
+< 			next.y += diff.height;
+759,770d726
+< 		LineSeg movedFirst = new LineSeg(previous, ptLoc.getCopy());
+< 		LineSeg movedSecond = new LineSeg(ptLoc.getCopy(), next);
+< 		
+< 		index = adjustOutsideBoundsLineFeedback(movedFirst, index - 1, constraint, originalFirst);
+< 		constraint.set(index, new AbsoluteBendpoint(movedFirst.getOrigin()));
+< 		constraint.set(index + 1, new AbsoluteBendpoint(movedFirst.getTerminus()));
+< 		
+< 		index = adjustOutsideBoundsLineFeedback(movedSecond, index + 1, constraint, originalSecond);
+< 		constraint.set(index + 1, new AbsoluteBendpoint(movedSecond.getTerminus()));
+< 		
+< 		getConnection().setRoutingConstraint(constraint);	}
+< 
+794a751,759
+> 		if (!newLine.isHorizontal() && !newLine.isVertical()) {
+> 			if (Math.abs(newLine.getOrigin().x - newLine.getTerminus().x) < 
+> 				Math.abs(newLine.getOrigin().y - newLine.getTerminus().y)) {
+> 				newLine.setTerminus(new Point(newLine.getOrigin().x, newLine.getTerminus().y));
+> 			}
+> 			else {
+> 				newLine.setTerminus(new Point(newLine.getTerminus().x, newLine.getOrigin().y));
+> 			}
+> 		}
+796,796c761,761
+< 		index = adjustOutsideBoundsLineFeedback(newLine, index, constraint, moveLine);
+---
+> 		index = adjustOutsideBoundsLineFeedback(request, constraint, index, newLine);
+799,799d763
+< 		
+806a773,773
+> 	 * @param index int index of the line that the user is currently manipulating.
+806a771,771
+> 	 * @param request BendpointRequest that triggered the gesture
+807,807c774,774
+< 	 * @param newLine LineSeg representing the line currently being manipulated.
+---
+> 	 * @param newLine LineSeg representing the line currently being manipulated.
+808,808d774
+< 	 * @param index the index
+810,810d772
+< 	 * @param moveLine original segment that is being manipulated
+813a778,778
+> 		
+813,813c777,777
+< 	private int adjustOutsideBoundsLineFeedback(LineSeg newLine, int index, List constraint, LineSeg moveLine) {
+---
+> 	protected int adjustOutsideBoundsLineFeedback(BendpointRequest request, List constraint, int index, LineSeg newLine) {
+831,831c797,797
+< 		if (index == 0 && lineOutsideSource(newLine)) {
+---
+> 		if (request.getIndex() == 0 && lineOutsideSource(newLine)) {
+836,836c802,802
+< 		} else if (index == 1 && getFeedbackState().isOutsideSource && !lineOutsideSource(newLine)) {
+---
+> 		} else if (getFeedbackState().isOutsideSource) {
+849,849c815,815
+< 		} else if (checkTargetIndex == constraint.size() - 2 && getFeedbackState().isOutsideTarget
+---
+> 		} else if (getFeedbackState().isOutsideTarget) {
+850,850d815
+< 				&& !lineOutsideTarget(newLine)) {
+855a822,822
+> 			index = request.getIndex();
+856,856d821
+< 			index--;
+863a783,783
+> 				LineSeg moveLine = getLineSeg(constraint, index + 1);
+863a830,831
+> 			showOutsideSourceFeedback(constraint);
+> 			index = request.getIndex() + 1;
+864,865d782
+< 			showOutsideSourceFeedback(newLine, moveLine, constraint);
+< 			index++;
+869,869c835,835
+< 			showOutsideTargetFeedback(newLine, moveLine, constraint);
+---
+> 			showOutsideTargetFeedback(constraint);
+875,927d840
+< 	* Method showOutsideSourceFeedback.
+< 	* Adds a bendpoint to the beginning of the constraint.
+< 	* Also adjusts the new segment with respect to added constraint
+< 	* 
+< 	* @param constraint List of bendpoints that the source point will be added too.
+< 	*/
+< 	private void showOutsideSourceFeedback(LineSeg newLine, LineSeg moveLine, List constraint) {
+< 		Connection conn = (Connection)getHostFigure();
+< 		ConnectionAnchor anchor = conn.getSourceAnchor();
+< 		PrecisionPoint startPoint = new PrecisionPoint(anchor.getOwner().getBounds().getCenter());
+< 		anchor.getOwner().translateToAbsolute(startPoint);
+< 		conn.translateToRelative(startPoint);
+< 		PrecisionRectangle bounds = new PrecisionRectangle(anchor.getOwner().getBounds());
+< 		anchor.getOwner().translateToAbsolute(bounds);
+< 		conn.translateToRelative(bounds);
+< 		Point origin = new Point(newLine.getOrigin());
+< 		if (moveLine.isHorizontal()) {
+< 			origin.x = startPoint.x;
+< 		} else {
+< 			origin.y = startPoint.y;
+< 		}
+< 		newLine.setOrigin(origin);
+< 		constraint.add(0, new AbsoluteBendpoint(startPoint));
+< 		
+< 	}
+< 
+< 	/**
+< 	* Method showOutsideTargetFeedback.
+< 	* Adds a bendpoint to the end of the constraint.
+< 	* Also adjusts the new segment with respect to added constraint
+< 	* 
+< 	* @param constraint List of bendpoints that the target point will be added too.
+< 	*/
+< 	private void showOutsideTargetFeedback(LineSeg newLine, LineSeg moveLine, List constraint) {
+< 		Connection conn = (Connection)getHostFigure();
+< 		ConnectionAnchor anchor = conn.getTargetAnchor();
+< 		PrecisionPoint endPoint = new PrecisionPoint(anchor.getOwner().getBounds().getCenter());
+< 		anchor.getOwner().translateToAbsolute(endPoint);
+< 		conn.translateToRelative(endPoint);
+< 		PrecisionRectangle bounds = new PrecisionRectangle(anchor.getOwner().getBounds());
+< 		anchor.getOwner().translateToAbsolute(bounds);
+< 		conn.translateToRelative(bounds);
+< 		Point terminus = new Point(newLine.getTerminus()); 
+< 		if (moveLine.isHorizontal()) {
+< 			terminus.x = endPoint.x;
+< 		} else {
+< 			terminus.y = endPoint.y;
+< 		}
+< 		newLine.setTerminus(terminus);
+< 		constraint.add(new AbsoluteBendpoint(endPoint));
+< 	}
+< 
+< 	/**

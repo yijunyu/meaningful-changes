@@ -1,0 +1,176 @@
+package org.eclipse.gmf.runtime.emf.commands.core.command;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.HashSet;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.core.commands.operations.IOperationApprover;
+
+import org.eclipse.core.commands.operations.IUndoableOperation;
+
+import org.eclipse.core.commands.operations.OperationHistoryFactory;
+
+import org.eclipse.core.resources.IFile;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.workspace.AbstractEMFOperation;
+
+import org.eclipse.emf.workspace.CompositeEMFOperation;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.internal.command.ICommandWithSettableResult;
+
+public class CompositeTransactionalCommand extends CompositeEMFOperation implements ICompositeCommand, ICommandWithSettableResult {
+    private CommandResult commandResult;
+
+    public CompositeTransactionalCommand (TransactionalEditingDomain domain, String label) {
+        super (domain, (label == null) ? "" : label);
+    }
+
+    public CompositeTransactionalCommand (TransactionalEditingDomain domain, String label, Map options) {
+        super (domain, (label == null) ? "" : label, options);
+    }
+
+    public CompositeTransactionalCommand (TransactionalEditingDomain domain, String label, List children) {
+        super (domain, (label == null) ? "" : label, children);
+    }
+
+    public CompositeTransactionalCommand (TransactionalEditingDomain domain, String label, List children, Map options) {
+        super (domain, (label == null) ? "" : label, children, options);
+    }
+
+    public List getAffectedFiles () {
+        HashSet result = new HashSet ();
+        for (Iterator i = iterator ();
+        i.hasNext ();) {
+            IUndoableOperation nextOperation = (IUndoableOperation) i.next ();
+            if (nextOperation instanceof ICommand) {
+                List nextAffected = ((ICommand) nextOperation).getAffectedFiles ();
+                if (nextAffected != null) {
+                    result.addAll (nextAffected);
+                }
+            }
+        }
+        return new ArrayList (result);
+    }
+
+    public CommandResult getCommandResult () {
+        return commandResult;
+    }
+
+    protected void setResult (CommandResult result) {
+        this.commandResult = result;
+    }
+
+    protected List getReturnValues () {
+        List returnValues = new ArrayList ();
+        for (Iterator i = iterator ();
+        i.hasNext ();) {
+            IUndoableOperation operation = (IUndoableOperation) i.next ();
+            if (operation instanceof ICommand) {
+                ICommand command = (ICommand) operation;
+                CommandResult result = command.getCommandResult ();
+                if (result != null) {
+                    Object returnValue = result.getReturnValue ();
+                    if (returnValue != null) {
+                        if (getClass ().isInstance (command)) {
+                            if (returnValue != null && returnValue instanceof Collection) {
+                                returnValues.addAll ((Collection) returnValue);
+                            } else {
+                                returnValues.add (returnValue);
+                            }
+                        } else {
+                            returnValues.add (returnValue);
+                        }
+                    }
+                }
+            }
+        }
+        return returnValues;
+    }
+
+    protected IStatus aggregateStatuses (List statuses) {
+        IStatus aggregate = super.aggregateStatuses (statuses);
+        setResult (new CommandResult (aggregate, getReturnValues ()));
+        return aggregate;
+    }
+
+    public final ICommand compose (IUndoableOperation operation) {
+        if (operation != null) {
+            add (operation);
+        }
+        return this;
+    }
+
+    public ICommand reduce () {
+        switch (size ()) {
+            case 0 :
+                return this;
+            case 1 :
+                IUndoableOperation child = (IUndoableOperation) iterator ().next ();
+                if (child instanceof ICommand && child instanceof AbstractEMFOperation) {
+                    return ((ICommand) child).reduce ();
+                }
+            default :
+                if (! isTransactionNestingEnabled ()) {
+                    List children = getChildren ();
+                    IUndoableOperation [] opChildren = (IUndoableOperation []) children.toArray (new IUndoableOperation [children.size ()]);
+                    children.clear ();
+                    for (int i = 0;
+                    i < opChildren.length; ++ i) {
+                        doReduce (opChildren [i], children);
+                    }
+                }
+        }
+        return this;
+    }
+
+    private void doReduce (IUndoableOperation operation, List children) {
+        if (operation instanceof CompositeEMFOperation) {
+            for (Iterator i = ((CompositeEMFOperation) operation).iterator ();
+            i.hasNext ();) {
+                doReduce ((IUndoableOperation) i.next (), children);
+            }
+        } else {
+            children.add (operation);
+        }
+    }
+
+    public final boolean isEmpty () {
+        return size () < 1;
+    }
+
+    public boolean canExecute () {
+        return ! isEmpty () && super.canExecute ();
+    }
+
+    public boolean canRedo () {
+        return ! isEmpty () && super.canRedo ();
+    }
+
+    public boolean canUndo () {
+        return ! isEmpty () && super.canUndo ();
+    }
+
+    public void internalSetResult (CommandResult result) {
+        this.commandResult = result;
+    }
+
+}
+

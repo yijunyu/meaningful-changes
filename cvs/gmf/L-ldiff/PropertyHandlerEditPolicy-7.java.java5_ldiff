@@ -1,0 +1,54 @@
+4a5,6
+> import java.util.Iterator;
+> 
+18a21,22
+> import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+> 
+30a35,36
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.TopGraphicEditPart;
+> 
+32a39,40
+> import org.eclipse.gmf.runtime.diagram.ui.requests.ChangeChildPropertyValueRequest;
+> 
+51a131,131
+>         if (request.getType ().equals (RequestConstants.REQ_PROPERTY_CHANGE) || request.getType ().equals (RequestConstants.REQ_CHILD_PROPERTY_CHANGE) || request.getType ().equals (RequestConstants.REQ_SHOW_ALL_COMPARTMENTS)) {
+52,53d130
+<         if (request.getType ().equals (RequestConstants.REQ_PROPERTY_CHANGE)) {
+<             ChangePropertyValueRequest cpvr = (ChangePropertyValueRequest) request;
+55a63,68
+>                 View view = ((IGraphicalEditPart) ep).getNotationView ();
+>                 ChangePropertyValueRequest cpvr = (ChangePropertyValueRequest) request;
+>                 if (request.getType ().equals (RequestConstants.REQ_CHILD_PROPERTY_CHANGE)) {
+>                     view = ViewUtil.getChildBySemanticHint (view, ((ChangeChildPropertyValueRequest) cpvr).getNotationViewType ());
+>                 }
+>                 if (view != null) {
+56,56d62
+<                 View view = (View) ((IGraphicalEditPart) ep).getModel ();
+60a73,91
+>             }
+>         } else if (request.getType ().equals (RequestConstants.REQ_SHOW_ALL_COMPARTMENTS)) {
+>             EditPart ep = getHost ();
+>             if (ep instanceof TopGraphicEditPart) {
+>                 TopGraphicEditPart topEP = (TopGraphicEditPart) ep;
+>                 List resizableViews = topEP.getResizableNotationViews ();
+>                 if (resizableViews.isEmpty ()) return null;
+> 
+>                 ChangePropertyValueRequest cpvr = (ChangePropertyValueRequest) request;
+>                 CompositeCommand compositeCommand = new CompositeCommand (cpvr.getPropertyName ());
+>                 for (Iterator iter = resizableViews.iterator ();
+>                 iter.hasNext ();) {
+>                     View childView = (View) iter.next ();
+>                     if (ViewUtil.isPropertySupported (childView, cpvr.getPropertyID ())) {
+>                         compositeCommand.compose (new SetPropertyCommand (new EObjectAdapter (childView), cpvr.getPropertyID (), cpvr.getPropertyName (), ((ChangePropertyValueRequest) request).getValue ()));
+>                     }
+>                 }
+>                 return new EtoolsProxyCommand (compositeCommand);
+>             }
+89a121,121
+>         if (request.getType ().equals (RequestConstants.REQ_PROPERTY_CHANGE) || request.getType ().equals (RequestConstants.REQ_CHILD_PROPERTY_CHANGE) || request.getType ().equals (RequestConstants.REQ_SHOW_ALL_COMPARTMENTS)) return true;
+90,90d120
+<         if (request.getType ().equals (RequestConstants.REQ_PROPERTY_CHANGE)) return true;
+100,100c60,60
+<         if (request.getType ().equals (RequestConstants.REQ_PROPERTY_CHANGE)) {
+---
+>         if (request.getType ().equals (RequestConstants.REQ_PROPERTY_CHANGE) || request.getType ().equals (RequestConstants.REQ_CHILD_PROPERTY_CHANGE)) {

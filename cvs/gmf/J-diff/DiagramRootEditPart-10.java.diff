@@ -1,0 +1,196 @@
+25a26
+> import org.eclipse.gef.editparts.GridLayer;
+33a35
+> import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.GridLayerEx;
+42a45
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.FigureUtilities;
+49a53,54
+> import org.eclipse.swt.SWT;
+> import org.eclipse.swt.graphics.Color;
+114a120,121
+> 	private int printableLayerIndex;
+> 	private GridLayer gridLayer;
+164a172,181
+>     protected void moveGridLayer(boolean inFront) {
+>     	if (layers.getChildren().indexOf(gridLayer) > printableLayerIndex && (! inFront)) {    	
+>     		layers.remove(gridLayer);
+>     		layers.add(gridLayer,GRID_LAYER, printableLayerIndex);
+>     	} else if (layers.getChildren().indexOf(gridLayer) <= printableLayerIndex && inFront) {
+>     		layers.remove(gridLayer);
+>     		layers.add(gridLayer,GRID_LAYER, printableLayerIndex+1);
+>     	}
+>     }
+>     
+170a188
+>     	
+173d190
+<         layers.add(createGridLayer(), GRID_LAYER);
+174a192
+>         printableLayerIndex = layers.getChildren().size();
+175a194,198
+>                 
+>         gridLayer = createGridLayer();
+>         
+>         layers.add(gridLayer, GRID_LAYER);
+>         
+249a273
+> 		if (getViewer() == null) return null;
+260a285,290
+> 		
+> 		// Check the workspace properties
+> 		double gridSpacing = getWorkspaceViewerPreferences().getDouble(WorkspaceViewerProperties.GRIDSPACING);
+> 		
+> 		// If the workspace property is not set then get the global preference value
+> 		if (gridSpacing == 0) {
+262c292,318
+< 		return pluginStore.getDouble(IPreferenceConstants.PREF_GRID_SPACING);
+---
+> 			gridSpacing = pluginStore.getDouble(IPreferenceConstants.PREF_GRID_SPACING);
+> 		}
+> 		return gridSpacing;
+> 	}
+> 
+> 	/**
+> 	 * Sets the grid line style.  
+> 	 * @param color 
+> 	 * 
+> 	 * @param style
+> 	 */
+> 	public void setGridStyle(int style) {
+> 		if (gridLayer instanceof GridLayerEx) {
+> 			((GridLayerEx) gridLayer).setLineStyle(style);
+> 		}
+> 		gridLayer.repaint();
+> 	}
+> 
+> 	
+> 	/**
+> 	 * Sets the grid line color.  
+> 	 * @param color 
+> 	 * 
+> 	 * @param gridSpacing
+> 	 */
+> 	public void setGridColor(Integer rgbValue) {
+> 		gridLayer.setForegroundColor(FigureUtilities.integerToColor(rgbValue));
+273,275c329
+< 		// Get the Ruler Units from the Plug-in Preference Store
+< 		IPreferenceStore preferenceStore = (IPreferenceStore) getPreferencesHint().getPreferenceStore();
+< 		int rulerUnits = preferenceStore.getInt(IPreferenceConstants.PREF_RULER_UNITS);
+---
+> 		int rulerUnits = getWorkspaceViewerPreferences().getInt(WorkspaceViewerProperties.RULERUNIT);
+364d417
+< 			
+366,367c419
+< 			getViewer().setProperty(SnapToGrid.PROPERTY_GRID_VISIBLE,
+< 				event.getNewValue());
+---
+> 			getViewer().setProperty(SnapToGrid.PROPERTY_GRID_VISIBLE, event.getNewValue());
+369d420
+< 			
+371,372c422,429
+< 			getViewer().setProperty(SnapToGeometry.PROPERTY_SNAP_ENABLED,
+< 					event.getNewValue());
+---
+> 			getViewer().setProperty(SnapToGeometry.PROPERTY_SNAP_ENABLED, event.getNewValue());
+> 		} else if (WorkspaceViewerProperties.GRIDORDER.equals(event.getProperty())) {
+> 			// Set the grid level
+> 			moveGridLayer(((Boolean) event.getNewValue()).booleanValue());
+> 		} else if (WorkspaceViewerProperties.GRIDSPACING.equals(event.getProperty())) {
+> 			// Set the grid spacing			
+> 			Double spacing = (Double) event.getNewValue();
+> 			setGridSpacing(spacing.doubleValue());
+374d430
+< 			
+378c434
+< 		} else if (IPreferenceConstants.PREF_RULER_UNITS.equals(event.getProperty())) { 
+---
+> 		} else if (WorkspaceViewerProperties.RULERUNIT.equals(event.getProperty())) { 
+391,392c447
+< 					  	DiagramUIStatusCodes.RESOURCE_FAILURE,
+< 					  	e.toString() );
+---
+> 					  	DiagramUIStatusCodes.RESOURCE_FAILURE, e.toString() );
+394d448
+< 				
+410,429c464,471
+< 		} else if (IPreferenceConstants.PREF_GRID_SPACING.equals(event.getProperty())) {
+< 			Object newValue = event.getNewValue();
+< 			double gridSpacing;
+< 			try {
+< 				if (newValue.getClass() == Double.class) {
+< 					gridSpacing = ((Double) newValue).doubleValue();
+< 					setGridSpacing(gridSpacing);
+< 				} else if (newValue.getClass() == String.class) {
+< 					gridSpacing = Double.parseDouble((String) newValue);
+< 					setGridSpacing(gridSpacing);
+< 				} else {
+< 					Log.error( DiagramUIPlugin.getInstance(),
+< 					  	DiagramUIStatusCodes.RESOURCE_FAILURE,
+< 						newValue.getClass().getName());
+< 				}
+< 			} catch (NumberFormatException ex ) {
+< 			  Log.error( DiagramUIPlugin.getInstance(),
+< 			  	DiagramUIStatusCodes.RESOURCE_FAILURE,
+< 			  	ex.toString() );	
+< 			}
+---
+> 		} else if (WorkspaceViewerProperties.GRIDLINECOLOR.equals(event.getProperty())) {
+> 			Integer newValue = (Integer) event.getNewValue();
+> 			// Set the grid line color
+> 			setGridColor(newValue);
+> 		}  else if (WorkspaceViewerProperties.GRIDLINESTYLE.equals(event.getProperty())) {
+> 			Integer newValue = (Integer) event.getNewValue();
+> 			// Set the grid line style
+> 			setGridStyle(newValue.intValue());
+488,492c530
+< 		IPreferenceStore preferenceStore =
+< 			(IPreferenceStore) getPreferencesHint().getPreferenceStore();
+< 		int rulerUnits = preferenceStore.getInt(
+< 			IPreferenceConstants.PREF_RULER_UNITS);
+< 		setRulers(rulerUnits);
+---
+> 		setRulers(getWorkspaceViewerPreferences().getInt(WorkspaceViewerProperties.RULERUNIT));
+519a558,559
+> 		initWorkspaceViewerProperties();
+> 		
+526a567,597
+> 	private static final int LIGHT_GRAY_RGB = 12632256;
+> 	
+> 	/**
+> 	 * Initializes the workspace viewer property that are stored per diagram
+> 	 */
+> 	private void initWorkspaceViewerProperties() {		
+> 		IPreferenceStore wsPrefStore = getWorkspaceViewerPreferences();
+> 		
+> 		if (! wsPrefStore.contains(WorkspaceViewerProperties.GRIDORDER)) {
+> 			wsPrefStore.setValue(WorkspaceViewerProperties.GRIDORDER, true);			
+> 		} 
+> 		if (! wsPrefStore.contains(WorkspaceViewerProperties.GRIDLINECOLOR)) {
+> 			wsPrefStore.setValue(WorkspaceViewerProperties.GRIDLINECOLOR, LIGHT_GRAY_RGB);			
+> 		} else {
+> 			setGridColor(new Integer(wsPrefStore.getInt(WorkspaceViewerProperties.GRIDLINECOLOR)));
+> 		}
+> 		if (! wsPrefStore.contains(WorkspaceViewerProperties.GRIDLINESTYLE)) {
+> 			wsPrefStore.setValue(WorkspaceViewerProperties.GRIDLINESTYLE, SWT.LINE_DOT);			
+> 		} else {
+> 			setGridStyle(wsPrefStore.getInt(WorkspaceViewerProperties.GRIDLINESTYLE));
+> 		}
+> 		
+> 		if ((! wsPrefStore.contains(WorkspaceViewerProperties.RULERUNIT)) || 
+> 				(! wsPrefStore.contains(WorkspaceViewerProperties.GRIDSPACING))) {
+> 			IPreferenceStore preferenceStore =
+> 				(IPreferenceStore) getPreferencesHint().getPreferenceStore();			
+> 			wsPrefStore.setValue(WorkspaceViewerProperties.RULERUNIT, preferenceStore.getInt(IPreferenceConstants.PREF_RULER_UNITS));						
+> 			wsPrefStore.setValue(WorkspaceViewerProperties.GRIDSPACING, preferenceStore.getDouble(IPreferenceConstants.PREF_GRID_SPACING));			
+> 		}
+> 	}
+> 
+624a696,703
+> 	protected GridLayer createGridLayer() {
+> 		return new GridLayerEx();
+> 	}
+> 
+> 	protected GridLayer createGridLayer(int r, int g, int b) {
+> 		return new GridLayerEx(new Color(null,r,g,b));
+> 	}
+> 

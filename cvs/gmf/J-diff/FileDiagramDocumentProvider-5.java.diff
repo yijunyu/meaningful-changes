@@ -1,0 +1,46 @@
+2d1
+<  * Copyright (c) 2005 IBM Corporation and others.
+28,30d26
+< import org.eclipse.ui.IEditorInput;
+< import org.eclipse.ui.IFileEditorInput;
+< 
+31a28
+> import org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.DiagramModificationListener;
+42a40,41
+> import org.eclipse.ui.IEditorInput;
+> import org.eclipse.ui.IFileEditorInput;
+56a56
+> 		DiagramModificationListener fListener;
+64c64
+< 		public DiagramFileInfo(IDocument document, FileSynchronizer fileSynchronizer) {
+---
+> 		public DiagramFileInfo(IDocument document, FileSynchronizer fileSynchronizer, DiagramModificationListener listener) {
+65a66
+> 			fListener = listener;
+79c80,81
+< 				Diagram newContent = (Diagram)event.getEventInfo();
+---
+> 				IDiagramDocument diagramDocument = (IDiagramDocument)event.getEventInfo();
+> 				Diagram newContent = diagramDocument.getDiagram();
+111a114,116
+> 
+> 			assert info instanceof DiagramFileInfo;
+> 			((DiagramFileInfo)info).fListener.stopListening();
+194d198
+< 
+196c200
+< 	 * @see org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.document.FileDocumentProvider#createFileInfo(org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDocument, org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.document.FileDocumentProvider.FileSynchronizer)
+---
+> 	 * @see org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.document.FileDocumentProvider#createFileInfo(org.eclipse.gmf.runtime.diagram.ui.resources.editor.document.IDocument, org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.document.FileDocumentProvider.FileSynchronizer, org.eclipse.ui.IFileEditorInput)
+198,199c202,209
+< 	protected FileInfo createFileInfo(IDocument document, FileSynchronizer synchronizer) {
+< 		return new DiagramFileInfo(document, synchronizer);
+---
+> 	protected FileInfo createFileInfo(IDocument document, FileSynchronizer synchronizer, IFileEditorInput input) {
+> 		assert document instanceof DiagramDocument; 
+> 		
+> 		DiagramModificationListener diagramListener = new FileDiagramModificationListener(this, (DiagramDocument)document, input);
+> 		DiagramFileInfo info = new DiagramFileInfo(document, synchronizer, diagramListener);
+> 		
+> 		diagramListener.startListening();
+> 		return info;

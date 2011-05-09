@@ -1,0 +1,306 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2003 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2003, 2006 IBM Corporation and others.
+18a19,19
+> import java.util.Map;
+83a85,87
+>     private static final String DEFINE_ONLY = "defineOnly"; //$NON-NLS-1$
+>     private static final String PREDEFINED_ENTRY = "predefinedEntry"; //$NON-NLS-1$
+>     private static final String REMOVE = "remove"; //$NON-NLS-1$
+124a129,135
+>             
+>             configChildren =
+>                 configElement.getChildren(PREDEFINED_ENTRY);
+> 
+>             for (int i = 0; i < configChildren.length; i++) {
+>                 entries.add(new PredefinedEntryDescriptor(configChildren[i]));
+>             }
+128a140,141
+>          * content
+>          * 
+128,128c139,139
+< 		 * Contributes to the given palette root based on the given editor's content 
+---
+>          * Contributes to the given palette root based on the given editor's
+130a144,146
+>          * @param predefinedEntries
+>          *            map of predefined palette entries where the key is the
+>          *            palette entry id and the value is the palette entry
+132,132c148,148
+< 		public void contribute(Object content, PaletteRoot root) {
+---
+> 		public void contribute(Object content, PaletteRoot root, Map predefinedEntries) {
+135,135c151,151
+< 				((EntryDescriptor) iter.next()).contribute(
+---
+> 				((IEntryDescriptor) iter.next()).contribute(
+138,138c154,154
+< 					paletteFactory);
+---
+> 					paletteFactory, predefinedEntries);
+138a155,155
+> 			}
+146,146c184,184
+< 	private static class EntryDescriptor {
+---
+> 	private static class EntryDescriptor implements IEntryDescriptor {
+155a194,194
+>         private boolean defineOnly;
+179a219,221
+>             defineOnly = Boolean.valueOf(
+>                 configElement.getAttribute(DEFINE_ONLY)).booleanValue();
+> 
+180a223,223
+> 			if (path == null && !defineOnly)
+181,181d222
+< 			if (path == null)
+182,182c224,224
+< 				Log.info(DiagramProvidersPlugin.getInstance(), DiagramProvidersStatusCodes.SERVICE_FAILURE, "No factory class name is provided"); //$NON-NLS-1$
+---
+> 				Log.info(DiagramProvidersPlugin.getInstance(), DiagramProvidersStatusCodes.SERVICE_FAILURE, "Path must be provided when contributing a palette entry"); //$NON-NLS-1$
+248a158,166
+>     
+>     /**
+>      * An interface describing the types of palette entries in the schema.
+>      *
+>      * @author cmahoney
+>      */
+>     private static interface IEntryDescriptor {
+> 
+>         /**
+249,249d157
+< 		/**
+250,250c167,167
+< 		 * Contributes the palette entry based on the given content, starting
+---
+>          * Contributes the palette entry based on the given content, starting
+251a169,171
+>          * 
+>          * @param content
+>          * @param root
+251,251c168,168
+< 		 * from the given root and into the given path
+---
+>          * from the given root and into the given path
+252,253d168
+< 		 * @param content
+< 		 * @param root
+254,254c172,172
+< 		 * @param paletteFactory
+---
+>          * @param paletteFactory
+254a173,178
+>          * @param predefinedEntries
+>          *            map of predefined palette entries where the key is the
+>          *            palette entry id and the value is the palette entry
+>          */
+>         public void contribute(Object content, PaletteRoot root,
+>                 PaletteFactoryProxy paletteFactory, Map predefinedEntries);
+255,255d172
+< 		 */
+258a294,294
+> 			PaletteFactoryProxy paletteFactory, Map predefinedEntries) {
+259,259d293
+< 			PaletteFactoryProxy paletteFactory) {
+260,260c295,295
+< 			if (kind == null || id == null || path == null || label == null)
+---
+> 			if (kind == null || id == null || label == null)
+297a333,371
+> 				if (defineOnly) {
+>                     predefinedEntries.put(id, paletteEntry);
+>                 } else {
+>             		appendPaletteEntry(root, predefinedEntries, path, paletteEntry);
+>                 }
+> 			}
+> 		}
+> 
+> 	}
+> 
+>     /**
+>      * A descriptor for an XML-based predefined palette entry. 
+>      */
+>     private static class PredefinedEntryDescriptor
+>         implements IEntryDescriptor {
+> 
+>         private String id;
+>         private String path;
+>         private DrawerExpandHelper expandHelper;
+>         private boolean remove;
+> 
+>         /**
+>          * Reads an XML palette entry and its attributes
+>          * @param configElement
+>          */
+>         public PredefinedEntryDescriptor(IConfigurationElement configElement) {
+>             id = configElement.getAttribute(ID);
+>             if (id == null) {
+>                 Log.info(DiagramProvidersPlugin.getInstance(),
+>                     DiagramProvidersStatusCodes.SERVICE_FAILURE,
+>                     "No ID provided"); //$NON-NLS-1$
+>             }
+>  
+>             path = configElement.getAttribute(PATH);
+>  
+>             IConfigurationElement[] configChildren = configElement
+>                 .getChildren(EXPAND);
+>             if (configChildren.length > 0)
+>                 expandHelper = new DrawerExpandHelper(configChildren[0]);
+297a484,495
+>      * Appends the given palette entry to the appropriate location in either a
+>      * predefined palette entry or the palette root.
+>      * 
+>      * @param root
+>      * @param predefinedEntries
+>      *            map of predefined palette entries where the key is the palette
+>      *            entry id and the value is the palette entry
+>      * @param path
+>      * @param paletteEntry
+>      */
+>     private static void appendPaletteEntry(PaletteRoot root,
+>             Map predefinedEntries, String path, PaletteEntry paletteEntry) {
+298,298c496,496
+< 				PaletteEntry fEntry = findPaletteEntry(root, path);
+---
+>         PaletteEntry fEntry = findPaletteEntry(root, path);
+298a497,501
+>         if (fEntry == null) {
+>             fEntry = findPredefinedEntry(predefinedEntries, path);
+>         }
+>         if (fEntry == null) 
+>             Log.info(DiagramProvidersPlugin.getInstance(), DiagramProvidersStatusCodes.SERVICE_FAILURE, "Invalid palette entry path"); //$NON-NLS-1$                
+299,300d496
+< 				if (fEntry == null)
+< 					Log.info(DiagramProvidersPlugin.getInstance(), DiagramProvidersStatusCodes.SERVICE_FAILURE, "Invalid palette entry path"); //$NON-NLS-1$				
+301a503,503
+>              ((PaletteContainer) fEntry).add(paletteEntry);
+301,301c502,502
+< 				else if (fEntry instanceof PaletteContainer)
+---
+>         else if (fEntry instanceof PaletteContainer)
+302,302d502
+< 					 ((PaletteContainer) fEntry).add(paletteEntry);
+303,303c504,504
+< 				else if (fEntry instanceof PaletteSeparator)
+---
+>         else if (fEntry instanceof PaletteSeparator)
+304,304c505,505
+< 					appendTo((PaletteSeparator) fEntry, paletteEntry);
+---
+>             appendTo((PaletteSeparator) fEntry, paletteEntry);
+304a506,514
+>         else
+>             fEntry.getParent().add(
+>                 fEntry.getParent().getChildren().indexOf(fEntry) + 1,
+>                 paletteEntry);
+>     }
+>     
+>     /**
+>      * Appends the given entry to the end of the group of the given separator.
+>      * 
+305a373,393
+>                 expandHelper = new DrawerExpandHelper(Boolean.FALSE);
+>             
+>             remove = Boolean.valueOf(configElement.getAttribute(REMOVE))
+>                 .booleanValue();
+>         }
+> 
+>         public void contribute(
+>             Object content,
+>             PaletteRoot root,
+>             PaletteFactoryProxy paletteFactory, Map predefinedEntries) {
+>             
+>             if (id == null)
+>                 return;
+>             
+>             PaletteEntry paletteEntry = findPredefinedEntry(predefinedEntries, id);
+>             
+>             if (paletteEntry != null) {
+>                 // this entry has been predefined but not contributed,
+>                 // contributethis entry to the palette now
+>                 if (path != null && !remove) {
+>                     appendPaletteEntry(root, predefinedEntries, path,
+306,307d372
+< 					fEntry.getParent().add(
+< 						fEntry.getParent().getChildren().indexOf(fEntry) + 1,
+309a396,411
+>             } else {
+>                 paletteEntry = findPaletteEntry(root, id);
+>             }
+>             
+>             if (remove) {
+>                 paletteEntry.getParent().remove(paletteEntry);
+>                 return;
+>             }
+> 
+>             // Set expand state on drawers.
+>             if (paletteEntry instanceof PaletteDrawer
+>                 && expandHelper.expand(content)) {
+>                 ((PaletteDrawer) paletteEntry)
+>                     .setInitialState(PaletteDrawer.INITIAL_STATE_OPEN);
+>             }    
+>         }
+312a415,442
+>      * Searches the predefined entries for a palette entry given the full path
+>      * as it was predefined.
+>      * 
+>      * @param predefinedEntries
+>      *            map of predefined palette entries where the key is the palette
+>      *            entry id and the value is the palette entry
+>      * @param path
+>      *            the path to the palette entry starting as it was predefined
+>      * @return the palette entry if one exists; null otherwise.
+>      */
+>     private static PaletteEntry findPredefinedEntry(Map predefinedEntries,
+>             String path) {
+>         StringTokenizer tokens = new StringTokenizer(path, "/"); //$NON-NLS-1$
+> 
+>         PaletteEntry root = (PaletteEntry) predefinedEntries.get(tokens
+>             .nextToken());
+> 
+>         while (tokens.hasMoreElements()) {
+>             if (root instanceof PaletteContainer)
+>                 root = findChildPaletteEntry((PaletteContainer) root, tokens
+>                     .nextToken());
+>             else
+>                 return null;
+>         }
+>         return root;
+>     }
+>     
+>     /**
+313,313c443,443
+< 		 * Finds a palette container starting from the given root
+---
+>      * Finds a palette container starting from the given root and using the
+314a445,445
+>      * 
+314,314c444,444
+< 		 * and using the given path
+---
+>      * given path
+319,319c450,450
+< 		private PaletteEntry findPaletteEntry(PaletteEntry root, String aPath) {
+---
+>     private static PaletteEntry findPaletteEntry(PaletteEntry root, String aPath) {
+340,340c471,471
+< 		private PaletteEntry findChildPaletteEntry(
+---
+>     private static PaletteEntry findChildPaletteEntry(
+353,353d483
+< 		 * Appends the given entry to the end of the group of the given separator
+357,357c518,518
+< 		private void appendTo(PaletteSeparator separator, PaletteEntry entry) {
+---
+>     private static void appendTo(PaletteSeparator separator, PaletteEntry entry) {
+366,366d526
+< 	}
+499,499c659,659
+< 		PaletteRoot root) {
+---
+> 		PaletteRoot root, Map predefinedEntries) {
+502,502c662,662
+< 			((ContributionDescriptor) iter.next()).contribute(content, root);
+---
+> 			((ContributionDescriptor) iter.next()).contribute(content, root, predefinedEntries);

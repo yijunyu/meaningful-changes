@@ -1,0 +1,870 @@
+package org.eclipse.gmf.runtime.diagram.ui.editparts;
+
+import java.beans.PropertyChangeEvent;
+
+import java.beans.PropertyChangeListener;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.Dictionary;
+
+import java.util.HashMap;
+
+import java.util.HashSet;
+
+import java.util.Hashtable;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.ListIterator;
+
+import java.util.Map;
+
+import java.util.Set;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.Platform;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.ecore.ENamedElement;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.gef.AccessibleEditPart;
+
+import org.eclipse.gef.DragTracker;
+
+import org.eclipse.gef.EditDomain;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.EditPolicy;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.RequestConstants;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.commands.CompoundCommand;
+
+import org.eclipse.gef.commands.UnexecutableCommand;
+
+import org.eclipse.gef.editparts.AbstractGraphicalEditPart;
+
+import org.eclipse.gef.requests.CreateConnectionRequest;
+
+import org.eclipse.gef.requests.DropRequest;
+
+import org.eclipse.gef.requests.GroupRequest;
+
+import org.eclipse.gef.requests.TargetRequest;
+
+import org.eclipse.gmf.runtime.common.core.util.IAdaptableSelection;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.filter.ActionFilterService;
+
+import org.eclipse.gmf.runtime.common.ui.services.parser.CommonParserHint;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.core.listener.NotificationEvent;
+
+import org.eclipse.gmf.runtime.diagram.core.listener.PresentationListener;
+
+import org.eclipse.gmf.runtime.diagram.core.listener.PropertyChangeNotifier;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.CanonicalEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.DecorationEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.PropertyHandlerEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.SemanticEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.commands.ToggleCanonicalModeCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.DefaultEditableEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.editparts.IEditableEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.services.editpolicy.EditPolicyService;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.PresentationResourceManager;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramEditDomain;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramGraphicalViewer;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.Properties;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper;
+
+import org.eclipse.gmf.runtime.diagram.ui.tools.DragEditPartsTrackerEx;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.WrapLabel;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.emf.core.util.MetaModelUtil;
+
+import org.eclipse.gmf.runtime.emf.core.util.ProxyUtil;
+
+import org.eclipse.gmf.runtime.gef.ui.internal.editpolicies.GraphicalEditPolicyEx;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.gmf.runtime.notation.FillStyle;
+
+import org.eclipse.gmf.runtime.notation.FontStyle;
+
+import org.eclipse.gmf.runtime.notation.LineStyle;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.accessibility.AccessibleEvent;
+
+import org.eclipse.swt.graphics.Color;
+
+import org.eclipse.swt.graphics.FontData;
+
+import org.eclipse.swt.widgets.Display;
+
+import org.eclipse.ui.IActionFilter;
+
+public abstract class GraphicalEditPart extends AbstractGraphicalEditPart implements IGraphicalEditPart, PropertyChangeListener, IAdaptableSelection {
+    private Map listenerFilters;
+    protected AccessibleEditPart accessibleEP;
+    private String elementGuid;
+    private final IEditableEditPart editableEditPart;
+
+    public GraphicalEditPart (View view) {
+        setModel (view);
+        this.editableEditPart = new DefaultEditableEditPart (this);
+    }
+
+    public void activate () {
+        addNotationalListeners ();
+        EObject semanticProxy = ((View) getModel ()).getElement ();
+        EObject semanticElement = ProxyUtil.resolve (MEditingDomainGetter.getMEditingDomain ((View) getModel ()), semanticProxy);
+        if (semanticElement != null) addSemanticListeners ();
+        else if (semanticProxy != null) {
+            addListenerFilter ("SemanticProxy", this, semanticProxy);
+        }
+
+        GraphicalEditPart.super.activate ();
+    }
+
+    protected void addListenerFilter (String filterId, PropertyChangeListener listener, PropertyChangeNotifier notifier) {
+        if (notifier == null) return;
+
+        Assert.isNotNull (filterId);
+        Assert.isNotNull (listener);
+        if (listenerFilters == null) listenerFilters = new HashMap ();
+
+        notifier.addPropertyChangeListener (listener);
+        listenerFilters.put (filterId, new Object [] {notifier, listener});
+    }
+
+    protected void addListenerFilter (String filterId, PropertyChangeListener listener, EObject element) {
+        if (element == null) return;
+
+        Assert.isNotNull (filterId);
+        Assert.isNotNull (listener);
+        if (listenerFilters == null) listenerFilters = new HashMap ();
+
+        PresentationListener.getInstance ().addPropertyChangeListener (element, listener);
+        listenerFilters.put (filterId, new Object [] {element, listener});
+    }
+
+    protected void addListenerFilter (String filterId, PropertyChangeListener listener, EObject element, EStructuralFeature feature) {
+        if (element == null) return;
+
+        Assert.isNotNull (filterId);
+        Assert.isNotNull (listener);
+        if (listenerFilters == null) listenerFilters = new HashMap ();
+
+        PresentationListener.getInstance ().addPropertyChangeListener (element, listener);
+        listenerFilters.put (filterId, new Object [] {element, feature, listener});
+    }
+
+    final protected org.eclipse.gef.ConnectionEditPart createConnection (Object connectorView) {
+        return (org.eclipse.gef.ConnectionEditPart) createChild (connectorView);
+    }
+
+    final protected void createEditPolicies () {
+        createDefaultEditPolicies ();
+        EditPolicyService.getInstance ().createEditPolicies (this);
+    }
+
+    protected void createDefaultEditPolicies () {
+        installEditPolicy (EditPolicyRoles.SEMANTIC_ROLE, new SemanticEditPolicy ());
+        installEditPolicy (EditPolicyRoles.PROPERTY_HANDLER_ROLE, new PropertyHandlerEditPolicy ());
+        installEditPolicy (EditPolicyRoles.DECORATION_ROLE, new DecorationEditPolicy ());
+    }
+
+    public void deactivate () {
+        if (! isActive ()) {
+            return;
+        }
+        removeNotationalListeners ();
+        if (listenerFilters != null) {
+            for (Iterator i = listenerFilters.keySet ().iterator ();
+            i.hasNext ();) {
+                Object [] obj = (Object []) listenerFilters.get (i.next ());
+                if (obj.length > 2) {
+                    PresentationListener.getInstance ().removePropertyChangeListener ((EObject) obj [0], (EStructuralFeature) obj [1], (PropertyChangeListener) obj [2]);
+                } else {
+                    if (obj [0] instanceof PropertyChangeNotifier) ((PropertyChangeNotifier) obj [0]).removePropertyChangeListener ((PropertyChangeListener) obj [1]);
+                    else PresentationListener.getInstance ().removePropertyChangeListener ((EObject) obj [0], (PropertyChangeListener) obj [1]);
+
+                }
+            }
+        }
+        super.deactivate ();
+    }
+
+    protected void executeCommand (Command command) {
+        getViewer ().getEditDomain ().getCommandStack ().execute (command);
+    }
+
+    public Object getAdapter (Class key) {
+        Object model = getModel ();
+        if (key == IActionFilter.class) {
+            return ActionFilterService.getInstance ();
+        }
+        if (View.class.isAssignableFrom (key) && model instanceof View) {
+            return model;
+        }
+        if (model != null && model instanceof View && EObject.class.isAssignableFrom (key)) {
+            EObject semanticObject = ViewUtil.resolveSemanticElement ((View) model);
+            if (key.isInstance (semanticObject)) {
+                return semanticObject;
+            } else if (key.isInstance (model)) {
+                return model;
+            }
+
+        }
+        Object adapter = super.getAdapter (key);
+        if (adapter != null) return adapter;
+
+        return Platform.getAdapterManager ().getAdapter (this, key);
+    }
+
+    public IGraphicalEditPart getChildBySemanticHintOnPrimaryView (String semanticHint) {
+        View primaryView = getPrimaryView ();
+        View childView = ViewUtil.getChildBySemanticHint (primaryView, semanticHint);
+        if (childView != null) return (IGraphicalEditPart) getViewer ().getEditPartRegistry ().get (childView);
+
+        return null;
+    }
+
+    public IGraphicalEditPart getChildBySemanticHint (String semanticHint) {
+        if (getModel () != null) {
+            View view = ViewUtil.getChildBySemanticHint ((View) getModel (), semanticHint);
+            if (view != null) return (IGraphicalEditPart) getViewer ().getEditPartRegistry ().get (view);
+
+        }
+        return null;
+    }
+
+    private static volatile int GETCOMMAND_RECURSIVE_COUNT = 0;
+    private static Set _disableCanonicalEditPolicyList = new HashSet ();
+
+    public Command getCommand (Request _request) {
+        if (! isEditModeEnabled ()) {
+            if (RequestConstants.REQ_OPEN.equals (_request.getType ())) {
+            } else {
+                return UnexecutableCommand.INSTANCE;
+            }
+        }
+        Command cmd = null;
+        try {
+            GETCOMMAND_RECURSIVE_COUNT ++;
+            final Request request = _request;
+            cmd = (Command) MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+
+                public Object run () {
+                    return GraphicalEditPart.super.getCommand (request);
+                }
+
+            }
+
+            );
+            if (cmd != null) {
+                _disableCanonicalEditPolicyList.addAll (disableCanonicalFor (_request));
+            }
+            GETCOMMAND_RECURSIVE_COUNT --;
+            if (GETCOMMAND_RECURSIVE_COUNT == 0) {
+                if (cmd != null && ! _disableCanonicalEditPolicyList.isEmpty ()) {
+                    CompoundCommand cc = new CompoundCommand ();
+                    cc.setLabel (cmd.getLabel ());
+                    ToggleCanonicalModeCommand tcmd = ToggleCanonicalModeCommand.getToggleCanonicalModeCommand (_disableCanonicalEditPolicyList, false);
+                    cc.add (tcmd);
+                    cc.add (cmd);
+                    cc.add (ToggleCanonicalModeCommand.getToggleCanonicalModeCommand (tcmd, true));
+                    _disableCanonicalEditPolicyList.clear ();
+                    return cc.unwrap ();
+                }
+            }
+        } catch (RuntimeException t) {
+            GETCOMMAND_RECURSIVE_COUNT = 0;
+            throw t;
+        }
+        return cmd;
+    }
+
+    Collection disableCanonicalFor (final Request request) {
+        Set hosts = new HashSet ();
+        if ((request instanceof EditCommandRequestWrapper) || request instanceof TargetRequest || request instanceof DropRequest) {
+            hosts.add (this);
+            hosts.add (getParent ());
+        }
+        if ((request instanceof CreateConnectionRequest)) {
+            CreateConnectionRequest ccvr = (CreateConnectionRequest) request;
+            hosts.add (this);
+            hosts.add (getParent ());
+            if (ccvr.getSourceEditPart () != null) {
+                hosts.add (ccvr.getSourceEditPart ());
+                hosts.add (ccvr.getSourceEditPart ().getParent ());
+            }
+            if (ccvr.getTargetEditPart () != null) {
+                hosts.add (ccvr.getTargetEditPart ());
+                hosts.add (ccvr.getTargetEditPart ().getParent ());
+            }
+        }
+        if ((request instanceof GroupRequest)) {
+            List parts = ((GroupRequest) request).getEditParts ();
+            hosts.add (this);
+            hosts.add (getParent ());
+            Iterator editparts = parts == null ? Collections.EMPTY_LIST.iterator () : parts.iterator ();
+            while (editparts.hasNext ()) {
+                EditPart ep = (EditPart) editparts.next ();
+                hosts.add (ep);
+                hosts.add (ep.getParent ());
+            }
+        }
+        return hosts;
+    }
+
+    protected IFigure getContentPaneFor (IGraphicalEditPart editPart) {
+        return getContentPane ();
+    }
+
+    protected Diagram getDiagramView () {
+        return (Diagram) getRoot ().getContents ().getModel ();
+    }
+
+    public final View getPrimaryView () {
+        for (EditPart parent = this;
+        parent != null; parent = parent.getParent ()) if (parent instanceof IPrimaryEditPart) return (View) parent.getModel ();
+
+        return null;
+    }
+
+    protected EditDomain getEditDomain () {
+        EditDomain result = null;
+        try {
+            result = getRoot ().getViewer ().getEditDomain ();
+        } catch (NullPointerException nullPointerException) {
+            return null;
+        }
+        return result;
+    }
+
+    public IDiagramEditDomain getDiagramEditDomain () {
+        EditDomain editDomain = getEditDomain ();
+        if (editDomain != null) {
+            return (IDiagramEditDomain) editDomain;
+        }
+        return null;
+    }
+
+    protected List getModelChildren () {
+        Object model = getModel ();
+        if (model != null && model instanceof View) {
+            return new ArrayList (((View) model).getChildren ());
+        }
+        return Collections.EMPTY_LIST;
+    }
+
+    public Object getPropertyValue (Object id) {
+        return ViewUtil.getPropertyValue ((View) getModel (), id);
+    }
+
+    public Object getStructuralFeatureValue (EStructuralFeature feature) {
+        return ViewUtil.getStructuralFeatureValue ((View) getModel (), feature);
+    }
+
+    public EObject resolveSemanticElement () {
+        return (EObject) MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+
+            public Object run () {
+                return ViewUtil.resolveSemanticElement ((View) getModel ());
+            }
+
+        }
+
+        );
+    }
+
+    public TopGraphicEditPart getTopGraphicEditPart () {
+        EditPart editPart = this;
+        while (editPart instanceof IGraphicalEditPart) {
+            if (editPart instanceof TopGraphicEditPart) return (TopGraphicEditPart) editPart;
+
+            editPart = editPart.getParent ();
+        }
+        return null;
+    }
+
+    public View getNotationView () {
+        Object model = getModel ();
+        if (model instanceof View) return (View) model;
+
+        return null;
+    }
+
+    public final void propertyChange (PropertyChangeEvent event) {
+        if (isActive ()) handlePropertyChangeEvent (event);
+
+    }
+
+    protected void handlePropertyChangeEvent (PropertyChangeEvent event) {
+        if (Properties.ID_PERSISTED_CHILDREN.equals (event.getPropertyName ()) || Properties.ID_TRANSIENT_CHILDREN.equals (event.getPropertyName ())) {
+            refreshChildren ();
+        } else if (Properties.ID_ISVISIBLE.equals (event.getPropertyName ())) {
+            refreshVisibility ();
+        } else if (Properties.ID_SEMANTICREF.equals (event.getPropertyName ())) {
+            handleMajorSemanticChange ();
+        } else if (event instanceof NotificationEvent) {
+            handleNotificationEvent ((NotificationEvent) event);
+        }
+
+    }
+
+    protected void handleNotificationEvent (NotificationEvent e) {
+    }
+
+    protected void reactivateSemanticModel () {
+        removeSemanticListeners ();
+        if (resolveSemanticElement () != null) addSemanticListeners ();
+
+    }
+
+    public EditPart findEditPart (EditPart epBegin, EObject theElement) {
+        if (theElement == null) {
+            return null;
+        }
+        EditPart epStart = null;
+        if (epBegin == null) {
+            epStart = this;
+        } else {
+            epStart = epBegin;
+        }
+        final View view = (View) ((IAdaptable) epStart).getAdapter (View.class);
+        if (view != null) {
+            EObject el = ViewUtil.resolveSemanticElement (view);
+            if ((el != null) && el.equals (theElement)) {
+                return epStart;
+            }
+        }
+        ListIterator childLI = epStart.getChildren ().listIterator ();
+        while (childLI.hasNext ()) {
+            EditPart epChild = (EditPart) childLI.next ();
+            EditPart elementEP = findEditPart (epChild, theElement);
+            if (elementEP != null) {
+                return elementEP;
+            }
+        }
+        return null;
+    }
+
+    public void refresh () {
+        MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+
+            public Object run () {
+                EditPolicyIterator i = getEditPolicyIterator ();
+                while (i.hasNext ()) {
+                    EditPolicy policy = i.next ();
+                    if (policy instanceof GraphicalEditPolicyEx) {
+                        ((GraphicalEditPolicyEx) policy).refresh ();
+                    }
+                }
+                GraphicalEditPart.super.refresh ();
+                return null;
+            }
+
+        }
+
+        );
+    }
+
+    protected void refreshBackgroundColor () {
+        FillStyle style = (FillStyle) getPrimaryView ().getStyle (NotationPackage.eINSTANCE.getFillStyle ());
+        if (style != null) {
+            setBackgroundColor (PresentationResourceManager.getInstance ().getColor (new Integer (style.getFillColor ())));
+        }
+    }
+
+    protected void refreshFont () {
+        FontStyle style = (FontStyle) getPrimaryView ().getStyle (NotationPackage.eINSTANCE.getFontStyle ());
+        if (style != null) {
+            setFont (new FontData (style.getFontName (), style.getFontHeight (), (style.isBold () ? SWT.BOLD : SWT.NORMAL) | (style.isItalic () ? SWT.ITALIC : SWT.NORMAL)));
+        }
+    }
+
+    protected void refreshFontColor () {
+        FontStyle style = (FontStyle) getPrimaryView ().getStyle (NotationPackage.eINSTANCE.getFontStyle ());
+        if (style != null) {
+            setFontColor (PresentationResourceManager.getInstance ().getColor (new Integer (style.getFontColor ())));
+        }
+    }
+
+    protected void refreshForegroundColor () {
+        LineStyle style = (LineStyle) getPrimaryView ().getStyle (NotationPackage.eINSTANCE.getLineStyle ());
+        if (style != null) {
+            setForegroundColor (PresentationResourceManager.getInstance ().getColor (new Integer (style.getLineColor ())));
+        }
+    }
+
+    protected void refreshVisibility () {
+        setVisibility (((View) getModel ()).isVisible ());
+    }
+
+    protected void refreshVisuals () {
+        super.refreshVisuals ();
+        refreshVisibility ();
+    }
+
+    protected void removeListenerFilter (String filterId) {
+        if (listenerFilters == null) return;
+
+        Object [] objects = (Object []) listenerFilters.get (filterId);
+        if (objects == null) return;
+
+        if (objects.length > 2) {
+            PresentationListener.getInstance ().removePropertyChangeListener ((EObject) objects [0], (EStructuralFeature) objects [1], (PropertyChangeListener) objects [2]);
+        } else {
+            if (objects [0] instanceof PropertyChangeNotifier) {
+                ((PropertyChangeNotifier) objects [0]).removePropertyChangeListener ((PropertyChangeListener) objects [1]);
+            } else {
+                PresentationListener.getInstance ().removePropertyChangeListener ((EObject) objects [0], (PropertyChangeListener) objects [1]);
+            }
+        }
+        listenerFilters.remove (filterId);
+    }
+
+    protected void setBackgroundColor (Color color) {
+        getFigure ().setBackgroundColor (color);
+    }
+
+    protected void setFont (FontData fontData) {
+        getFigure ().setFont (PresentationResourceManager.getInstance ().getFont (Display.getDefault (), fontData));
+        getFigure ().repaint ();
+    }
+
+    protected void setFontColor (Color color) {
+    }
+
+    protected void setForegroundColor (Color color) {
+        getFigure ().setForegroundColor (color);
+    }
+
+    public void setPropertyValue (Object id, Object value) {
+        ViewUtil.setPropertyValue ((View) getModel (), id, value);
+    }
+
+    public void setStructuralFeatureValue (EStructuralFeature feature, Object value) {
+        ViewUtil.setStructuralFeatureValue ((View) getModel (), feature, value);
+    }
+
+    protected void setVisibility (boolean vis) {
+        if (! vis && getSelected () != SELECTED_NONE) getViewer ().deselect (this);
+
+        getFigure ().setVisible (vis);
+        getFigure ().revalidate ();
+    }
+
+    protected void addNotationalListeners () {
+        addListenerFilter ("View", this, (View) getModel ());
+    }
+
+    protected void addSemanticListeners () {
+        addListenerFilter ("SemanticElement", this, resolveSemanticElement ());
+    }
+
+    protected void removeNotationalListeners () {
+        removeListenerFilter ("View");
+    }
+
+    protected void removeSemanticListeners () {
+        removeListenerFilter ("SemanticElement");
+    }
+
+    public Map getAppearancePropertiesMap () {
+        Map properties = new HashMap ();
+        fillAppearancePropertiesMap (properties);
+        Iterator iterator = getChildren ().iterator ();
+        while (iterator.hasNext ()) {
+            IGraphicalEditPart child = (IGraphicalEditPart) iterator.next ();
+            child.fillAppearancePropertiesMap (properties);
+        }
+        return properties;
+    }
+
+    public void fillAppearancePropertiesMap (Map properties) {
+        if (getAppearancePropertyIDs ().length > 0) {
+            final Dictionary local_properties = new Hashtable ();
+            for (int i = 0;
+            i < getAppearancePropertyIDs ().length; i ++) {
+                String prob = getAppearancePropertyIDs () [i];
+                ENamedElement element = MetaModelUtil.getElement (prob);
+                if (element instanceof EStructuralFeature && ViewUtil.isPropertySupported ((View) getModel (), prob)) local_properties.put (getAppearancePropertyIDs () [i], getStructuralFeatureValue ((EStructuralFeature) element));
+
+            }
+            properties.put (((View) getModel ()).getType (), local_properties);
+        }
+    }
+
+    private static final String [] appearanceProperties = new String [] {Properties.ID_ISVISIBLE};
+
+    private String [] getAppearancePropertyIDs () {
+        return appearanceProperties;
+    }
+
+    public void performRequest (Request request) {
+        if (! isEditModeEnabled ()) {
+            if (RequestConstants.REQ_OPEN.equals (request.getType ())) {
+            } else {
+                return;
+            }
+        }
+        if (RequestConstants.REQ_DIRECT_EDIT == request.getType ()) {
+            performDirectEditRequest (request);
+        } else {
+            EditPart targetEditPart = getTargetEditPart (request);
+            if (targetEditPart != null) {
+                Command command = targetEditPart.getCommand (request);
+                if (command != null) {
+                    getDiagramEditDomain ().getDiagramCommandStack ().execute (command);
+                    return;
+                }
+            }
+        }
+    }
+
+    protected void performDirectEditRequest (Request request) {
+    }
+
+    protected AccessibleEditPart getAccessibleEditPart () {
+        if (accessibleEP == null) accessibleEP = new AccessibleGraphicalEditPart () {
+
+            private String getSemanticName () {
+                EObject semanticElement = resolveSemanticElement ();
+                if (semanticElement != null) {
+                    String name = semanticElement.getClass ().getName ();
+                    int startIndex = name.lastIndexOf ('.') + 1;
+                    int endIndex = name.lastIndexOf ("Impl");
+                    return name.substring (startIndex, endIndex);
+                }
+                return null;
+            }
+
+            public void getName (AccessibleEvent e) {
+                IGraphicalEditPart childEP = getChildBySemanticHint (CommonParserHint.NAME);
+                if (childEP == null) {
+                    childEP = getChildBySemanticHint (CommonParserHint.DESCRIPTION);
+                }
+                if (childEP != null) {
+                    IFigure fig = childEP.getFigure ();
+                    if (fig instanceof WrapLabel) {
+                        e.result = ((WrapLabel) fig).getText ();
+                    }
+                } else {
+                    e.result = getSemanticName ();
+                }
+            }
+
+        }
+
+        ;
+
+        return accessibleEP;
+    }
+
+    protected void registerModel () {
+        super.registerModel ();
+        EObject ref = ((View) getModel ()).getElement ();
+        if (ref == null) {
+            return;
+        }
+        elementGuid = ProxyUtil.getProxyID (ref);
+        ((IDiagramGraphicalViewer) getViewer ()).registerEditPartForElement (elementGuid, this);
+    }
+
+    protected void unregisterModel () {
+        super.unregisterModel ();
+        if (elementGuid == null) {
+            return;
+        }
+        ((IDiagramGraphicalViewer) getViewer ()).unregisterEditPartForElement (elementGuid, this);
+    }
+
+    protected final void refreshChild (GraphicalEditPart child) {
+        removeChild (child);
+        refreshChildren ();
+    }
+
+    protected final void refreshSourceConnection (ConnectionEditPart conn) {
+        removeSourceConnection (conn);
+        refreshSourceConnections ();
+    }
+
+    protected final void refreshTargetConnection (ConnectionEditPart conn) {
+        removeTargetConnection (conn);
+        refreshTargetConnections ();
+    }
+
+    protected final void handleMajorSemanticChange () {
+        if (getParent () instanceof GraphicalEditPart) ((GraphicalEditPart) getParent ()).refreshChild (this);
+        else if (getParent () instanceof ConnectionEditPart) ((ConnectionEditPart) getParent ()).refreshChild (this);
+
+    }
+
+    public DragTracker getDragTracker (Request request) {
+        return new DragEditPartsTrackerEx (this);
+    }
+
+    public final boolean isCanonical () {
+        CanonicalEditPolicy policy = (CanonicalEditPolicy) getEditPolicy (EditPolicyRoles.CANONICAL_ROLE);
+        return policy == null ? false : policy.isActive ();
+    }
+
+    public boolean isSelectable () {
+        return getFigure ().isShowing ();
+    }
+
+    public void disableEditMode () {
+        this.editableEditPart.disableEditMode ();
+    }
+
+    public void enableEditMode () {
+        this.editableEditPart.enableEditMode ();
+    }
+
+    public boolean isEditModeEnabled () {
+        return this.editableEditPart.isEditModeEnabled ();
+    }
+
+    public void showSourceFeedback (Request request) {
+        if (! isEditModeEnabled ()) {
+            return;
+        }
+        super.showSourceFeedback (request);
+    }
+
+    public void showTargetFeedback (Request request) {
+        if (! isEditModeEnabled ()) {
+            return;
+        }
+        super.showTargetFeedback (request);
+    }
+
+    public void eraseSourceFeedback (Request request) {
+        if (! isEditModeEnabled ()) {
+            return;
+        }
+        super.eraseSourceFeedback (request);
+    }
+
+    public void eraseTargetFeedback (Request request) {
+        if (! isEditModeEnabled ()) {
+            return;
+        }
+        super.eraseTargetFeedback (request);
+    }
+
+    public EditPart getPrimaryChildEditPart () {
+        if (getChildren ().size () > 0) return (EditPart) getChildren ().get (0);
+
+        return null;
+    }
+
+    public PreferencesHint getDiagramPreferencesHint () {
+        if (getRoot () instanceof IDiagramPreferenceSupport) {
+            return ((IDiagramPreferenceSupport) getRoot ()).getPreferencesHint ();
+        }
+        return PreferencesHint.USE_DEFAULTS;
+    }
+
+    public void removeNotify () {
+        if (getSelected () != SELECTED_NONE) getViewer ().deselect (this);
+
+        if (hasFocus ()) getViewer ().setFocus (null);
+
+        List children = getChildren ();
+        for (int i = 0;
+        i < children.size (); i ++) ((EditPart) children.get (i)).removeNotify ();
+
+        unregister ();
+        List conns;
+        conns = getSourceConnections ();
+        for (int i = 0;
+        i < conns.size (); i ++) {
+            ConnectionEditPart conn = (ConnectionEditPart) conns.get (i);
+            if (conn.getSource () == this) conn.setSource (null);
+
+        }
+        conns = getTargetConnections ();
+        for (int i = 0;
+        i < conns.size (); i ++) {
+            ConnectionEditPart conn = (ConnectionEditPart) conns.get (i);
+            if (conn.getTarget () == this) conn.setTarget (null);
+
+        }
+    }
+
+    public void notifyChanged (Notification notification) {
+        if (isActive ()) {
+            handleNotificationEvent (notification);
+        }
+    }
+
+    protected void handleNotificationEvent (Notification event) {
+        if (NotationPackage.eINSTANCE.getView_PersistedChildren ().equals (event.getFeature ()) || NotationPackage.eINSTANCE.getView_TransientChildren ().equals (event.getFeature ())) {
+            refreshChildren ();
+        } else if (NotationPackage.eINSTANCE.getView_Visible ().equals (event.getFeature ())) {
+            refreshVisibility ();
+        } else if (NotationPackage.eINSTANCE.getView_Element ().equals (event.getFeature ())) {
+            handleMajorSemanticChange ();
+        }
+
+    }
+
+}
+

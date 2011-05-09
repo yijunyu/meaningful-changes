@@ -1,0 +1,73 @@
+2a3,14
+> import java.io.File;
+> 
+> import java.io.FileOutputStream;
+> 
+> import java.io.IOException;
+> 
+> import java.net.MalformedURLException;
+> 
+> import java.util.ArrayList;
+> 
+> import java.util.StringTokenizer;
+> 
+12c24,25
+<     private String myTemplateRoot;
+---
+>     private String [] myTemplateRoots;
+>     private String myOutFile;
+22,23c35,40
+<     public void setBareInput (int i) {
+<         myTemplateTarget = i;
+---
+>     public void setInputURI (String uri) {
+>         myTemplateTarget = uri;
+>     }
+> 
+>     public void setOutFile (String uri) {
+>         myOutFile = uri;
+27c44,49
+<         myTemplateRoot = root;
+---
+>         ArrayList < String > roots = new ArrayList < String > ();
+>         for (StringTokenizer st = new StringTokenizer (root, ";, ");
+>         st.hasMoreTokens ();) {
+>             roots.add (st.nextToken ().trim ());
+>         }
+>         myTemplateRoots = roots.toArray (new String [roots.size ()]);
+42a65
+>         if (myOutFile == null) {
+43a67,76
+>         } else {
+>             try {
+>                 File f = getProject ().resolveFile (myOutFile);
+>                 FileOutputStream os = new FileOutputStream (f);
+>                 os.write (result.getBytes ());
+>                 os.close ();
+>             } catch (IOException ex) {
+>                 throw new BuildException ("Can't write to " + myOutFile, ex, getLocation ());
+>             }
+>         }
+52a86,88
+>         if (myTemplateRoots == null || myTemplateRoots.length == 0) {
+>             throw new BuildException ("No template root specified", getLocation ());
+>         }
+63c99
+<     protected XpandFacade createFacade () {
+---
+>     protected XpandFacade createFacade () throws BuildException {
+66c102,104
+<             xf.addLocation (myTemplateRoot);
+---
+>             for (String r : myTemplateRoots) {
+>                 xf.addLocation (r);
+>             }
+68,69c106,107
+<         } catch (Exception ex) {
+<             ex.printStackTrace ();
+---
+>         } catch (MalformedURLException ex) {
+>             throw new BuildException (ex, getLocation ());
+71,72d108
+<         assert false;
+<         return null;

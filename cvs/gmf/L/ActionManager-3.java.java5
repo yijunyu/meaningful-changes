@@ -1,0 +1,213 @@
+package org.eclipse.gmf.runtime.common.ui.action;
+
+import java.lang.reflect.InvocationTargetException;
+
+import java.util.ArrayList;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.jface.dialogs.ProgressMonitorDialog;
+
+import org.eclipse.jface.operation.IRunnableWithProgress;
+
+import org.eclipse.swt.custom.BusyIndicator;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+
+import org.eclipse.gmf.runtime.common.ui.internal.l10n.ResourceManager;
+
+public class ActionManager {
+    protected static final String EMPTY_STRING = "";
+    public static final String REPEAT_LABEL_PREFIX = ResourceManager.getI18NString ("ActionManager.repeat.label.prefix");
+    protected static final String SPACE = " ";
+    private static ActionManager actionManager = null;
+    private final CommandManager commandManager;
+    private IRepeatableAction action = null;
+    private final List listeners = Collections.synchronizedList (new ArrayList ());
+
+    public ActionManager (CommandManager commandManager) {
+        super ();
+        assert null != commandManager;
+        this.commandManager = commandManager;
+    }
+
+    public static ActionManager getDefault () {
+        if (null == actionManager) {
+            actionManager = new ActionManager (CommandManager.getDefault ());
+        }
+        return actionManager;
+    }
+
+    public final CommandManager getCommandManager () {
+        return commandManager;
+    }
+
+    protected final IRepeatableAction getAction () {
+        return action;
+    }
+
+    protected final void setAction (IRepeatableAction action) {
+        this.action = action;
+    }
+
+    protected final List getListeners () {
+        return listeners;
+    }
+
+    public String getRepeatLabel () {
+        return REPEAT_LABEL_PREFIX + (canRepeat () ? SPACE + getAction ().getLabel () : EMPTY_STRING);
+    }
+
+    public void addActionManagerChangeListener (IActionManagerChangeListener listener) {
+        assert null != listener;
+        getListeners ().add (listener);
+    }
+
+    public void removeActionManagerChangeListener (IActionManagerChangeListener listener) {
+        assert null != listener;
+        getListeners ().remove (listener);
+    }
+
+    protected void fireActionManagerChange (ActionManagerChangeEvent event) {
+        assert null != event;
+        List targets = null;
+        synchronized (getListeners ()) {
+            targets = new ArrayList (getListeners ());
+        }
+        for (Iterator i = targets.iterator ();
+        i.hasNext ();) {
+            ((IActionManagerChangeListener) i.next ()).actionManagerChanged (event);
+        }
+    }
+
+    public boolean canRepeat () {
+        return false;
+    }
+
+    public void clear () {
+        setAction (null);
+        fireActionManagerChange (new ActionManagerChangeEvent (this));
+    }
+
+    public void repeat () {
+        if (! canRepeat ()) {
+            UnsupportedOperationException uoe = new UnsupportedOperationException ();
+            Trace.throwing (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_THROWING, getClass (), "repeat", uoe);
+            throw uoe;
+        }
+        IRepeatableAction.WorkIndicatorType type = getAction ().getWorkIndicatorType ();
+        if (type == IRepeatableAction.WorkIndicatorType.PROGRESS_MONITOR) {
+            repeatActionInProgressMonitorDialog (getAction (), false);
+        } else if (type == IRepeatableAction.WorkIndicatorType.CANCELABLE_PROGRESS_MONITOR) {
+            repeatActionInProgressMonitorDialog (getAction (), true);
+        } else if (type == IRepeatableAction.WorkIndicatorType.BUSY) {
+            BusyIndicator.showWhile (null, new Runnable () {
+
+                public void run () {
+                    getAction ().repeat (new NullProgressMonitor ());
+                }
+
+            }
+
+            );
+        } else {
+            getAction ().run (new NullProgressMonitor ());
+        }
+
+        Trace.trace (CommonUIPlugin.getDefault (), CommonUIDebugOptions.ACTIONS_REPEAT, "Action '" + String.valueOf (getAction ()) + "' repeated.");
+    }
+
+    public void run (final IRepeatableAction theAction) {
+        if (! theAction.isRunnable ()) {
+            UnsupportedOperationException uoe = new UnsupportedOperationException ();
+            Trace.throwing (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_THROWING, getClass (), "run", uoe);
+            throw uoe;
+        }
+        boolean setup = theAction.setup ();
+        if (! setup) {
+            return;
+        }
+        IRepeatableAction.WorkIndicatorType type = theAction.getWorkIndicatorType ();
+        if (type == IRepeatableAction.WorkIndicatorType.PROGRESS_MONITOR) {
+            runActionInProgressMonitorDialog (theAction, false);
+        } else if (type == IRepeatableAction.WorkIndicatorType.CANCELABLE_PROGRESS_MONITOR) {
+            runActionInProgressMonitorDialog (theAction, true);
+        } else if (type == IRepeatableAction.WorkIndicatorType.BUSY) {
+            BusyIndicator.showWhile (null, new Runnable () {
+
+                public void run () {
+                    theAction.run (new NullProgressMonitor ());
+                }
+
+            }
+
+            );
+        } else {
+            theAction.run (new NullProgressMonitor ());
+        }
+
+        setAction (theAction);
+        fireActionManagerChange (new ActionManagerChangeEvent (this, theAction));
+        Trace.trace (CommonUIPlugin.getDefault (), CommonUIDebugOptions.ACTIONS_RUN, "Action '" + String.valueOf (getAction ()) + "' run.");
+    }
+
+    private void runInProgressMonitorDialog (IRunnableWithProgress runnable, boolean cancelable) {
+        try {
+            new ProgressMonitorDialog (null).run (false, cancelable, runnable);
+        } catch (InvocationTargetException ite) {
+            Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", ite);
+            Log.error (CommonUIPlugin.getDefault (), CommonUIStatusCodes.SERVICE_FAILURE, "run", ite);
+            RuntimeException cre = new RuntimeException (ite.getTargetException ());
+            Trace.throwing (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_THROWING, getClass (), "run", cre);
+            throw cre;
+        } catch (InterruptedException ie) {
+            Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", ie);
+        }
+    }
+
+    private void runActionInProgressMonitorDialog (final IRepeatableAction act, boolean cancelable) {
+        IRunnableWithProgress runnable = new IRunnableWithProgress () {
+
+            public void run (IProgressMonitor monitor) {
+                act.run (monitor);
+            }
+
+        }
+
+        ;
+        runInProgressMonitorDialog (runnable, cancelable);
+    }
+
+    private void repeatActionInProgressMonitorDialog (final IRepeatableAction act, boolean cancelable) {
+        IRunnableWithProgress runnable = new IRunnableWithProgress () {
+
+            public void run (IProgressMonitor monitor) {
+                act.repeat (monitor);
+            }
+
+        }
+
+        ;
+        runInProgressMonitorDialog (runnable, cancelable);
+    }
+
+}
+

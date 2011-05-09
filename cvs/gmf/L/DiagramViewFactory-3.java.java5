@@ -1,0 +1,97 @@
+package org.eclipse.gmf.runtime.diagram.ui.view.factories;
+
+import java.util.ArrayList;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.jface.preference.IPreferenceStore;
+
+import org.eclipse.jface.preference.PreferenceConverter;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.graphics.FontData;
+
+import org.eclipse.swt.graphics.RGB;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.services.view.ViewService;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.ui.IPreferenceConstants;
+
+import org.eclipse.gmf.runtime.diagram.ui.properties.Properties;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.core.view.factories.DiagramFactory;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.FigureUtilities;
+
+import org.eclipse.gmf.runtime.notation.Diagram;
+
+import org.eclipse.gmf.runtime.notation.NotationFactory;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class DiagramViewFactory implements DiagramFactory {
+    private PreferencesHint preferencesHint;
+
+    public Diagram createDiagram (IAdaptable semanticAdapter, String diagramKind, PreferencesHint thePreferencesHint) {
+        setPreferencesHint (thePreferencesHint);
+        Diagram diagram = (Diagram) MEditingDomainGetter.getMEditingDomain (semanticAdapter).create (NotationPackage.eINSTANCE.getDiagram ());
+        diagram.getStyles ().addAll (createStyles (diagram));
+        if (diagramKind != null) diagram.setType (diagramKind);
+
+        if (semanticAdapter != null) diagram.setElement ((EObject) semanticAdapter.getAdapter (EObject.class));
+        else diagram.setElement (null);
+
+        decorateView (diagram, semanticAdapter, diagramKind);
+        return diagram;
+    }
+
+    protected void decorateView (View view, IAdaptable semanticAdapter, String diagramKind) {
+        initializeFromPreferences (view);
+    }
+
+    protected List createStyles (View view) {
+        List styles = new ArrayList ();
+        styles.add (NotationFactory.eINSTANCE.createDiagramStyle ());
+        return styles;
+    }
+
+    protected void initializeFromPreferences (View view) {
+        IPreferenceStore store = (IPreferenceStore) getPreferencesHint ().getPreferenceStore ();
+        RGB lineRGB = PreferenceConverter.getColor (store, IPreferenceConstants.PREF_LINE_COLOR);
+        ViewUtil.setPropertyValue (view, Properties.ID_LINECOLOR, FigureUtilities.RGBToInteger (lineRGB));
+        FontData fontData = PreferenceConverter.getFontData (store, IPreferenceConstants.PREF_DEFAULT_FONT);
+        ViewUtil.setPropertyValue (view, Properties.ID_FONTNAME, fontData.getName ());
+        ViewUtil.setPropertyValue (view, Properties.ID_FONTSIZE, new Integer (fontData.getHeight ()));
+        ViewUtil.setPropertyValue (view, Properties.ID_FONTBOLD, Boolean.valueOf ((fontData.getStyle () & SWT.BOLD) != 0));
+        ViewUtil.setPropertyValue (view, Properties.ID_FONTITALIC, Boolean.valueOf ((fontData.getStyle () & SWT.ITALIC) != 0));
+        RGB fontRGB = PreferenceConverter.getColor (store, IPreferenceConstants.PREF_FONT_COLOR);
+        ViewUtil.setPropertyValue (view, Properties.ID_FONTCOLOR, FigureUtilities.RGBToInteger (fontRGB));
+    }
+
+    protected static ViewService getViewService () {
+        return ViewService.getInstance ();
+    }
+
+    protected PreferencesHint getPreferencesHint () {
+        return preferencesHint;
+    }
+
+    protected void setPreferencesHint (PreferencesHint preferencesHint) {
+        this.preferencesHint = preferencesHint;
+    }
+
+}
+

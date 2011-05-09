@@ -1,0 +1,45 @@
+24a25
+> import org.eclipse.gmf.runtime.emf.type.core.ElementTypeRegistry;
+53,55c54,59
+< 		Command semanticCommand = getSemanticCommandSwitch(completedRequest);
+< 		if (semanticCommand == null) {
+< 			return UnexecutableCommand.INSTANCE;
+---
+> 		IElementType elementType = ElementTypeRegistry.getInstance().getElementType(completedRequest.getEditHelperContext());
+> 		Command semanticHelperCommand = null;
+> 		if (elementType != null) {
+> 			ICommand semanticCommand = elementType.getEditCommand(completedRequest);
+> 			if (semanticCommand != null) {
+> 				semanticHelperCommand = new EtoolsProxyCommand(semanticCommand);
+56a61,77
+> 		}
+> 		Command semanticPolicyCommand = getSemanticCommandSwitch(completedRequest);
+> 
+> 		// combine commands from edit policy and edit helper
+> 		if (semanticPolicyCommand == null) {
+> 			if (semanticHelperCommand == null) {
+> 				return null;
+> 			} else {
+> 				semanticPolicyCommand = semanticHelperCommand;
+> 			}
+> 		} else {
+> 			if (semanticHelperCommand != null) {
+> 				semanticPolicyCommand = semanticPolicyCommand.chain(semanticHelperCommand);
+> 			}
+> 		}
+> 
+> 		// append command to delete view if necessary
+63,64c84,85
+< 				ICommand deleteCommand = new DeleteCommand((View) getHost().getModel());
+< 				semanticCommand = semanticCommand.chain(new EtoolsProxyCommand(deleteCommand));
+---
+> 				Command deleteViewCommand = new EtoolsProxyCommand(new DeleteCommand(((IGraphicalEditPart) getHost()).getEditingDomain(), (View) getHost().getModel()));
+> 				semanticPolicyCommand = semanticPolicyCommand.chain(deleteViewCommand);
+66c87
+< 			return semanticCommand;
+---
+> 			return semanticPolicyCommand;
+68c89
+< 		return UnexecutableCommand.INSTANCE;
+---
+> 		return null;

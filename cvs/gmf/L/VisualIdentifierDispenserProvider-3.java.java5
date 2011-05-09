@@ -1,0 +1,66 @@
+package org.eclipse.gmf.internal.bridge.transform;
+
+import org.eclipse.core.runtime.Platform;
+
+import org.eclipse.emf.common.util.URI;
+
+import org.eclipse.gmf.internal.bridge.NaiveIdentifierDispenser;
+
+import org.eclipse.gmf.internal.bridge.StatefulVisualIdentifierDispencer;
+
+import org.eclipse.gmf.internal.bridge.VisualIdentifierDispenser;
+
+import org.eclipse.gmf.internal.bridge.ui.Plugin;
+
+import org.osgi.framework.Bundle;
+
+public class VisualIdentifierDispenserProvider {
+    private VisualIdentifierDispenser dispenser;
+    private final URI myStateBaseURI;
+
+    public VisualIdentifierDispenserProvider (URI stateBaseURI) {
+        myStateBaseURI = stateBaseURI;
+    }
+
+    private VisualIdentifierDispenser initialize () {
+        Bundle tracePluginBundle = Platform.getBundle ("org.eclipse.gmf.bridge.trace");
+        if (tracePluginBundle != null) {
+            try {
+                Class < ? > despenserClass = tracePluginBundle.loadClass ("org.eclipse.gmf.internal.bridge.trace.MergingIdentifierDispenser");
+                return (VisualIdentifierDispenser) despenserClass.newInstance ();
+            } catch (ClassNotFoundException e) {
+                Plugin.log (Plugin.createError ("MergingIdentifierDispenser was not found in org.eclipse.gmf.bridge.trace bundle", e));
+            } catch (InstantiationException e) {
+                Plugin.log (Plugin.createError ("MergingIdentifierDispenser was not instantiated", e));
+            } catch (IllegalAccessException e) {
+                Plugin.log (Plugin.createError ("IllegalAccessException while instantiating MergingIdentifierDispenser", e));
+            } catch (ClassCastException ex) {
+                Plugin.log (Plugin.createError ("MergingIdentifierDispenser was not instantiated", ex));
+            }
+        }
+        return new NaiveIdentifierDispenser ();
+    }
+
+    public VisualIdentifierDispenser get () {
+        assert dispenser != null;
+        return dispenser;
+    }
+
+    public void acquire () {
+        assert dispenser == null;
+        dispenser = initialize ();
+        if (dispenser instanceof StatefulVisualIdentifierDispencer) {
+            StatefulVisualIdentifierDispencer statefulDispencer = (StatefulVisualIdentifierDispencer) dispenser;
+            statefulDispencer.loadState (myStateBaseURI);
+        }
+    }
+
+    public void release () {
+        if (dispenser instanceof StatefulVisualIdentifierDispencer) {
+            ((StatefulVisualIdentifierDispencer) dispenser).saveState ();
+        }
+        dispenser = null;
+    }
+
+}
+

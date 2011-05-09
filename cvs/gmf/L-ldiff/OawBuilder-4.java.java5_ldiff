@@ -1,0 +1,219 @@
+30a43,43
+> import org.eclipse.gmf.internal.xpand.util.ParserException;
+31,31d42
+< import org.eclipse.gmf.internal.xpand.ResourceManager;
+32,32c44,44
+< 
+---
+> 
+32a45,46
+> import org.eclipse.gmf.internal.xpand.util.ParserException.ErrorLocationInfo;
+> 
+48a141,142
+>         delta.accept (new XpandResourceVisitor (monitor));
+>     }
+49,50d140
+<     class OawDeltaVisitor implements IResourceDeltaVisitor {
+<         private IProgressMonitor monitor;
+51a144,146
+>     private WorkspaceResourceManager getResourceManager () {
+>         return resourceManager;
+>     }
+51,51c143,143
+< 
+---
+> 
+52,54d143
+<         public OawDeltaVisitor (final IProgressMonitor monitor) {
+<             this.monitor = monitor;
+<         }
+55,55c147,147
+< 
+---
+> 
+55a148,167
+>     private static void updateMarkers (IFile resource, Set < AnalysationIssue > issues) {
+>         OawMarkerManager.deleteMarkers (resource);
+>         OawMarkerManager.addMarkers (resource, issues.toArray (new AnalysationIssue [issues.size ()]));
+>     }
+> 
+>     private static void updateMarkers (IFile resource, ErrorLocationInfo [] parsingErrors) {
+>         OawMarkerManager.deleteMarkers (resource);
+>         OawMarkerManager.addMarkers (resource, parsingErrors);
+>     }
+> 
+>     private class XpandResourceVisitor implements IResourceVisitor, IResourceDeltaVisitor {
+>         private IProgressMonitor monitor;
+> 
+>         public XpandResourceVisitor (final IProgressMonitor monitor) {
+>             this.monitor = monitor;
+>         }
+> 
+>         public boolean visit (final IResource resource) {
+>             if (! resource.isDerived () && (resource instanceof IFile) && isFileOfInterest ((IFile) resource)) {
+>                 reloadResource ((IFile) resource);
+56,59d147
+<         public boolean visit (final IResourceDelta delta) throws CoreException {
+<             final IResource resource = delta.getResource ();
+<             if (resource.isDerived ()) {
+<                 return false;
+60a169,177
+>             monitor.worked (1);
+>             return true;
+>         }
+> 
+>         public boolean visit (final IResourceDelta delta) throws CoreException {
+>             final IResource resource = delta.getResource ();
+>             if (resource.isDerived ()) {
+>                 return false;
+>             }
+60,60c168,168
+<             }
+---
+>             }
+61,61c178,178
+<             if ((resource instanceof IFile)) {
+---
+>             if ((resource instanceof IFile)) {
+62,62c179,179
+<                 IFile file = (IFile) resource;
+---
+>                 IFile file = (IFile) resource;
+63,63c180,180
+<                 if (! isFileOfInterest (file)) {
+---
+>                 if (! isFileOfInterest (file)) {
+64,64c181,181
+<                     return false;
+---
+>                     return false;
+65,65c182,182
+<                 }
+---
+>                 }
+66,66c183,183
+<                 switch (delta.getKind ()) {
+---
+>                 switch (delta.getKind ()) {
+67,67c184,184
+<                     case IResourceDelta.ADDED :
+---
+>                     case IResourceDelta.ADDED :
+68,68c185,185
+<                         reloadResource (file);
+---
+>                         reloadResource (file);
+69,69c186,186
+<                         break;
+---
+>                         break;
+70,70c187,187
+<                     case IResourceDelta.REMOVED :
+---
+>                     case IResourceDelta.REMOVED :
+71,71c188,188
+<                         handleRemovement (file);
+---
+>                         handleRemovement (file);
+72,72c189,189
+<                         break;
+---
+>                         break;
+73,73c190,190
+<                     case IResourceDelta.CHANGED :
+---
+>                     case IResourceDelta.CHANGED :
+74,74c191,191
+<                         reloadResource (file);
+---
+>                         reloadResource (file);
+75,75c192,192
+<                         break;
+---
+>                         break;
+76a194,200
+>             } else if (resource instanceof IProject) {
+>                 if (delta.getKind () == IResourceDelta.REMOVED) {
+>                     System.err.println ("Project removed:" + resource.getName ());
+>                 }
+>                 if (delta.getKind () == IResourceDelta.OPEN) {
+>                     System.err.println ("Project open:" + ((IProject) resource).isOpen ());
+>                 }
+76,76c193,193
+<                 }
+---
+>                 }
+77a202,202
+> 
+77,77c201,201
+<             }
+---
+>             }
+78,78c203,203
+<             monitor.worked (1);
+---
+>             monitor.worked (1);
+79,79c204,204
+<             return true;
+---
+>             return true;
+80,99d204
+<         }
+< 
+<     }
+< 
+<     private class XpandResourceVisitor implements IResourceVisitor {
+<         private IProgressMonitor monitor;
+< 
+<         public XpandResourceVisitor (final IProgressMonitor monitor) {
+<             this.monitor = monitor;
+<         }
+< 
+<         public boolean visit (final IResource resource) {
+<             if (! resource.isDerived () && (resource instanceof IFile) && isFileOfInterest ((IFile) resource)) {
+<                 reloadResource ((IFile) resource);
+<             }
+<             monitor.worked (1);
+<             return true;
+<         }
+< 
+<     }
+108a63,67
+>     @Override
+>     protected void startupOnInitialize () {
+>         super.startupOnInitialize ();
+>         resourceManager = new WorkspaceResourceManager (getProject ());
+>     }
+108a51,51
+>     private WorkspaceResourceManager resourceManager;
+109,109c52,52
+<     private final Map < XtendResource, IFile > xtendResourcesToAnalyze = new HashMap < XtendResource, IFile > ();
+---
+>     private final Map < XtendResource, IFile > xtendResourcesToAnalyze = new HashMap < XtendResource, IFile > ();
+110,110c53,53
+<     private final Map < XpandResource, IFile > xpandResourcesToAnalyze = new HashMap < XpandResource, IFile > ();
+---
+>     private final Map < XpandResource, IFile > xpandResourcesToAnalyze = new HashMap < XpandResource, IFile > ();
+115a73,73
+>                 System.err.println ("First build, kind:" + kind + " and is FULLBUILD:" + (kind == FULL_BUILD));
+146,150d103
+<     private static void updateMarkers (IFile resource, Set < AnalysationIssue > issues) {
+<         OawMarkerManager.deleteMarkers (resource);
+<         OawMarkerManager.addMarkers (resource, issues.toArray (new AnalysationIssue [issues.size ()]));
+<     }
+< 
+155a109,109
+>         try {
+167a122,128
+>         } catch (ParserException ex) {
+>             updateMarkers (resource, ex.getParsingErrors ());
+>         } catch (Exception ex) {
+>             Activator.logError (ex);
+>             OawMarkerManager.deleteMarkers (resource);
+>             OawMarkerManager.addErrorMarker (resource, ex.getMessage (), - 1, - 1);
+>         }
+180,180d140
+<         delta.accept (new OawDeltaVisitor (monitor));
+183,184d206
+<     protected ResourceManager getResourceManager () {
+<         return Activator.getResourceManager (getProject ());

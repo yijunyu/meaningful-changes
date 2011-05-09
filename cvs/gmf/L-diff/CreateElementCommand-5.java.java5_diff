@@ -1,0 +1,70 @@
+3c3,5
+< import java.util.Collection;
+---
+> import org.eclipse.core.commands.ExecutionException;
+> 
+> import org.eclipse.core.runtime.IAdaptable;
+18a21,24
+> import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+> 
+> import org.eclipse.gmf.runtime.emf.core.util.PackageUtil;
+> 
+38c44
+<     protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+---
+>     protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+42,43c48,49
+<         if (configureCommand != null && configureCommand.isExecutable ()) {
+<             configureCommand.execute (progressMonitor);
+---
+>         if (configureCommand != null && configureCommand.canExecute ()) {
+>             configureCommand.execute (monitor, info);
+46c52
+<         return newOKCommandResult (newElement);
+---
+>         return CommandResult.newOKCommandResult (newElement);
+50c56
+<         ConfigureRequest configureRequest = new ConfigureRequest (newElement, getElementType ());
+---
+>         ConfigureRequest configureRequest = new ConfigureRequest (getEditingDomain (), newElement, getElementType ());
+55a62
+>         EReference containment = getContainmentFeature ();
+57,66c64,67
+<         EObject element = eClass.getEPackage ().getEFactoryInstance ().create (eClass);
+<         if (getContainmentFeature () != null) {
+<             EObject container = getElementToEdit ();
+<             if (container != null) {
+<                 if (getContainmentFeature ().isMany ()) {
+<                     ((Collection) container.eGet (getContainmentFeature ())).add (element);
+<                 } else {
+<                     container.eSet (getContainmentFeature (), element);
+<                 }
+<             }
+---
+>         if (containment != null) {
+>             EObject element = getElementToEdit ();
+>             if (element != null) return EMFCoreUtil.create (element, containment, eClass);
+> 
+68c69
+<         return element;
+---
+>         return null;
+93a95,103
+>         if (containmentFeature == null) {
+>             EClass classToEdit = getEClassToEdit ();
+>             if (classToEdit != null) {
+>                 IElementType type = getElementType ();
+>                 if (type != null) {
+>                     containmentFeature = PackageUtil.findFeature (classToEdit, type.getEClass ());
+>                 }
+>             }
+>         }
+109c119
+<     public boolean isExecutable () {
+---
+>     public boolean canExecute () {
+119c129,130
+<             return result && super.isExecutable ();
+---
+>             result = result && PackageUtil.canContain (getEClassToEdit (), getContainmentFeature (), getElementType ().getEClass (), false);
+>             return result && super.canExecute ();

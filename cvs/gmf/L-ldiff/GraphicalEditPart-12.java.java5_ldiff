@@ -1,0 +1,128 @@
+2a3,6
+> import java.beans.PropertyChangeEvent;
+> 
+> import java.beans.PropertyChangeListener;
+> 
+79,79c83,83
+< import org.eclipse.gmf.runtime.diagram.core.listener.NotificationListener;
+---
+> import org.eclipse.gmf.runtime.diagram.core.listener.NotificationEvent;
+82a87,88
+> import org.eclipse.gmf.runtime.diagram.core.listener.PropertyChangeNotifier;
+> 
+102a117,117
+> import org.eclipse.gmf.runtime.diagram.ui.properties.Properties;
+103,103d116
+< import org.eclipse.gmf.runtime.diagram.ui.internal.properties.Properties;
+104,104c118,118
+< 
+---
+> 
+153,153c159,159
+< public abstract class GraphicalEditPart extends AbstractGraphicalEditPart implements IGraphicalEditPart, IAdaptableSelection, NotificationListener {
+---
+> public abstract class GraphicalEditPart extends AbstractGraphicalEditPart implements IGraphicalEditPart, PropertyChangeListener, IAdaptableSelection {
+175a182,192
+>     protected void addListenerFilter (String filterId, PropertyChangeListener listener, PropertyChangeNotifier notifier) {
+>         if (notifier == null) return;
+> 
+>         Assert.isNotNull (filterId);
+>         Assert.isNotNull (listener);
+>         if (listenerFilters == null) listenerFilters = new HashMap ();
+> 
+>         notifier.addPropertyChangeListener (listener);
+>         listenerFilters.put (filterId, new Object [] {notifier, listener});
+>     }
+> 
+176,176c193,193
+<     protected void addListenerFilter (String filterId, NotificationListener listener, EObject element) {
+---
+>     protected void addListenerFilter (String filterId, PropertyChangeListener listener, EObject element) {
+183,183c200,200
+<         PresentationListener.getInstance ().addNotificationListener (element, listener);
+---
+>         PresentationListener.getInstance ().addPropertyChangeListener (element, listener);
+187,187c204,204
+<     protected void addListenerFilter (String filterId, NotificationListener listener, EObject element, EStructuralFeature feature) {
+---
+>     protected void addListenerFilter (String filterId, PropertyChangeListener listener, EObject element, EStructuralFeature feature) {
+194,194c211,211
+<         PresentationListener.getInstance ().addNotificationListener (element, listener);
+---
+>         PresentationListener.getInstance ().addPropertyChangeListener (element, listener);
+223,223c240,240
+<                     PresentationListener.getInstance ().removeNotificationListener ((EObject) obj [0], (EStructuralFeature) obj [1], (NotificationListener) obj [2]);
+---
+>                     PresentationListener.getInstance ().removePropertyChangeListener ((EObject) obj [0], (EStructuralFeature) obj [1], (PropertyChangeListener) obj [2]);
+224a242,242
+>                     if (obj [0] instanceof PropertyChangeNotifier) ((PropertyChangeNotifier) obj [0]).removePropertyChangeListener ((PropertyChangeListener) obj [1]);
+225,225c243,243
+<                     PresentationListener.getInstance ().removeNotificationListener ((EObject) obj [0], (NotificationListener) obj [1]);
+---
+>                     else PresentationListener.getInstance ().removePropertyChangeListener ((EObject) obj [0], (PropertyChangeListener) obj [1]);
+225a244,244
+> 
+432a452,472
+>     public final void propertyChange (PropertyChangeEvent event) {
+>         if (isActive ()) handlePropertyChangeEvent (event);
+> 
+>     }
+> 
+>     protected void handlePropertyChangeEvent (PropertyChangeEvent event) {
+>         if (Properties.ID_PERSISTED_CHILDREN.equals (event.getPropertyName ()) || Properties.ID_TRANSIENT_CHILDREN.equals (event.getPropertyName ())) {
+>             refreshChildren ();
+>         } else if (Properties.ID_ISVISIBLE.equals (event.getPropertyName ())) {
+>             refreshVisibility ();
+>         } else if (Properties.ID_SEMANTICREF.equals (event.getPropertyName ())) {
+>             handleMajorSemanticChange ();
+>         } else if (event instanceof NotificationEvent) {
+>             handleNotificationEvent ((NotificationEvent) event);
+>         }
+> 
+>     }
+> 
+>     protected void handleNotificationEvent (NotificationEvent e) {
+>     }
+> 
+531,531c571,571
+<             PresentationListener.getInstance ().removeNotificationListener ((EObject) objects [0], (EStructuralFeature) objects [1], (NotificationListener) objects [2]);
+---
+>             PresentationListener.getInstance ().removePropertyChangeListener ((EObject) objects [0], (EStructuralFeature) objects [1], (PropertyChangeListener) objects [2]);
+532a573,575
+>             if (objects [0] instanceof PropertyChangeNotifier) {
+>                 ((PropertyChangeNotifier) objects [0]).removePropertyChangeListener ((PropertyChangeListener) objects [1]);
+>             } else {
+533,533c576,576
+<             PresentationListener.getInstance ().removeNotificationListener ((EObject) objects [0], (NotificationListener) objects [1]);
+---
+>                 PresentationListener.getInstance ().removePropertyChangeListener ((EObject) objects [0], (PropertyChangeListener) objects [1]);
+533a577,577
+>             }
+780a825,851
+>     public void removeNotify () {
+>         if (getSelected () != SELECTED_NONE) getViewer ().deselect (this);
+> 
+>         if (hasFocus ()) getViewer ().setFocus (null);
+> 
+>         List children = getChildren ();
+>         for (int i = 0;
+>         i < children.size (); i ++) ((EditPart) children.get (i)).removeNotify ();
+> 
+>         unregister ();
+>         List conns;
+>         conns = getSourceConnections ();
+>         for (int i = 0;
+>         i < conns.size (); i ++) {
+>             ConnectionEditPart conn = (ConnectionEditPart) conns.get (i);
+>             if (conn.getSource () == this) conn.setSource (null);
+> 
+>         }
+>         conns = getTargetConnections ();
+>         for (int i = 0;
+>         i < conns.size (); i ++) {
+>             ConnectionEditPart conn = (ConnectionEditPart) conns.get (i);
+>             if (conn.getTarget () == this) conn.setTarget (null);
+> 
+>         }
+>     }
+> 

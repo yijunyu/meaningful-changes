@@ -1,0 +1,246 @@
+20a21,22
+> import org.eclipse.core.runtime.Platform;
+> import org.eclipse.core.runtime.jobs.IJobManager;
+24a27
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+62c65,66
+<     private IElementSelectionInput elementSelectionInput;
+---
+>     protected class JobData {
+>         public IElementSelectionInput elementSelectionInput;
+64c68
+<     private IElementSelectionListener elementSelectionListener;
+---
+>         public IElementSelectionListener elementSelectionListener;
+66c70,89
+<     private HashMap jobs = new HashMap();
+---
+>         public HashMap jobs = new HashMap();
+>     }
+>     
+>     private Map jobs2Data = new HashMap();
+>     
+>     public JobData getJobData() {
+>         Job currentJob = jobManager.currentJob();
+>         assert currentJob != null;
+>         
+>         if(currentJob == null) {
+>             return null;
+>         }
+>         
+>         JobData data = null;
+>         synchronized(jobs2Data) {
+>             data = (JobData)jobs2Data.get(currentJob);
+>         }
+>         
+>         return data;
+>     }
+74,75c97
+<         instance.configureProviders(CommonUIServicesPlugin.getPluginId(),
+<             "elementSelectionProviders"); //$NON-NLS-1$
+---
+>         instance.configureProviders();
+111,115c133,140
+<         elementSelectionInput = input;
+<         elementSelectionListener = listener;
+<         ElementSelectionServiceJob job = new ElementSelectionServiceJob(
+<             getJobName(), this);
+<         job.setPriority(Job.SHORT);
+---
+>         ElementSelectionServiceJob job = createSelectionJob();
+>         JobData data = new JobData();
+>         data.elementSelectionInput = input;
+>         data.elementSelectionListener = listener;
+>         job.setName(getJobName(data));
+>         synchronized(jobs2Data) {
+>             jobs2Data.put(job, data);
+>         }
+119a145,164
+>     
+>     protected String getJobName() {
+>         return StringStatics.BLANK;
+>     }
+>     
+>     /**
+>      * Creates the selection service job that manages the individual provider
+>      * search jobs.  This method should configure the new job with the appropriate
+>      * priority, scheduling rules, etc. but should not schedule it.
+>      * 
+>      * @return a new selection service job
+>      */
+>     protected ElementSelectionServiceJob createSelectionJob() {
+>         ElementSelectionServiceJob job = new ElementSelectionServiceJob(getJobName(), this);
+>         job.setPriority(Job.SHORT);
+>         return job;
+>     }
+>     
+>     public static final IJobManager jobManager = Platform.getJobManager();
+> 
+123a169,172
+>         JobData data = getJobData();
+>         if(data == null)
+>             return;
+>         
+126c175
+<             elementSelectionInput);
+---
+>             data.elementSelectionInput);
+144c193
+<             addJob(provider);
+---
+>             addJob(data, provider);
+151,152c200,201
+<         synchronized (jobs) {
+<             jobsClone  = (HashMap)jobs.clone();
+---
+>         synchronized (data) {
+>             jobsClone  = (HashMap)data.jobs.clone();
+155a205,206
+>             IElementSelectionProvider provider = (IElementSelectionProvider) entry
+>             	.getKey();
+158c209,210
+<             job.schedule();
+---
+>             
+>             schedule(provider, job);
+164c216
+<         monitor.beginTask(getJobName(), 1000);
+---
+>         monitor.beginTask(getJobName(data), 1000);
+166,167c218,219
+<             synchronized (jobs) {
+<                 if (jobs.size() == 0) {
+---
+>             synchronized (data) {
+>                 if (data.jobs.size() == 0) {
+175a228,230
+>                 synchronized(data) {
+>                     // nullify the element selection listener.
+>                     data.elementSelectionListener = null;
+179a235
+>         }
+183a240,249
+>      * Schedules the specified selection provider job.
+>      * 
+>      * @param provider a selection provider
+>      * @param job the <code>provider</code>'s job
+>      */
+>     protected void schedule(IElementSelectionProvider provider, ElementSelectionServiceJob job) {
+>     	job.schedule();
+>     }
+> 
+>     /**
+199c265,266
+<     protected String getJobName() {
+---
+>     protected String getJobName(JobData data) {
+>         if((getJobName() != null && getJobName().equals(StringStatics.BLANK)) && data != null) {
+202c269
+<         String filter = elementSelectionInput.getInput();
+---
+>             String filter = data.elementSelectionInput.getInput();
+206a274,275
+>         return getJobName();
+>     }
+213c282
+<     private void addJob(IElementSelectionProvider provider) {
+---
+>     private void addJob(JobData data, IElementSelectionProvider provider) {
+215,217c284,290
+<             elementSelectionInput, this);
+<         synchronized (jobs) {
+<             jobs.put(provider, job);
+---
+>             data.elementSelectionInput, this);
+>         synchronized (data) {
+>             data.jobs.put(provider, job);
+>         }
+>         
+>         synchronized(jobs2Data) {
+>             jobs2Data.put(job, data);
+226c299
+<     private void removeJob(IElementSelectionProvider provider) {
+---
+>     private void removeJob(JobData data, IElementSelectionProvider provider) {
+228,230c301,304
+<         synchronized (jobs) {
+<             jobs.remove(provider);
+<             if (jobs.size() == 0) {
+---
+>         Object job = null;
+>         synchronized (data) {
+>             job = data.jobs.remove(provider);
+>             if (data.jobs.size() == 0) {
+233a308
+>         
+239a315,318
+> 
+>         synchronized(jobs2Data) {
+>             jobs2Data.remove(job);
+>         }
+249a329,341
+>         final Job currentJob = jobManager.currentJob();
+>         if(currentJob == null)
+>             return;
+>         
+>         JobData data = null;
+>         synchronized(jobs2Data) {
+>             data = (JobData)jobs2Data.get(currentJob);
+>         }
+>         
+>         if(data == null)
+>             return;
+>         
+>         final JobData finalData = data;
+253c345,347
+<                 elementSelectionListener
+---
+>                 synchronized(finalData) { 
+>                     if(finalData.elementSelectionListener != null) {
+>                         finalData.elementSelectionListener
+255a350,351
+>                 }
+>             }
+273a370,372
+>         JobData data = getJobData();
+>         if(data == null)
+>             return;
+275c374
+<             removeJob(matchingObjectEvent.getMatchingObject().getProvider());
+---
+>             removeJob(data, matchingObjectEvent.getMatchingObject().getProvider());
+284a384
+>         JobData data = getJobData();
+286,287c386,387
+<         synchronized (jobs) {
+<             jobsClone = (HashMap) jobs.clone();
+---
+>         synchronized (data) {
+>             jobsClone = (HashMap) data.jobs.clone();
+295c395
+<             removeJob(provider);
+---
+>             removeJob(data, provider);
+302a403,424
+>     
+>     /**
+>      * Configures my providers from the <tt>elementSelectionProviders</tt>
+>      * extension point.
+>      */
+>     protected void configureProviders() {
+>     	configureProviders(
+>     		CommonUIServicesPlugin.getPluginId(),
+>         	"elementSelectionProviders"); //$NON-NLS-1$
+>     }
+>     
+>     public void cancelJob(ElementSelectionServiceJob job) {
+>         JobData data = null;
+>         synchronized(jobs2Data) {
+>             data = (JobData)jobs2Data.get(job);
+>         }
+>         
+>         synchronized(data) {
+>             data.elementSelectionListener = null;
+>         }
+>         job.cancel();
+>     }

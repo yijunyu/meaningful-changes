@@ -1,0 +1,55 @@
+2a3,6
+> import java.util.ArrayList;
+> 
+> import java.util.Iterator;
+> 
+10a15,16
+> import org.eclipse.gef.EditPart;
+> 
+16a23,24
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.GroupEditPart;
+> 
+89,91c97
+<                     ENamedElement element = PackageUtil.getElement (thePropertyId);
+<                     if (element instanceof EStructuralFeature) setResult (editPart.getStructuralFeatureValue ((EStructuralFeature) element));
+< 
+---
+>                     setResult (getStructuralFeatureValue (editPart, thePropertyId));
+108,111c114
+<             ENamedElement element = PackageUtil.getElement (thePropertyId);
+<             if (element instanceof EStructuralFeature) {
+<                 return editPart.getStructuralFeatureValue ((EStructuralFeature) element);
+<             }
+---
+>             return getStructuralFeatureValue (editPart, thePropertyId);
+113d115
+<         return null;
+121a124,151
+>     protected boolean digIntoGroups () {
+>         return false;
+>     }
+> 
+>     private Object getStructuralFeatureValue (IGraphicalEditPart editpart, final String thePropertyId) {
+>         ENamedElement element = PackageUtil.getElement (thePropertyId);
+>         if (element instanceof EStructuralFeature) {
+>             if (digIntoGroups () && editpart instanceof GroupEditPart) {
+>                 editpart = (IGraphicalEditPart) editpart.getChildren ().get (0);
+>             }
+>             return editpart.getStructuralFeatureValue ((EStructuralFeature) element);
+>         }
+>         return null;
+>     }
+> 
+>     protected List getTargetEditParts (EditPart editpart) {
+>         if (digIntoGroups () && editpart instanceof GroupEditPart) {
+>             List targetEPs = new ArrayList ();
+>             for (Iterator iterator = ((GroupEditPart) editpart).getShapeChildren ().iterator ();
+>             iterator.hasNext ();) {
+>                 EditPart childEP = (EditPart) iterator.next ();
+>                 targetEPs.addAll (super.getTargetEditParts (childEP));
+>             }
+>             return targetEPs;
+>         }
+>         return super.getTargetEditParts (editpart);
+>     }
+> 

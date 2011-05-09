@@ -1,0 +1,141 @@
+package org.eclipse.gmf.graphdef.codegen;
+
+import org.eclipse.core.runtime.Platform;
+
+import org.eclipse.emf.codegen.jet.JETException;
+
+import org.eclipse.gmf.common.codegen.ImportAssistant;
+
+import org.eclipse.gmf.common.codegen.NullImportAssistant;
+
+import org.eclipse.gmf.gmfgraph.Figure;
+
+import org.eclipse.gmf.gmfgraph.Label;
+
+import org.eclipse.gmf.gmfgraph.PolygonDecoration;
+
+import org.eclipse.gmf.gmfgraph.Polyline;
+
+import org.eclipse.gmf.gmfgraph.PolylineConnection;
+
+import org.eclipse.gmf.gmfgraph.PolylineDecoration;
+
+import org.eclipse.gmf.gmfgraph.RoundedRectangle;
+
+import org.eclipse.gmf.gmfgraph.Shape;
+
+import org.eclipse.gmf.gmfgraph.util.FigureQualifiedNameSwitch;
+
+import org.eclipse.gmf.gmfgraph.util.GMFGraphSwitch;
+
+import org.eclipse.gmf.graphdef.codegen.templates.FigureAttrGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.FigureChildrenGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.LabelAttrGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.NewFigureGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.PolygonDecorationAttrGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.PolylineAttrGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.PolylineDecorationAttrGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.RoundedRectAttrGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.ShapeAttrGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.TopConnectionGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.TopFigureGenerator;
+
+import org.eclipse.gmf.graphdef.codegen.templates.TopShapeGenerator;
+
+import org.eclipse.gmf.internal.codegen.dispatch.EmitterFactory;
+
+import org.eclipse.gmf.internal.codegen.dispatch.HierarchyKeyMap;
+
+import org.eclipse.gmf.internal.codegen.dispatch.KeyChain;
+
+import org.eclipse.gmf.internal.codegen.dispatch.KeyMap;
+
+import org.eclipse.gmf.internal.codegen.dispatch.StaticTemplateRegistry;
+
+import org.eclipse.gmf.internal.codegen.dispatch.TemplateRegistry;
+
+import org.osgi.framework.Bundle;
+
+public class FigureGenerator {
+    private final String packageName;
+    private GraphDefDispatcher myTopDispatcher;
+    private GraphDefDispatcher myInnerDispatcher;
+
+    public FigureGenerator () {
+        this (null, new NullImportAssistant (), new FigureQualifiedNameSwitch ());
+    }
+
+    public FigureGenerator (String aPackageName, ImportAssistant importManager, GMFGraphSwitch figureNameSwitch) {
+        packageName = aPackageName;
+        final Bundle thisBundle = Platform.getBundle ("org.eclipse.gmf.graphdef.codegen");
+        final String [] variables = new String [] {"org.eclipse.gmf.graphdef", "org.eclipse.emf.ecore", "org.eclipse.emf.common", "org.eclipse.gmf.common", "org.eclipse.gmf.graphdef.codegen"};
+        KeyMap keyMap = new HierarchyKeyMap () {
+
+            public KeyChain map (Object key) {
+                if (key instanceof String) {
+                    return super.map (key);
+                } else {
+                    return super.map (key.getClass ());
+                }
+            }
+
+        }
+
+        ;
+        EmitterFactory topFactory = new EmitterFactory (thisBundle.getEntry ("/"), fillTopLevel (), true, variables, true);
+        myTopDispatcher = new GraphDefDispatcher (topFactory, keyMap, importManager, figureNameSwitch);
+        EmitterFactory innerFactory = new EmitterFactory (thisBundle.getEntry ("/"), fillAttrs (), true, variables, true);
+        myInnerDispatcher = new GraphDefDispatcher (innerFactory, keyMap, importManager, figureNameSwitch);
+    }
+
+    public String getPackageStatement () {
+        return packageName;
+    }
+
+    private static TemplateRegistry fillTopLevel () {
+        StaticTemplateRegistry tr = new StaticTemplateRegistry ();
+        tr.put (PolylineConnection.class, "/templates/PolylineConnection.javajet", TopConnectionGenerator.class);
+        tr.put (Shape.class, "/templates/top/Shape.javajet", TopShapeGenerator.class);
+        tr.put (Figure.class, "/templates/top/Figure.javajet", TopFigureGenerator.class);
+        return tr;
+    }
+
+    private static TemplateRegistry fillAttrs () {
+        StaticTemplateRegistry tr = new StaticTemplateRegistry ();
+        tr.put (Figure.class, "/templates/attr/Figure.javajet", FigureAttrGenerator.class);
+        tr.put (Shape.class, "/templates/attr/Shape.javajet", ShapeAttrGenerator.class);
+        tr.put (Label.class, "/templates/attr/Label.javajet", LabelAttrGenerator.class);
+        tr.put (Polyline.class, "/templates/attr/Polyline.javajet", PolylineAttrGenerator.class);
+        tr.put (RoundedRectangle.class, "/templates/attr/RoundedRectangle.javajet", RoundedRectAttrGenerator.class);
+        tr.put (PolygonDecoration.class, "/templates/attr/PolygonDecoration.javajet", PolygonDecorationAttrGenerator.class);
+        tr.put (PolylineDecoration.class, "/templates/attr/PolylineDecoration.javajet", PolylineDecorationAttrGenerator.class);
+        tr.put ("instantiate", "/templates/new/Figure.javajet", NewFigureGenerator.class);
+        tr.put ("Children", "/templates/children/Figure.javajet", FigureChildrenGenerator.class);
+        tr.put ("Shape", "/templates/attr/Shape.javajet", ShapeAttrGenerator.class);
+        tr.put ("Figure", "/templates/attr/Figure.javajet", FigureAttrGenerator.class);
+        tr.put ("PolylineDecoration", "/templates/attr/PolylineDecoration.javajet", PolylineDecorationAttrGenerator.class);
+        return tr;
+    }
+
+    public String go (Figure fig) throws JETException {
+        String res = null;
+        Object args = new Object [] {fig, myTopDispatcher.getImportManager (), myTopDispatcher.getFQNSwitch (), myInnerDispatcher};
+        res = myTopDispatcher.dispatch (fig, args);
+        if (res == null) {
+            throw new IllegalStateException ();
+        }
+        return packageName == null ? res : "package " + packageName + ";\n" + res;
+    }
+
+}
+

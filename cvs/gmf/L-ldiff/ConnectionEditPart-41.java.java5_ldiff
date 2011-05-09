@@ -1,0 +1,142 @@
+8a9,12
+> import java.util.Collection;
+> 
+> import java.util.Collections;
+> 
+10a15,16
+> import java.util.HashSet;
+> 
+18a25,26
+> import java.util.Set;
+> 
+70a79,80
+> import org.eclipse.gef.commands.CompoundCommand;
+> 
+76a87,96
+> import org.eclipse.gef.requests.CreateConnectionRequest;
+> 
+> import org.eclipse.gef.requests.DropRequest;
+> 
+> import org.eclipse.gef.requests.GroupRequest;
+> 
+> import org.eclipse.gef.requests.ReconnectRequest;
+> 
+> import org.eclipse.gef.requests.TargetRequest;
+> 
+108a129,130
+> import org.eclipse.gmf.runtime.diagram.ui.internal.commands.ToggleCanonicalModeCommand;
+> 
+138a161,164
+> import org.eclipse.gmf.runtime.diagram.ui.requests.CreateConnectionViewRequest;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper;
+> 
+222a249,250
+>     private static volatile int GETCOMMAND_RECURSIVE_COUNT = 0;
+>     private static Set _disableCanonicalEditPolicyList = new HashSet ();
+448a477,479
+>         Command cmd = null;
+>         try {
+>             GETCOMMAND_RECURSIVE_COUNT ++;
+451,451c482,482
+<             Command cmd = (Command) getEditingDomain ().runExclusive (new RunnableWithResult.Impl () {
+---
+>                 cmd = (Command) getEditingDomain ().runExclusive (new RunnableWithResult.Impl () {
+460,460d490
+<             return cmd;
+464,464d493
+<             return null;
+465a495,587
+>             if (cmd != null) {
+>                 _disableCanonicalEditPolicyList.addAll (disableCanonicalFor (_request));
+>             }
+>             GETCOMMAND_RECURSIVE_COUNT --;
+>             if (GETCOMMAND_RECURSIVE_COUNT == 0) {
+>                 if (cmd != null && ! _disableCanonicalEditPolicyList.isEmpty ()) {
+>                     CompoundCommand cc = new CompoundCommand ();
+>                     cc.setLabel (cmd.getLabel ());
+>                     ToggleCanonicalModeCommand tcmd = ToggleCanonicalModeCommand.getToggleCanonicalModeCommand (_disableCanonicalEditPolicyList, false);
+>                     cc.add (tcmd);
+>                     cc.add (cmd);
+>                     ToggleCanonicalModeCommand tcmd2 = ToggleCanonicalModeCommand.getToggleCanonicalModeCommand (tcmd, true);
+>                     if (tcmd2 != null) {
+>                         tcmd2.setDomain (getEditingDomain ());
+>                     }
+>                     cc.add (tcmd2);
+>                     _disableCanonicalEditPolicyList.clear ();
+>                     return cc.unwrap ();
+>                 }
+>             }
+>         } catch (RuntimeException t) {
+>             GETCOMMAND_RECURSIVE_COUNT = 0;
+>             throw t;
+>         }
+>         return cmd;
+>     }
+> 
+>     protected Collection disableCanonicalFor (final Request request) {
+>         Set hosts = new HashSet ();
+>         if ((request instanceof EditCommandRequestWrapper) || request instanceof TargetRequest || request instanceof DropRequest) {
+>             hosts.add (this);
+>             hosts.add (getParent ());
+>         }
+>         if ((request instanceof ReconnectRequest)) {
+>             ReconnectRequest reconnect = (ReconnectRequest) request;
+>             hosts.add (this);
+>             hosts.add (getParent ());
+>             if (reconnect.getTarget () != null) {
+>                 EditPart target = reconnect.getTarget ();
+>                 addEditPartAndParent (hosts, target);
+>             }
+>             if (reconnect.getConnectionEditPart () != null) {
+>                 org.eclipse.gef.ConnectionEditPart connectionEditPart = reconnect.getConnectionEditPart ();
+>                 if (connectionEditPart.getSource () != null) {
+>                     EditPart srcEP = connectionEditPart.getSource ();
+>                     addEditPartAndParent (hosts, srcEP);
+>                 }
+>                 if (connectionEditPart.getTarget () != null) {
+>                     EditPart trgEP = connectionEditPart.getTarget ();
+>                     addEditPartAndParent (hosts, trgEP);
+>                 }
+>             }
+>         }
+>         if ((request instanceof CreateConnectionRequest)) {
+>             CreateConnectionRequest ccvr = (CreateConnectionRequest) request;
+>             hosts.add (this);
+>             hosts.add (getParent ());
+>             if (ccvr.getSourceEditPart () != null) {
+>                 hosts.add (ccvr.getSourceEditPart ());
+>                 hosts.add (ccvr.getSourceEditPart ().getParent ());
+>             }
+>             if (ccvr.getTargetEditPart () != null) {
+>                 hosts.add (ccvr.getTargetEditPart ());
+>                 hosts.add (ccvr.getTargetEditPart ().getParent ());
+>             }
+>         }
+>         if ((request instanceof GroupRequest)) {
+>             List parts = ((GroupRequest) request).getEditParts ();
+>             hosts.add (this);
+>             hosts.add (getParent ());
+>             Iterator editparts = parts == null ? Collections.EMPTY_LIST.iterator () : parts.iterator ();
+>             while (editparts.hasNext ()) {
+>                 EditPart ep = (EditPart) editparts.next ();
+>                 addEditPartAndParent (hosts, ep);
+>             }
+>         }
+>         if (this instanceof IBorderItemEditPart) {
+>             if ((request instanceof CreateConnectionViewRequest)) {
+>                 CreateConnectionViewRequest ccvr = (CreateConnectionViewRequest) request;
+>                 if (ccvr.getSourceEditPart () instanceof IBorderItemEditPart) {
+>                     hosts.add (ccvr.getSourceEditPart ().getParent ().getParent ());
+>                 }
+>                 if (ccvr.getTargetEditPart () instanceof IBorderItemEditPart) {
+>                     hosts.add (ccvr.getTargetEditPart ().getParent ().getParent ());
+>                 }
+>             }
+>         }
+>         return hosts;
+>     }
+> 
+>     private void addEditPartAndParent (Set hosts, EditPart editPart) {
+>         hosts.add (editPart);
+>         hosts.add (editPart.getParent ());

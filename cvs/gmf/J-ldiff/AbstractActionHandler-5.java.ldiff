@@ -1,0 +1,133 @@
+2,2c2,2
+<  * Copyright (c) 2002, 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2006 IBM Corporation and others.
+13a14,18
+> import org.eclipse.core.commands.operations.IOperationHistory;
+> import org.eclipse.core.commands.operations.IOperationHistoryListener;
+> import org.eclipse.core.commands.operations.IUndoContext;
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> import org.eclipse.core.commands.operations.OperationHistoryEvent;
+31,31c22,22
+< import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+---
+> import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+32,33d22
+< import org.eclipse.gmf.runtime.common.core.command.CommandManagerChangeEvent;
+< import org.eclipse.gmf.runtime.common.core.command.ICommandManagerChangeListener;
+34,34c23,23
+< import org.eclipse.gmf.runtime.common.core.util.Log;
+---
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+35,35c24,24
+< import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+---
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+36,36c25,25
+< import org.eclipse.gmf.runtime.common.core.util.Trace;
+---
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+37,37c26,26
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+---
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+38,38c27,27
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+---
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+39,39c28,28
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+---
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+40,40c29,29
+< import org.eclipse.gmf.runtime.common.ui.util.PartListenerAdapter;
+---
+> import org.eclipse.gmf.runtime.common.ui.util.PartListenerAdapter;
+41,41c30,30
+< import org.eclipse.gmf.runtime.common.ui.util.StatusLineUtil;
+---
+> import org.eclipse.gmf.runtime.common.ui.util.StatusLineUtil;
+42,42d30
+< 
+64a67,67
+> 	IOperationHistoryListener, IPropertyListener {
+65,65d66
+< 	ICommandManagerChangeListener, IPropertyListener {
+207a210,211
+> 			if (isOperationHistoryListener()) {
+>                 getOperationHistory().removeOperationHistoryListener(this);
+208,209d209
+< 			if (isCommandStackListener()) {
+< 				getCommandManager().removeCommandManagerChangeListener(this);
+225a228,229
+> 			if (isOperationHistoryListener()) {
+>                 getOperationHistory().addOperationHistoryListener(this);
+226,227d227
+< 			if (isCommandStackListener()) {
+< 				getCommandManager().addCommandManagerChangeListener(this);
+264a267,267
+>      * @deprecated Use {@link #getOperationHistory()} instead.
+266a270,280
+> 		return CommandManager.getDefault();
+> 	}
+> 	
+>     /**
+>      * Returns the operation history for this action handler from its action
+>      * manager.
+>      * 
+>      * @return the operation history
+>      */
+>     protected IOperationHistory getOperationHistory() {
+>         return getActionManager().getOperationHistory();
+267,267d269
+< 		return getActionManager().getCommandManager();
+413a427,427
+>      * @deprecated Subclasses must implement {@link #isOperationHistoryListener()}.
+419a434,444
+>      * Retrieves a Boolean indicating whether this action handler is interested
+>      * in operation history changed events.
+>      * 
+>      * @return <code>true</code> if this action handler is interested;
+>      *         <code>false</code> otherwise.
+>      */
+>     protected boolean isOperationHistoryListener() {
+>         return false;
+>     }
+> 
+> 	/**
+486a512,512
+>      * Refreshes me if the history event has my workbench part's context.
+487,490d511
+< 	 * Handles an event indicating that a command manager has changed.
+< 	 * 
+< 	 * @param event
+< 	 *            The command manager change event to be handled.
+491a514,521
+>     public void historyNotification(OperationHistoryEvent event) {
+> 
+>         IUndoableOperation operation = event.getOperation();
+> 
+>         if (operation != null) {
+>             IUndoContext partContext = getUndoContext();
+> 
+>             if (partContext != null && operation.hasContext(partContext)) {
+492,492d513
+< 	public final void commandManagerChanged(CommandManagerChangeEvent event) {
+494a524,540
+>         }
+>     }
+>     
+>     /**
+>      * Gets the undo context from my workbench part.
+>      * 
+>      * @return the undo context
+>      */
+>     protected IUndoContext getUndoContext() {
+>         IWorkbenchPart part = getWorkbenchPart();
+> 
+>         if (part != null) {
+>             return (IUndoContext) part.getAdapter(IUndoContext.class);
+>         }
+> 
+>         return null;
+>     }

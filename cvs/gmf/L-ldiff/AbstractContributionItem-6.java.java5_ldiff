@@ -1,0 +1,147 @@
+2a3,14
+> import org.eclipse.core.commands.ExecutionException;
+> 
+> import org.eclipse.core.commands.operations.IOperationHistory;
+> 
+> import org.eclipse.core.commands.operations.IOperationHistoryListener;
+> 
+> import org.eclipse.core.commands.operations.IUndoContext;
+> 
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> 
+> import org.eclipse.core.commands.operations.OperationHistoryEvent;
+> 
+6a19,20
+> import org.eclipse.core.runtime.NullProgressMonitor;
+> 
+52a83,83
+> public abstract class AbstractContributionItem extends ContributionItem implements ISelectionChangedListener, IOperationHistoryListener, IActionWithProgress {
+53,53c23,23
+< import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+---
+> import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+54a25,25
+> import org.eclipse.gmf.runtime.common.core.command.ICommand;
+54,54c24,24
+< 
+---
+> 
+55,55d24
+< import org.eclipse.gmf.runtime.common.core.command.CommandManagerChangeEvent;
+56a27,27
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+56,56c26,26
+< 
+---
+> 
+57,57d26
+< import org.eclipse.gmf.runtime.common.core.command.ICommand;
+58a29,29
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+58,58c28,28
+< 
+---
+> 
+59,59d28
+< import org.eclipse.gmf.runtime.common.core.command.ICommandManagerChangeListener;
+60,60c30,30
+< 
+---
+> 
+60a31,31
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+61,61d30
+< import org.eclipse.gmf.runtime.common.core.util.Log;
+62a33,33
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+62,62c32,32
+< 
+---
+> 
+63,63d32
+< import org.eclipse.gmf.runtime.common.core.util.Trace;
+64a35,35
+> import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+64,64c34,34
+< 
+---
+> 
+65,65d34
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+66a37,37
+> import org.eclipse.gmf.runtime.common.ui.util.PartListenerAdapter;
+66,66c36,36
+< 
+---
+> 
+67,67d36
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+68,68c38,38
+< 
+---
+> 
+69,73d38
+< import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+< 
+< import org.eclipse.gmf.runtime.common.ui.util.PartListenerAdapter;
+< 
+< public abstract class AbstractContributionItem extends ContributionItem implements ISelectionChangedListener, ICommandManagerChangeListener, IActionWithProgress {
+130a141,148
+>     protected IUndoContext getUndoContext () {
+>         IWorkbenchPart part = getWorkbenchPart ();
+>         if (part != null) {
+>             return (IUndoContext) part.getAdapter (IUndoContext.class);
+>         }
+>         return null;
+>     }
+> 
+166a185,186
+>             if (isOperationHistoryListener ()) {
+>                 getOperationHistory ().removeOperationHistoryListener (this);
+167,168d184
+<             if (isCommandStackListener ()) {
+<                 getCommandManager ().removeCommandManagerChangeListener (this);
+178a197,198
+>             if (isOperationHistoryListener ()) {
+>                 getOperationHistory ().addOperationHistoryListener (this);
+179,180d196
+<             if (isCommandStackListener ()) {
+<                 getCommandManager ().addCommandManagerChangeListener (this);
+275,275c293,293
+<         if (command == null || ! command.isExecutable ()) return;
+---
+>         if (command == null || ! command.canExecute ()) return;
+276a295,301
+>         command.addContext (getUndoContext ());
+>         try {
+>             getOperationHistory ().execute (command, new NullProgressMonitor (), null);
+>         } catch (ExecutionException e) {
+>             Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "execute", e);
+>             Log.error (CommonUIPlugin.getDefault (), CommonUIStatusCodes.ACTION_FAILURE, e.getLocalizedMessage (), e);
+>         }
+277,277d294
+<         getCommandManager ().execute (command);
+286a311,315
+>         return CommandManager.getDefault ();
+>     }
+> 
+>     protected IOperationHistory getOperationHistory () {
+>         return getActionManager ().getOperationHistory ();
+287,287d310
+<         return getActionManager ().getCommandManager ();
+326a355,358
+>     protected boolean isOperationHistoryListener () {
+>         return false;
+>     }
+> 
+330a363,367
+>     public void historyNotification (OperationHistoryEvent event) {
+>         IUndoableOperation operation = event.getOperation ();
+>         if (operation != null) {
+>             IUndoContext partContext = getUndoContext ();
+>             if (partContext != null && operation.hasContext (partContext)) {
+331,331d362
+<     public final void commandManagerChanged (CommandManagerChangeEvent event) {
+341a378,379
+>         }
+>     }

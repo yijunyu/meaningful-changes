@@ -1,0 +1,275 @@
+package org.eclipse.gmf.runtime.diagram.ui.editparts;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.Comparator;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gef.EditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+
+import org.eclipse.gmf.runtime.diagram.ui.figures.ResizableCompartmentFigure;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.editpolicies.ListComponentEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.editpolicies.ModifySortFilterEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.figures.NestedResizableCompartmentFigure;
+
+import org.eclipse.gmf.runtime.draw2d.ui.figures.ConstrainedToolbarLayout;
+
+import org.eclipse.gmf.runtime.notation.Filtering;
+
+import org.eclipse.gmf.runtime.notation.FilteringStyle;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.Sorting;
+
+import org.eclipse.gmf.runtime.notation.SortingDirection;
+
+import org.eclipse.gmf.runtime.notation.SortingStyle;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public abstract class ListCompartmentEditPart extends ResizableCompartmentEditPart {
+    static long count = 0;
+    protected List modelChildrenListeners;
+    protected boolean listening;
+
+    public ListCompartmentEditPart (EObject model) {
+        super (model);
+    }
+
+    protected void createDefaultEditPolicies () {
+        super.createDefaultEditPolicies ();
+        installEditPolicy (EditPolicyRoles.MODIFY_SORT_FILTER_ROLE, new ModifySortFilterEditPolicy ());
+        installEditPolicy (EditPolicy.COMPONENT_ROLE, new ListComponentEditPolicy ());
+    }
+
+    public IFigure createFigure () {
+        ResizableCompartmentFigure rcf;
+        if (getParent () == getTopGraphicEditPart ()) {
+            rcf = (ResizableCompartmentFigure) super.createFigure ();
+        } else {
+            rcf = new NestedResizableCompartmentFigure (getMapMode ().DPtoLP (11));
+        }
+        ConstrainedToolbarLayout layout = new ConstrainedToolbarLayout ();
+        layout.setStretchMajorAxis (false);
+        layout.setStretchMinorAxis (false);
+        layout.setMinorAlignment (ConstrainedToolbarLayout.ALIGN_TOPLEFT);
+        rcf.getContentPane ().setLayoutManager (layout);
+        return rcf;
+    }
+
+    protected final List getModelChildren () {
+        List sortedFilteredChildren = new ArrayList (getSortedChildren ());
+        sortedFilteredChildren.removeAll (getFilteredChildren ());
+        return sortedFilteredChildren;
+    }
+
+    protected List getBaseModelChildren () {
+        return super.getChildren ();
+    }
+
+    abstract protected boolean hasModelChildrenChanged (Notification evt);
+
+    protected void handleNotificationEvent (Notification event) {
+        if (hasModelChildrenChanged (event) && modeAutomatic ()) {
+            removeSemanticChildrenListeners ();
+            addSemanticChildrenListeners ();
+            refresh ();
+        }
+        Object feature = event.getFeature ();
+        if (NotationPackage.eINSTANCE.getFilteringStyle_Filtering ().equals (feature) || NotationPackage.eINSTANCE.getFilteringStyle_FilteringKeys ().equals (feature) || NotationPackage.eINSTANCE.getFilteringStyle_FilteredObjects ().equals (feature) || NotationPackage.eINSTANCE.getSortingStyle_Sorting ().equals (feature) || NotationPackage.eINSTANCE.getSortingStyle_SortingKeys ().equals (feature) || NotationPackage.eINSTANCE.getSortingStyle_SortedObjects ().equals (feature)) {
+            refresh ();
+            if (modeAutomatic () && ! listening) {
+                removeSemanticChildrenListeners ();
+                addSemanticChildrenListeners ();
+            }
+            if (! modeAutomatic () && listening) {
+                removeSemanticChildrenListeners ();
+            }
+        } else {
+            super.handleNotificationEvent (event);
+        }
+        if (isAffectingSortingFiltering (feature) && modeAutomatic ()) refresh ();
+
+    }
+
+    protected List getSortedChildren () {
+        SortingStyle style = (SortingStyle) ((View) getModel ()).getStyle (NotationPackage.eINSTANCE.getSortingStyle ());
+        if (style != null) {
+            Sorting sorting = style.getSorting ();
+            if (Sorting.NONE_LITERAL == sorting) {
+                return super.getModelChildren ();
+            } else if (Sorting.MANUAL_LITERAL == sorting) {
+                List allChildren = super.getModelChildren ();
+                if (allChildren.isEmpty ()) return allChildren;
+
+                List sortedChildren = style.eIsSet (NotationPackage.eINSTANCE.getSortingStyle_SortedObjects ()) ? style.getSortedObjects () : Collections.EMPTY_LIST;
+                List sorted = new ArrayList ();
+                Iterator i = sortedChildren.iterator ();
+                while (i.hasNext ()) {
+                    EObject eObject = (EObject) i.next ();
+                    View view = getModelChildByID (eObject);
+                    if (view != null) sorted.add (view);
+
+                }
+                for (int j = 0;
+                j < allChildren.size (); j ++) {
+                    View view = (View) allChildren.get (j);
+                    if (! sorted.contains (view)) sorted.add (view);
+
+                }
+                return sorted;
+            } else if (Sorting.AUTOMATIC_LITERAL == sorting) {
+                Map sortingKeys = style.eIsSet (NotationPackage.eINSTANCE.getSortingStyle_SortingKeys ()) ? style.getSortingKeys () : Collections.EMPTY_MAP;
+                return getChildrenSortedBy (sortingKeys);
+            }
+
+        }
+        return super.getModelChildren ();
+    }
+
+    protected List getChildrenSortedBy (Map sortingKeys) {
+        List allChildren = new ArrayList (super.getModelChildren ());
+        if (sortingKeys != null && ! sortingKeys.isEmpty ()) {
+            Collection keySet = sortingKeys.keySet ();
+            Iterator i = keySet.iterator ();
+            String name = (String) i.next ();
+            SortingDirection direction = (SortingDirection) sortingKeys.get (name);
+            Comparator comparator = getComparator (name, direction);
+            if (comparator != null) Collections.sort (allChildren, getComparator (name, direction));
+
+        }
+        return allChildren;
+    }
+
+    protected Comparator getComparator (String name, SortingDirection direction) {
+        return null;
+    }
+
+    protected List getFilteredChildren () {
+        Object model = getModel ();
+        if (model instanceof View) {
+            View view = (View) model;
+            FilteringStyle style = (FilteringStyle) view.getStyle (NotationPackage.eINSTANCE.getFilteringStyle ());
+            if (style != null) {
+                Filtering filtering = style.getFiltering ();
+                if (Filtering.NONE_LITERAL == filtering) {
+                    return Collections.EMPTY_LIST;
+                } else if (Filtering.MANUAL_LITERAL == filtering) {
+                    List filteredChildren = style.eIsSet (NotationPackage.eINSTANCE.getFilteringStyle_FilteredObjects ()) ? style.getFilteredObjects () : Collections.EMPTY_LIST;
+                    List filteredViews = new ArrayList ();
+                    Iterator i = filteredChildren.iterator ();
+                    while (i.hasNext ()) {
+                        EObject eObject = (EObject) i.next ();
+                        filteredViews.add (getModelChildByID (eObject));
+                    }
+                    return filteredViews;
+                } else if (Filtering.AUTOMATIC_LITERAL == filtering) {
+                    List filteringKeys = style.eIsSet (NotationPackage.eINSTANCE.getFilteringStyle_FilteringKeys ()) ? style.getFilteringKeys () : Collections.EMPTY_LIST;
+                    return getChildrenFilteredBy (filteringKeys);
+                }
+
+            }
+        }
+        return Collections.EMPTY_LIST;
+    }
+
+    protected List getChildrenFilteredBy (List filterKeys) {
+        return Collections.EMPTY_LIST;
+    }
+
+    public String getCompartmentName () {
+        return getTitleName ();
+    }
+
+    protected View getModelChildByID (EObject eObject) {
+        for (int i = 0;
+        i < super.getModelChildren ().size (); i ++) {
+            View view = (View) super.getModelChildren ().get (i);
+            EObject e = ViewUtil.resolveSemanticElement (view);
+            if (eObject.equals (e)) return view;
+
+        }
+        return null;
+    }
+
+    protected String getTitleName () {
+        return null;
+    }
+
+    protected boolean modeAutomatic () {
+        View view = getNotationView ();
+        if (view != null) {
+            SortingStyle sortingStyle = (SortingStyle) view.getStyle (NotationPackage.eINSTANCE.getSortingStyle ());
+            FilteringStyle filteringStyle = (FilteringStyle) view.getStyle (NotationPackage.eINSTANCE.getFilteringStyle ());
+            if (sortingStyle != null && Sorting.AUTOMATIC_LITERAL == sortingStyle.getSorting ()) return true;
+
+            if (filteringStyle != null && Filtering.AUTOMATIC_LITERAL == filteringStyle.getFiltering ()) return true;
+
+        }
+        return false;
+    }
+
+    protected boolean isAffectingSortingFiltering (Object feature) {
+        return false;
+    }
+
+    protected void addSemanticChildrenListeners () {
+        modelChildrenListeners = super.getModelChildren ();
+        for (int i = 0;
+        i < modelChildrenListeners.size (); i ++) {
+            EObject eObject = ViewUtil.resolveSemanticElement ((View) modelChildrenListeners.get (i));
+            if (eObject != null) addListenerFilter ("SemanticModel" + i, this, eObject);
+
+        }
+        listening = true;
+    }
+
+    protected void removeSemanticChildrenListeners () {
+        if (modelChildrenListeners != null) {
+            for (int i = 0;
+            i < modelChildrenListeners.size (); i ++) removeListenerFilter ("SemanticModel" + i);
+
+            modelChildrenListeners.clear ();
+        }
+        listening = false;
+    }
+
+    protected void addSemanticListeners () {
+        if (modeAutomatic () && ! listening) {
+            addSemanticChildrenListeners ();
+        }
+        super.addSemanticListeners ();
+    }
+
+    protected void removeSemanticListeners () {
+        removeSemanticChildrenListeners ();
+        modelChildrenListeners = null;
+        listening = false;
+        super.removeSemanticListeners ();
+    }
+
+}
+

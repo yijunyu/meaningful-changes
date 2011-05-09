@@ -1,0 +1,136 @@
+package org.eclipse.gmf.internal.validate.expressions;
+
+import java.util.Collections;
+
+import java.util.HashMap;
+
+import java.util.Iterator;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.EClassifier;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.ETypedElement;
+
+import org.eclipse.emf.ecore.EcorePackage;
+
+import org.eclipse.gmf.internal.validate.DebugOptions;
+
+import org.eclipse.gmf.internal.validate.GMFValidationPlugin;
+
+import org.eclipse.gmf.internal.validate.LabelProvider;
+
+import org.eclipse.gmf.internal.validate.Messages;
+
+import org.eclipse.gmf.internal.validate.StatusCodes;
+
+import org.eclipse.gmf.internal.validate.Trace;
+
+public abstract class AbstractExpression implements IModelExpression {
+    private IStatus status;
+    private String body;
+    private EClassifier contextClassifier;
+    private Map < String, EClassifier > extEnv;
+
+    protected AbstractExpression (String body, EClassifier context, IParseEnvironment extendedEnv) {
+        if (body == null || context == null) {
+            throw new IllegalArgumentException ("null body or context-class");
+        }
+        this.body = body;
+        this.contextClassifier = context;
+        this.status = Status.OK_STATUS;
+        if (extendedEnv != null) {
+            this.extEnv = new HashMap < String, EClassifier > (5);
+            for (Iterator it = extendedEnv.getVariableNames ().iterator ();
+            it.hasNext ();) {
+                String nextVar = (String) it.next ();
+                extEnv.put (nextVar, extendedEnv.getTypeOf (nextVar));
+            }
+        } else {
+            this.extEnv = Collections.emptyMap ();
+        }
+    }
+
+    protected Map getExtEnvironment () {
+        return extEnv;
+    }
+
+    public boolean isLooselyTyped () {
+        return true;
+    }
+
+    protected void setStatus (IStatus status) {
+        this.status = status;
+    }
+
+    protected abstract Object doEvaluate (Object context);
+
+    protected abstract Object doEvaluate (Object context, IEvaluationEnvironment extendedEnv);
+
+    public EClassifier getResultType () {
+        return EcorePackage.eINSTANCE.getEJavaObject ();
+    }
+
+    public abstract boolean isAssignableTo (EClassifier ecoreType);
+
+    public abstract boolean isAssignableToElement (ETypedElement typedElement);
+
+    public abstract String getLanguage ();
+
+    public final Object evaluate (Object context) {
+        return evaluate (context, null);
+    }
+
+    public final Object evaluate (Object contextInstance, IEvaluationEnvironment extendedEnv) {
+        if (contextInstance == null || ! hasCompatibleContext (contextInstance)) {
+            throw new IllegalArgumentException ("Invalid evaluation context:" + contextInstance);
+        }
+        if (getStatus ().isOK ()) {
+            try {
+                if (extendedEnv != null) {
+                    return doEvaluate (contextInstance, extendedEnv);
+                }
+                return doEvaluate (contextInstance);
+            } catch (RuntimeException e) {
+                IStatus status = GMFValidationPlugin.createStatus (IStatus.ERROR, StatusCodes.UNEXPECTED_EVALUATION_ERROR, Messages.unexpectedExprEvalError, e);
+                GMFValidationPlugin.log (status);
+                Trace.catching (DebugOptions.EXCEPTIONS_CATCHING, e);
+            }
+        }
+        return null;
+    }
+
+    public IStatus getStatus () {
+        return status;
+    }
+
+    public String getBody () {
+        return body;
+    }
+
+    public EClassifier getContext () {
+        return contextClassifier;
+    }
+
+    public String toString () {
+        return body + "context:[" + LabelProvider.INSTANCE.getObjectLabel (contextClassifier) + "] ";
+    }
+
+    private boolean hasCompatibleContext (Object ctxInstance) {
+        if (contextClassifier instanceof EClass) {
+            EClass contextClass = (EClass) contextClassifier;
+            return (ctxInstance instanceof EObject) ? contextClass.isSuperTypeOf (((EObject) ctxInstance).eClass ()) : false;
+        }
+        return contextClassifier.isInstance (ctxInstance);
+    }
+
+}
+

@@ -1,0 +1,115 @@
+29,30d52
+< import org.eclipse.jface.resource.ImageDescriptor;
+< 
+44a19,19
+> import org.eclipse.emf.ecore.EObject;
+45,45d18
+< import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+46a21,21
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+46,46c20,20
+< 
+---
+> 
+47,47d20
+< import org.eclipse.gmf.runtime.common.core.util.Trace;
+48,48c22,22
+< 
+---
+> 
+48a23,23
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+49,49d22
+< import org.eclipse.gmf.runtime.common.ui.dialogs.PropertiesDialog;
+50,50c24,24
+< 
+---
+> 
+50a25,25
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+51,51d24
+< import org.eclipse.gmf.runtime.common.ui.services.properties.extended.PropertyPagePropertyDescriptor;
+52a27,27
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+52,52c26,26
+< 
+---
+> 
+53,53d26
+< import org.eclipse.gmf.runtime.emf.core.exceptions.MSLActionAbandonedException;
+54a29,29
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+54,54c28,28
+< 
+---
+> 
+55,55d28
+< import org.eclipse.gmf.runtime.emf.core.util.OperationUtil;
+56a31,31
+> import org.eclipse.gmf.runtime.common.ui.dialogs.PropertiesDialog;
+56,56c30,30
+< 
+---
+> 
+57,57d30
+< import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesDebugOptions;
+58,58c32,32
+< 
+---
+> 
+58a33,33
+> import org.eclipse.gmf.runtime.common.ui.services.properties.extended.PropertyPagePropertyDescriptor;
+59,59d32
+< import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesPlugin;
+60a35,35
+> import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesDebugOptions;
+60,60c34,34
+< 
+---
+> 
+61,61d34
+< import org.eclipse.gmf.runtime.emf.ui.properties.internal.l10n.EMFUIPropertiesMessages;
+62,62c36,36
+< 
+---
+> 
+62a37,42
+> import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesPlugin;
+> 
+> import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesStatusCodes;
+> 
+> import org.eclipse.gmf.runtime.emf.ui.properties.internal.l10n.EMFUIPropertiesMessages;
+> 
+77a82,83
+>                 TransactionalEditingDomain domain = getEditingDomain ((IStructuredSelection) selection);
+>                 if (domain != null) {
+79,79c85,85
+<                     OperationUtil.runAsRead (new Runnable () {
+---
+>                         domain.runExclusive (new Runnable () {
+111a118,121
+>                     } catch (InterruptedException e) {
+>                         Trace.catching (EMFPropertiesPlugin.getDefault (), EMFPropertiesDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", e);
+>                         Log.error (EMFPropertiesPlugin.getDefault (), EMFPropertiesStatusCodes.ACTION_FAILURE, e.getLocalizedMessage (), e);
+>                     }
+112,113d117
+<                 } catch (MSLActionAbandonedException e) {
+<                     e.printStackTrace ();
+173a182,198
+>     private TransactionalEditingDomain getEditingDomain (IStructuredSelection s) {
+>         TransactionalEditingDomain result = null;
+>         for (Iterator i = s.iterator ();
+>         i.hasNext ();) {
+>             Object next = i.next ();
+>             result = TransactionUtil.getEditingDomain (next);
+>             if (result == null && next instanceof IAdaptable) {
+>                 EObject eObject = (EObject) ((IAdaptable) next).getAdapter (EObject.class);
+>                 result = TransactionUtil.getEditingDomain (eObject);
+>             }
+>             if (result != null) {
+>                 return result;
+>             }
+>         }
+>         return null;
+>     }
+> 

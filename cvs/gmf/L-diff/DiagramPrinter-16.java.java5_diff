@@ -1,0 +1,629 @@
+5,8d4
+< import java.util.Iterator;
+< 
+< import org.eclipse.core.runtime.Assert;
+< 
+11,12d6
+< import org.eclipse.draw2d.SWTGraphics;
+< 
+15,16d8
+< import org.eclipse.gef.LayerConstants;
+< 
+21,22d12
+< import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+< 
+31,42d20
+< import org.eclipse.gmf.runtime.diagram.ui.internal.pagesetup.PageInfoHelper;
+< 
+< import org.eclipse.gmf.runtime.diagram.ui.internal.pagesetup.PageInfoHelper.PageMargins;
+< 
+< import org.eclipse.gmf.runtime.diagram.ui.internal.properties.WorkspaceViewerProperties;
+< 
+< import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramEditor;
+< 
+< import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramGraphicalViewer;
+< 
+< import org.eclipse.gmf.runtime.diagram.ui.util.DiagramEditorUtil;
+< 
+45,48d22
+< import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.PrinterGraphics;
+< 
+< import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.ScaledGraphics;
+< 
+51,52d24
+< import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapModeUtil;
+< 
+55,68d26
+< import org.eclipse.jface.preference.IPreferenceStore;
+< 
+< import org.eclipse.jface.resource.JFaceResources;
+< 
+< import org.eclipse.swt.SWT;
+< 
+< import org.eclipse.swt.graphics.Font;
+< 
+< import org.eclipse.swt.graphics.FontData;
+< 
+< import org.eclipse.swt.graphics.GC;
+< 
+< import org.eclipse.swt.graphics.Image;
+< 
+71,102c29,43
+< import org.eclipse.swt.printing.Printer;
+< 
+< import org.eclipse.swt.widgets.Display;
+< 
+< import org.eclipse.swt.widgets.Shell;
+< 
+< import org.eclipse.ui.PlatformUI;
+< 
+< public class DiagramPrinter implements Runnable {
+<     protected Printer printer;
+<     private Point display_dpi;
+<     private boolean isScaledPercent = false;
+<     private int rows = 1;
+<     private int columns = 1;
+<     private boolean printRangePageSelection = false;
+<     private int pageFrom = 1, pageTo = 1;
+<     private GC gc;
+<     private Graphics swtGraphics;
+<     private Graphics graphics;
+<     private PrinterGraphics printerGraphics;
+<     protected Point printerOffset;
+<     protected Rectangle logicalClientArea;
+<     private float userScale;
+<     protected Collection diagrams;
+<     private Point translated = null;
+<     private PreferencesHint preferencesHint;
+<     private IMapMode mm;
+<     private boolean fitToPage = false;
+< 
+<     public void setFitToPage (boolean fitToPage) {
+<         this.fitToPage = fitToPage;
+<     }
+---
+> public abstract class DiagramPrinter implements Runnable {
+>     protected Point display_dpi;
+>     protected Collection < Diagram > diagrams;
+>     protected PreferencesHint preferencesHint;
+>     protected IMapMode mapMode;
+>     protected Point translated;
+>     protected float userScale;
+>     protected boolean isScaledPercent = false;
+>     protected boolean fitToPage = false;
+>     protected boolean printRangePageSelection = false;
+>     protected int pageFrom = 1, pageTo = 1;
+>     protected int rows = 1;
+>     protected int columns = 1;
+>     protected Graphics swtGraphics;
+>     protected Graphics graphics;
+107,135c48
+<         this.mm = mm;
+<     }
+< 
+<     public DiagramPrinter (PreferencesHint preferencesHint) {
+<         this (preferencesHint, MapModeUtil.getMapMode ());
+<     }
+< 
+<     protected IMapMode getMapMode () {
+<         return mm;
+<     }
+< 
+<     public void setColumns (int columns) {
+<         this.columns = columns;
+<     }
+< 
+<     public void setDiagrams (Collection diagrams) {
+<         this.diagrams = diagrams;
+<     }
+< 
+<     public void setDisplayDPI (Point display_dpi) {
+<         this.display_dpi = new Point (display_dpi.x, display_dpi.y);
+<     }
+< 
+<     public void setPrinter (Printer printer) {
+<         this.printer = printer;
+<     }
+< 
+<     public void setPrintRangePageSelection (boolean isPrintRangePageSelected) {
+<         this.printRangePageSelection = isPrintRangePageSelected;
+---
+>         this.mapMode = mm;
+138,202c51
+<     public void setPrintRangePages (int pageFrom, int pageTo) {
+<         assert pageFrom > 0 : "From page in print range page selection must be bigger than zero.";
+<         assert (pageTo > 0 && pageTo >= pageFrom) : "To page in print range page selection must be bigger than zero and from page.";
+<         this.pageFrom = pageFrom;
+<         this.pageTo = pageTo;
+<     }
+< 
+<     public void setRows (int rows) {
+<         this.rows = rows;
+<     }
+< 
+<     public void setScaledPercent (int scalePercent) {
+<         this.isScaledPercent = true;
+<         this.userScale = (scalePercent) / 100.0f;
+<     }
+< 
+<     public void run () {
+<         assert null != printer : "printer must be set";
+<         if (! (printer.startJob ("Printing"))) {
+<             return;
+<         }
+<         assert diagrams != null;
+<         Iterator it = diagrams.iterator ();
+<         Shell shell = new Shell ();
+<         try {
+<             while (it.hasNext ()) {
+<                 Object obj = it.next ();
+<                 Assert.isTrue (obj instanceof Diagram);
+<                 Diagram diagram = (Diagram) obj;
+<                 DiagramEditor openedDiagramEditor = DiagramEditorUtil.findOpenedDiagramEditorForID (ViewUtil.getIdStr (diagram));
+<                 DiagramEditPart dgrmEP = openedDiagramEditor == null ? PrintHelper.createDiagramEditPart (diagram, preferencesHint, shell) : openedDiagramEditor.getDiagramEditPart ();
+<                 boolean loadedPreferences = openedDiagramEditor != null || PrintHelper.initializePreferences (dgrmEP, preferencesHint);
+<                 RootEditPart rep = dgrmEP.getRoot ();
+<                 if (rep instanceof DiagramRootEditPart) this.mm = ((DiagramRootEditPart) rep).getMapMode ();
+< 
+<                 initialize ();
+<                 IPreferenceStore pref = null;
+<                 assert dgrmEP.getViewer () instanceof DiagramGraphicalViewer;
+<                 pref = ((DiagramGraphicalViewer) dgrmEP.getViewer ()).getWorkspaceViewerPreferenceStore ();
+<                 if (pref.getBoolean (WorkspaceViewerProperties.PREF_USE_WORKSPACE_SETTINGS)) {
+<                     if (dgrmEP.getDiagramPreferencesHint ().getPreferenceStore () != null) pref = (IPreferenceStore) dgrmEP.getDiagramPreferencesHint ().getPreferenceStore ();
+< 
+<                 }
+<                 doPrintDiagram (dgrmEP, loadedPreferences, pref);
+<                 dispose ();
+<             }
+<             printer.endJob ();
+<         } finally {
+<             shell.dispose ();
+<         }
+<     }
+< 
+<     private int calculateRowFromPage (int pageNum, int totalNumColumns) {
+<         int row = pageNum / totalNumColumns;
+<         if (pageNum % totalNumColumns != 0) row ++;
+< 
+<         return row;
+<     }
+< 
+<     private int calculateColumnFromPage (int pageNum, int totalNumColumns, int cRow) {
+<         int col = pageNum - ((cRow - 1) * totalNumColumns);
+<         return col;
+<     }
+< 
+<     private org.eclipse.draw2d.geometry.Point getPageCount (DiagramEditPart dgrmEP, Rectangle figureBounds, org.eclipse.draw2d.geometry.Point pageSize, boolean applyUserScale) {
+---
+>     protected org.eclipse.draw2d.geometry.Point getPageCount (DiagramEditPart dgrmEP, Rectangle figureBounds, org.eclipse.draw2d.geometry.Point pageSize, boolean applyUserScale) {
+221,226c70,73
+<     private void doPrintDiagram (DiagramEditPart dgrmEP, boolean loadedPreferences, IPreferenceStore fPreferences) {
+<         this.graphics.pushState ();
+<         if (isScaledPercent) {
+<             printToScale (dgrmEP, loadedPreferences, fPreferences);
+<         } else {
+<             printToPages (dgrmEP, loadedPreferences, fPreferences);
+---
+>     protected int calculateRowFromPage (int pageNum, int totalNumColumns) {
+>         int row = pageNum / totalNumColumns;
+>         if (pageNum % totalNumColumns != 0) {
+>             row ++;
+228c75
+<         this.graphics.popState ();
+---
+>         return row;
+231,276c78,79
+<     private void initialize () {
+<         assert null != printer : "printer must be set";
+<         int style = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ().getShell ().getStyle ();
+<         if ((style & SWT.MIRRORED) != 0) this.gc = new GC (printer, SWT.RIGHT_TO_LEFT);
+<         else this.gc = new GC (printer);
+< 
+<         gc.setXORMode (false);
+<         this.swtGraphics = new SWTGraphics (gc);
+<         this.printerGraphics = createPrinterGraphics (swtGraphics);
+<         this.graphics = createMapModeGraphics (printerGraphics);
+<         this.graphics.scale (computePrinterDisplayScale ());
+<         this.logicalClientArea = this.graphics.getClip (new Rectangle (this.printer.getClientArea ()));
+<     }
+< 
+<     protected Point getPrinterOffset () {
+<         if (printerOffset == null) {
+<             int offsetX = this.printer.getBounds ().width - this.printer.getClientArea ().width;
+<             int offsetY = this.printer.getBounds ().height - this.printer.getClientArea ().height;
+<             offsetX = (int) (getMapMode ().DPtoLP ((int) (offsetX / 2.0f * display_dpi.x / printer.getDPI ().x)) / userScale);
+<             offsetY = (int) (getMapMode ().DPtoLP ((int) (offsetY / 2.0f * display_dpi.y / printer.getDPI ().y)) / userScale);
+<             printerOffset = new Point (offsetX, offsetY);
+<         }
+<         return printerOffset;
+<     }
+< 
+<     protected void printToScale (DiagramEditPart dgrmEP, boolean loadedPreferences, IPreferenceStore fPreferences) {
+<         assert null != printer : "printer must be set";
+<         Rectangle figureBounds = PrintHelper.getPageBreakBounds (dgrmEP, loadedPreferences);
+<         org.eclipse.draw2d.geometry.Point pageBounds = PageInfoHelper.getPageSize (fPreferences, getMapMode ());
+<         translated = new Point ((int) (- figureBounds.x * userScale), (int) (- figureBounds.y * userScale));
+<         int numRows = 0, numCols = 0;
+<         PageMargins margins = PageInfoHelper.getPageMargins (fPreferences, getMapMode ());
+<         adjustMargins (margins, userScale, getPrinterOffset ());
+<         GC gc_ = new GC (Display.getDefault (), this.gc.getStyle ());
+<         gc_.setAntialias (this.gc.getAntialias ());
+<         FontData fontData = JFaceResources.getDefaultFont ().getFontData () [0];
+<         Font font = new Font (printer, fontData);
+<         org.eclipse.draw2d.geometry.Point pageCount = getPageCount (dgrmEP, figureBounds, pageBounds, true);
+<         numCols = pageCount.x;
+<         numRows = pageCount.y;
+<         int row = 1, col = 1, finalRow = 0, finalColumn = 0;
+<         if (this.printRangePageSelection) {
+<             row = calculateRowFromPage (this.pageFrom, numCols);
+<             col = calculateColumnFromPage (this.pageFrom, numCols, row);
+<             finalRow = calculateRowFromPage (this.pageTo, numCols);
+<             finalColumn = calculateColumnFromPage (this.pageTo, numCols, finalRow);
+---
+>     protected int calculateColumnFromPage (int pageNum, int totalNumColumns, int cRow) {
+>         return (pageNum - ((cRow - 1) * totalNumColumns));
+278,284d80
+<         try {
+<             for (; row <= numRows; row ++) {
+<                 for (; col <= numCols; col ++) {
+<                     printer.startPage ();
+<                     drawPage (gc_, dgrmEP, fPreferences, figureBounds, margins, font, row, col);
+<                     printer.endPage ();
+<                     if (row == finalRow && col == finalColumn && this.printRangePageSelection == true) break;
+285a82,88
+>     protected void dispose () {
+>         if (this.graphics != null) {
+>             try {
+>                 this.graphics.dispose ();
+>             } catch (NullPointerException e) {
+>             } finally {
+>                 this.graphics = null;
+287,289d89
+<                 if (row == finalRow && col == finalColumn && this.printRangePageSelection == true) break;
+< 
+<                 col = 1;
+290a91,94
+>         if (this.swtGraphics != null) {
+>             try {
+>                 this.swtGraphics.dispose ();
+>             } catch (NullPointerException e) {
+292,294c96
+<             font.dispose ();
+<             gc_.dispose ();
+<         }
+---
+>                 this.swtGraphics = null;
+296,330d97
+< 
+<     protected void drawHeaderAndFooter (GC gc_, DiagramEditPart dgrmEP, Rectangle figureBounds, Font font, int rowIndex, int colIndex) {
+<         int width = this.logicalClientArea.width;
+<         int height = this.logicalClientArea.height;
+<         this.graphics.pushState ();
+<         this.graphics.setFont (font);
+<         this.graphics.scale (1.0f / userScale);
+<         this.graphics.translate (- translated.x, - translated.y);
+<         String headerOrFooter = HeaderAndFooterHelper.makeHeaderOrFooterString (WorkspaceViewerProperties.HEADER_PREFIX, rowIndex, colIndex, dgrmEP);
+<         this.graphics.drawText (headerOrFooter, getMapMode ().DPtoLP (HeaderAndFooterHelper.LEFT_MARGIN_DP) + (width - getMapMode ().DPtoLP (gc_.textExtent (headerOrFooter).x)) / 2, getMapMode ().DPtoLP (HeaderAndFooterHelper.TOP_MARGIN_DP));
+<         headerOrFooter = HeaderAndFooterHelper.makeHeaderOrFooterString (WorkspaceViewerProperties.FOOTER_PREFIX, rowIndex, colIndex, dgrmEP);
+<         this.graphics.drawText (headerOrFooter, getMapMode ().DPtoLP (HeaderAndFooterHelper.LEFT_MARGIN_DP) + (width - getMapMode ().DPtoLP (gc_.textExtent (headerOrFooter).x)) / 2, height - getMapMode ().DPtoLP (HeaderAndFooterHelper.BOTTOM_MARGIN_DP));
+<         this.graphics.popState ();
+<     }
+< 
+<     protected void drawPage (GC gc_, DiagramEditPart dgrmEP, IPreferenceStore fPreferences, Rectangle figureBounds, PageMargins margins, Font font, int rowIndex, int colIndex) {
+<         org.eclipse.draw2d.geometry.Point pageSize = PageInfoHelper.getPageSize (fPreferences, false, getMapMode ());
+<         boolean rtlEnabled = ((this.gc.getStyle () & SWT.MIRRORED) != 0);
+<         if (rtlEnabled) {
+<             Image image = new Image (Display.getDefault (), getMapMode ().LPtoDP (pageSize.x), getMapMode ().LPtoDP (pageSize.y));
+<             GC imgGC = new GC (image, (rtlEnabled) ? SWT.RIGHT_TO_LEFT : SWT.LEFT_TO_RIGHT);
+<             imgGC.setXORMode (false);
+<             SWTGraphics sg = new SWTGraphics (imgGC);
+<             ScaledGraphics g1 = new ScaledGraphics (sg);
+<             MapModeGraphics mmg = createMapModeGraphics (g1);
+<             imgGC.setFont (mmg.getFont ());
+<             internalDrawPage (dgrmEP, figureBounds, fPreferences, margins, mmg, rowIndex, colIndex, true);
+<             this.graphics.pushState ();
+<             this.graphics.drawImage (image, 0, 0);
+<             this.graphics.popState ();
+<             drawHeaderAndFooter (gc_, dgrmEP, figureBounds, font, rowIndex, colIndex);
+<             disposeImageVars (imgGC, image, sg, g1, mmg);
+<         } else {
+<             internalDrawPage (dgrmEP, figureBounds, fPreferences, margins, this.graphics, rowIndex, colIndex, false);
+<             drawHeaderAndFooter (gc_, dgrmEP, figureBounds, font, rowIndex, colIndex);
+334,393c101,102
+<     private void internalDrawPage (DiagramEditPart dgrmEP, Rectangle figureBounds, IPreferenceStore fPreferences, PageMargins margins, Graphics g, int rowIndex, int colIndex, boolean RTL_ENABLED) {
+<         org.eclipse.draw2d.geometry.Point pageSize = PageInfoHelper.getPageSize (fPreferences, false, getMapMode ());
+<         int width = pageSize.x, height = pageSize.y;
+<         g.pushState ();
+<         g.translate (translated.x, translated.y);
+<         g.scale (userScale);
+<         int translateX = - (width * (colIndex - 1));
+<         int translateY = - (height * (rowIndex - 1));
+<         int scaledTranslateX = (int) (translateX / userScale);
+<         int scaledTranslateY = (int) (translateY / userScale);
+<         int scaledWidth = (int) (width / userScale);
+<         int scaledHeight = (int) (height / userScale);
+<         if (RTL_ENABLED) {
+<             scaledTranslateX += (margins.left * (colIndex - 1)) + (margins.right * (colIndex));
+<             scaledTranslateY += ((margins.top * rowIndex) + (margins.bottom * (rowIndex - 1)));
+<         } else {
+<             scaledTranslateX += ((margins.left * colIndex) + (margins.right * (colIndex - 1)));
+<             scaledTranslateY += ((margins.top * rowIndex) + (margins.bottom * (rowIndex - 1)));
+<         }
+<         g.translate (scaledTranslateX, scaledTranslateY);
+<         Rectangle clip = new Rectangle ((scaledWidth - margins.left - margins.right) * (colIndex - 1) + figureBounds.x, (scaledHeight - margins.bottom - margins.top) * (rowIndex - 1) + figureBounds.y, scaledWidth - margins.right - margins.left, scaledHeight - margins.top - margins.bottom);
+<         g.clipRect (clip);
+<         dgrmEP.getLayer (LayerConstants.PRINTABLE_LAYERS).paint (g);
+<         g.popState ();
+<     }
+< 
+<     protected void printToPages (DiagramEditPart dgrmEP, boolean loadedPreferences, IPreferenceStore fPreferences) {
+<         assert null != printer : "printer must be set";
+<         Rectangle figureBounds = PrintHelper.getPageBreakBounds (dgrmEP, loadedPreferences);
+<         PageMargins margins = PageInfoHelper.getPageMargins (fPreferences, getMapMode ());
+<         org.eclipse.draw2d.geometry.Point pageBounds = PageInfoHelper.getPageSize (fPreferences, getMapMode ());
+<         org.eclipse.draw2d.geometry.Point pageCount = getPageCount (dgrmEP, figureBounds, pageBounds, false);
+<         int numCols = pageCount.x;
+<         int numRows = pageCount.y;
+<         float actualWidth = 0;
+<         float actualHeight = 0;
+<         if (this.rows == 1 && this.columns == 1 && fitToPage) {
+<             figureBounds = dgrmEP.getChildrenBounds ();
+<             actualWidth = figureBounds.width;
+<             actualHeight = figureBounds.height;
+<         } else {
+<             actualWidth = numCols * pageBounds.x;
+<             actualHeight = numRows * pageBounds.y;
+<         }
+<         int totalHeight = (this.rows * pageBounds.y);
+<         int totalWidth = (this.columns * pageBounds.x);
+<         float vScale = totalHeight / actualHeight;
+<         float hScale = totalWidth / actualWidth;
+<         this.userScale = Math.min (hScale, vScale);
+<         translated = new Point ((int) (- figureBounds.x * userScale), (int) (- figureBounds.y * userScale));
+<         adjustMargins (margins, userScale, getPrinterOffset ());
+<         GC gc_ = new GC (Display.getDefault ());
+<         FontData fontData = JFaceResources.getDefaultFont ().getFontData () [0];
+<         Font font = new Font (printer, fontData);
+<         int row = 1, col = 1, finalRow = 0, finalColumn = 0;
+<         if (this.printRangePageSelection) {
+<             row = calculateRowFromPage (this.pageFrom, this.columns);
+<             col = calculateColumnFromPage (this.pageFrom, this.columns, row);
+<             finalRow = calculateRowFromPage (this.pageTo, this.columns);
+<             finalColumn = calculateColumnFromPage (this.pageTo, this.columns, finalRow);
+---
+>     protected MapModeGraphics createMapModeGraphics (Graphics theGraphics) {
+>         return new MapModeGraphics (theGraphics, getMapMode ());
+395,401d103
+<         try {
+<             for (; row <= rows; row ++) {
+<                 for (; col <= columns; col ++) {
+<                     printer.startPage ();
+<                     drawPage (gc_, dgrmEP, fPreferences, figureBounds, margins, font, row, col);
+<                     printer.endPage ();
+<                     if (row == finalRow && col == finalColumn && this.printRangePageSelection == true) break;
+402a105,109
+>     public void setPrintRangePages (int pageFrom, int pageTo) {
+>         assert pageFrom > 0 : "From page in print range page selection must be bigger than zero.";
+>         assert (pageTo > 0 && pageTo >= pageFrom) : "To page in print range page selection must be bigger than zero and from page.";
+>         this.pageFrom = pageFrom;
+>         this.pageTo = pageTo;
+404d110
+<                 if (row == finalRow && col == finalColumn && this.printRangePageSelection == true) break;
+406,411c112,113
+<                 col = 1;
+<             }
+<         } finally {
+<             font.dispose ();
+<             gc_.dispose ();
+<         }
+---
+>     public Point getDisplayDPI () {
+>         return display_dpi;
+414,419c116,117
+<     private float computePrinterDisplayScale () {
+<         assert null != printer : "printer must be set";
+<         assert null != display_dpi : "display_dpi must be set";
+<         Point dpi = printer.getDPI ();
+<         float scale = dpi.x / (float) display_dpi.x;
+<         return scale;
+---
+>     public void setDisplayDPI (Point display_dpi) {
+>         this.display_dpi = display_dpi;
+422,429c120,121
+<     private void dispose () {
+<         if (this.graphics != null) {
+<             try {
+<                 this.graphics.dispose ();
+<             } catch (NullPointerException e) {
+<             } finally {
+<                 this.graphics = null;
+<             }
+---
+>     public PreferencesHint getPreferencesHint () {
+>         return preferencesHint;
+431,436c123,125
+<         if (this.printerGraphics != null) {
+<             try {
+<                 this.printerGraphics.dispose ();
+<             } catch (NullPointerException e) {
+<             } finally {
+<                 this.printerGraphics = null;
+---
+> 
+>     public void setPreferencesHint (PreferencesHint preferencesHint) {
+>         this.preferencesHint = preferencesHint;
+437a127,129
+> 
+>     public IMapMode getMapMode () {
+>         return mapMode;
+439,444c131,133
+<         if (this.swtGraphics != null) {
+<             try {
+<                 this.swtGraphics.dispose ();
+<             } catch (NullPointerException e) {
+<             } finally {
+<                 this.swtGraphics = null;
+---
+> 
+>     public void setMapMode (IMapMode mm) {
+>         this.mapMode = mm;
+445a135,137
+> 
+>     public Point getTranslated () {
+>         return translated;
+447,452c139,141
+<         if (this.gc != null) {
+<             try {
+<                 this.gc.dispose ();
+<             } catch (NullPointerException e) {
+<             } finally {
+<                 this.gc = null;
+---
+> 
+>     public void setTranslated (Point translated) {
+>         this.translated = translated;
+453a143,145
+> 
+>     public float getUserScale () {
+>         return userScale;
+455c147,150
+<         printerOffset = null;
+---
+> 
+>     public void setScaledPercent (int scalePercent) {
+>         this.isScaledPercent = true;
+>         this.userScale = (scalePercent) / 100.0f;
+458,464c153,154
+<     private void disposeImageVars (GC imgGC, Image image, SWTGraphics sg, ScaledGraphics g1, MapModeGraphics mmg) {
+<         if (mmg != null) {
+<             try {
+<                 mmg.dispose ();
+<             } catch (NullPointerException e) {
+<             } finally {
+<                 mmg = null;
+---
+>     public void setScaledPercent (boolean isScaledPercent) {
+>         this.isScaledPercent = isScaledPercent;
+465a156,158
+> 
+>     public boolean isFitToPage () {
+>         return fitToPage;
+467,472c160,162
+<         if (g1 != null) {
+<             try {
+<                 g1.dispose ();
+<             } catch (NullPointerException e) {
+<             } finally {
+<                 g1 = null;
+---
+> 
+>     public void setFitToPage (boolean fitToPage) {
+>         this.fitToPage = fitToPage;
+473a164,166
+> 
+>     public boolean isPrintRangePageSelection () {
+>         return printRangePageSelection;
+475,480c168,170
+<         if (sg != null) {
+<             try {
+<                 sg.dispose ();
+<             } catch (NullPointerException e) {
+<             } finally {
+<                 sg = null;
+---
+> 
+>     public void setPrintRangePageSelection (boolean printRangePageSelection) {
+>         this.printRangePageSelection = printRangePageSelection;
+481a172,174
+> 
+>     public int getPageFrom () {
+>         return pageFrom;
+483,488c176,178
+<         if (imgGC != null) {
+<             try {
+<                 imgGC.dispose ();
+<             } catch (NullPointerException e) {
+<             } finally {
+<                 imgGC = null;
+---
+> 
+>     public void setPageFrom (int pageFrom) {
+>         this.pageFrom = pageFrom;
+489a180,182
+> 
+>     public int getPageTo () {
+>         return pageTo;
+491,496c184,186
+<         if (image != null) {
+<             try {
+<                 image.dispose ();
+<             } catch (NullPointerException e) {
+<             } finally {
+<                 image = null;
+---
+> 
+>     public void setPageTo (int pageTo) {
+>         this.pageTo = pageTo;
+497a188,190
+> 
+>     public int getRows () {
+>         return rows;
+498a192,194
+> 
+>     public void setRows (int rows) {
+>         this.rows = rows;
+501,502c197,198
+<     protected MapModeGraphics createMapModeGraphics (Graphics theGraphics) {
+<         return new MapModeGraphics (theGraphics, getMapMode ());
+---
+>     public int getColumns () {
+>         return columns;
+505,506c201,202
+<     protected PrinterGraphics createPrinterGraphics (Graphics theGraphics) {
+<         return new PrinterGraphics (theGraphics, printer, true);
+---
+>     public void setColumns (int columns) {
+>         this.columns = columns;
+509,510c205,206
+<     protected PreferencesHint getPreferencesHint () {
+<         return preferencesHint;
+---
+>     public Graphics getSwtGraphics () {
+>         return swtGraphics;
+513,522c209,211
+<     protected void adjustMargins (PageMargins margins, float scale, Point offset) {
+<         margins.left /= scale;
+<         margins.top /= scale;
+<         margins.right /= scale;
+<         margins.bottom /= scale;
+<         margins.left -= offset.x;
+<         margins.right += offset.x;
+<         margins.top -= offset.y;
+<         margins.bottom += offset.y;
+<         if (margins.left < 0) margins.left = 0;
+---
+>     public void setSwtGraphics (Graphics swtGraphics) {
+>         this.swtGraphics = swtGraphics;
+>     }
+524c213,215
+<         if (margins.right < 0) margins.right = 0;
+---
+>     public Graphics getGraphics () {
+>         return graphics;
+>     }
+526c217,219
+<         if (margins.top < 0) margins.top = 0;
+---
+>     public void setGraphics (Graphics graphics) {
+>         this.graphics = graphics;
+>     }
+528c221,223
+<         if (margins.bottom < 0) margins.bottom = 0;
+---
+>     public void setDiagrams (Collection < Diagram > diagrams) {
+>         this.diagrams = diagrams;
+>     }
+529a225,226
+>     public Collection < Diagram > getDiagrams () {
+>         return diagrams;

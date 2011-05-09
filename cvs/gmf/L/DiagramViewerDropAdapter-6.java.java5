@@ -1,0 +1,154 @@
+package org.eclipse.gmf.runtime.diagram.ui.dnd.parts;
+
+import java.util.ArrayList;
+
+import java.util.Arrays;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.Assert;
+
+import org.eclipse.gef.dnd.DelegatingDropAdapter;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.drop.DelegatingDropTargetAdapter;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.drop.DropTargetContext;
+
+import org.eclipse.gmf.runtime.common.ui.services.dnd.drop.IDropTargetContext;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+
+import org.eclipse.swt.dnd.DropTargetEvent;
+
+import org.eclipse.swt.dnd.Transfer;
+
+import org.eclipse.swt.graphics.Point;
+
+import org.eclipse.swt.widgets.Control;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+public class DiagramViewerDropAdapter extends DelegatingDropAdapter {
+    private final class DiagramViewerDropTargetContext extends DropTargetContext {
+
+        public DiagramViewerDropTargetContext (IWorkbenchPart activePart, Control viewerControl) {
+            super (activePart, viewerControl);
+        }
+
+        protected void dragEnter (DropTargetEvent event) {
+            DiagramViewerDropAdapter.super.dragEnter (event);
+        }
+
+        protected void dragLeave (DropTargetEvent event) {
+            DiagramViewerDropAdapter.super.dragLeave (event);
+        }
+
+        protected void dragOperationChanged (DropTargetEvent event) {
+            DiagramViewerDropAdapter.super.dragOperationChanged (event);
+        }
+
+        protected void dragOver (DropTargetEvent event) {
+            DiagramViewerDropAdapter.super.dragOver (event);
+        }
+
+        protected void drop (DropTargetEvent event) {
+            DiagramViewerDropAdapter.super.drop (event);
+        }
+
+        protected void dropAccept (DropTargetEvent event) {
+            DiagramViewerDropAdapter.super.dropAccept (event);
+        }
+
+        protected void setCurrentTargetAndLocation (DropTargetEvent event) {
+            location = getViewerControl ().toControl (new Point (event.x, event.y));
+            org.eclipse.draw2d.geometry.Point gefPoint = new org.eclipse.draw2d.geometry.Point (location.x, location.y);
+            target = DiagramViewerDropAdapter.this.getWorkbenchPart ().getDiagramGraphicalViewer ().findObjectAt (gefPoint);
+            relativeLocation = IDropTargetContext.LOCATION_NONE;
+        }
+
+    }
+
+    private final IDiagramWorkbenchPart workbenchPart;
+    private DelegatingDropTargetAdapter internalDropAdapter;
+
+    public DiagramViewerDropAdapter (IDiagramWorkbenchPart workbenchPart) {
+        Assert.isNotNull (workbenchPart);
+        this.workbenchPart = workbenchPart;
+    }
+
+    public Transfer [] getTransfers () {
+        if (getInternalDropAdapter () == null) {
+            return super.getTransfers ();
+        }
+        Transfer [] allTransferAgents = getInternalDropAdapter ().getAllTransferAgents ();
+        Transfer [] superTransferTypes = super.getTransfers ();
+        List myTransfers = null;
+        List superTransfers = null;
+        if (allTransferAgents != null) myTransfers = Arrays.asList (allTransferAgents);
+
+        if (superTransferTypes != null) superTransfers = Arrays.asList (superTransferTypes);
+
+        ArrayList allTransfers = new ArrayList ();
+        if (superTransfers != null) allTransfers.addAll (superTransfers);
+
+        if (myTransfers != null) allTransfers.addAll (myTransfers);
+
+        Transfer [] arrTransfers = new Transfer [allTransfers.size ()];
+        arrTransfers = (Transfer []) allTransfers.toArray (arrTransfers);
+        return arrTransfers;
+    }
+
+    private DelegatingDropTargetAdapter getInternalDropAdapter () {
+        return internalDropAdapter;
+    }
+
+    protected final void initialize (Control control) {
+        if (this.internalDropAdapter == null) {
+            Assert.isNotNull (control);
+            DiagramViewerDropTargetContext context = new DiagramViewerDropTargetContext (getWorkbenchPart (), control);
+            this.internalDropAdapter = new DelegatingDropTargetAdapter (context);
+        }
+    }
+
+    public void dragEnter (DropTargetEvent event) {
+        getInternalDropAdapter ().dragEnter (event);
+    }
+
+    public void dragLeave (DropTargetEvent event) {
+        getInternalDropAdapter ().dragLeave (event);
+    }
+
+    public void dragOperationChanged (DropTargetEvent event) {
+        getInternalDropAdapter ().dragOperationChanged (event);
+    }
+
+    public void dragOver (DropTargetEvent event) {
+        getInternalDropAdapter ().dragOver (event);
+    }
+
+    public void drop (DropTargetEvent event) {
+        getInternalDropAdapter ().drop (event);
+    }
+
+    public void dropAccept (DropTargetEvent event) {
+        getInternalDropAdapter ().dropAccept (event);
+    }
+
+    private IDiagramWorkbenchPart getWorkbenchPart () {
+        return this.workbenchPart;
+    }
+
+    public boolean isEmpty () {
+        Transfer [] transfers = getTransfers ();
+        if (transfers != null && transfers.length > 0) {
+            return false;
+        }
+        return true;
+    }
+
+    protected final boolean isInitialized () {
+        return getInternalDropAdapter () != null;
+    }
+
+}
+

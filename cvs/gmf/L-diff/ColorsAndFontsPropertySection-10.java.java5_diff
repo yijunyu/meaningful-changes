@@ -1,0 +1,100 @@
+27c27,29
+< import org.eclipse.gmf.runtime.diagram.ui.properties.internal.l10n.ResourceManager;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.properties.internal.l10n.DiagramUIPropertiesImages;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.properties.internal.l10n.DiagramUIPropertiesMessages;
+46a49,50
+> import org.eclipse.jface.resource.ImageDescriptor;
+> 
+92,99c96,100
+<     protected static final String FONT_COLOR_COMMAND_NAME = ResourceManager.getI18NString ("FontColor.commandText") + StringStatics.SPACE + VALUE_CHANGED_STRING;
+<     protected static final String LINE_COLOR_COMMAND_NAME = ResourceManager.getI18NString ("LineColor.commandText") + StringStatics.SPACE + VALUE_CHANGED_STRING;
+<     protected static final String FONT_COMMAND_NAME = ResourceManager.getI18NString ("Font.commandText") + StringStatics.SPACE + VALUE_CHANGED_STRING;
+<     static protected final String FILL_COLOR_COMMAND_NAME = ResourceManager.getI18NString ("FillColor.commandText") + StringStatics.SPACE + VALUE_CHANGED_STRING;
+<     protected static final String FILL_COLOR_IMAGE_NAME = "fill_color.gif";
+<     protected static final String BOLD_IMAGE_NAME = "bold.gif";
+<     protected static final String ITALIC_IMAGE_NAME = "italic.gif";
+<     protected static final String FONTS_AND_COLORS_LABEL = ResourceManager.getI18NString ("FontAndColor.nameLabel");
+---
+>     protected static final String FONT_COLOR_COMMAND_NAME = DiagramUIPropertiesMessages.FontColor_commandText + StringStatics.SPACE + VALUE_CHANGED_STRING;
+>     protected static final String LINE_COLOR_COMMAND_NAME = DiagramUIPropertiesMessages.LineColor_commandText + StringStatics.SPACE + VALUE_CHANGED_STRING;
+>     protected static final String FONT_COMMAND_NAME = DiagramUIPropertiesMessages.Font_commandText + StringStatics.SPACE + VALUE_CHANGED_STRING;
+>     static protected final String FILL_COLOR_COMMAND_NAME = DiagramUIPropertiesMessages.FillColor_commandText + StringStatics.SPACE + VALUE_CHANGED_STRING;
+>     protected static final String FONTS_AND_COLORS_LABEL = DiagramUIPropertiesMessages.FontAndColor_nameLabel;
+131,132d131
+<     private static final String FONT_COLOR_IMAGE_NAME = "font_color.gif";
+<     private static final String LINE_COLOR_IMAGE_NAME = "line_color.gif";
+204c203
+<         fontBoldButton.setImage (ResourceManager.getInstance ().getImage (BOLD_IMAGE_NAME));
+---
+>         fontBoldButton.setImage (DiagramUIPropertiesImages.get (DiagramUIPropertiesImages.IMG_BOLD));
+206c205
+<         fontItalicButton.setImage (ResourceManager.getInstance ().getImage (ITALIC_IMAGE_NAME));
+---
+>         fontItalicButton.setImage (DiagramUIPropertiesImages.get (DiagramUIPropertiesImages.IMG_ITALIC));
+227c226
+<         fontColorButton.setImage (ResourceManager.getInstance ().getImage (FONT_COLOR_IMAGE_NAME));
+---
+>         fontColorButton.setImage (DiagramUIPropertiesImages.get (DiagramUIPropertiesImages.IMG_FONT_COLOR));
+239c238
+<         lineColorButton.setImage (ResourceManager.getInstance ().getImage (LINE_COLOR_IMAGE_NAME));
+---
+>         lineColorButton.setImage (DiagramUIPropertiesImages.get (DiagramUIPropertiesImages.IMG_LINE_COLOR));
+250c249
+<         fillColorButton.setImage (ResourceManager.getInstance ().getImage (FILL_COLOR_IMAGE_NAME));
+---
+>         fillColorButton.setImage (DiagramUIPropertiesImages.get (DiagramUIPropertiesImages.IMG_FILL_COLOR));
+268c267
+<         lineColor = changeColor (event, lineColorButton, IPreferenceConstants.PREF_LINE_COLOR, Properties.ID_LINECOLOR, LINE_COLOR_COMMAND_NAME, LINE_COLOR_IMAGE_NAME);
+---
+>         lineColor = changeColor (event, lineColorButton, IPreferenceConstants.PREF_LINE_COLOR, Properties.ID_LINECOLOR, LINE_COLOR_COMMAND_NAME, DiagramUIPropertiesImages.DESC_LINE_COLOR);
+272c271
+<         fontColor = changeColor (event, fontColorButton, IPreferenceConstants.PREF_FONT_COLOR, Properties.ID_FONTCOLOR, FONT_COLOR_COMMAND_NAME, FONT_COLOR_IMAGE_NAME);
+---
+>         fontColor = changeColor (event, fontColorButton, IPreferenceConstants.PREF_FONT_COLOR, Properties.ID_FONTCOLOR, FONT_COLOR_COMMAND_NAME, DiagramUIPropertiesImages.DESC_FONT_COLOR);
+300c299,332
+<                 Image overlyedImage = new ColorOverlayImageDescriptor (ResourceManager.getInstance ().getImage (imageName).getImageData (), color).createImage ();
+---
+>                 Image overlyedImage = new ColorOverlayImageDescriptor (DiagramUIPropertiesImages.get (imageName).getImageData (), color).createImage ();
+>                 button.setImage (overlyedImage);
+>             }
+>             return color;
+>         }
+>         return null;
+>     }
+> 
+>     protected RGB changeColor (SelectionEvent event, ToolItem button, String preferenceId, final String propertyId, String commandName, ImageDescriptor imageDescriptor) {
+>         ColorPalettePopup popup = new ColorPalettePopup (button.getParent ().getShell (), preferenceId, IDialogConstants.BUTTON_BAR_HEIGHT);
+>         Rectangle r = button.getBounds ();
+>         Point location = button.getParent ().toDisplay (r.x, r.y);
+>         popup.open (new Point (location.x, location.y + r.height));
+>         if (popup.getSelectedColor () != null) {
+>             final RGB color = popup.getSelectedColor ();
+>             if (color != null) {
+>                 List commands = new ArrayList ();
+>                 Iterator it = getInputIterator ();
+>                 while (it.hasNext ()) {
+>                     final IGraphicalEditPart ep = (IGraphicalEditPart) it.next ();
+>                     commands.add (createCommand (commandName, ((View) ep.getModel ()).eResource (), new Runnable () {
+> 
+>                         public void run () {
+>                             ENamedElement element = (EStructuralFeature) MetaModelUtil.getElement (propertyId);
+>                             if (element instanceof EStructuralFeature) ep.setStructuralFeatureValue ((EStructuralFeature) MetaModelUtil.getElement (propertyId), FigureUtilities.RGBToInteger (color));
+> 
+>                         }
+> 
+>                     }
+> 
+>                     ));
+>                 }
+>                 executeAsCompositeCommand (commandName, commands);
+>                 Image overlyedImage = new ColorOverlayImageDescriptor (imageDescriptor.getImageData (), color).createImage ();
+387c419
+<             Image overlyedImage = new ColorOverlayImageDescriptor (ResourceManager.getInstance ().getImage (FONT_COLOR_IMAGE_NAME).getImageData (), fontColor).createImage ();
+---
+>             Image overlyedImage = new ColorOverlayImageDescriptor (DiagramUIPropertiesImages.DESC_FONT_COLOR.getImageData (), fontColor).createImage ();
+389c421
+<             overlyedImage = new ColorOverlayImageDescriptor (ResourceManager.getInstance ().getImage (LINE_COLOR_IMAGE_NAME).getImageData (), lineColor).createImage ();
+---
+>             overlyedImage = new ColorOverlayImageDescriptor (DiagramUIPropertiesImages.DESC_LINE_COLOR.getImageData (), lineColor).createImage ();

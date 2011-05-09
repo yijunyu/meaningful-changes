@@ -1,0 +1,70 @@
+26,27c26,30
+< import org.eclipse.ui.IEditorPart;
+< 
+---
+> import org.eclipse.emf.edit.domain.EditingDomain;
+> import org.eclipse.emf.edit.domain.IEditingDomainProvider;
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+29,31c32,35
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+< import org.eclipse.gmf.runtime.emf.core.util.OperationUtil;
+< import org.eclipse.gmf.runtime.emf.core.util.ResourceUtil;
+---
+> import org.eclipse.gmf.runtime.emf.ui.internal.MslUIDebugOptions;
+> import org.eclipse.gmf.runtime.emf.ui.internal.MslUIPlugin;
+> import org.eclipse.gmf.runtime.emf.ui.internal.MslUIStatusCodes;
+> import org.eclipse.ui.IEditorPart;
+47a52,53
+>     private TransactionalEditingDomain editingDomain;
+>     
+59a66,78
+>         // Remember the editing domain associated with this editor
+>         IEditingDomainProvider domainProvider = (IEditingDomainProvider) getEditor().getAdapter(IEditingDomainProvider.class);
+>         
+>         if (domainProvider != null) {
+>             EditingDomain domain = domainProvider.getEditingDomain();
+>             
+>             if (domain instanceof TransactionalEditingDomain) {
+>                 editingDomain = (TransactionalEditingDomain) domain;
+>             }
+>         }
+>         
+>         if (editingDomain != null) {
+> 
+61,62c80,83
+<         OperationUtil.runAsRead(new MRunnable() {
+<             public Object run() {
+---
+>             try {
+>                 editingDomain.runExclusive(new Runnable() {
+>     
+>                     public void run() {
+64,67c85,97
+<                     editor,
+<                     marker);
+<                 return null;
+<             }});
+---
+>                             editor, marker);
+>                     }
+>                 });
+>                 
+>             } catch (InterruptedException e) {
+>                 Trace.catching(MslUIPlugin.getDefault(),
+>                     MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+>                     "gotoMarker", e); //$NON-NLS-1$
+>                 Log.error(MslUIPlugin.getDefault(),
+>                     MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e
+>                         .getLocalizedMessage(), e);
+>             }
+>         }
+90c120,122
+< 		        result = ResourceUtil.load(resourcePath.toOSString());
+---
+>                 ResourceSet resourceSet = editingDomain.getResourceSet();
+>                 URI uri = URI.createFileURI(resourcePath.toOSString());
+>                 result = resourceSet.getResource(uri, true);
+181a214
+> 

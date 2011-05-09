@@ -1,0 +1,81 @@
+4a5,8
+> import org.eclipse.draw2d.IFigure;
+> 
+> import org.eclipse.draw2d.Label;
+> 
+16a21,22
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.ITextAwareEditPart;
+> 
+90a97,121
+>     private static class LabelCellEditorLocator implements CellEditorLocator {
+>         private Label label;
+> 
+>         public LabelCellEditorLocator (Label label) {
+>             this.label = label;
+>         }
+> 
+>         public Label getLabel () {
+>             return label;
+>         }
+> 
+>         public void relocate (CellEditor celleditor) {
+>             Text text = (Text) celleditor.getControl ();
+>             Rectangle rect = getLabel ().getTextBounds ().getCopy ();
+>             getLabel ().translateToAbsolute (rect);
+>             int avr = FigureUtilities.getFontMetrics (text.getFont ()).getAverageCharWidth ();
+>             rect.setSize (new Dimension (text.computeSize (SWT.DEFAULT, SWT.DEFAULT)).expand (avr * 2, 0));
+>             if (! rect.equals (new Rectangle (text.getBounds ()))) text.setBounds (rect.x, rect.y, rect.width, rect.height);
+> 
+>         }
+> 
+>     }
+> 
+>     public TextDirectEditManager (ITextAwareEditPart source) {
+>         super (source, getTextCellEditorClass (source), getTextCellEditorLocator (source));
+91,92d96
+<     public TextDirectEditManager (TextCompartmentEditPart source) {
+<         super (source, getTextCellEditorClass (source), new TextCellEditorLocator (source.getLabel ()));
+98a128,136
+>     public static CellEditorLocator getTextCellEditorLocator (ITextAwareEditPart source) {
+>         if (source instanceof TextCompartmentEditPart) return new TextCellEditorLocator (((TextCompartmentEditPart) source).getLabel ());
+>         else {
+>             IFigure figure = source.getFigure ();
+>             assert figure instanceof Label;
+>             return new LabelCellEditorLocator ((Label) figure);
+>         }
+>     }
+> 
+99,99c137,137
+<     private static Class getTextCellEditorClass (TextCompartmentEditPart source) {
+---
+>     public static Class getTextCellEditorClass (GraphicalEditPart source) {
+99a138,138
+>         IFigure figure = source.getFigure ();
+100,100d137
+<         WrapLabel wrapLabel = source.getLabel ();
+101,101c139,139
+<         if (wrapLabel.isTextWrapped ()) return WrapTextCellEditor.class;
+---
+>         if (figure instanceof WrapLabel && ((WrapLabel) figure).isTextWrapped ()) return WrapTextCellEditor.class;
+106,106c144,144
+<     protected Font getScaledFont (WrapLabel label) {
+---
+>     protected Font getScaledFont (IFigure label) {
+119a158,158
+>         ITextAwareEditPart textEP = (ITextAwareEditPart) getEditPart ();
+120,120d157
+<         TextCompartmentEditPart textEP = (TextCompartmentEditPart) getEditPart ();
+122,122c160,160
+<         WrapLabel label = textEP.getLabel ();
+---
+>         IFigure label = textEP.getFigure ();
+180a219,219
+>         ITextAwareEditPart textEP = (ITextAwareEditPart) getEditPart ();
+181,181d218
+<         TextCompartmentEditPart textEP = (TextCompartmentEditPart) getEditPart ();
+182a221,221
+>         textEP.setLabelText (toEdit);
+183,185d220
+<         WrapLabel label = textEP.getLabel ();
+<         Assert.isNotNull (label);
+<         label.setText (toEdit);

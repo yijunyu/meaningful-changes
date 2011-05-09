@@ -1,0 +1,164 @@
+package org.eclipse.gmf.runtime.diagram.ui.editparts;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.gef.ExposeHelper;
+
+import org.eclipse.gef.editparts.ViewportExposeHelper;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.figures.ResizableCompartmentFigure;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.properties.Properties;
+
+import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramColorRegistry;
+
+import org.eclipse.gmf.runtime.notation.DrawerStyle;
+
+import org.eclipse.gmf.runtime.notation.NotationPackage;
+
+import org.eclipse.gmf.runtime.notation.Ratio;
+
+import org.eclipse.gmf.runtime.notation.TitleStyle;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.swt.graphics.Color;
+
+import org.eclipse.swt.graphics.FontData;
+
+public abstract class ResizableCompartmentEditPart extends CompartmentEditPart implements IResizableCompartmentEditPart {
+
+    public ResizableCompartmentEditPart (EObject model) {
+        super (model);
+    }
+
+    public Object getAdapter (Class key) {
+        if (key == ExposeHelper.class) {
+            ViewportExposeHelper helper = new ViewportExposeHelper (this);
+            return helper;
+        }
+        return super.getAdapter (key);
+    }
+
+    protected void refreshVisuals () {
+        super.refreshVisuals ();
+        refreshFont ();
+        refreshFontColor ();
+        refreshShowCompartmentTitle ();
+        refreshCollapsed ();
+        refreshRatio ();
+    }
+
+    protected IFigure createFigure () {
+        return new ResizableCompartmentFigure (getCompartmentName (), getMapMode ());
+    }
+
+    public ResizableCompartmentFigure getCompartmentFigure () {
+        return (ResizableCompartmentFigure) getFigure ();
+    }
+
+    public IFigure getContentPane () {
+        if (getCompartmentFigure () != null) {
+            return getCompartmentFigure ().getContentPane ();
+        } else {
+            return null;
+        }
+    }
+
+    public String getCompartmentName () {
+        return new String ();
+    }
+
+    protected void handleNotificationEvent (Notification event) {
+        Object feature = event.getFeature ();
+        if (NotationPackage.eINSTANCE.getRatio_Value ().equals (feature) || event.getOldValue () instanceof Ratio || event.getNewValue () instanceof Ratio) refreshRatio ();
+        else if (NotationPackage.eINSTANCE.getDrawerStyle_Collapsed ().equals (feature)) {
+            setCollapsed (event.getNewBooleanValue (), true);
+            this.getFigure ().revalidate ();
+        } else if (NotationPackage.eINSTANCE.getTitleStyle_ShowTitle ().equals (feature)) setShowCompartmentTitle (event.getNewBooleanValue ());
+        else if (NotationPackage.eINSTANCE.getFontStyle_FontColor ().equals (feature)) {
+            Integer c = (Integer) event.getNewValue ();
+            setFontColor (DiagramColorRegistry.getInstance ().getColor (c));
+        } else if (NotationPackage.eINSTANCE.getFontStyle_FontHeight ().equals (feature) || NotationPackage.eINSTANCE.getFontStyle_FontName ().equals (feature) || NotationPackage.eINSTANCE.getFontStyle_Bold ().equals (feature) || NotationPackage.eINSTANCE.getFontStyle_Italic ().equals (feature)) {
+            refreshFont ();
+        } else super.handleNotificationEvent (event);
+
+    }
+
+    protected void refreshRatio () {
+        if (ViewUtil.isPropertySupported ((View) getModel (), Properties.ID_RATIO)) setRatio ((Double) getStructuralFeatureValue (NotationPackage.eINSTANCE.getRatio_Value ()));
+        else setRatio (new Double (- 1));
+
+    }
+
+    protected void refreshCollapsed () {
+        DrawerStyle style = (DrawerStyle) ((View) getModel ()).getStyle (NotationPackage.eINSTANCE.getDrawerStyle ());
+        if (style != null) setCollapsed (style.isCollapsed (), false);
+
+    }
+
+    protected void refreshShowCompartmentTitle () {
+        TitleStyle style = (TitleStyle) ((View) getModel ()).getStyle (NotationPackage.eINSTANCE.getTitleStyle ());
+        if (style != null) setShowCompartmentTitle (style.isShowTitle ());
+
+    }
+
+    protected void setCollapsed (boolean collapsed, boolean animate) {
+        if (getCompartmentFigure () != null) {
+            if (collapsed) {
+                if (animate) getCompartmentFigure ().collapse ();
+                else getCompartmentFigure ().setCollapsed ();
+
+            } else {
+                if (animate) getCompartmentFigure ().expand ();
+                else getCompartmentFigure ().setExpanded ();
+
+            }
+        }
+    }
+
+    protected void setRatio (Double ratio) {
+        ((IGraphicalEditPart) getParent ()).setLayoutConstraint (this, getFigure (), ratio);
+    }
+
+    protected void setShowCompartmentTitle (boolean showCompartmentTitle) {
+        if (getCompartmentFigure () != null) getCompartmentFigure ().setTitleVisibility (showCompartmentTitle);
+
+    }
+
+    protected void setFont (FontData fontData) {
+        if (getCompartmentFigure () != null) fontData.setHeight (fontData.getHeight () - 1);
+
+        super.setFont (fontData);
+    }
+
+    protected void setFontColor (Color color) {
+        if (getCompartmentFigure () != null) getCompartmentFigure ().setFontColor (color);
+
+    }
+
+    protected void addNotationalListeners () {
+        super.addNotationalListeners ();
+        addListenerFilter ("PrimaryView", this, getPrimaryView ());
+    }
+
+    protected void removeNotationalListeners () {
+        super.removeNotationalListeners ();
+        removeListenerFilter ("PrimaryView");
+    }
+
+    public boolean isSelectable () {
+        if (super.isSelectable ()) {
+            return (! (getParent () instanceof ResizableCompartmentEditPart));
+        }
+        return false;
+    }
+
+}
+

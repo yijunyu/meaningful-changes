@@ -1,0 +1,58 @@
+package org.eclipse.gmf.runtime.diagram.core.commands;
+
+import java.util.Collection;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.l10n.Messages;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractModelCommand;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class AddCommand extends AbstractModelCommand {
+    private IAdaptable parent;
+    private IAdaptable child;
+    private int index;
+
+    public AddCommand (IAdaptable parent, IAdaptable child) {
+        this (parent, child, ViewUtil.APPEND);
+    }
+
+    public AddCommand (IAdaptable parent, IAdaptable child, int index) {
+        super (Messages.getString ("AddCommand.Label"), null);
+        assert null != parent : "Null parent in AddCommand";
+        assert null != child : "Null child in AddCommand";
+        this.parent = parent;
+        this.child = child;
+        this.index = index;
+    }
+
+    public Collection getAffectedObjects () {
+        View view = (View) parent.getAdapter (View.class);
+        if (view != null) return getWorkspaceFilesFor (view);
+
+        return super.getAffectedObjects ();
+    }
+
+    protected CommandResult doExecute (IProgressMonitor progressMonitor) {
+        View childView = (View) child.getAdapter (View.class);
+        View parentView = (View) parent.getAdapter (View.class);
+        if (index == ViewUtil.APPEND) parentView.insertChild (childView);
+        else parentView.insertChildAt (childView, index);
+
+        return newOKCommandResult ();
+    }
+
+    public String getLabel () {
+        return Messages.getString ("AddCommand.Label");
+    }
+
+}
+

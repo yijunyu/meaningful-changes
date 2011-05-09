@@ -1,0 +1,78 @@
+4a5,6
+> import org.eclipse.draw2d.PositionConstants;
+> 
+13a16,17
+>     private int [] verticalGuidesMM;
+>     private int [] horizontalGuidesMM;
+19c23,44
+<     protected double getCorrectionFor (int [] guides, double value, Map extendedData, boolean vert, int side) {
+---
+>     protected double getThreshold () {
+>         IMapMode mm = MapModeUtil.getMapMode (container.getFigure ());
+>         return mm.DPtoLP ((int) super.getThreshold ());
+>     }
+> 
+>     protected int [] getHorizontalGuides () {
+>         if (horizontalGuidesMM == null) {
+>             int guides [] = super.getHorizontalGuides ();
+>             IMapMode mm = MapModeUtil.getMapMode (container.getFigure ());
+>             horizontalGuidesMM = new int [guides.length];
+>             for (int i = 0;
+>             i < guides.length; i ++) {
+>                 int guide = guides [i];
+>                 horizontalGuidesMM [i] = mm.DPtoLP (guide);
+>             }
+>         }
+>         return horizontalGuidesMM;
+>     }
+> 
+>     protected int [] getVerticalGuides () {
+>         if (verticalGuidesMM == null) {
+>             int guides [] = super.getVerticalGuides ();
+21,22c46
+<         double resultMag = mm.DPtoLP ((int) THRESHOLD);
+<         double result = THRESHOLD;
+---
+>             verticalGuidesMM = new int [guides.length];
+25,32c49,50
+<             int offset = mm.DPtoLP (guides [i]);
+<             double magnitude;
+<             magnitude = Math.abs (value - offset);
+<             if (magnitude < resultMag) {
+<                 extendedData.put (vert ? KEY_VERTICAL_GUIDE : KEY_HORIZONTAL_GUIDE, new Integer (mm.DPtoLP (guides [i])));
+<                 extendedData.put (vert ? KEY_VERTICAL_ANCHOR : KEY_HORIZONTAL_ANCHOR, new Integer (side));
+<                 resultMag = magnitude;
+<                 result = offset - value;
+---
+>                 int guide = guides [i];
+>                 verticalGuidesMM [i] = mm.DPtoLP (guide);
+35c53,79
+<         return result;
+---
+>         return verticalGuidesMM;
+>     }
+> 
+>     protected double getCorrectionFor (int [] guides, double value, Map extendedData, boolean vert, int side) {
+>         Integer restrictedDirections = (Integer) extendedData.get (SnapToHelperUtil.RESTRICTED_DIRECTIONS);
+>         if (restrictedDirections == null || restrictedDirections == PositionConstants.NONE) {
+>             return super.getCorrectionFor (guides, value, extendedData, vert, side);
+>         }
+>         if (restrictedDirections == NONE) {
+>             return super.getCorrectionFor (guides, value, extendedData, vert, side);
+>         }
+>         boolean increaseOK = vert ? (restrictedDirections & EAST) != 0 : (restrictedDirections & SOUTH) != 0;
+>         boolean decreaseOK = vert ? (restrictedDirections & WEST) != 0 : (restrictedDirections & NORTH) != 0;
+>         int filteredGuides [] = new int [guides.length];
+>         int count = 0;
+>         for (int i = 0;
+>         i < guides.length; i ++) {
+>             if ((increaseOK && guides [i] > value) || (decreaseOK && guides [i] < value)) {
+>                 filteredGuides [count ++] = guides [i];
+>             }
+>         }
+>         int [] filteredGuides2 = new int [count];
+>         for (int i = 0;
+>         i < count; i ++) {
+>             filteredGuides2 [i] = filteredGuides [i];
+>         }
+>         return super.getCorrectionFor (filteredGuides2, value, extendedData, vert, side);

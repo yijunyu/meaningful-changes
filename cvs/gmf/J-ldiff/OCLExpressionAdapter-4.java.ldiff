@@ -1,0 +1,108 @@
+20a21,23
+> import org.eclipse.emf.ocl.expressions.CollectionItem;
+> import org.eclipse.emf.ocl.expressions.CollectionLiteralExp;
+> import org.eclipse.emf.ocl.expressions.CollectionLiteralPart;
+22a26,26
+> import org.eclipse.emf.ocl.expressions.TypeExp;
+29a34,34
+> import org.eclipse.emf.ocl.parser.SemanticException;
+31a37,39
+> import org.eclipse.emf.ocl.types.CollectionType;
+> import org.eclipse.emf.ocl.types.TypeType;
+> import org.eclipse.emf.ocl.types.impl.TypeUtil;
+129,129c137,137
+< 	boolean isOclConformantTo(EClassifier oclType) {
+---
+> 	boolean isOclConformantTo(EClassifier anotherOclType) {
+130a139,168
+> 		
+> 		boolean isTargetCollection = anotherOclType instanceof CollectionType; 
+> 		if(isTargetCollection) {
+> 			CollectionType oclCollectionType = (CollectionType)anotherOclType;
+> 			if(oclCollectionType.getElementType() != null) {
+> 				anotherOclType = oclCollectionType.getElementType();
+> 			}
+> 		}
+> 		
+> 		if(thisOclType instanceof CollectionType) {
+> 			if(!isTargetCollection) {
+> 				return false; // can't assign CollectionType to scalar
+> 			}
+> 			CollectionType thisOclCollectionType = (CollectionType)thisOclType;
+> 			if(thisOclCollectionType.getElementType() != null) {
+> 				thisOclType = thisOclCollectionType.getElementType();
+> 			}
+> 		}
+> 
+> 		// handle OCL TypeType meta-types
+> 		if(thisOclType instanceof TypeType) {
+> 			// There is no way of getting the reffered type directly from the TypeType
+> 			// Handle only, TypeExp here as there should be no other use-case producing TypeType 
+> 			// except for the type literal.			
+> 			EClassifier thisRefferedClassifier = getReferredType(query.getExpression());	
+> 			if(thisRefferedClassifier != null) {
+> 				return DefUtils.getCanonicalEClassifier(anotherOclType).isInstance(thisRefferedClassifier);
+> 			}
+> 		}
+> 		
+132a171,171
+> 				thisOclType.getInstanceClass() == int.class) && 
+132,132c170,170
+< 		if ((oclType.getInstanceClass() == Integer.class ||
+---
+> 		if ((thisOclType.getInstanceClass() == Integer.class ||
+133,133d170
+< 			oclType.getInstanceClass() == int.class) && 
+134,134c172,172
+< 			(thisOclType.getInstanceClass() == Double.class || 
+---
+> 			(anotherOclType.getInstanceClass() == Double.class || 
+135,135c173,173
+< 				thisOclType.getInstanceClass() == double.class)) {
+---
+> 				anotherOclType.getInstanceClass() == double.class)) {
+138a177,177
+> 		if(thisOclType instanceof EDataType && anotherOclType instanceof EDataType) {
+139,139d176
+< 		if(thisOclType instanceof EDataType && oclType instanceof EDataType) {
+140,140c178,178
+< 			if(EDataTypeConversion.isConvertable((EDataType)oclType, (EDataType)thisOclType)) {
+---
+> 			if(EDataTypeConversion.isConvertable((EDataType)anotherOclType, (EDataType)thisOclType)) {
+143a182,215
+> 		
+> 		return DefUtils.checkTypeAssignmentCompatibility(anotherOclType, thisOclType);			
+> 	}
+> 	
+> 	static EClassifier getReferredType(OCLExpression oclExpression) {
+> 		EClassifier referredType = null;
+> 		if(oclExpression instanceof TypeExp) {
+> 			// There is no way of getting the reffered type directly from the TypeType
+> 			// Handle only, TypeExp here as there should be no other use-case producing TypeType 
+> 			// except for the type literal.
+> 			referredType = ((TypeExp)oclExpression).getReferredType();
+> 		} else if(oclExpression instanceof CollectionLiteralExp) {
+> 			for (Iterator it = ((CollectionLiteralExp)oclExpression).getPart().iterator(); it.hasNext();) {
+> 				CollectionLiteralPart nextPart = (CollectionLiteralPart) it.next();
+> 				
+> 				if(nextPart.getType() instanceof TypeType && nextPart instanceof CollectionItem) {
+> 					EClassifier nextType = getReferredType(((CollectionItem)nextPart).getItem());
+> 					if(referredType == null) {
+> 						referredType = nextType;
+> 					} else {
+> 						try {
+> 							if(nextType != null) {
+> 								referredType = TypeUtil.commonSuperType(referredType, nextType);
+> 							}
+> 						} catch (SemanticException e) {
+> 							// Should never happen as the OCL expression should have been successfully parsed
+> 							assert false;
+> 							return null;
+> 						}
+> 					}
+> 				}
+> 			}
+> 		}
+> 		return referredType;
+144,144d181
+< 		return DefUtils.checkTypeAssignmentCompatibility(oclType, thisOclType);			

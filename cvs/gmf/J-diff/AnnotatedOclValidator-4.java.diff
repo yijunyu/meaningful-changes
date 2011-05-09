@@ -1,0 +1,58 @@
+34a35
+> import org.eclipse.osgi.util.NLS;
+130c131,133
+< 							ConstraintAdapter constraint = new ConstraintAdapter(expression);																				
+---
+> 							ConstraintAdapter constraint = new ConstraintAdapter(expression, 
+> 									getDiagnosticSeverity(annotation, diagnostics), 
+> 									getDescriptionDetail(annotation));																				
+133,134c136
+< 								isValid &= handleConstrainedElement(constraint, contextInstance, 
+< 												getDescriptionDetail(annotation), diagnostics);
+---
+> 								isValid &= handleConstrainedElement(constraint, contextInstance, diagnostics);
+150a153,180
+> 		/**
+> 		 * Gets Diagnostic.severity level from the given annotation
+> 		 * 
+> 		 * @param constraintAnnotation annotation defining a constraint
+> 		 * @param diagnostics container for possible problems on the severity definition
+> 		 * @return Diagnostic.ERROR|WARN|INFO integer
+> 		 * 
+> 		 * @see Diagnostic
+> 		 */
+> 		private static int getDiagnosticSeverity(EAnnotation constraintAnnotation, DiagnosticChain diagnostics) {
+> 			int severity = IStatus.ERROR; // default and also fall-back value
+> 			Object val = constraintAnnotation.getDetails().get(Annotations.SEVERITY);
+> 			String strVal = (val instanceof String) ? ((String)val).trim() : null;
+> 			if(Annotations.SEVERITY_INFO.equals(strVal)) {
+> 				severity = Diagnostic.INFO;
+> 			} else if(Annotations.SEVERITY_WARN.equals(strVal)) {
+> 				severity = Diagnostic.WARNING;
+> 			} else if(Annotations.SEVERITY_ERROR.equals(strVal)) {
+> 				severity = Diagnostic.ERROR;
+> 			} else if(strVal != null) {
+> 				diagnostics.add(new BasicDiagnostic(Diagnostic.ERROR, DIAGNOSTIC_SOURCE, 
+> 						StatusCodes.INVALID_CONSTRAINT_SEVERITY,
+> 						NLS.bind(Messages.invalidConstraintSeverity, new Object[] { 
+> 								strVal, Annotations.SEVERITY_ERROR, Annotations.SEVERITY_WARN, Annotations.SEVERITY_INFO})
+> 						, new Object[] { val }));
+> 			}
+> 			return severity;
+> 		}
+235c265
+< 		protected boolean handleConstrainedElement(ConstraintAdapter constraint, EObject constrainedElement, String description, DiagnosticChain diagnostics) {
+---
+> 		protected boolean handleConstrainedElement(ConstraintAdapter constraint, EObject constrainedElement, DiagnosticChain diagnostics) {
+238c268
+< 				if(description == null) {
+---
+> 				if(constraint.getDescription() == null) {
+244c274
+< 					message = description; 
+---
+> 					message = constraint.getDescription(); 
+246c276
+< 				diagnostics.add(new BasicDiagnostic(Diagnostic.ERROR, DIAGNOSTIC_SOURCE, 
+---
+> 				diagnostics.add(new BasicDiagnostic(constraint.getSeverity(), DIAGNOSTIC_SOURCE, 

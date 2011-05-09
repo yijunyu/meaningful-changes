@@ -1,0 +1,480 @@
+2c2
+<  * Copyright (c) 2003, 2006 IBM Corporation and others.
+---
+>  * Copyright (c) 2003, 2007 IBM Corporation and others.
+13a14
+> import java.util.Arrays;
+23d23
+< import org.eclipse.gef.commands.CompoundCommand;
+29d28
+< import org.eclipse.gmf.runtime.diagram.ui.internal.dialogs.sortfilter.SortFilterRootPreferenceNode;
+48d46
+< import org.eclipse.jface.viewers.LabelProvider;
+130c128
+< 	private LabelProvider labelProvider = null;
+---
+> 	private SortFilterLabelProvider labelProvider = null;
+135,140d132
+< 	/** State variables */
+< 	/** Used to indicate a user gesture changed the compartment children order */
+< 	private boolean sortChanged = false;
+< 	/** Used to indicate a user gesture changed the visibility of a compartment child */
+< 	private boolean filterChanged = false;
+< 
+150a143,147
+> 	private List elementCollectionBackUp = Collections.EMPTY_LIST;
+> 	private Sorting _sortingBackUp = _sorting;
+> 	private Filtering _filteringBackUp = _filtering;
+> 	
+> 	
+234c231
+< 				filterItemsFromList();
+---
+> 				refreshList();
+365c362
+< 		initFilterLists();
+---
+> 		populateFilterLists();
+437a435
+> 		updateFilteringKeysFromControls();
+439c437,460
+< 			filterItemsFromList();			
+---
+> 			refreshList();			
+> 		} else if (pageType == ROOT_PAGE) {
+> 			PreferenceManager preferenceManager =
+> 				((SortFilterDialog) getContainer()).getPreferenceManager();
+> 			Iterator nodes =
+> 				preferenceManager
+> 					.getElements(PreferenceManager.PRE_ORDER)
+> 					.iterator();
+>             while (nodes.hasNext()) {
+> 				PreferenceNode node = (PreferenceNode) nodes.next();
+> 				SortFilterPage page = (SortFilterPage) node.getPage();
+> 				if (page == this) {
+> 					continue;
+> 				}
+> 
+> 				if (Arrays.equals(filterStrings, page.getFilterList())) {
+> 					page._filteringKeys = new ArrayList(_filteringKeys.size());
+> 					page._filteringKeys.addAll(_filteringKeys);
+> 					page._filtering = _filtering;
+> 					page.populateFilterLists();
+> 					page.refreshList();
+> 					page.updateApplyButton();
+> 				}				
+> 				
+441c462,464
+< 		filterChanged = true;
+---
+> 			
+> 		}
+> 		updateApplyButton();
+459,462c482
+< 	/**
+< 	 * Updates the table items to reflect the change in the filtering lists.
+< 	 */
+< 	void filterItemsFromList() {
+---
+> 	private void updateFilteringKeysFromControls() {
+464,498d483
+< 		String[] nontheFilterStrings = filterList.getItems();
+< 		TableItem[] tableItems = tableViewer.getTable().getItems();
+< 		int filterColumn = findColumnIndexFromProperty(filterAppliesTo);
+< 		if (filterColumn == -1)
+< 			return;
+< 		// Set the matching items in this list as not visible
+< 		for (int i = 0; i < theFilterStrings.length; i++) {
+< 			for (int j = 0; j < tableItems.length; j++) {
+< 				String cell = tableItems[j].getText(filterColumn);
+< 				if (theFilterStrings[i].equals(cell)) {
+< 					(
+< 						(SortFilterElement) tableViewer.getElementAt(
+< 							j)).setVisible(
+< 						false);
+< 					tableViewer.update(
+< 						new Object[] { tableViewer.getElementAt(j)},
+< 						new String[] { getColumnProperties()[0] });
+< 				}
+< 			}
+< 		}
+< 		// Set the matching items in this list as visible
+< 		for (int i = 0; i < nontheFilterStrings.length; i++) {
+< 			for (int j = 0; j < tableItems.length; j++) {
+< 				String cell = tableItems[j].getText(filterColumn);
+< 				if (nontheFilterStrings[i].equals(cell)) {
+< 					(
+< 						(SortFilterElement) tableViewer.getElementAt(
+< 							j)).setVisible(
+< 						true);
+< 					tableViewer.update(
+< 						new Object[] { tableViewer.getElementAt(j)},
+< 						new String[] { getColumnProperties()[0] });
+< 				}
+< 			}
+< 		}
+500d484
+< 		filterChanged = true;
+512a497
+> 	}
+514,515c499,514
+< 		if (getApplyButton() != null)
+< 			getApplyButton().setEnabled(sortChanged || filterChanged);
+---
+> 	/**
+> 	 * Updates the table items to reflect the change in the filtering lists.
+> 	 */
+> 	void refreshList() {
+> 		int filterColumn = findColumnIndexFromProperty(filterAppliesTo);
+> 		if (filterColumn == -1)
+> 			return;
+> 		// Set the matching items in this list as not visible
+> 		for (int j = 0; j < elementCollection.size(); j++) {
+> 			String cell = labelProvider.getColumnText(elementCollection.get(j),
+> 					filterColumn);
+> 			((SortFilterElement) elementCollection.get(j))
+> 					.setVisible(!_filteringKeys.contains(cell));
+> 		}
+> 		if (tableViewer != null)
+> 			tableViewer.refresh();
+619c618,619
+< 
+---
+> 		elementCollection = newModel;
+> 		createBackUp();
+677c677
+< 		List model = (ArrayList) ((ArrayList) tableViewer.getInput()).clone();
+---
+> 		List model = (ArrayList) ((ArrayList) tableViewer.getInput());
+685c685
+< 		tableViewer.setInput(model);
+---
+> 		tableViewer.refresh();
+687c687,688
+< 		_sorting = Sorting.MANUAL_LITERAL;
+---
+> 		_sorting = isSameOrder(elementCollection, baseElements) ? Sorting.NONE_LITERAL
+> 				: Sorting.MANUAL_LITERAL;
+692,693c693
+< 		sortChanged = true;
+< 		getApplyButton().setEnabled(sortChanged || filterChanged);
+---
+> 		updateApplyButton();
+705c705
+< 		List model = (ArrayList) ((ArrayList) tableViewer.getInput()).clone();
+---
+> 		List model = (ArrayList) ((ArrayList) tableViewer.getInput());
+714c714
+< 		tableViewer.setInput(model);
+---
+> 		tableViewer.refresh();
+716c716,717
+< 		_sorting = Sorting.MANUAL_LITERAL;
+---
+> 		_sorting = isSameOrder(elementCollection, baseElements) ? Sorting.NONE_LITERAL
+> 				: Sorting.MANUAL_LITERAL;
+721,722c722,741
+< 		sortChanged = true;
+< 		getApplyButton().setEnabled(sortChanged || filterChanged);
+---
+> 		updateApplyButton();
+> 	}
+> 
+> 	/**
+> 	 * Compares two sort filter element lists based on the equality of data fields
+> 	 * only. 
+> 	 * @param elements1 <code>List</code> of sort filter elements
+> 	 * @param elements2 <code>List</code> of sort filter elements
+> 	 * @return <code>true</code> if both lists are e
+> 	 */
+> 	private boolean isSameOrder(List elements1, List elements2) {
+> 		Iterator itr1 = elements1.iterator();
+> 		Iterator itr2 = elements2.iterator();
+> 		while (itr1.hasNext() && itr2.hasNext()) {
+> 			SortFilterElement element1 = (SortFilterElement)itr1.next();
+> 			SortFilterElement element2 = (SortFilterElement)itr2.next();
+> 			if (!element1.getData().equals(element2.getData()))
+> 				return false;
+> 		}
+> 		return !itr1.hasNext() && !itr2.hasNext();
+797,799c816,817
+< 		Object[] columnNames = tableViewer.getColumnProperties();
+< 		for (int i = 0; i < columnNames.length; i++) {
+< 			if (((String) columnNames[i]).equals(property))
+---
+> 		for (int i = 0; i < collectionColumns.size(); i++) {
+> 			if (((SortFilterCollectionColumn)collectionColumns.get(i)).getCaption().equals(property))
+819c837,840
+< 		baseElements = updatedSortFilterElements;
+---
+> 		baseElements = new ArrayList(updatedSortFilterElements.size());
+> 		for (Iterator itr = updatedSortFilterElements.iterator(); itr.hasNext();) {
+> 			baseElements.add(new SortFilterElement(((SortFilterElement)itr.next()).getData()));
+> 		}
+873a895
+> 		createBackUp();
+892,901d913
+< 		// Reset the filter list if they exist
+< 		if (filterStrings != null) {
+< 			String[] filterItems = filters.getItems();
+< 			for (int i = 0; i < filterItems.length; i++) {
+< 				filterList.add(filterItems[i]);
+< 				filters.remove(filterItems[i]);
+< 				filterChanged = true;
+< 			}
+< 		}
+< 		
+903d914
+< 		_filteringKeys = Collections.EMPTY_LIST;
+906,920c917,921
+< 		// Set all elements as visible
+< 		TableItem[] tableItems = tableViewer.getTable().getItems();
+< 		for (int j = 0; j < tableItems.length; j++) {
+< 			if (!((SortFilterElement) tableViewer.getElementAt(j))
+< 				.isVisible()) {
+< 				filterChanged = true;
+< 				((SortFilterElement) tableViewer.getElementAt(j)).setVisible(
+< 					true);
+< 				tableViewer.update(
+< 					new Object[] { tableViewer.getElementAt(j)},
+< 					new String[] { getColumnProperties()[0] });
+< 
+< 			}
+< 			if (!((SortFilterElement)tableViewer.getElementAt(j)).equals(baseElements.get(j))) {
+< 				sortChanged = true;
+---
+> 		// Reset the filter list if they exist
+> 		if (filterStrings != null) {
+> 			if (!_filteringKeys.isEmpty()) {
+> 				_filteringKeys = Collections.EMPTY_LIST;
+> 				populateFilterLists();
+924,926d924
+< 		if (tableViewer.getSorter() != null)
+< 			sortChanged = true;
+< 		
+937c935,940
+< 		tableViewer.setInput(baseElements);
+---
+> 		List input = (List)tableViewer.getInput();
+> 		input.clear();
+> 		for (int i=0; i<baseElements.size(); i++) {
+> 			input.add(new SortFilterElement( ((SortFilterElement)baseElements.get(i)).getData() ));
+> 		}
+> 		tableViewer.refresh();
+939c942
+< 		getApplyButton().setEnabled(sortChanged || filterChanged);
+---
+> 		updateApplyButton();
+947,956c950,955
+< 
+< 		Command filteringCommand = getApplyCommand();
+< 		if (filteringCommand != null && filteringCommand.canExecute()) {				
+< 			editPart
+< 				.getRoot()
+< 				.getViewer()
+< 				.getEditDomain()
+< 				.getCommandStack()
+< 				.execute(
+< 				filteringCommand);
+---
+> 		Command sortAndFilteringCommand = getApplyCommand();
+> 		if (sortAndFilteringCommand != null
+> 				&& sortAndFilteringCommand.canExecute()) {
+> 			editPart.getRoot().getViewer().getEditDomain().getCommandStack()
+> 					.execute(sortAndFilteringCommand);
+> 			createBackUp();
+957a957
+> 		updateApplyButton();            
+961,962c961,975
+< 	 * Returns a <code>Command</code> that set both the sorting and
+< 	 * filtering for this particular list compartment.
+---
+> 	 * Creates the command that needs to be executed for this page when "Ok" is
+> 	 * pressed. It's different from {@link #getApplyCommand()}, because it checks
+> 	 * whether the page is dirty or not.
+> 	 * @return <code>Command</code> to be executed per this page
+> 	 */
+> 	public Command getCommand() {
+> 		if (isDirty())
+> 			return getApplyCommand();
+> 		return null;
+> 	}
+> 	
+> 	/**
+> 	 * Returns a <code>Command</code> that set both the sorting and filtering
+> 	 * for this particular list compartment.
+> 	 * 
+966c979,980
+< 		if (pageType == CHILD_PAGE) {
+---
+> 		Command cmd = UnexecutableCommand.INSTANCE;
+> 		if (CHILD_PAGE.equals(pageType)) {
+970,972c984,985
+< 					List model = (ArrayList) tableViewer.getInput();
+< 					for (int j = 0; j < model.size(); j++) {
+< 						SortFilterElement element = (SortFilterElement) model.get(j);
+---
+> 					for (Iterator itr = elementCollection.iterator(); itr.hasNext();) {
+> 						SortFilterElement element = (SortFilterElement) itr.next();
+980,982c993,994
+< 				List model = (ArrayList) tableViewer.getInput();			
+< 				for (int i = 0; i < model.size(); i++) {
+< 					SortFilterElement element = (SortFilterElement) model.get(i);
+---
+> 				for (Iterator itr = elementCollection.iterator(); itr.hasNext();) {
+> 					SortFilterElement element = (SortFilterElement) itr.next();
+1003,1037c1015
+< 			sortChanged = false;
+< 			filterChanged = false;
+< 			getApplyButton().setEnabled(sortChanged || filterChanged);
+< 	
+< 			return editPart.getCommand(request);
+< 		} else if (pageType == ROOT_PAGE) {
+< 			PreferenceManager preferenceManager =
+< 				((SortFilterDialog) getContainer()).getPreferenceManager();
+< 			Iterator nodes =
+< 				preferenceManager
+< 					.getElements(PreferenceManager.PRE_ORDER)
+< 					.iterator();
+< 			SortFilterRootPreferenceNode rootNode = null;
+< 			CompoundCommand cc = new CompoundCommand(
+< 	            DiagramUIMessages.Command_SortFilterCommand);
+< 	        while (nodes.hasNext()) {
+< 				PreferenceNode node = (PreferenceNode) nodes.next();
+< 				SortFilterPage page = (SortFilterPage) node.getPage();
+< 				if (page == this) {
+< 					rootNode = (SortFilterRootPreferenceNode) node;
+< 					continue;
+< 				}
+< 	
+< 				// We must build the page if it is already not done because each
+< 				// page
+< 				// in the dialog knows how to filter itself.
+< 				((SortFilterDialog) rootNode.getPreferenceDialog()).showPage(
+< 					node);
+< 	
+< 				// We set the child's filter criteria to the root's
+< 				// criteria if the child is using the same filtering criteria.
+< 				if (compareFilters(page.getFilterList())) {
+< 					page.setFilterCriteria(filters.getItems());
+< 					page.setCriteria(filterList.getItems());
+< 					page.filterItemsFromList();
+---
+> 			cmd = editPart.getCommand(request);		
+1039,1043c1017
+< 				cc.add(page.getApplyCommand());
+< 			}
+< 	        return cc;
+< 		}
+< 		return UnexecutableCommand.INSTANCE;
+---
+> 		return cmd;
+1050,1051c1024,1027
+< 	private void initFilterLists() {
+< 		if (filterMap != null && !filterMap.isEmpty()) {
+---
+> 	private void populateFilterLists() {
+> 		if (filterMap != null && !filterMap.isEmpty() && filterList != null && filters != null) {
+> 			filterList.removeAll();
+> 			filters.removeAll();
+1172a1149
+> 			boolean newValue = ((Boolean) value).booleanValue();
+1177d1153
+< 				boolean newValue = ((Boolean) value).booleanValue();
+1190d1165
+< 						filterChanged = true;
+1207,1208d1181
+< 
+< 				_filtering = Filtering.MANUAL_LITERAL;
+1211,1212c1184,1194
+< 				filterChanged = true;
+< 				getApplyButton().setEnabled(sortChanged || filterChanged);
+---
+> 				_filtering = newValue ? Filtering.NONE_LITERAL : Filtering.MANUAL_LITERAL;
+> 				if (newValue) {
+> 					Iterator itr = elementCollection.iterator();
+> 					while (itr.hasNext()) {
+> 						if (!baseElements.contains(itr.next())) {
+> 							_filtering = Filtering.MANUAL_LITERAL;
+> 							break;
+> 						}
+> 					}
+> 				}
+> 				updateApplyButton();
+1319c1301,1302
+< 				_tableViewer.setInput(newModel);
+---
+> 				elementCollection.clear();
+> 				elementCollection.addAll(newModel);
+1334,1335c1317
+< 				sortChanged = true;
+< 				getApplyButton().setEnabled(sortChanged || filterChanged);
+---
+> 				updateApplyButton();
+1374,1384c1356,1362
+< 	/**
+< 	 * Returns <code>true</code> if the filter criteria are the same and
+< 	 * <code>false</code> otherwise.
+< 	 * @param other
+< 	 * @return <code>true</code> if the filter criteria are the same
+< 	 */
+< 	private boolean compareFilters(String[] other) {
+< 		if (filterStrings == null
+< 			|| other == null
+< 			|| filterStrings.length != other.length)
+< 			return false;
+---
+> 	/* (non-Javadoc)
+> 	 * @see org.eclipse.jface.preference.PreferencePage#updateApplyButton()
+> 	 */
+> 	protected void updateApplyButton() {
+> 		if (getApplyButton() != null)
+> 			getApplyButton().setEnabled(isValid() && isDirty());
+> 	}
+1386,1388c1364,1369
+< 		for (int i = 0; i < filterStrings.length; i++) {
+< 			if (filterStrings[i] != other[i])
+< 				return false;
+---
+> 	/* (non-Javadoc)
+> 	 * @see org.eclipse.jface.preference.PreferencePage#createControl(org.eclipse.swt.widgets.Composite)
+> 	 */
+> 	public void createControl(Composite parent) {
+> 		super.createControl(parent);
+> 		updateApplyButton();
+1389a1371,1379
+> 	
+> 	/**
+> 	 * Determines whether the page contains changes that can be applied.
+> 	 * @return <code>true</code> if page is dirty
+> 	 */
+> 	protected boolean isDirty() {
+> 		if (pageType == ROOT_PAGE
+> 			|| _filteringBackUp != _filtering
+> 			|| _sortingBackUp != _sorting)
+1390a1381,1382
+> 		
+> 		return !elementCollection.equals(elementCollectionBackUp);
+1394,1397c1386,1387
+< 	 * Creates the command that needs to be executed for this page when "Ok" is
+< 	 * pressed. It's different from {@link #getApplyCommand()}, because it checks
+< 	 * whether the page is dirty or not.
+< 	 * @return <code>Command</code> to be executed per this page
+---
+> 	 * Creates the back up of the initial data to determine whether the page
+> 	 * has applicable changes later on.
+1399,1402c1389,1397
+< 	public Command getCommand() {
+< 		if (filterChanged || sortChanged)
+< 			return getApplyCommand();
+< 		return null;
+---
+> 	private void createBackUp() {
+> 		_filteringBackUp = _filtering;
+> 		_sortingBackUp = _sorting;
+> 		elementCollectionBackUp = new ArrayList(elementCollection.size());
+> 		for (Iterator itr = elementCollection.iterator(); itr.hasNext();) {
+> 			SortFilterElement element = (SortFilterElement) itr.next();
+> 			elementCollectionBackUp.add(new SortFilterElement(element
+> 					.isVisible(), element.getData()));
+> 		}

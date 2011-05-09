@@ -1,0 +1,126 @@
+13a14,15
+> import java.util.List;
+> import java.util.ListIterator;
+13a17,19
+> import org.eclipse.draw2d.Graphics;
+> import org.eclipse.draw2d.IFigure;
+> import org.eclipse.draw2d.Layer;
+14,14c20,20
+< import org.eclipse.draw2d.ScalableFreeformLayeredPane;
+---
+> import org.eclipse.draw2d.geometry.Rectangle;
+15,15d20
+< import org.eclipse.jface.preference.IPreferenceStore;
+18a23,23
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.MapModeGraphics;
+19a25,30
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.ScaledGraphics;
+> import org.eclipse.gmf.runtime.draw2d.ui.render.figures.ScalableImageFigure;
+> import org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics.RenderedMapModeGraphics;
+> import org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics.RenderedScaledGraphics;
+> import org.eclipse.gmf.runtime.gef.ui.internal.editparts.AnimatedZoomListener;
+> import org.eclipse.jface.preference.IPreferenceStore;
+19,19c24,24
+< import org.eclipse.gmf.runtime.draw2d.ui.render.internal.graphics.RenderedScalableFreeformLayeredPane;
+---
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.ScalableFreeformLayeredPane;
+29a41,111
+> 	static protected class DiagramRenderedScalableFreeformLayeredPane
+> 		extends DiagramScalableFreeformLayeredPane implements AnimatedZoomListener {
+> 
+> 		private boolean animatedZoomOn;
+> 
+> 		/*
+> 		 * (non-Javadoc)
+> 		 * 
+> 		 * @see org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.ScalableFreeformLayeredPane#createScaledGraphics(org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.MapModeGraphics)
+> 		 */
+> 		protected ScaledGraphics createScaledGraphics(MapModeGraphics gMM) {
+> 			if (animatedZoomOn) {
+> 				return new ScaledGraphics(gMM);
+> 			}
+> 
+> 			return new RenderedScaledGraphics(gMM);
+> 		}
+> 
+> 		/*
+> 		 * (non-Javadoc)
+> 		 * 
+> 		 * @see org.eclipse.gmf.runtime.draw2d.ui.internal.graphics.ScalableFreeformLayeredPane#createMapModeGraphics(org.eclipse.draw2d.Graphics)
+> 		 */
+> 		protected MapModeGraphics createMapModeGraphics(Graphics graphics) {
+> 			MapModeGraphics gMM = new RenderedMapModeGraphics(graphics);
+> 			return gMM;
+> 		}
+> 
+> 		/*
+> 		 * (non-Javadoc)
+> 		 * 
+> 		 * @see org.eclipse.gmf.runtime.gef.ui.internal.editparts.AnimatedZoomListener#animatedZoomEnded()
+> 		 */
+> 		public void animatedZoomEnded() {
+> 			animatedZoomOn = false;
+> 			
+> 			// only repaint ScalableImageFigures
+> 			Layer primaryLayer = getLayer(PRINTABLE_LAYERS);
+> 			if (primaryLayer != null)
+> 				paintScalableImageFigures(primaryLayer.getChildren());
+> 		}
+> 
+> 		private void paintScalableImageFigures(List figures) {
+> 			ListIterator iter = figures.listIterator();
+> 			Rectangle absbounds = getBounds().getCopy();
+> 			translateToAbsolute(absbounds);
+> 			
+> 			while (iter.hasNext()) {
+> 				IFigure fig = (IFigure)iter.next();
+> 				if (fig instanceof ScalableImageFigure) {
+> 					Rectangle absfigbounds = fig.getBounds().getCopy();
+> 					fig.translateToAbsolute(absfigbounds);
+> 					if (absbounds.intersects(absfigbounds))
+> 						fig.repaint();
+> 				}
+> 				else {
+> 					paintScalableImageFigures(fig.getChildren());
+> 				}
+> 			}
+> 		}
+> 		
+> 		/*
+> 		 * (non-Javadoc)
+> 		 * 
+> 		 * @see org.eclipse.gmf.runtime.gef.ui.internal.editparts.AnimatedZoomListener#animatedZoomStarted()
+> 		 */
+> 		public void animatedZoomStarted() {
+> 			animatedZoomOn = true;
+> 		}
+> 	}
+> 
+33a116,116
+> 	protected org.eclipse.draw2d.ScalableFreeformLayeredPane createScalableFreeformLayeredPane() {
+34,34d115
+< 	protected ScalableFreeformLayeredPane createScalableFreeformLayeredPane() {
+35,35c117,117
+< 		setLayers(new RenderedScalableFreeformLayeredPane());
+---
+> 		setLayers(new DiagramRenderedScalableFreeformLayeredPane());
+42a125,129
+> 		IPreferenceStore preferenceStore = (IPreferenceStore) getPreferencesHint()
+> 			.getPreferenceStore();
+> 		boolean antiAlias = preferenceStore
+> 			.getBoolean(IPreferenceConstants.PREF_ENABLE_ANTIALIAS);
+> 		if (getLayers() instanceof ScalableFreeformLayeredPane)
+43,47d124
+< 		IPreferenceStore preferenceStore =
+< 			(IPreferenceStore) getPreferencesHint().getPreferenceStore();
+< 		boolean antiAlias = preferenceStore.getBoolean(
+< 			IPreferenceConstants.PREF_ENABLE_ANTIALIAS);
+< 		if (getLayers() instanceof RenderedScalableFreeformLayeredPane)
+48,48c130,130
+< 			((RenderedScalableFreeformLayeredPane) getLayers()).setAntiAlias(antiAlias);
+---
+> 			((ScalableFreeformLayeredPane) getLayers()).setAntiAlias(antiAlias);
+50,52d131
+< 
+< 	
+< 	

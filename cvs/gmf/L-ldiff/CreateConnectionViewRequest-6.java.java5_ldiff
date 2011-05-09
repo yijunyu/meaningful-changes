@@ -1,0 +1,71 @@
+24a25,26
+> import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+> 
+40a43,44
+> import org.eclipse.gmf.runtime.notation.View;
+> 
+49a54,57
+>         public ConnectionViewDescriptor (IAdaptable elementAdapter, boolean persisted, PreferencesHint preferencesHint) {
+>             super (elementAdapter, Edge.class, persisted, preferencesHint);
+>         }
+> 
+53a62,65
+>         public ConnectionViewDescriptor (IAdaptable elementAdapter, String semanticHint, boolean persisted, PreferencesHint preferencesHint) {
+>             super (elementAdapter, Edge.class, semanticHint, persisted, preferencesHint);
+>         }
+> 
+69a82,85
+>     public CreateConnectionViewRequest (EObject element, boolean persisted, PreferencesHint preferencesHint) {
+>         this (new ConnectionViewDescriptor (new EObjectAdapter (element), persisted, preferencesHint));
+>     }
+> 
+98a115,115
+>         boolean transientTargetOrSource = hasTransientSourceOrTarget (sourceEditPart, targetEditPart);
+99,99c116,116
+<         CreateConnectionViewRequest request = new CreateConnectionViewRequest (element, preferencesHint);
+---
+>         CreateConnectionViewRequest request = new CreateConnectionViewRequest (element, ! transientTargetOrSource, preferencesHint);
+107a125,161
+>     private static boolean hasTransientSourceOrTarget (EditPart sourceEditPart, EditPart targetEditPart) {
+>         boolean transientTargetOrSource = hasTransientView (sourceEditPart);
+>         if (! transientTargetOrSource) {
+>             transientTargetOrSource = hasTransientView (targetEditPart);
+>         }
+>         return transientTargetOrSource;
+>     }
+> 
+>     private static boolean hasTransientSourceOrTarget (IAdaptable sourceView, IAdaptable targetView) {
+>         boolean transientTargetOrSource = hasTransientView (sourceView);
+>         if (! transientTargetOrSource) {
+>             transientTargetOrSource = hasTransientView (targetView);
+>         }
+>         return transientTargetOrSource;
+>     }
+> 
+>     private static boolean hasTransientView (EditPart sourceEditPart) {
+>         boolean transientTargetOrSource = false;
+>         if (sourceEditPart.getModel () instanceof View) {
+>             View srcView = (View) sourceEditPart.getModel ();
+>             if (ViewUtil.isTransient (srcView)) {
+>                 transientTargetOrSource = true;
+>             }
+>         }
+>         return transientTargetOrSource;
+>     }
+> 
+>     private static boolean hasTransientView (IAdaptable adaptable) {
+>         View view = (View) adaptable.getAdapter (View.class);
+>         if (view != null) {
+>             if (ViewUtil.isTransient (view)) {
+>                 return true;
+>             }
+>         }
+>         return false;
+>     }
+> 
+121a176,176
+>         boolean transientTargetOrSource = hasTransientSourceOrTarget (sourceViewAdapter, targetViewAdapter);
+122,122c177,177
+<         CreateCommand createCommand = new CreateCommand (diagramEditPart.getEditingDomain (), new ConnectionViewDescriptor (elementAdapter, preferencesHint), diagram);
+---
+>         CreateCommand createCommand = new CreateCommand (diagramEditPart.getEditingDomain (), new ConnectionViewDescriptor (elementAdapter, ! transientTargetOrSource, preferencesHint), diagram);

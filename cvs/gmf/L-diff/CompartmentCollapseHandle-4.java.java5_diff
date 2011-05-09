@@ -1,0 +1,198 @@
+1c1
+< package org.eclipse.gmf.runtime.lite.handles;
+---
+> package org.eclipse.gmf.runtime.diagram.ui.handles;
+3c3
+< import org.eclipse.emf.transaction.NotificationFilter;
+---
+> import java.beans.PropertyChangeEvent;
+5c5
+< import org.eclipse.emf.transaction.ResourceSetChangeEvent;
+---
+> import java.beans.PropertyChangeListener;
+7c7
+< import org.eclipse.emf.transaction.ResourceSetListener;
+---
+> import org.eclipse.draw2d.Cursors;
+9c9
+< import org.eclipse.emf.transaction.ResourceSetListenerImpl;
+---
+> import org.eclipse.draw2d.IFigure;
+11c11,19
+< import org.eclipse.emf.transaction.util.TransactionUtil;
+---
+> import org.eclipse.draw2d.Locator;
+> 
+> import org.eclipse.draw2d.StackLayout;
+> 
+> import org.eclipse.draw2d.TreeSearch;
+> 
+> import org.eclipse.draw2d.geometry.Dimension;
+> 
+> import org.eclipse.draw2d.geometry.Rectangle;
+15c23
+< import org.eclipse.gef.GraphicalEditPart;
+---
+> import org.eclipse.gef.handles.AbstractHandle;
+17c25
+< import org.eclipse.gmf.internal.runtime.lite.PluginImages;
+---
+> import org.eclipse.gmf.runtime.diagram.core.listener.PresentationListener;
+19c27
+< import org.eclipse.gmf.runtime.notation.DrawerStyle;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+21c29
+< import org.eclipse.gmf.runtime.notation.NotationPackage;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.IResizableCompartmentEditPart;
+23c31
+< import org.eclipse.gmf.runtime.notation.View;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.figures.ResizableCompartmentFigure;
+25c33
+< import org.eclipse.swt.graphics.Image;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.figures.CollapseFigure;
+27,28c35
+< public class CompartmentCollapseHandle extends CompartmentNameHandle {
+<     private ResourceSetListener myResourceSetListener;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.tools.CompartmentCollapseTracker;
+30,41c37
+<     public CompartmentCollapseHandle (GraphicalEditPart owner, String title) {
+<         super (owner, title);
+<         View ownerView = getOwnerView ();
+<         NotificationFilter filter = NotificationFilter.createNotifierFilter (ownerView).and (NotificationFilter.createFeatureFilter (NotationPackage.eINSTANCE.getView_Styles ()));
+<         NotificationFilter childrenFilter = NotificationFilter.createNotifierFilter (ownerView).and (NotificationFilter.createFeatureFilter (NotationPackage.eINSTANCE.getView_PersistedChildren ()).or (NotificationFilter.createFeatureFilter (NotationPackage.eINSTANCE.getView_TransientChildren ())));
+<         filter = filter.or (childrenFilter);
+<         DrawerStyle drawerStyle = (DrawerStyle) ownerView.getStyle (NotationPackage.eINSTANCE.getDrawerStyle ());
+<         if (drawerStyle != null) {
+<             NotificationFilter styleFilter = NotificationFilter.createNotifierFilter (drawerStyle).and (NotificationFilter.createFeatureFilter (NotationPackage.eINSTANCE.getDrawerStyle_Collapsed ()));
+<             filter = filter.or (styleFilter);
+<         }
+<         myResourceSetListener = new ResourceSetListenerImpl (filter) {
+---
+> import org.eclipse.gmf.runtime.diagram.ui.properties.Properties;
+43,46c39
+<             @Override
+<             public boolean isAggregatePrecommitListener () {
+<                 return true;
+<             }
+---
+> import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapMode;
+48,51c41
+<             @Override
+<             public void resourceSetChanged (ResourceSetChangeEvent event) {
+<                 updateIcon ();
+<             }
+---
+> import org.eclipse.gmf.runtime.notation.DrawerStyle;
+53c43
+<         }
+---
+> import org.eclipse.gmf.runtime.notation.NotationPackage;
+55,56c45,54
+<         ;
+<         updateIcon ();
+---
+> import org.eclipse.gmf.runtime.notation.View;
+> 
+> public class CompartmentCollapseHandle extends AbstractHandle implements PropertyChangeListener {
+>     private class CollapseHandleLocator implements Locator {
+> 
+>         public void relocate (IFigure target) {
+>             Rectangle theBounds = getOwnerFigure ().getClientArea ().getCopy ();
+>             getOwnerFigure ().translateToAbsolute (theBounds);
+>             target.translateToRelative (theBounds);
+>             target.setLocation (theBounds.getLocation ());
+59,60d56
+<     private void updateIcon () {
+<         getLabel ().setIcon (getCollapseIcon ());
+63,65c59,74
+<     private Image getCollapseIcon () {
+<         if (isEmptyContents ()) {
+<             return null;
+---
+>     public static Dimension SIZE = new Dimension (MapMode.LPtoDP (ResizableCompartmentFigure.MIN_CLIENT_SIZE), MapMode.LPtoDP (ResizableCompartmentFigure.MIN_CLIENT_SIZE));
+>     protected CollapseFigure collapseFigure = null;
+> 
+>     public CompartmentCollapseHandle (IGraphicalEditPart owner) {
+>         setOwner (owner);
+>         setLocator (new CollapseHandleLocator ());
+>         setCursor (Cursors.ARROW);
+>         setSize (SIZE);
+>         setLayoutManager (new StackLayout ());
+>         add (collapseFigure = new CollapseFigure ());
+>         View view = owner.getNotationView ();
+>         if (view != null) {
+>             DrawerStyle style = (DrawerStyle) view.getStyle (NotationPackage.eINSTANCE.getDrawerStyle ());
+>             if (style != null) {
+>                 collapseFigure.setCollapsed (style.isCollapsed ());
+>                 return;
+67,70d75
+<         if (isCollapsed ()) {
+<             return PluginImages.get (PluginImages.IMG_HANDLE_COLLAPSE);
+<         } else {
+<             return PluginImages.get (PluginImages.IMG_HANDLE_EXPAND);
+71a77
+>         collapseFigure.setCollapsed (false);
+74,77c80,82
+<     private boolean isCollapsed () {
+<         View ownerView = getOwnerView ();
+<         if (ownerView == null) {
+<             return false;
+---
+>     public IFigure findFigureAt (int x, int y, TreeSearch search) {
+>         IFigure found = super.findFigureAt (x, y, search);
+>         return (collapseFigure.equals (found)) ? this : found;
+79,80c84,86
+<         DrawerStyle drawerStyle = (DrawerStyle) ownerView.getStyle (NotationPackage.eINSTANCE.getDrawerStyle ());
+<         return drawerStyle != null && drawerStyle.isCollapsed ();
+---
+> 
+>     protected DragTracker createDragTracker () {
+>         return new CompartmentCollapseTracker ((IResizableCompartmentEditPart) getOwner ());
+83,84c89,91
+<     private View getOwnerView () {
+<         return getOwner ().getModel () instanceof View ? (View) getOwner ().getModel () : null;
+---
+>     public void propertyChange (PropertyChangeEvent evt) {
+>         if (evt.getPropertyName ().equals (Properties.ID_COLLAPSED)) collapseFigure.setCollapsed (((Boolean) evt.getNewValue ()).booleanValue ());
+> 
+87d93
+<     @Override
+90,91c96,100
+<         View ownerView = getOwnerView ();
+<         TransactionUtil.getEditingDomain (ownerView).addResourceSetListener (myResourceSetListener);
+---
+>         IGraphicalEditPart owner = (IGraphicalEditPart) getOwner ();
+>         View view = owner.getNotationView ();
+>         if (view != null) {
+>             PresentationListener.getInstance ().addPropertyChangeListener (owner.getNotationView (), CompartmentCollapseHandle.this);
+>         }
+94d102
+<     @Override
+96,97c104,105
+<         View ownerView = getOwnerView ();
+<         TransactionUtil.getEditingDomain (ownerView).removeResourceSetListener (myResourceSetListener);
+---
+>         IGraphicalEditPart owner = (IGraphicalEditPart) getOwner ();
+>         PresentationListener.getInstance ().removePropertyChangeListener (owner.getNotationView (), this);
+101,116d108
+<     @Override
+<     public DragTracker getDragTracker () {
+<         if (getOwnerView () != null && ! isEmptyContents ()) {
+<             return new CompartmentCollapseTracker (getOwner ());
+<         }
+<         return null;
+<     }
+< 
+<     protected boolean isEmptyContents () {
+<         if (isCollapsed ()) {
+<             return getOwnerView () == null || getOwnerView ().getVisibleChildren ().isEmpty ();
+<         } else {
+<             return getOwner ().getChildren ().isEmpty ();
+<         }
+<     }
+< 

@@ -1,0 +1,105 @@
+package org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg;
+
+import java.awt.image.BufferedImage;
+
+import java.io.ByteArrayInputStream;
+
+import java.io.IOException;
+
+import java.io.InputStream;
+
+import org.apache.batik.dom.svg.SAXSVGDocumentFactory;
+
+import org.apache.batik.util.XMLResourceDescriptor;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.draw2d.ui.graphics.GCUtilities;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.Draw2dRenderPlugin;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.image.ImageConverter;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.AbstractRenderedImage;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.Draw2dRenderDebugOptions;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.Draw2dRenderStatusCodes;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.factory.RenderedImageKey;
+
+import org.eclipse.swt.graphics.Image;
+
+import org.eclipse.swt.widgets.Display;
+
+import org.w3c.dom.Document;
+
+public final class SVGImage extends AbstractRenderedImage {
+
+    public SVGImage (byte [] buff, RenderedImageKey key) {
+        super (buff, key);
+        if (key.getExtraData () == null) key.setExtraData (getDocument ());
+
+    }
+
+    protected Image renderImage () {
+        try {
+            if (GCUtilities.supportsAdvancedGraphics ()) {
+                SVGImageConverter converter = new SVGImageConverter ();
+                return converter.renderSVGtoSWTImage (getDocument (), getRenderInfo ());
+            } else {
+                SVGImageConverter converter = new SVGImageConverter ();
+                BufferedImage img = converter.renderSVGToAWTImage (getDocument (), getRenderInfo ());
+                return ImageConverter.convert (img);
+            }
+        } catch (Exception e) {
+            try {
+                SVGImageConverter converter = new SVGImageConverter ();
+                BufferedImage img = converter.renderSVGToAWTImage (getDocument (), getRenderInfo ());
+                return ImageConverter.convert (img);
+            } catch (Exception e1) {
+                Trace.catching (Draw2dRenderPlugin.getInstance (), Draw2dRenderDebugOptions.EXCEPTIONS_THROWING, getClass (), "getSWTImage()", e1);
+                return new Image (Display.getDefault (), 8, 8);
+            }
+        }
+    }
+
+    public Document getDocument () {
+        Document document = null;
+        if (getKey ().getExtraData () != null) {
+            return (Document) getKey ().getExtraData ();
+        }
+        String parser = XMLResourceDescriptor.getXMLParserClassName ();
+        SAXSVGDocumentFactory f = new SAXSVGDocumentFactory (parser);
+        InputStream in = new ByteArrayInputStream (getBuffer ());
+        try {
+            document = f.createDocument (getKey ().getURLString (), in);
+        } catch (IOException e) {
+            Log.error (Draw2dRenderPlugin.getInstance (), Draw2dRenderStatusCodes.SVG_GENERATION_FAILURE, e.getMessage ());
+        }
+        return document;
+    }
+
+    public Object getAdapter (Class adapter) {
+        if (adapter.equals (BufferedImage.class)) {
+            BufferedImage buffImg = null;
+            try {
+                SVGImageConverter converter = new SVGImageConverter ();
+                buffImg = converter.renderSVGToAWTImage (getDocument (), getRenderInfo ());
+            } catch (Exception e) {
+                Trace.catching (Draw2dRenderPlugin.getInstance (), Draw2dRenderDebugOptions.EXCEPTIONS_THROWING, getClass (), "getSWTImage()", e);
+                buffImg = new BufferedImage (8, 8, BufferedImage.TYPE_INT_ARGB);
+            }
+            return buffImg;
+        }
+        return super.getAdapter (adapter);
+    }
+
+    public BufferedImage getBufferedImage () {
+        return (BufferedImage) getAdapter (BufferedImage.class);
+    }
+
+}
+

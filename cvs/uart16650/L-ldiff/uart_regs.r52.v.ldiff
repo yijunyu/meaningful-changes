@@ -1,0 +1,53 @@
+49a50,50
+> reg [7 : 0] scratch;
+92,92c93,93
+< always @ (dl or dlab or ier or iir or lcr or lsr or msr or rf_data_out or wb_addr_i or wb_re_i) begin
+---
+> always @ (dl or dlab or ier or iir or scratch or lcr or lsr or msr or rf_data_out or wb_addr_i or wb_re_i) begin
+93,98d93
+<     if (wb_rst_i)
+<         begin
+<             wb_dat_o <= # 1 8?b0;
+<         end
+<     else
+<         if (wb_re_i)
+99,99c94,94
+<             case (wb_addr_i) `UART_REG_RB : wb_dat_o <= # 1 dlab ? dl [`UART_DL1] : rf_data_out [10 : 3];
+---
+>     case (wb_addr_i) `UART_REG_RB : wb_dat_o = dlab ? dl [`UART_DL1] : rf_data_out [10 : 3];
+100,100d94
+<             `UART_REG_IE
+101a96,100
+>     `UART_REG_II : wb_dat_o = {4?b1100, iir};
+>     `UART_REG_LC : wb_dat_o = lcr;
+>     `UART_REG_LS : wb_dat_o = lsr;
+>     `UART_REG_MS : wb_dat_o = msr;
+>     `UART_REG_SR : wb_dat_o = scratch;
+101,101c95,95
+<             : wb_dat_o <= # 1 dlab ? dl [`UART_DL2] : ier;
+---
+>     `UART_REG_IE : wb_dat_o = dlab ? dl [`UART_DL2] : ier;
+102,109d95
+<             `UART_REG_II
+<             : wb_dat_o <= # 1 {4?b1100, iir};
+<             `UART_REG_LC
+<             : wb_dat_o <= # 1 lcr;
+<             `UART_REG_LS
+<             : wb_dat_o <= # 1 lsr;
+<             `UART_REG_MS
+<             : wb_dat_o <= # 1 msr;
+110,110c101,101
+<             default : wb_dat_o <= # 1 8?b0;
+---
+>     default : wb_dat_o = 8?b0;
+112,114d102
+<         else
+<             wb_dat_o <= # 1 8?b0;
+< 
+205a194,199
+>     scratch <= # 1 0;
+> else
+>     if (wb_we_i && wb_addr_i == `UART_REG_SR)
+>         scratch <= # 1 wb_dat_i;
+> 
+> always @ (posedge clk or posedge wb_rst_i) if (wb_rst_i)

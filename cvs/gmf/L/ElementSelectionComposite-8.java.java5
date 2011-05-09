@@ -1,0 +1,307 @@
+package org.eclipse.gmf.runtime.common.ui.services.elementselection;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.regex.Matcher;
+
+import java.util.regex.Pattern;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.common.ui.services.internal.l10n.CommonUIServicesMessages;
+
+import org.eclipse.jface.dialogs.Dialog;
+
+import org.eclipse.jface.resource.JFaceResources;
+
+import org.eclipse.jface.viewers.LabelProvider;
+
+import org.eclipse.jface.viewers.StructuredSelection;
+
+import org.eclipse.jface.viewers.TableViewer;
+
+import org.eclipse.jface.viewers.Viewer;
+
+import org.eclipse.jface.viewers.ViewerSorter;
+
+import org.eclipse.jface.wizard.ProgressMonitorPart;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.events.ModifyEvent;
+
+import org.eclipse.swt.events.ModifyListener;
+
+import org.eclipse.swt.events.SelectionEvent;
+
+import org.eclipse.swt.events.SelectionListener;
+
+import org.eclipse.swt.graphics.FontMetrics;
+
+import org.eclipse.swt.graphics.GC;
+
+import org.eclipse.swt.graphics.Image;
+
+import org.eclipse.swt.layout.GridData;
+
+import org.eclipse.swt.layout.GridLayout;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.swt.widgets.Label;
+
+import org.eclipse.swt.widgets.Table;
+
+import org.eclipse.swt.widgets.Text;
+
+public abstract class ElementSelectionComposite implements IElementSelectionListener {
+    private final String title;
+    private final List selectedElements = new ArrayList ();
+    private Text filterText = null;
+    private TableViewer tableViewer = null;
+    private ProgressMonitorPart progressBar;
+    private AbstractElementSelectionInput input;
+    private ElementSelectionServiceJob job;
+    private final ElementSelectionService elementSelectionService;
+    private char firstCharacter = Character.MIN_VALUE;
+    private String lastSearchedFor = StringStatics.BLANK;
+    private int lastScopeSearchedFor = 0;
+    private List matchingObjects = new ArrayList ();
+    private Pattern pattern;
+
+    public ElementSelectionComposite (String title, AbstractElementSelectionInput input) {
+        this (title, input, ElementSelectionService.getInstance ());
+    }
+
+    public ElementSelectionComposite (String title, AbstractElementSelectionInput input, ElementSelectionService elementSelectionService) {
+        super ();
+        this.title = title;
+        this.input = input;
+        this.elementSelectionService = elementSelectionService;
+        this.lastScopeSearchedFor = input.getScope ().intValue ();
+    }
+
+    abstract protected boolean isValidSelection (List currentSelectedElements);
+
+    protected abstract void handleSelection (boolean isValid);
+
+    public Composite createComposite (Composite parent) {
+        Composite result = new Composite (parent, SWT.NONE);
+        result.setLayout (new GridLayout ());
+        result.setLayoutData (new GridData (GridData.FILL_BOTH));
+        Label label = new Label (result, SWT.NONE);
+        label.setText (title);
+        filterText = new Text (result, SWT.SINGLE | SWT.BORDER);
+        filterText.setLayoutData (new GridData (GridData.FILL_HORIZONTAL));
+        filterText.addModifyListener (new ModifyListener () {
+
+            public void modifyText (ModifyEvent e) {
+                handleFilterChange ();
+            }
+
+        }
+
+        );
+        int selectStyle = SWT.SINGLE;
+        tableViewer = new TableViewer (result, selectStyle | SWT.H_SCROLL | SWT.V_SCROLL | SWT.BORDER);
+        tableViewer.setUseHashlookup (true);
+        Table table = tableViewer.getTable ();
+        GridData gridData = new GridData (GridData.FILL_BOTH);
+        GC gc = new GC (result);
+        gc.setFont (JFaceResources.getDefaultFont ());
+        FontMetrics fontMetrics = gc.getFontMetrics ();
+        gc.dispose ();
+        gridData.widthHint = Dialog.convertWidthInCharsToPixels (fontMetrics, 80);
+        gridData.heightHint = table.getItemHeight () * 15;
+        table.setLayoutData (gridData);
+        table.addSelectionListener (new SelectionListener () {
+
+            public void widgetSelected (SelectionEvent e) {
+                handleSelectionChange ();
+            }
+
+            public void widgetDefaultSelected (SelectionEvent e) {
+            }
+
+        }
+
+        );
+        progressBar = new ProgressMonitorPart (result, new GridLayout ());
+        progressBar.setLayoutData (new GridData (GridData.FILL_HORIZONTAL));
+        progressBar.setVisible (false);
+        tableViewer.setLabelProvider (new LabelProvider () {
+
+            public Image getImage (Object element) {
+                assert element instanceof AbstractMatchingObject;
+                return ((AbstractMatchingObject) element).getImage ();
+            }
+
+            public String getText (Object element) {
+                assert element instanceof AbstractMatchingObject;
+                return ((AbstractMatchingObject) element).getDisplayName ();
+            }
+
+        }
+
+        );
+        tableViewer.setSorter (new ViewerSorter () {
+
+            public int compare (Viewer viewer, Object e1, Object e2) {
+                if (e1 instanceof IMatchingObject && e2 instanceof IMatchingObject) return ((IMatchingObject) e1).getName ().toLowerCase ().compareTo (((IMatchingObject) e2).getName ().toLowerCase ());
+
+                return super.compare (viewer, e1, e2);
+            }
+
+        }
+
+        );
+        createCompositeAdditions (result);
+        return result;
+    }
+
+    protected void createCompositeAdditions (Composite parent) {
+    }
+
+    public void handleFilterChange () {
+        if (filterText.getText ().equals (StringStatics.BLANK)) {
+            cancel ();
+            matchingObjects.clear ();
+            tableViewer.getTable ().removeAll ();
+            firstCharacter = Character.MIN_VALUE;
+            return;
+        }
+        String filter = validatePattern (filterText.getText ());
+        pattern = Pattern.compile (filter);
+        if (firstCharacter != filterText.getText ().charAt (0) || this.input.getScope ().intValue () != this.lastScopeSearchedFor || ! filterText.getText ().startsWith (lastSearchedFor)) {
+            cancel ();
+            matchingObjects.clear ();
+            tableViewer.getTable ().removeAll ();
+            firstCharacter = filterText.getText ().charAt (0);
+            this.lastScopeSearchedFor = this.input.getScope ().intValue ();
+            startElementSelectionService ();
+        } else {
+            tableViewer.getTable ().removeAll ();
+            for (Iterator i = matchingObjects.iterator ();
+            i.hasNext ();) {
+                IMatchingObject matchingObject = (IMatchingObject) i.next ();
+                Matcher matcher = pattern.matcher (matchingObject.getName ().toLowerCase ());
+                if (matcher.matches ()) {
+                    tableViewer.add (matchingObject);
+                    setSelection ();
+                }
+            }
+        }
+    }
+
+    private void startElementSelectionService () {
+        input.setInput (filterText.getText ());
+        lastSearchedFor = filterText.getText ();
+        progressBar.setVisible (true);
+        progressBar.beginTask (CommonUIServicesMessages.ElementSelectionService_ProgressName, IProgressMonitor.UNKNOWN);
+        job = elementSelectionService.getMatchingObjects (input, this);
+    }
+
+    private void handleSelectionChange () {
+        StructuredSelection selection = (StructuredSelection) tableViewer.getSelection ();
+        if (selection.size () == 0) {
+            selectedElements.clear ();
+            handleSelection (false);
+            return;
+        }
+        List selectionList = selection.toList ();
+        List currentSelectedElements = new ArrayList ();
+        for (Iterator iter = selectionList.iterator ();
+        iter.hasNext ();) {
+            AbstractMatchingObject matchingObject = (AbstractMatchingObject) iter.next ();
+            currentSelectedElements.add (matchingObject);
+        }
+        boolean isValidSelection = isValidSelection (currentSelectedElements);
+        selectedElements.clear ();
+        if (isValidSelection) {
+            selectedElements.addAll (currentSelectedElements);
+        }
+        handleSelection (isValidSelection);
+    }
+
+    public List getSelectedElements () {
+        List result = new ArrayList ();
+        for (Iterator iter = selectedElements.iterator ();
+        iter.hasNext ();) {
+            IMatchingObject matchingObject = (IMatchingObject) iter.next ();
+            IElementSelectionProvider provider = matchingObject.getProvider ();
+            Object object = provider.resolve (matchingObject);
+            result.add (object);
+        }
+        return result;
+    }
+
+    public void matchingObjectEvent (IMatchingObjectEvent matchingObjectEvent) {
+        if (! progressBar.isDisposed ()) {
+            if (matchingObjectEvent.getEventType () == MatchingObjectEventType.END_OF_MATCHES) {
+                progressBar.done ();
+                progressBar.setVisible (false);
+                job = null;
+            } else {
+                IMatchingObject matchingObject = matchingObjectEvent.getMatchingObject ();
+                progressBar.worked (1);
+                progressBar.subTask (matchingObject.getName ());
+                matchingObjects.add (matchingObject);
+                Matcher matcher = pattern.matcher (matchingObject.getName ().toLowerCase ());
+                if (matcher.matches ()) {
+                    tableViewer.add (matchingObject);
+                    setSelection ();
+                }
+            }
+        }
+    }
+
+    public void cancel () {
+        if (job != null) {
+            elementSelectionService.cancelJob (job);
+            job = null;
+            progressBar.done ();
+            progressBar.setVisible (false);
+        }
+    }
+
+    private String validatePattern (String string) {
+        if (string.equals (StringStatics.BLANK)) {
+            return string;
+        }
+        StringBuffer result = new StringBuffer ();
+        for (int i = 0;
+        i < string.length (); i ++) {
+            char c = Character.toLowerCase (string.charAt (i));
+            if (c == '?') {
+                result.append ('.');
+            } else if (c == '*') {
+                result.append (".*");
+            } else {
+                result.append (c);
+            }
+
+        }
+        result.append (".*");
+        return result.toString ();
+    }
+
+    protected void setSelection () {
+        StructuredSelection selection = (StructuredSelection) tableViewer.getSelection ();
+        if (selection.isEmpty ()) {
+            tableViewer.getTable ().setSelection (0);
+            handleSelectionChange ();
+        }
+    }
+
+    public ElementSelectionServiceJob getSelectionServiceJob () {
+        return job;
+    }
+
+}
+

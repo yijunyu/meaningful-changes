@@ -1,0 +1,277 @@
+package org.eclipse.gmf.runtime.common.core.command;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.MultiStatus;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.core.runtime.SubProgressMonitor;
+
+import org.eclipse.gmf.runtime.common.core.internal.CommonCorePlugin;
+
+import org.eclipse.gmf.runtime.common.core.internal.CommonCoreStatusCodes;
+
+import org.eclipse.gmf.runtime.common.core.internal.l10n.ResourceManager;
+
+public class CompositeCommand implements ICommand {
+    protected static final String EMPTY_STRING = "";
+    protected static final String CANCELLED_MESSAGE = ResourceManager.getInstance ().getString ("AbstractCommand._INFO_.cancelOperation");
+    private final List commands = new ArrayList ();
+    private final String label;
+    private boolean canceled = false;
+
+    public CompositeCommand (String label) {
+        super ();
+        this.label = label;
+    }
+
+    public CompositeCommand (String label, List commands) {
+        super ();
+        this.label = label;
+        assert null != commands : "null commands";
+        for (Iterator i = commands.iterator ();
+        i.hasNext ();) {
+            ICommand command = (ICommand) i.next ();
+            compose (command);
+        }
+    }
+
+    public final List getCommands () {
+        return commands;
+    }
+
+    public final String getLabel () {
+        if (label == null) if (getCommands ().isEmpty ()) return null;
+
+        if (label != null) return label;
+
+        return ((ICommand) getCommands ().get (0)).getLabel ();
+    }
+
+    public CommandResult getCommandResult () {
+        if (isCanceled ()) {
+            return newCancelledCommandResult ();
+        }
+        List statuses = new ArrayList ();
+        List returnValues = new ArrayList ();
+        int severity = IStatus.OK;
+        String plugin = CommonCorePlugin.getPluginId ();
+        int code = CommonCoreStatusCodes.OK;
+        String message = EMPTY_STRING;
+        Throwable exception = null;
+        for (Iterator i = getCommands ().iterator ();
+        i.hasNext ();) {
+            ICommand command = (ICommand) i.next ();
+            CommandResult result = command.getCommandResult ();
+            if (result == null) {
+                break;
+            }
+            IStatus status = result.getStatus ();
+            statuses.add (result.getStatus ());
+            if (severity < status.getSeverity ()) {
+                severity = status.getSeverity ();
+                plugin = status.getPlugin ();
+                code = status.getCode ();
+                message = status.getMessage ();
+                exception = status.getException ();
+            }
+            Object returnValue = result.getReturnValue ();
+            if (returnValue != null) {
+                if (getClass ().isInstance (command)) {
+                    if (returnValue != null && returnValue instanceof Collection) {
+                        returnValues.addAll ((Collection) returnValue);
+                    } else {
+                        returnValues.add (returnValue);
+                    }
+                } else {
+                    returnValues.add (returnValue);
+                }
+            }
+        }
+        return new CommandResult (new MultiStatus (plugin, code, (IStatus []) statuses.toArray (new IStatus [] {}), message, exception), returnValues);
+    }
+
+    public final Collection getAffectedObjects () {
+        List affectedObjects = new ArrayList ();
+        for (Iterator i = getCommands ().iterator ();
+        i.hasNext ();) {
+            Collection coll = ((ICommand) i.next ()).getAffectedObjects ();
+            if (coll != null) {
+                affectedObjects.addAll (coll);
+            }
+        }
+        return affectedObjects;
+    }
+
+    public boolean involvesReadOnlyNonWorkSpaceFiles () {
+        for (Iterator i = getCommands ().iterator ();
+        i.hasNext ();) {
+            if (((ICommand) i.next ()).involvesReadOnlyNonWorkSpaceFiles ()) return true;
+
+        }
+        return false;
+    }
+
+    public final ICommand compose (ICommand command) {
+        if (command != null) getCommands ().add (command);
+
+        return this;
+    }
+
+    public final boolean isExecutable () {
+        if (getCommands ().isEmpty ()) return false;
+
+        for (Iterator i = getCommands ().iterator ();
+        i.hasNext ();) {
+            if (! ((ICommand) i.next ()).isExecutable ()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public final boolean isRedoable () {
+        if (getCommands ().isEmpty ()) return false;
+
+        for (Iterator i = getCommands ().iterator ();
+        i.hasNext ();) {
+            if (! ((ICommand) i.next ()).isRedoable ()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public final boolean isUndoable () {
+        if (getCommands ().isEmpty ()) return false;
+
+        for (Iterator i = getCommands ().iterator ();
+        i.hasNext ();) {
+            if (! ((ICommand) i.next ()).isUndoable ()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public final boolean isEmpty () {
+        return getCommands ().size () == 0;
+    }
+
+    public ICommand unwrap () {
+        switch (commands.size ()) {
+            case 0 :
+                return UnexecutableCommand.INSTANCE;
+            case 1 :
+                return (ICommand) commands.get (0);
+            default :
+                return this;
+        }
+    }
+
+    public void execute (IProgressMonitor progressMonitor) {
+        if (! getValidator ().okToEdit (this)) {
+            setCanceled (true);
+        } else {
+            IProgressMonitor monitor = (progressMonitor == null) ? new NullProgressMonitor () : progressMonitor;
+            setCanceled (false);
+            List executedCommands = new ArrayList (getCommands ().size ());
+            int totalWork = getCommands ().size ();
+            monitor.beginTask (getLabel (), totalWork);
+            for (Iterator i = getCommands ().iterator ();
+            i.hasNext ();) {
+                SubProgressMonitor subprogressMonitor = new SubProgressMonitor (monitor, 1, SubProgressMonitor.SUPPRESS_SUBTASK_LABEL);
+                ICommand nextCommand = (ICommand) i.next ();
+                nextCommand.execute (subprogressMonitor);
+                CommandResult result = nextCommand.getCommandResult ();
+                if (result != null) {
+                    if (result.getStatus ().getSeverity () == IStatus.ERROR) {
+                        undoCancelledCommands (executedCommands);
+                        return;
+                    }
+                }
+                monitor.worked (1);
+                if (monitor.isCanceled ()) {
+                    undoCancelledCommands (executedCommands);
+                    monitor.done ();
+                    setCanceled (true);
+                    return;
+                }
+                executedCommands.add (nextCommand);
+            }
+            monitor.done ();
+        }
+    }
+
+    protected void undoCancelledCommands (List executedCommands) {
+        Collections.reverse (executedCommands);
+        for (Iterator i = executedCommands.iterator ();
+        i.hasNext ();) {
+            ICommand nextCommand = (ICommand) i.next ();
+            if (nextCommand.isUndoable ()) {
+                nextCommand.undo ();
+            }
+        }
+    }
+
+    public void redo () {
+        if (! getValidator ().okToEdit (this)) {
+            setCanceled (true);
+            return;
+        }
+        Collections.reverse (getCommands ());
+        for (Iterator i = getCommands ().iterator ();
+        i.hasNext ();) {
+            ((ICommand) i.next ()).redo ();
+        }
+    }
+
+    public void undo () {
+        if (! getValidator ().okToEdit (this)) {
+            setCanceled (true);
+            return;
+        }
+        Collections.reverse (getCommands ());
+        for (Iterator i = getCommands ().iterator ();
+        i.hasNext ();) {
+            ((ICommand) i.next ()).undo ();
+        }
+    }
+
+    protected String getPluginId () {
+        return CommonCorePlugin.getPluginId ();
+    }
+
+    protected CommandResult newCancelledCommandResult () {
+        return new CommandResult (new Status (IStatus.ERROR, getPluginId (), CommonCoreStatusCodes.CANCELLED, CANCELLED_MESSAGE, null), null);
+    }
+
+    protected void setCanceled (boolean canceled) {
+        this.canceled = canceled;
+    }
+
+    protected boolean isCanceled () {
+        return canceled;
+    }
+
+    public CMValidator getValidator () {
+        return new CMValidator ();
+    }
+
+}
+

@@ -1,0 +1,75 @@
+14a15,16
+> import org.eclipse.draw2d.Viewport;
+> 
+16a19,20
+> import org.eclipse.draw2d.geometry.Rectangle;
+> 
+24a29,30
+> import org.eclipse.gef.SharedCursors;
+> 
+29,30d34
+< import org.eclipse.gef.ui.parts.ScrollingGraphicalViewer;
+< 
+53,54d56
+< import org.eclipse.gmf.runtime.diagram.ui.util.SelectInDiagramHelper;
+< 
+66a69,70
+> import org.eclipse.swt.widgets.Control;
+> 
+70d73
+<     private boolean antiScroll = false;
+201d203
+<                     antiScroll = true;
+203d204
+<                     antiScroll = false;
+225d225
+<         antiScroll = true;
+227d226
+<         antiScroll = false;
+252d250
+<         if (! antiScroll) {
+254,260c252,253
+<             boolean cont = getState () == STATE_CONNECTION_STARTED && ((getCurrentCommand () == null) || ((getCurrentCommand () != null) && (getCurrentCommand ().canExecute ())));
+<             if (cont) {
+<                 if ((getTargetEditPart () != null) && (getTargetEditPart ().getViewer () instanceof ScrollingGraphicalViewer) && (getTargetEditPart ().getViewer ().getControl () instanceof FigureCanvas)) {
+<                     FigureCanvas figureCanvas = (FigureCanvas) ((ScrollingGraphicalViewer) getTargetEditPart ().getViewer ()).getControl ();
+<                     Point location1 = getLocation ().getCopy ();
+<                     SelectInDiagramHelper.exposeLocation (figureCanvas, location1);
+<                 }
+---
+>         if (isInState (STATE_CONNECTION_STARTED)) {
+>             updateAutoexposeHelper ();
+264,265d256
+<         return false;
+<     }
+267,270c258,273
+<     protected void doAutoexpose () {
+<         if (! antiScroll) super.doAutoexpose ();
+< 
+<         return;
+---
+>     protected Cursor calculateCursor () {
+>         if (isInState (STATE_CONNECTION_STARTED)) {
+>             if (getAutoexposeHelper () != null) {
+>                 return SharedCursors.HAND;
+>             } else {
+>                 Control control = getCurrentViewer ().getControl ();
+>                 if (control instanceof FigureCanvas) {
+>                     Viewport viewport = ((FigureCanvas) control).getViewport ();
+>                     Rectangle rect = Rectangle.SINGLETON;
+>                     viewport.getClientArea (rect);
+>                     viewport.translateToParent (rect);
+>                     viewport.translateToAbsolute (rect);
+>                     if (! rect.contains (getLocation ())) {
+>                         return getDisabledCursor ();
+>                     }
+>                 }
+272,276d274
+< 
+<     protected Command getCommand () {
+<         if (! antiScroll) return super.getCommand ();
+< 
+<         return null;
+278,279d275
+< 
+<     protected Cursor calculateCursor () {

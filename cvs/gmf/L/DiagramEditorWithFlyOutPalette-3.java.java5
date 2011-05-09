@@ -1,0 +1,314 @@
+package org.eclipse.gmf.runtime.diagram.ui.parts;
+
+import org.eclipse.draw2d.PositionConstants;
+
+import org.eclipse.gef.ContextMenuProvider;
+
+import org.eclipse.gef.DefaultEditDomain;
+
+import org.eclipse.gef.KeyHandler;
+
+import org.eclipse.gef.Tool;
+
+import org.eclipse.gef.palette.PaletteRoot;
+
+import org.eclipse.gef.ui.palette.FlyoutPaletteComposite;
+
+import org.eclipse.gef.ui.palette.PaletteContextMenuProvider;
+
+import org.eclipse.gef.ui.palette.PaletteCustomizer;
+
+import org.eclipse.gef.ui.palette.PaletteViewer;
+
+import org.eclipse.gef.ui.palette.PaletteViewerProvider;
+
+import org.eclipse.gef.ui.views.palette.PalettePage;
+
+import org.eclipse.gef.ui.views.palette.PaletteViewerPage;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.parts.ImageFileDropTargetListener;
+
+import org.eclipse.gmf.runtime.diagram.ui.services.palette.PaletteService;
+
+import org.eclipse.gmf.runtime.diagram.ui.tools.ConnectorCreationTool;
+
+import org.eclipse.gmf.runtime.diagram.ui.tools.CreationTool;
+
+import org.eclipse.jface.util.TransferDropTargetListener;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.events.KeyEvent;
+
+import org.eclipse.swt.events.MouseEvent;
+
+import org.eclipse.swt.events.MouseListener;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.ui.PlatformUI;
+
+import org.eclipse.ui.activities.ActivityManagerEvent;
+
+import org.eclipse.ui.activities.IActivityManagerListener;
+
+public abstract class DiagramEditorWithFlyOutPalette extends DiagramEditor implements IActivityManagerListener {
+    boolean fHasFlyoutPalette = true;
+
+    public DiagramEditorWithFlyOutPalette () {
+    }
+
+    public DiagramEditorWithFlyOutPalette (boolean hasFlyout) {
+        fHasFlyoutPalette = hasFlyout;
+    }
+
+    protected static final int UNCOLLAPSED_PINNED = 4;
+    protected static final int COLLAPSED = 2;
+    private PaletteViewerProvider provider;
+    private FlyoutPaletteComposite splitter;
+    private CustomPalettePage page;
+
+    protected void initializeGraphicalViewer () {
+        if (fHasFlyoutPalette) {
+            splitter.hookDropTargetListener (getGraphicalViewer ());
+            super.initializeGraphicalViewer ();
+            getDiagramGraphicalViewer ().addDropTargetListener ((TransferDropTargetListener) new ImageFileDropTargetListener (getDiagramGraphicalViewer ()));
+            PlatformUI.getWorkbench ().getActivitySupport ().getActivityManager ().addActivityManagerListener (this);
+        } else {
+            super.initializeGraphicalViewer ();
+        }
+    }
+
+    protected PaletteViewerProvider createPaletteViewerProvider () {
+        assert fHasFlyoutPalette == true;
+        getEditDomain ().setPaletteRoot (createPaletteRoot ());
+        return new PaletteViewerProvider (getEditDomain ()) {
+
+            protected void configurePaletteViewer (PaletteViewer viewer) {
+                super.configurePaletteViewer (viewer);
+                viewer.getKeyHandler ().setParent (getPaletteKeyHandler ());
+                viewer.getControl ().addMouseListener (getPaletteMouseListener ());
+            }
+
+            private KeyHandler getPaletteKeyHandler () {
+                if (paletteKeyHandler == null) {
+                    paletteKeyHandler = new KeyHandler () {
+
+                        public boolean keyReleased (KeyEvent event) {
+                            if (event.keyCode == SWT.Selection) {
+                                Tool tool = getPaletteViewer ().getActiveTool ().createTool ();
+                                if (tool instanceof CreationTool || tool instanceof ConnectorCreationTool) {
+                                    tool.keyUp (event, getDiagramGraphicalViewer ());
+                                    getPaletteViewer ().setActiveTool (null);
+                                    return true;
+                                }
+                            }
+                            return super.keyReleased (event);
+                        }
+
+                    }
+
+                    ;
+                }
+                return paletteKeyHandler;
+            }
+
+            private MouseListener getPaletteMouseListener () {
+                if (paletteMouseListener == null) {
+                    paletteMouseListener = new MouseListener () {
+                        private boolean clearActiveTool = false;
+
+                        public void mouseDoubleClick (MouseEvent e) {
+                            Tool tool = getPaletteViewer ().getActiveTool ().createTool ();
+                            if (tool instanceof CreationTool || tool instanceof ConnectorCreationTool) {
+                                tool.setViewer (getDiagramGraphicalViewer ());
+                                tool.setEditDomain (getDiagramGraphicalViewer ().getEditDomain ());
+                                tool.mouseDoubleClick (e, getDiagramGraphicalViewer ());
+                                clearActiveTool = true;
+                            }
+                        }
+
+                        public void mouseDown (MouseEvent e) {
+                        }
+
+                        public void mouseUp (MouseEvent e) {
+                            if (clearActiveTool) {
+                                getPaletteViewer ().setActiveTool (null);
+                                clearActiveTool = false;
+                            }
+                        }
+
+                    }
+
+                    ;
+                }
+                return paletteMouseListener;
+            }
+
+        }
+
+        ;
+    }
+
+    KeyHandler paletteKeyHandler = null;
+    MouseListener paletteMouseListener = null;
+
+    public void setFocus () {
+        if (getGraphicalControl () != null) getGraphicalControl ().setFocus ();
+
+    }
+
+    public void createPartControl (Composite parent) {
+        if (fHasFlyoutPalette) {
+            FlyoutPaletteComposite.FlyoutPreferences flyoutPrefs = new FlyoutPreferencesImpl ();
+            flyoutPrefs.setPaletteState (getInitialPaletteState ());
+            flyoutPrefs.setPaletteWidth (getInitialPaletteSize ());
+            splitter = new FlyoutPaletteComposite (parent, SWT.NONE, getSite ().getPage (), getPaletteViewerProvider (), flyoutPrefs);
+            super.createPartControl (splitter);
+            splitter.setGraphicalControl (getGraphicalControl ());
+            if (page != null) {
+                splitter.setExternalViewer (getPaletteViewer ());
+                page = null;
+            }
+        } else {
+            super.createPartControl (parent);
+        }
+    }
+
+    public Object getAdapter (Class type) {
+        if (fHasFlyoutPalette) {
+            if (type == PalettePage.class) {
+                if (splitter == null) {
+                    page = new CustomPalettePage (getPaletteViewerProvider ());
+                    return page;
+                }
+                return new CustomPalettePage (getPaletteViewerProvider ());
+            }
+            if (type == PaletteViewer.class) {
+                return getPaletteViewer ();
+            }
+        }
+        return super.getAdapter (type);
+    }
+
+    private PaletteRoot createPaletteRoot () {
+        return PaletteService.getInstance ().createPalette (this, getDefaultPaletteContent ());
+    }
+
+    private void updatePaletteRoot () {
+        PaletteService.getInstance ().updatePalette (getEditDomain ().getPaletteViewer ().getPaletteRoot (), this, getDefaultPaletteContent ());
+    }
+
+    protected abstract Object getDefaultPaletteContent ();
+
+    protected final PaletteViewerProvider getPaletteViewerProvider () {
+        if (provider == null) provider = createPaletteViewerProvider ();
+
+        return provider;
+    }
+
+    protected int getInitialPaletteSize () {
+        return 125;
+    }
+
+    protected int getInitialPaletteState () {
+        return UNCOLLAPSED_PINNED;
+    }
+
+    protected void setEditDomain (DefaultEditDomain ed) {
+        super.setEditDomain (ed);
+    }
+
+    protected void configurePaletteViewer () {
+        assert fHasFlyoutPalette == true;
+        PaletteViewer viewer = getPaletteViewer ();
+        if (viewer == null) return;
+
+        ContextMenuProvider paletteContextProvider = new PaletteContextMenuProvider (viewer);
+        getPaletteViewer ().setContextMenu (paletteContextProvider);
+        viewer.setCustomizer (new PaletteCustomizer () {
+
+            public void revertToSaved () {
+            }
+
+            public void save () {
+            }
+
+        }
+
+        );
+    }
+
+    private PaletteViewer getPaletteViewer () {
+        return getEditDomain ().getPaletteViewer ();
+    }
+
+    protected class CustomPalettePage extends PaletteViewerPage {
+
+        public CustomPalettePage (PaletteViewerProvider provider) {
+            super (provider);
+        }
+
+        public void createControl (Composite parent) {
+            super.createControl (parent);
+            if (splitter != null) splitter.setExternalViewer (viewer);
+
+        }
+
+        public void dispose () {
+            if (splitter != null) splitter.setExternalViewer (null);
+
+            super.dispose ();
+        }
+
+        public PaletteViewer getPaletteViewer () {
+            return viewer;
+        }
+
+    }
+
+    protected void handlePaletteResized (int newSize) {
+    }
+
+    protected void handlePaletteDefaultStateChanged (int newState) {
+    }
+
+    private static final class FlyoutPreferencesImpl implements FlyoutPaletteComposite.FlyoutPreferences {
+        private int dockLocation = PositionConstants.EAST;
+        private int paletteState = UNCOLLAPSED_PINNED;
+        private int paletteWidth = 125;
+
+        public int getDockLocation () {
+            return dockLocation;
+        }
+
+        public int getPaletteState () {
+            return paletteState;
+        }
+
+        public int getPaletteWidth () {
+            return paletteWidth;
+        }
+
+        public void setDockLocation (int location) {
+            dockLocation = location;
+        }
+
+        public void setPaletteState (int state) {
+            paletteState = state;
+        }
+
+        public void setPaletteWidth (int width) {
+            paletteWidth = width;
+        }
+
+    }
+
+    public void activityManagerChanged (ActivityManagerEvent activityManagerEvent) {
+        if (activityManagerEvent.haveEnabledActivityIdsChanged ()) {
+            updatePaletteRoot ();
+        }
+    }
+
+}
+

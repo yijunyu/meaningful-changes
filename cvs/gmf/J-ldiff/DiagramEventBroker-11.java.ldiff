@@ -1,0 +1,256 @@
+35a36,38
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> import org.eclipse.emf.workspace.EMFOperationCommand;
+> import org.eclipse.gmf.runtime.diagram.core.internal.commands.PersistElementCommand;
+40,40c56,56
+< 
+---
+> 
+46a49,49
+> public class DiagramEventBroker
+47,47c50,50
+< public class DiagramEventBroker extends ResourceSetListenerImpl {
+---
+>     extends ResourceSetListenerImpl {
+202,202d205
+< 	public static void startListening(
+203,203c206,206
+< 			TransactionalEditingDomain editingDomain) {
+---
+>     public static void startListening(TransactionalEditingDomain editingDomain) {
+216,216d218
+<     public static void stopListening(
+217,217c219,219
+<             TransactionalEditingDomain editingDomain) {
+---
+>     public static void stopListening(TransactionalEditingDomain editingDomain) {
+224a227,231
+>     /*
+>      * (non-Javadoc)
+>      * 
+>      * @see org.eclipse.emf.transaction.ResourceSetListenerImpl#transactionAboutToCommit(org.eclipse.emf.transaction.ResourceSetChangeEvent)
+>      */
+226a329,329
+>                 
+227,227d328
+<  
+230a278,287
+>     /**
+>      * determine if the passed notification can be ignored or not the default
+>      * implementation will ignore touch event if it is not a resolve event, also
+>      * it will ignore the mutable feature events
+>      * 
+>      * @param notification
+>      *            the notification to check
+>      * @return true if the notification should be ignored, otherwise false
+>      */
+>     protected boolean shouldIgnoreNotification(Notification notification) {
+230a237,237
+>             if (shouldIgnoreNotification(notification))
+231,234d277
+<             Object eventFeature = notification.getFeature();
+< 
+<             // ignore touch event if it is not a resolve event,and ignore the mutable feature
+<             // events
+235,235c288,288
+<             if ((notification.isTouch() && notification.getEventType() != Notification.RESOLVE)||
+---
+>         if ((notification.isTouch() && notification.getEventType() != Notification.RESOLVE)
+236,236c289,289
+<                  NotationPackage.eINSTANCE.getView_Mutable().equals(eventFeature)){
+---
+>             || NotationPackage.eINSTANCE.getView_Mutable().equals(
+236a290,294
+>                 notification.getFeature())) {
+>             return true;
+>         }
+>         return false;
+>     }
+237a417,417
+> 
+238,239d416
+<             }
+<             
+251a251,251
+>             : cc;
+251,251c250,250
+<         return cc.isEmpty() ? null : cc;
+---
+>         return cc.isEmpty() ? null
+253a254,258
+>     /*
+>      * (non-Javadoc)
+>      * 
+>      * @see org.eclipse.emf.transaction.ResourceSetListenerImpl#resourceSetChanged(org.eclipse.emf.transaction.ResourceSetChangeEvent)
+>      */
+258a264,264
+>             if (shouldIgnoreNotification(notification))
+259,264d263
+< 			Object eventFeature = notification.getFeature();
+< 
+< 			// ignore touch event if it is not a resolve event,and ignore the mutable feature
+< 			// events
+< 			if ((notification.isTouch() && notification.getEventType() != Notification.RESOLVE)||
+< 			     NotationPackage.eINSTANCE.getView_Mutable().equals(eventFeature)){
+265a500,500
+> 
+266,266d499
+< 			}
+278a631,631
+>     
+279,279d630
+< 
+291a307,307
+>             false);
+291,291c306,306
+< 		Collection listenerList = getInterestedNotificationListeners(event, false);
+---
+>         Collection listenerList = getInterestedNotificationListeners(event,
+311,311c324,324
+< 				CompoundCommand cc = new CompoundCommand();
+---
+>         CompoundCommand cc = new CompoundCommand();
+311a325,325
+>         preparePersistCommand(event,cc);
+324a343,344
+>         
+>         if (cc.isEmpty())
+402,402c446,446
+< 			preListeners.removeListener(target, LISTEN_TO_ALL_FEATURES, listener);
+---
+>             preListeners.removeListener(target, LISTEN_TO_ALL_FEATURES,
+402a447,447
+>                 listener);
+417,417c462,462
+< 			postListeners.removeListener(target, LISTEN_TO_ALL_FEATURES, listener);
+---
+>             postListeners.removeListener(target, LISTEN_TO_ALL_FEATURES,
+417a463,463
+>                 listener);
+475,475c667,667
+< 
+---
+> }
+482a529,529
+>             boolean preCommit) {
+482,482c528,528
+< 	private Set getNotificationListeners(Object notifier, Object key, boolean preCommit) {
+---
+>     private Set getNotificationListeners(Object notifier, Object key,
+483a531,531
+>             : postListeners;
+483,483c530,530
+< 		NotifierToKeyToListenersSetMap listeners = preCommit ? preListeners : postListeners;
+---
+>         NotifierToKeyToListenersSetMap listeners = preCommit ? preListeners
+509a558,558
+>             boolean preCommit) {
+509,509c557,557
+< 	private Set getInterestedNotificationListeners(Notification event, boolean preCommit) {
+---
+>     private Set getInterestedNotificationListeners(Notification event,
+518a568,574
+>         // the Visibility Event get fired to all interested listeners in the
+>         // container
+>         if (NotationPackage.eINSTANCE.getView_Visible().equals(
+>             event.getFeature())
+>             && notifier.eContainer() != null) {
+>             listenerSet.addAll(getNotificationListeners(notifier.eContainer(),
+>                 preCommit));
+519,523d567
+< 		//the Visibility Event get fired to all interested listeners in the container
+< 		if (NotationPackage.eINSTANCE.getView_Visible().equals(event.getFeature()) &&
+< 			notifier.eContainer()!=null){
+< 				listenerSet.addAll(getNotificationListeners(notifier.eContainer(), preCommit));
+< 		}
+524,524c575,575
+< 		else if (notifier instanceof EAnnotation) {
+---
+>         } else if (notifier instanceof EAnnotation) {
+525a577,577
+>                 preCommit);
+525,525c576,576
+< 			addListenersOfNotifier(listenerSet, notifier.eContainer(), event, preCommit);
+---
+>             addListenersOfNotifier(listenerSet, notifier.eContainer(), event,
+534a587,590
+>     public boolean isAggregatePrecommitListener() {
+>         return true;
+>     }
+> 
+572,572d627
+< 
+583,584d638
+< 		
+< 		if (!event.isTouch()) {
+585a346,361
+>         
+>         return cc;
+>     }
+> 
+>     private void preparePersistCommand(Notification event, CompoundCommand cc) {
+>         PersistElementCommand persistCmd = null;
+>         if (!event.isTouch()) {
+>             EObject elementToPersist = (EObject) event.getNotifier();
+>             while (elementToPersist != null && !(elementToPersist instanceof View)) {
+>                 elementToPersist = elementToPersist.eContainer();
+>             }
+>             if (elementToPersist != null
+>                 && (NotationPackage.eINSTANCE.getView_TransientChildren() == elementToPersist
+>                     .eContainingFeature() || NotationPackage.eINSTANCE
+>                     .getDiagram_TransientEdges() == elementToPersist
+>                     .eContainingFeature())) {
+586,591d345
+< 			while (element != null && !(element instanceof View)) {
+< 				element = element.eContainer();
+< 			}
+< 			if (element != null && 
+<                 (NotationPackage.eINSTANCE.getView_TransientChildren()==element.eContainingFeature() ||
+<                  NotationPackage.eINSTANCE.getDiagram_TransientEdges()==element.eContainingFeature())) {
+592a363,363
+>                     persistCmd = getPersistViewCommand((View)elementToPersist);
+592,592c362,362
+<                 if (!NotificationFilter.READ.matches(event)) {
+---
+>                 if (!NotificationFilter.READ.matches(event)) {
+593,593d362
+<                     ViewUtil.persistElement((View) element);
+594a365,368
+>             }
+>         }
+>         if (persistCmd!=null)
+>             cc.append(new EMFOperationCommand(persistCmd.getEditingDomain(),persistCmd));
+594,594c364,364
+<                 }
+---
+>                 }
+597a645,661
+>     /**
+>      * Returns a persisted view command. This command if executed will persisted
+>      * the passed view and all its required parents.
+>      * @param view the view to persist
+>      * @return the command to persist the view; the return value can be null
+>      */
+>     private PersistElementCommand getPersistViewCommand(View view) {
+>         PersistElementCommand pvc = null;
+>         // only immutable views can be persisted
+>         if (!view.isMutable()) {
+>             TransactionalEditingDomain editingDomain = TransactionUtil.getEditingDomain(view);
+>             // get Top view needs to get persisted
+>             View viewToPersist = ViewUtil.getTopViewToPersist(view);
+>             if (viewToPersist!=null){
+>                 // now the command that will persist the view
+>                 //Map options = Collections.singletonMap( Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+>                 pvc = new PersistElementCommand(editingDomain, viewToPersist /*, options*/);
+598,598d639
+< 		EObject element = (EObject) event.getNotifier();
+599,599c640,640
+< 		if (element != null) {
+---
+>         if (element != null) {
+600,600c641,641
+< 			fireNotification(event);
+---
+>             fireNotification(event);
+602a664,664
+>         return pvc;

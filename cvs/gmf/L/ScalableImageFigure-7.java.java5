@@ -1,0 +1,163 @@
+package org.eclipse.gmf.runtime.draw2d.ui.render.figures;
+
+import java.io.ByteArrayOutputStream;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.ImageFigure;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapModeUtil;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderInfo;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderedImage;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.factory.RenderedImageFactory;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.DrawableRenderedImage;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.graphics.Color;
+
+import org.eclipse.swt.graphics.Image;
+
+import org.eclipse.swt.graphics.ImageData;
+
+import org.eclipse.swt.graphics.ImageLoader;
+
+public class ScalableImageFigure extends ImageFigure {
+    private Dimension preferredSize = new Dimension (- 1, - 1);
+    private static final int FLAG_USE_DEFAULT_IMAGESIZE = MAX_FLAG << 1, FLAG_MAINTAIN_ASPECT_RATIO = MAX_FLAG << 2, FLAG_ANTI_ALIAS = MAX_FLAG << 3, FLAG_USE_ORIGINAL_COLORS = MAX_FLAG << 4;
+    private RenderedImage origRenderedImage = null;
+    private RenderedImage lastRenderedImage = null;
+
+    public boolean isAntiAlias () {
+        return getFlag (FLAG_ANTI_ALIAS);
+    }
+
+    public void setAntiAlias (boolean antiAlias) {
+        setFlag (FLAG_ANTI_ALIAS, antiAlias);
+        invalidate ();
+    }
+
+    public boolean isMaintainAspectRatio () {
+        return getFlag (FLAG_MAINTAIN_ASPECT_RATIO);
+    }
+
+    public void setMaintainAspectRatio (boolean maintainAspectRatio) {
+        setFlag (FLAG_MAINTAIN_ASPECT_RATIO, maintainAspectRatio);
+        invalidate ();
+    }
+
+    public ScalableImageFigure (Image img) {
+        ImageLoader imageLoader = new ImageLoader ();
+        ByteArrayOutputStream byteOS = new ByteArrayOutputStream ();
+        imageLoader.data = new ImageData [] {img.getImageData ()};
+        imageLoader.logicalScreenHeight = img.getBounds ().width;
+        imageLoader.logicalScreenHeight = img.getBounds ().height;
+        imageLoader.save (byteOS, SWT.IMAGE_BMP);
+        this.origRenderedImage = RenderedImageFactory.getInstance (byteOS.toByteArray ());
+        setFlag (FLAG_USE_DEFAULT_IMAGESIZE, false);
+        setFlag (FLAG_USE_ORIGINAL_COLORS, false);
+        setFlag (FLAG_MAINTAIN_ASPECT_RATIO, true);
+        setFlag (FLAG_ANTI_ALIAS, true);
+    }
+
+    public ScalableImageFigure (RenderedImage renderedImage) {
+        this (renderedImage, false, false, true);
+    }
+
+    public ScalableImageFigure (RenderedImage renderedImage, boolean antiAlias) {
+        this (renderedImage, false, false, antiAlias);
+    }
+
+    public ScalableImageFigure (RenderedImage renderedImage, boolean useDefaultImageSize, boolean useOriginalColors, boolean antiAlias) {
+        origRenderedImage = renderedImage;
+        setFlag (FLAG_USE_DEFAULT_IMAGESIZE, useDefaultImageSize);
+        setFlag (FLAG_USE_ORIGINAL_COLORS, useOriginalColors);
+        setFlag (FLAG_MAINTAIN_ASPECT_RATIO, true);
+        setFlag (FLAG_ANTI_ALIAS, antiAlias);
+    }
+
+    public void setPreferredImageSize (int w, int h) {
+        preferredSize = new Dimension (w, h);
+    }
+
+    public Dimension getPreferredSize (int wHint, int hHint) {
+        if (preferredSize.height == - 1 && preferredSize.width == - 1) {
+            if (getImage () == null) return preferredSize;
+
+            int extent = MapModeUtil.getMapMode (this).DPtoLP (32);
+            preferredSize = new Dimension (extent, extent);
+            if (getFlag (FLAG_USE_DEFAULT_IMAGESIZE)) {
+                if (getRenderedImage () != null) {
+                    setRenderedImage (getRenderedImage (new Dimension (0, 0)));
+                    Image swtImage = null;
+                    if (getRenderedImage () != null) swtImage = getRenderedImage ().getSWTImage ();
+
+                    if (swtImage != null) {
+                        org.eclipse.swt.graphics.Rectangle imgRect = swtImage.getBounds ();
+                        preferredSize.width = MapModeUtil.getMapMode (this).DPtoLP (imgRect.width);
+                        preferredSize.height = MapModeUtil.getMapMode (this).DPtoLP (imgRect.height);
+                    }
+                }
+            }
+        }
+        return preferredSize;
+    }
+
+    public void setBounds (Rectangle rect) {
+        Dimension devDim = new Dimension (rect.getSize ());
+        MapModeUtil.getMapMode (this).LPtoDP (devDim);
+        setRenderedImage (getRenderedImage (devDim));
+        super.setBounds (rect);
+    }
+
+    public Image getImage () {
+        if (getRenderedImage () == null) return null;
+
+        return getRenderedImage ().getSWTImage ();
+    }
+
+    private RenderedImage getRenderedImage (Dimension dim) {
+        RenderInfo newRenderInfo = RenderedImageFactory.createInfo (dim.width, dim.height, useOriginalColors () ? null : translateSWTColorToAWTColor (getBackgroundColor ()), useOriginalColors () ? null : translateSWTColorToAWTColor (getForegroundColor ()), isMaintainAspectRatio (), isAntiAlias ());
+        RenderedImage newRenderedImage = getRenderedImage ().getNewRenderedImage (newRenderInfo);
+        return newRenderedImage;
+    }
+
+    public boolean useOriginalColors () {
+        return getFlag (FLAG_USE_ORIGINAL_COLORS);
+    }
+
+    protected void paintFigure (Graphics graphics) {
+        int x, y;
+        Rectangle area = getClientArea ().getCopy ();
+        y = (area.height - getBounds ().height) / 2 + area.y;
+        x = (area.width - getBounds ().width) / 2 + area.x;
+        if (graphics instanceof DrawableRenderedImage) {
+            lastRenderedImage = ((DrawableRenderedImage) graphics).drawRenderedImage (getRenderedImage (new Dimension (getBounds ().width, getBounds ().height)), x, y, getBounds ().width, getBounds ().height);
+            assert lastRenderedImage != null;
+        } else {
+            graphics.drawImage (getRenderedImage ().getSWTImage (), x, y);
+        }
+    }
+
+    private java.awt.Color translateSWTColorToAWTColor (Color swtColor) {
+        return (swtColor == null) ? null : new java.awt.Color (swtColor.getRed (), swtColor.getGreen (), swtColor.getBlue ());
+    }
+
+    public RenderedImage getRenderedImage () {
+        return origRenderedImage;
+    }
+
+    public void setRenderedImage (RenderedImage renderedImage) {
+        this.origRenderedImage = renderedImage;
+    }
+
+}
+

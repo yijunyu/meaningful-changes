@@ -1,0 +1,104 @@
+package org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.export;
+
+import java.awt.Color;
+
+import java.awt.Dimension;
+
+import org.apache.batik.dom.svg.SVGDOMImplementation;
+
+import org.apache.batik.dom.svg.SVGOMDocument;
+
+import org.apache.batik.dom.util.DOMUtilities;
+
+import org.apache.batik.svggen.DOMTreeManager;
+
+import org.apache.batik.svggen.SVGGraphics2D;
+
+import org.apache.batik.util.SVGConstants;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderInfo;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderedImage;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.graphics.GraphicsToGraphics2DAdaptor;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.SVGColorConverter;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.SVGImage;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.DrawableRenderedImage;
+
+import org.eclipse.gmf.runtime.draw2d.ui.render.internal.RenderingListener;
+
+import org.w3c.dom.DOMImplementation;
+
+import org.w3c.dom.Document;
+
+import org.w3c.dom.Element;
+
+public class GraphicsSVG extends GraphicsToGraphics2DAdaptor implements DrawableRenderedImage {
+    private Document doc;
+
+    public static GraphicsSVG getInstance (Rectangle viewPort) {
+        SVGGraphics2D svgGraphics;
+        DOMImplementation impl = SVGDOMImplementation.getDOMImplementation ();
+        String svgNameSpace = SVGDOMImplementation.SVG_NAMESPACE_URI;
+        Document doc = impl.createDocument (svgNameSpace, "svg", null);
+        svgGraphics = new SVGGraphics2D (doc);
+        svgGraphics.getGeneratorContext ().setPrecision (3);
+        svgGraphics.setSVGCanvasSize (new Dimension (viewPort.width, viewPort.height));
+        return new GraphicsSVG (svgGraphics, doc, svgNameSpace, viewPort);
+    }
+
+    public SVGGraphics2D getSVGGraphics2D () {
+        return (SVGGraphics2D) getGraphics2D ();
+    }
+
+    private GraphicsSVG (SVGGraphics2D graphics, Document doc, String svgNameSpace, Rectangle viewPort) {
+        this (graphics, doc, svgNameSpace, new org.eclipse.swt.graphics.Rectangle (viewPort.x, viewPort.y, viewPort.width, viewPort.height));
+    }
+
+    private GraphicsSVG (SVGGraphics2D graphics, Document doc, String svgNameSpace, org.eclipse.swt.graphics.Rectangle viewPort) {
+        super (graphics, viewPort);
+        this.doc = doc;
+    }
+
+    public Document getDocument () {
+        return doc;
+    }
+
+    public Element getRoot () {
+        return getSVGGraphics2D ().getRoot ();
+    }
+
+    public RenderedImage drawRenderedImage (RenderedImage srcImage, Rectangle rect, RenderingListener listener) {
+        checkState ();
+        DOMTreeManager treeManager = getSVGGraphics2D ().getDOMTreeManager ();
+        Point trans = getTranslationOffset ();
+        if (srcImage instanceof SVGImage) {
+            Document document = ((SVGImage) srcImage).getDocument ();
+            DOMImplementation impl = SVGDOMImplementation.getDOMImplementation ();
+            document = DOMUtilities.deepCloneDocument (document, impl);
+            if (document instanceof SVGOMDocument) {
+                RenderInfo info = srcImage.getRenderInfo ();
+                SVGColorConverter.getInstance ().replaceDocumentColors ((SVGOMDocument) document, new Color (info.getBackgroundColor ().red, info.getBackgroundColor ().green, info.getBackgroundColor ().blue), new Color (info.getForegroundColor ().red, info.getForegroundColor ().green, info.getForegroundColor ().blue));
+            }
+            Element root = document.getDocumentElement ();
+            Element toAppend = (Element) doc.importNode (root, true);
+            toAppend.setAttributeNS (null, SVGConstants.SVG_X_ATTRIBUTE, String.valueOf (rect.x + trans.x));
+            toAppend.setAttributeNS (null, SVGConstants.SVG_Y_ATTRIBUTE, String.valueOf (rect.y + trans.y));
+            toAppend.setAttributeNS (null, SVGConstants.SVG_WIDTH_ATTRIBUTE, String.valueOf (rect.width));
+            toAppend.setAttributeNS (null, SVGConstants.SVG_HEIGHT_ATTRIBUTE, String.valueOf (rect.height));
+            treeManager.appendGroup (toAppend, null);
+            return srcImage;
+        } else {
+            return super.drawRenderedImage (srcImage, rect, listener);
+        }
+    }
+
+}
+

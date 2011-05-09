@@ -1,0 +1,91 @@
+package org.eclipse.gmf.runtime.emf.ui.services.action;
+
+import org.eclipse.gmf.runtime.common.core.service.IOperation;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.filter.AbstractActionFilterProvider;
+
+import org.eclipse.gmf.runtime.emf.core.exceptions.MSLActionAbandonedException;
+
+import org.eclipse.gmf.runtime.emf.core.util.OperationUtil;
+
+import org.eclipse.gmf.runtime.emf.ui.internal.MslUIDebugOptions;
+
+import org.eclipse.gmf.runtime.emf.ui.internal.MslUIPlugin;
+
+import org.eclipse.gmf.runtime.emf.ui.internal.MslUIStatusCodes;
+
+public abstract class AbstractModelActionFilterProvider extends AbstractActionFilterProvider {
+    private boolean result = false;
+
+    protected AbstractModelActionFilterProvider () {
+        super ();
+    }
+
+    protected final boolean getResult () {
+        return result;
+    }
+
+    protected final void setResult (boolean result) {
+        this.result = result;
+    }
+
+    protected abstract boolean doTestAttribute (Object target, String name, String value);
+
+    protected abstract boolean doProvides (IOperation operation);
+
+    public final boolean testAttribute (final Object target, final String name, final String value) {
+        try {
+            OperationUtil.runAsRead (new Runnable () {
+
+                public void run () {
+                    try {
+                        setResult (doTestAttribute (target, name, value));
+                    } catch (Exception e) {
+                        Trace.catching (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "testAttribute", e);
+                        Log.warning (MslUIPlugin.getDefault (), MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getMessage (), e);
+                        RuntimeException cre = new RuntimeException (e);
+                        Trace.throwing (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_THROWING, getClass (), "testAttribute", cre);
+                        throw cre;
+                    }
+                }
+
+            }
+
+            );
+        } catch (MSLActionAbandonedException e) {
+            Trace.trace (MslUIPlugin.getDefault (), MslUIDebugOptions.MODEL_OPERATIONS, "MSLActionAbandonedException");
+        }
+        return getResult ();
+    }
+
+    public final boolean provides (final IOperation operation) {
+        try {
+            OperationUtil.runAsRead (new Runnable () {
+
+                public void run () {
+                    try {
+                        setResult (doProvides (operation));
+                    } catch (Exception e) {
+                        Trace.catching (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "provides", e);
+                        Log.warning (MslUIPlugin.getDefault (), MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getMessage (), e);
+                        RuntimeException cre = new RuntimeException (e);
+                        Trace.throwing (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_THROWING, getClass (), "provides", cre);
+                        throw cre;
+                    }
+                }
+
+            }
+
+            );
+        } catch (MSLActionAbandonedException e) {
+            Trace.trace (MslUIPlugin.getDefault (), MslUIDebugOptions.MODEL_OPERATIONS, "MSLActionAbandonedException");
+        }
+        return getResult ();
+    }
+
+}
+

@@ -1,0 +1,234 @@
+package org.eclipse.gmf.runtime.diagram.ui.editpolicies;
+
+import org.eclipse.draw2d.MouseEvent;
+
+import org.eclipse.draw2d.MouseMotionListener;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.EditPartListener;
+
+import org.eclipse.gef.editpolicies.GraphicalEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.GraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.jface.preference.IPreferenceStore;
+
+import org.eclipse.swt.widgets.Display;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.ui.IWorkbenchWindow;
+
+import org.eclipse.ui.PlatformUI;
+
+public abstract class DiagramAssistantEditPolicy extends GraphicalEditPolicy implements MouseMotionListener {
+    private class ShowDiagramAssistantRunnable implements Runnable {
+        private Point originalMouseLocation;
+
+        protected ShowDiagramAssistantRunnable (Point originalMouseLocation) {
+            this.originalMouseLocation = originalMouseLocation;
+        }
+
+        public void run () {
+            if (originalMouseLocation.equals (getMouseLocation ())) {
+                if (isDiagramAssistantShowing () && ! shouldAvoidHidingDiagramAssistant ()) {
+                    hideDiagramAssistant ();
+                }
+                if (shouldShowDiagramAssistant ()) {
+                    showDiagramAssistant (originalMouseLocation);
+                }
+            }
+        }
+
+    }
+
+    private Runnable hideDiagramAssistantRunnable = new Runnable () {
+
+        public void run () {
+            if (getMouseLocation () == null || ! shouldAvoidHidingDiagramAssistant ()) {
+                hideDiagramAssistant ();
+            }
+        }
+
+    }
+
+    ;
+    private class FocusListener extends EditPartListener.Stub {
+
+        public void selectedStateChanged (EditPart part) {
+            if (part.hasFocus () && shouldShowDiagramAssistant ()) {
+                showDiagramAssistant (getMouseLocation ());
+            } else {
+                hideDiagramAssistant ();
+            }
+        }
+
+    }
+
+    private static final int APPEARANCE_DELAY = 200;
+    private static final int DISAPPEARANCE_DELAY = 2000;
+    private static final int DISAPPEARANCE_DELAY_UPON_EXIT = 1000;
+    private Point mouseLocation;
+    private FocusListener focusListener = new FocusListener ();
+    private boolean avoidHidingDiagramAssistant = true;
+
+    public DiagramAssistantEditPolicy () {
+        super ();
+    }
+
+    protected abstract boolean isDiagramAssistant (Object object);
+
+    protected abstract boolean isDiagramAssistantShowing ();
+
+    protected abstract void showDiagramAssistant (Point referencePoint);
+
+    protected abstract void hideDiagramAssistant ();
+
+    protected boolean shouldShowDiagramAssistant () {
+        return isPreferenceOn () && getHost ().isActive () && isHostEditable () && isHostResolvable () && isDiagramPartActive ();
+    }
+
+    protected boolean isPreferenceOn () {
+        String prefName = getPreferenceName ();
+        if (prefName == null) {
+            return true;
+        }
+        IPreferenceStore preferenceStore = (IPreferenceStore) ((IGraphicalEditPart) getHost ()).getDiagramPreferencesHint ().getPreferenceStore ();
+        return preferenceStore.getBoolean (prefName);
+    }
+
+    String getPreferenceName () {
+        return null;
+    }
+
+    private boolean isHostEditable () {
+        if (getHost () instanceof GraphicalEditPart) {
+            return ((GraphicalEditPart) getHost ()).isEditModeEnabled ();
+        }
+        return true;
+    }
+
+    private boolean isHostResolvable () {
+        final View view = (View) getHost ().getModel ();
+        if (view.getElement () != null) {
+            Boolean retval = (Boolean) MEditingDomainGetter.getMEditingDomain (view).runAsRead (new MRunnable () {
+
+                public Object run () {
+                    return ViewUtil.resolveSemanticElement (view) != null ? Boolean.TRUE : Boolean.FALSE;
+                }
+
+            }
+
+            );
+            return retval.booleanValue ();
+        }
+        return true;
+    }
+
+    private boolean isDiagramPartActive () {
+        IWorkbenchWindow window = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ();
+        if (window != null) {
+            IWorkbenchPage page = window.getActivePage ();
+            if (page != null) {
+                IWorkbenchPart activePart = page.getActivePart ();
+                if (activePart instanceof IDiagramWorkbenchPart) {
+                    return ((IDiagramWorkbenchPart) activePart).getDiagramEditPart ().getRoot ().equals (((IGraphicalEditPart) getHost ()).getRoot ());
+                }
+            }
+        }
+        return false;
+    }
+
+    protected void showDiagramAssistantAfterDelay (int delay) {
+        if (shouldShowDiagramAssistant ()) {
+            Display.getCurrent ().timerExec (delay, new ShowDiagramAssistantRunnable (getMouseLocation ()));
+        }
+    }
+
+    protected void hideDiagramAssistantAfterDelay (int delay) {
+        if (isDiagramAssistantShowing ()) {
+            Display.getCurrent ().timerExec (delay, hideDiagramAssistantRunnable);
+        }
+    }
+
+    public void activate () {
+        super.activate ();
+        ((IGraphicalEditPart) getHost ()).getFigure ().addMouseMotionListener (this);
+        ((IGraphicalEditPart) getHost ()).addEditPartListener (focusListener);
+    }
+
+    public void deactivate () {
+        ((IGraphicalEditPart) getHost ()).getFigure ().removeMouseMotionListener (this);
+        ((IGraphicalEditPart) getHost ()).removeEditPartListener (focusListener);
+        hideDiagramAssistant ();
+        super.deactivate ();
+    }
+
+    public void mouseEntered (MouseEvent me) {
+        setMouseLocation (me.getLocation ());
+    }
+
+    public void mouseExited (MouseEvent me) {
+        setMouseLocation (null);
+        hideDiagramAssistantAfterDelay (getDisappearanceDelayUponExit ());
+    }
+
+    public void mouseMoved (MouseEvent me) {
+        setMouseLocation (me.getLocation ());
+        setAvoidHidingDiagramAssistant (isDiagramAssistant (me.getSource ()));
+        showDiagramAssistantAfterDelay (getAppearanceDelay ());
+    }
+
+    public void mouseHover (MouseEvent me) {
+    }
+
+    public void mouseDragged (MouseEvent me) {
+    }
+
+    protected int getAppearanceDelay () {
+        return APPEARANCE_DELAY;
+    }
+
+    protected int getDisappearanceDelay () {
+        return DISAPPEARANCE_DELAY;
+    }
+
+    protected int getDisappearanceDelayUponExit () {
+        return DISAPPEARANCE_DELAY_UPON_EXIT;
+    }
+
+    protected Point getMouseLocation () {
+        return mouseLocation;
+    }
+
+    protected void setMouseLocation (Point mouseLocation) {
+        this.mouseLocation = mouseLocation;
+    }
+
+    protected void setAvoidHidingDiagramAssistant (boolean avoidHidingDiagramAssistant) {
+        this.avoidHidingDiagramAssistant = avoidHidingDiagramAssistant;
+    }
+
+    protected boolean shouldAvoidHidingDiagramAssistant () {
+        return avoidHidingDiagramAssistant;
+    }
+
+}
+

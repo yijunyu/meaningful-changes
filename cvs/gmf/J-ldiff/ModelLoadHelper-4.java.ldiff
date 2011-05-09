@@ -1,0 +1,129 @@
+17,17d16
+< import org.eclipse.core.runtime.Status;
+20a20,20
+> import org.eclipse.emf.common.util.WrappedException;
+34a35,35
+> 	private Diagnostic diagnostic;	
+38a74,81
+> 	public Diagnostic getDiagnostics() {
+> 		return diagnostic;
+> 	}
+> 	
+> 	/**
+> 	 * Creates resource diagnostic wrapping the given exception.
+> 	 * @param resource the resource associated with the created diagnostic
+> 	 * @param exception non-<code>null</code> exception to be wrapped as diagnostic
+39,40d73
+< 	 * Constructs helper for loading resource refered by URI into given
+< 	 * resourceset.
+41a83,83
+> 	 * @return diagnostic object
+41,41c82,82
+< 	 * 
+---
+> 	 * 
+42,45d82
+< 	 * @param targetResSet
+< 	 *            resourceset into which the resource will be loaded
+< 	 * @param resourceURI
+< 	 *            URI referencing the resource to load
+46a85,87
+> 	static Resource.Diagnostic createDiagnostic(Resource resource, Exception exception) {
+> 		if(exception == null) {
+> 			throw new IllegalArgumentException("null diagnostic exception"); //$NON-NLS-1$
+46,46c84,84
+< 	 */
+---
+> 	 */
+47,49d84
+< 	public ModelLoadHelper(ResourceSet targetResSet, URI resourceURI) {
+< 		if(targetResSet == null || resourceURI == null) {
+< 			throw new IllegalArgumentException("null resourceSet or resourceURI"); //$NON-NLS-1$
+50a89,94
+> 		final String location = resource.getURI() == null ? null : resource.getURI().toString();
+> 		class ExceptionDiagnostic extends WrappedException implements Resource.Diagnostic {
+> 			
+> 			public ExceptionDiagnostic(Exception exception) {
+> 				super(exception);
+> 			}
+50,50c88,88
+< 		}
+---
+> 		}
+51,54d88
+< 		this.resourceSet = targetResSet;
+< 		this.uri = resourceURI;
+< 		this.status = internalLoad(targetResSet, uri);
+< 	}
+55,55c95,95
+< 	
+---
+> 	
+55a96,111
+> 			public String getLocation() {
+> 				return location;
+> 			}
+> 	
+> 			public int getColumn() {
+> 				return 0;
+> 			}
+> 	
+> 			public int getLine() {
+> 				return 0;
+> 			}
+> 		}
+> 		
+> 		return new ExceptionDiagnostic(exception);
+> 	}
+> 	
+56a113,129
+> 	 * Constructs helper for loading resource refered by URI into given
+> 	 * resourceset.
+> 	 * 
+> 	 * @param targetResSet
+> 	 *            resourceset into which the resource will be loaded
+> 	 * @param resourceURI
+> 	 *            URI referencing the resource to load
+> 	 */
+> 	public ModelLoadHelper(ResourceSet targetResSet, URI resourceURI) {
+> 		if(targetResSet == null || resourceURI == null) {
+> 			throw new IllegalArgumentException("null resourceSet or resourceURI"); //$NON-NLS-1$
+> 		}
+> 		this.resourceSet = targetResSet;
+> 		this.uri = resourceURI;
+> 		this.diagnostic = internalLoad(targetResSet, uri);
+> 	}	
+> 
+56,56c112,112
+< 	/**
+---
+> 	/**
+75a59,62
+> 	public boolean isOK() {
+> 		return diagnostic.getSeverity() == Diagnostic.OK;
+> 	}
+> 	
+80a68,70
+> 		if(status == null) {
+> 			status = BasicDiagnostic.toIStatus(diagnostic);
+> 		}
+85,85c131,131
+< 	private static IStatus internalLoad(ResourceSet resourceSet, URI uri) {
+---
+> 	private static Diagnostic internalLoad(ResourceSet resourceSet, URI uri) {
+86,86c132,132
+< 		IStatus loadStatus = Status.OK_STATUS;
+---
+> 		Diagnostic diagnostic = Diagnostic.OK_INSTANCE;
+97,97c143,143
+< 			resource.getErrors().add(MigrationUtil.createDiagnostic(resource, e));
+---
+> 			resource.getErrors().add(ModelLoadHelper.createDiagnostic(resource, e));
+107a154,154
+> 			diagnostic = loadDiagnostic;
+108,108d153
+< 			loadStatus = BasicDiagnostic.toIStatus(loadDiagnostic);
+110,110c156,156
+< 		return loadStatus;
+---
+> 		return diagnostic;

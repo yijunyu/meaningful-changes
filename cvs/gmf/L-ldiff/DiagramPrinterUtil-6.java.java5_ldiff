@@ -1,0 +1,73 @@
+2a3,4
+> import java.text.ParseException;
+> 
+18a21,28
+> import org.eclipse.gmf.runtime.diagram.ui.internal.pagesetup.PageSetupPageType;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.properties.WorkspaceViewerProperties;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramGraphicalViewer;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramGraphicalViewer;
+> 
+36a47,48
+> import org.eclipse.jface.preference.IPreferenceStore;
+> 
+46a59,60
+> import com.ibm.icu.text.NumberFormat;
+> 
+49a64,67
+>         if (helper.getDlgPrintRangePages ()) {
+>             diagramPrinter.setPrintRangePageSelection (true);
+>             diagramPrinter.setPrintRangePages (helper.getDlgPagesFrom (), helper.getDlgPagesTo ());
+>         }
+51,51d68
+<             diagramPrinter.setRows (helper.getDlgScaleFitToM ());
+52a70,70
+>             diagramPrinter.setRows (helper.getDlgScaleFitToN ());
+52,52c69,69
+<             diagramPrinter.setColumns (helper.getDlgScaleFitToN ());
+---
+>             diagramPrinter.setColumns (helper.getDlgScaleFitToM ());
+62a81,81
+>         IPreferenceStore pref = null;
+66a86,124
+>             if (editorPart instanceof IDiagramWorkbenchPart) {
+>                 IDiagramGraphicalViewer viewer = ((IDiagramWorkbenchPart) editorPart).getDiagramGraphicalViewer ();
+>                 if (viewer instanceof DiagramGraphicalViewer) {
+>                     pref = ((DiagramGraphicalViewer) viewer).getWorkspaceViewerPreferenceStore ();
+>                     if (pref.getBoolean (WorkspaceViewerProperties.PREF_USE_WORKSPACE_SETTINGS)) {
+>                         if (((IDiagramWorkbenchPart) editorPart).getDiagramEditPart ().getDiagramPreferencesHint ().getPreferenceStore () != null) pref = (IPreferenceStore) ((IDiagramWorkbenchPart) editorPart).getDiagramEditPart ().getDiagramPreferencesHint ().getPreferenceStore ();
+> 
+>                     }
+>                 }
+>             }
+>             if (pref != null) {
+>                 helper.setDlgOrientation (pref.getBoolean (WorkspaceViewerProperties.PREF_USE_LANDSCAPE));
+>                 PageSetupPageType storedPageType = PageSetupPageType.LETTER;
+>                 String strPageType = pref.getString (WorkspaceViewerProperties.PREF_PAGE_SIZE);
+>                 for (int i = 0;
+>                 i < PageSetupPageType.pages.length; i ++) {
+>                     if (strPageType.startsWith (PageSetupPageType.pages [i].getName ())) {
+>                         storedPageType = PageSetupPageType.pages [i];
+>                         break;
+>                     }
+>                 }
+>                 if (storedPageType.getIndex () == PageSetupPageType.USER_DEFINED.getIndex ()) {
+>                     NumberFormat fNumberFormat = NumberFormat.getNumberInstance ();
+>                     ;
+>                     String strWidth = pref.getString (WorkspaceViewerProperties.PREF_PAGE_WIDTH);
+>                     String strHeight = pref.getString (WorkspaceViewerProperties.PREF_PAGE_HEIGHT);
+>                     double width = 0, height = 0;
+>                     try {
+>                         Number num = fNumberFormat.parse (strWidth);
+>                         width = num.doubleValue () / 0.0394d;
+>                         num = fNumberFormat.parse (strHeight);
+>                         height = num.doubleValue () / 0.0394d;
+>                         helper.setDlgPaperSize (PageSetupPageType.USER_DEFINED.getIndex (), width, height);
+>                     } catch (ParseException e) {
+>                         Log.warning (DiagramPrintingPlugin.getInstance (), DiagramPrintingStatusCodes.IGNORED_EXCEPTION_WARNING, e.getMessage (), e);
+>                     }
+>                 } else helper.setDlgPaperSize (storedPageType.getIndex (), 0, 0);
+> 
+>             }

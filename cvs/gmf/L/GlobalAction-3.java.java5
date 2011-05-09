@@ -1,0 +1,218 @@
+package org.eclipse.gmf.runtime.common.ui.action.global;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Vector;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.jface.text.ITextSelection;
+
+import org.eclipse.jface.viewers.IStructuredSelection;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.action.AbstractActionHandler;
+
+import org.eclipse.gmf.runtime.common.ui.action.internal.CommonUIActionDebugOptions;
+
+import org.eclipse.gmf.runtime.common.ui.action.internal.CommonUIActionPlugin;
+
+import org.eclipse.gmf.runtime.common.ui.action.internal.CommonUIActionStatusCodes;
+
+import org.eclipse.gmf.runtime.common.ui.action.internal.global.GlobalActionHandlerData;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.global.GlobalActionContext;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.global.GlobalActionHandlerContext;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.global.GlobalActionHandlerService;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.global.IGlobalActionContext;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.global.IGlobalActionHandler;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.global.IGlobalActionHandlerProvider;
+
+public abstract class GlobalAction extends AbstractActionHandler {
+    private final String workbenchActionConstant = getActionId ();
+    private String defaultLabel;
+
+    public GlobalAction (IWorkbenchPart workbenchPart) {
+        super (workbenchPart);
+        assert null != workbenchPart;
+        setEnabled (false);
+    }
+
+    public GlobalAction (IWorkbenchPage workbenchPage) {
+        super (workbenchPage);
+        assert null != workbenchPage;
+        setEnabled (false);
+    }
+
+    protected void doRun (IProgressMonitor progressMonitor) {
+        Vector list = new Vector ();
+        List handlerInfo = getGlobalActionHandlerData ();
+        for (Iterator i = handlerInfo.iterator ();
+        i.hasNext ();) {
+            GlobalActionHandlerData data = (GlobalActionHandlerData) i.next ();
+            ICommand command = data.getHandler ().getCommand (data.getContext ());
+            if (command != null) {
+                list.addElement (command);
+            }
+        }
+        if (list.size () <= 0) {
+            return;
+        }
+        CompositeCommand compositeCommand = createCompositeCommand (list);
+        getCommandManager ().execute (compositeCommand, progressMonitor);
+        IStatus status = compositeCommand.getCommandResult ().getStatus ();
+        if (! status.isOK ()) {
+            Log.log (CommonUIActionPlugin.getDefault (), status);
+        }
+    }
+
+    public void refresh () {
+        boolean enable = false;
+        try {
+            List handlerInfo = getGlobalActionHandlerData ();
+            if (defaultLabel != null) {
+                setText (defaultLabel);
+            }
+            for (Iterator i = handlerInfo.iterator ();
+            i.hasNext ();) {
+                GlobalActionHandlerData data = (GlobalActionHandlerData) i.next ();
+                if (data.getHandler ().canHandle (data.getContext ())) {
+                    if (! enable) {
+                        enable = true;
+                    }
+                }
+                if (handlerInfo.size () == 1) {
+                    String label = data.getHandler ().getLabel (data.getContext ());
+                    if (label != null) {
+                        setText (label);
+                    }
+                }
+            }
+        } catch (Throwable exception) {
+            enable = false;
+            Trace.catching (CommonUIActionPlugin.getDefault (), CommonUIActionDebugOptions.EXCEPTIONS_CATCHING, getClass (), "refresh", exception);
+            IStatus status = new Status (IStatus.WARNING, CommonUIActionPlugin.getPluginId (), CommonUIActionStatusCodes.GENERAL_UI_FAILURE, String.valueOf (exception.getMessage ()), exception);
+            Log.log (CommonUIActionPlugin.getDefault (), status);
+        }
+        setEnabled (enable);
+    }
+
+    public abstract String getActionId ();
+
+    protected CompositeCommand createCompositeCommand (List commands) {
+        assert null != commands;
+        return new CompositeCommand (getLabel (), commands);
+    }
+
+    protected IGlobalActionContext createContext () {
+        return new GlobalActionContext (getWorkbenchPart (), getSelection (), getLabel (), getActionId ());
+    }
+
+    protected List getGlobalActionHandlerData () {
+        if (getSelection () instanceof ITextSelection) {
+            return getGlobalActionHandlerData ((ITextSelection) getSelection ());
+        } else if (getSelection () instanceof IStructuredSelection) {
+            return getGlobalActionHandlerData ((IStructuredSelection) getSelection ());
+        }
+
+        return new ArrayList ();
+    }
+
+    private List getGlobalActionHandlerData (List listOfElementTypes) {
+        assert null != listOfElementTypes;
+        ArrayList listOfHandlers = new ArrayList ();
+        Iterator iterator = listOfElementTypes.iterator ();
+        while (iterator.hasNext ()) {
+            Class clazz = (Class) iterator.next ();
+            GlobalActionHandlerContext context = new GlobalActionHandlerContext (getWorkbenchPart (), getActionId (), clazz, false);
+            IGlobalActionHandler handler = GlobalActionHandlerService.getInstance ().getGlobalActionHandler (context);
+            if (handler == null) {
+                context = new GlobalActionHandlerContext (getWorkbenchPart (), getActionId (), clazz, true);
+                handler = GlobalActionHandlerService.getInstance ().getGlobalActionHandler (context);
+            }
+            if (handler != null && ! listOfHandlers.contains (handler)) {
+                listOfHandlers.add (handler);
+            }
+        }
+        ArrayList handlerData = new ArrayList ();
+        IGlobalActionContext actionContext = createContext ();
+        for (int i = 0;
+        i < listOfHandlers.size (); i ++) {
+            IGlobalActionHandler handler = (IGlobalActionHandler) listOfHandlers.get (i);
+            handlerData.add (new GlobalActionHandlerData (handler, actionContext));
+        }
+        return handlerData;
+    }
+
+    private List getGlobalActionHandlerData (IStructuredSelection selection) {
+        assert null != selection;
+        ArrayList listOfElementTypes = new ArrayList ();
+        if (selection.isEmpty ()) {
+            listOfElementTypes.add (IGlobalActionHandlerProvider.NullElementType.class);
+        } else {
+            Object [] array = selection.toArray ();
+            for (int i = 0;
+            i < array.length; i ++) {
+                if (! listOfElementTypes.contains (array [i].getClass ())) {
+                    listOfElementTypes.add (array [i].getClass ());
+                }
+            }
+        }
+        return getGlobalActionHandlerData (listOfElementTypes);
+    }
+
+    private List getGlobalActionHandlerData (ITextSelection selection) {
+        assert null != selection;
+        Class clazz = selection.getClass ();
+        ArrayList listOfElementTypes = new ArrayList ();
+        listOfElementTypes.add (clazz);
+        return getGlobalActionHandlerData (listOfElementTypes);
+    }
+
+    protected String getWorkbenchActionConstant () {
+        return workbenchActionConstant;
+    }
+
+    protected List getObjectContextGlobalActionHandlerData () {
+        GlobalActionHandlerContext context = new GlobalActionHandlerContext (getWorkbenchPart (), getActionId (), Object.class, false);
+        IGlobalActionHandler globalActionHandler = GlobalActionHandlerService.getInstance ().getGlobalActionHandler (context);
+        if (globalActionHandler == null) {
+            return new ArrayList ();
+        }
+        GlobalActionHandlerData data = new GlobalActionHandlerData (globalActionHandler, createContext ());
+        ArrayList list = new ArrayList ();
+        list.add (data);
+        return list;
+    }
+
+    public void init () {
+        super.init ();
+        defaultLabel = getLabel ();
+    }
+
+}
+

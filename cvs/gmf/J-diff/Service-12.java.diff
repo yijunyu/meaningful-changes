@@ -1,0 +1,79 @@
+27a28
+> import org.eclipse.gmf.runtime.common.core.internal.l10n.CommonCoreMessages;
+83a85,86
+> 		private String providerClassName;
+> 
+115a119,124
+> 		 * Tracks the failure of the provider class intantiation, so that a
+> 		 * failure to create the class is logged only once.
+> 		 */
+> 		private boolean providerClassInstantiationFailed = false;
+> 
+> 		/**
+145c154
+< 			if (null == provider) {
+---
+> 			if (null == provider && !providerClassInstantiationFailed) {
+152a162
+> 				
+153a164,169
+> 					
+> 					if (provider == null) {
+> 						// remember that the provider class could not be instantiated
+> 						providerClassInstantiationFailed = true;
+> 					}
+> 					
+160c176
+< 						status.getMessage(),
+---
+> 						CommonCoreMessages.bind(CommonCoreMessages.serviceProviderNotActivated, element.getAttribute(A_CLASS)),
+254a271,289
+> 		/**
+> 		 * Returns the provider's class name, if it can be found.
+> 		 */
+> 		public String toString() {
+> 
+> 			if (providerClassName == null) {
+> 				if (getElement() != null) {
+> 					// get the provider class name
+> 					providerClassName = getElement().getAttribute(A_CLASS);
+> 				}
+> 				if (providerClassName == null) {
+> 					// use the object ID if no provider class name can be found
+> 					providerClassName = super.toString();
+> 				}
+> 			}
+> 
+> 			return providerClassName;
+> 		}
+> 
+294a330,335
+> 	 * List of providers class names that have thrown exceptions in the provides() method.
+> 	 * Used to prevent logging repeatedly for the same failed provider.
+> 	 */
+> 	private static final List ignoredProviders = new ArrayList();
+> 
+> 	/**
+811a853,859
+> 			
+> 			String providerClassName = provider.getClass().getName();
+> 			
+> 			if (!ignoredProviders.contains(providerClassName)) {
+> 				// remember the ignored provider so that the error is only logged once per provider
+> 				ignoredProviders.add(providerClassName);
+> 				
+817a866,867
+> 			}
+> 			
+822a873,883
+> 	/**
+> 	 * Package private access to the list of ignored providers. Providers are
+> 	 * ignored when they cause a runtime exception to be thrown in their {{@link #provides(IOperation)}}
+> 	 * method.
+> 	 * 
+> 	 * @return the list of ignored providers.
+> 	 */
+> 	static List getIgnoredProviders() {
+> 		return ignoredProviders;
+> 	}
+> 

@@ -1,0 +1,39 @@
+37c37,45
+< 		return getRecord(eClass, false).getMatcher();
+---
+> 		Matcher result = getRecord(eClass, false).getMatcher();
+> 		if (result != Matcher.FALSE) {
+> 			return result;
+> 		}
+> 		// XXX Correct strategy whould be to look up first *non-default*
+> 		// matcher in the hierarchy, however, for now, expect no more that
+> 		// two records per hierarchy chain (e.g. a nondefault matcher for superclass
+> 		// plus a record with default matcher for subclass
+> 		return getExistingRecordFromHierarchy(eClass).getMatcher();
+91,97c99
+< 				result = EMPTY_RECORD;
+< 				for (Iterator<EClass> superClasses = eClass.getEAllSuperTypes().iterator(); result == EMPTY_RECORD && superClasses.hasNext();){
+< 					EClass nextSuper = superClasses.next();
+< 					if (nextSuper.isAbstract()) {
+< 						result = getTemplateRecord(nextSuper, false);
+< 					}
+< 				}
+---
+> 				result = getExistingRecordFromHierarchy(eClass);
+106a109,124
+> 	/**
+> 	 * Looks through the hierarchy of superclasses, checking for registered 
+> 	 * records for abstract classes. 
+> 	 * @return never null, {@link #EMPTY_RECORD} in case none found 
+> 	 */
+> 	private EClassRecord getExistingRecordFromHierarchy(EClass eClass) {
+> 		EClassRecord result= EMPTY_RECORD;
+> 		for (Iterator<EClass> superClasses = eClass.getEAllSuperTypes().iterator(); result == EMPTY_RECORD && superClasses.hasNext();){
+> 			EClass nextSuper = superClasses.next();
+> 			if (nextSuper.isAbstract()) {
+> 				result = getTemplateRecord(nextSuper, false);
+> 			}
+> 		}
+> 		return result;
+> 	}
+> 

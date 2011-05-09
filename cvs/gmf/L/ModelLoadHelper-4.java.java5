@@ -1,0 +1,125 @@
+package org.eclipse.gmf.internal.common.migrate;
+
+import java.io.IOException;
+
+import java.text.MessageFormat;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.emf.common.util.BasicDiagnostic;
+
+import org.eclipse.emf.common.util.Diagnostic;
+
+import org.eclipse.emf.common.util.URI;
+
+import org.eclipse.emf.common.util.WrappedException;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.plugin.EcorePlugin;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.ecore.resource.ResourceSet;
+
+import org.eclipse.emf.ecore.util.EcoreUtil;
+
+public class ModelLoadHelper {
+    private static final String DIAGNOSTIC_SOURCE = "gmf.common.modelLoadHelper";
+    private IStatus status;
+    private Diagnostic diagnostic;
+    private URI uri;
+    private ResourceSet resourceSet;
+
+    public Resource getLoadedResource () {
+        return resourceSet.getResource (uri, false);
+    }
+
+    public EObject getContentsRoot () {
+        Resource resource = getLoadedResource ();
+        assert resource != null;
+        if (! resource.getContents ().isEmpty ()) {
+            return (EObject) resource.getContents ().get (0);
+        }
+        return null;
+    }
+
+    public boolean isOK () {
+        return diagnostic.getSeverity () == Diagnostic.OK;
+    }
+
+    public IStatus getStatus () {
+        if (status == null) {
+            status = BasicDiagnostic.toIStatus (diagnostic);
+        }
+        return status;
+    }
+
+    public Diagnostic getDiagnostics () {
+        return diagnostic;
+    }
+
+    static Resource.Diagnostic createDiagnostic (Resource resource, Exception exception) {
+        if (exception == null) {
+            throw new IllegalArgumentException ("null diagnostic exception");
+        }
+        final String location = resource.getURI () == null ? null : resource.getURI ().toString ();
+        class ExceptionDiagnostic extends WrappedException implements Resource.Diagnostic {
+
+            public ExceptionDiagnostic (Exception exception) {
+                super (exception);
+            }
+
+            public String getLocation () {
+                return location;
+            }
+
+            public int getColumn () {
+                return 0;
+            }
+
+            public int getLine () {
+                return 0;
+            }
+
+        }
+
+        return new ExceptionDiagnostic (exception);
+    }
+
+    public ModelLoadHelper (ResourceSet targetResSet, URI resourceURI) {
+        if (targetResSet == null || resourceURI == null) {
+            throw new IllegalArgumentException ("null resourceSet or resourceURI");
+        }
+        this.resourceSet = targetResSet;
+        this.uri = resourceURI;
+        this.diagnostic = internalLoad (targetResSet, uri);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Diagnostic internalLoad (ResourceSet resourceSet, URI uri) {
+        Diagnostic diagnostic = Diagnostic.OK_INSTANCE;
+        Resource resource = resourceSet.createResource (uri);
+        assert resource != null;
+        Exception rootException = null;
+        try {
+            resource.load (resourceSet.getLoadOptions ());
+        } catch (IOException e) {
+            rootException = e;
+        } catch (RuntimeException e) {
+            EcorePlugin.INSTANCE.getPluginLogger ().log (e);
+            resource.getErrors ().add (ModelLoadHelper.createDiagnostic (resource, e));
+        }
+        if (! resource.getErrors ().isEmpty () || ! resource.getWarnings ().isEmpty ()) {
+            Diagnostic resourceDiagnostic = EcoreUtil.computeDiagnostic (resource, true);
+            Integer severityOpt = new Integer (resourceDiagnostic.getSeverity () == Diagnostic.ERROR ? 0 : 1);
+            String message = MessageFormat.format (Messages.modelLoadedWithProblems, new Object [] {severityOpt, resource.getURI ()});
+            BasicDiagnostic loadDiagnostic = new BasicDiagnostic (DIAGNOSTIC_SOURCE, resourceDiagnostic.getCode (), message, (rootException != null) ? new Object [] {rootException} : null);
+            loadDiagnostic.addAll (resourceDiagnostic);
+            diagnostic = loadDiagnostic;
+        }
+        return diagnostic;
+    }
+
+}
+

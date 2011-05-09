@@ -1,0 +1,50 @@
+package org.eclipse.gmf.runtime.emf.type.core.commands;
+
+import java.util.Collection;
+
+import java.util.List;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.emf.type.core.requests.SetRequest;
+
+public class SetValueCommand extends EditElementCommand {
+    private final EStructuralFeature feature;
+    private final Object value;
+
+    public SetValueCommand (SetRequest request) {
+        super (request.getLabel (), request.getElementToEdit (), request);
+        this.feature = request.getFeature ();
+        this.value = request.getValue ();
+    }
+
+    protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+        if (feature.isMany ()) {
+            ((Collection) getElementToEdit ().eGet (feature)).add (value);
+        } else {
+            getElementToEdit ().eSet (feature, value);
+        }
+        return CommandResult.newOKCommandResult ();
+    }
+
+    public boolean canExecute () {
+        if (! super.canExecute ()) {
+            return false;
+        }
+        if (value == null && feature.isMany ()) {
+            return false;
+        }
+        List allFeatures = getElementToEdit ().eClass ().getEAllStructuralFeatures ();
+        return allFeatures.contains (feature) && feature.isChangeable () && (value == null || feature.getEType ().isInstance (value));
+    }
+
+}
+

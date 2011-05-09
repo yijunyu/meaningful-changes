@@ -1,0 +1,82 @@
+14a15
+> import java.util.HashSet;
+15a17
+> import java.util.Set;
+25c27
+<  * We don't suppose to reuse GenTopLevelNodes, thus API references GenChildNodes
+---
+>  * Keep track of gmfmap-to-gmfgen transformation elements.
+30c32
+< 	private final Map/*<NodeMapping, GenChildNode>*/ myNodeMap;
+---
+> 	private final Map/*<NodeMapping, Set<GenChildNode>>*/ myNodeMap;
+38a41,43
+> 	/**
+> 	 * No more then 1 GenTopLevelNode may be logged for node mapping 
+> 	 */
+41,47d45
+< 		// TODO leave only asserts
+< 		if (nodeMap == null || genNode == null) {
+< 			throw new NullPointerException();
+< 		}
+< 		if (myTopNodeMap.containsKey(nodeMap)) {
+< 			throw new IllegalArgumentException(nodeMap.toString());
+< 		}
+50a49,52
+> 	/**
+> 	 * More than 1 GenChildNode may be logged for node mapping  
+> 	 * (to handle children taken from different containment/children features)
+> 	 */
+52,58c54,58
+< 		assert nodeMap != null && genNode != null && !myNodeMap.containsKey(nodeMap);
+< 		// TODO leave only asserts
+< 		if (nodeMap == null || genNode == null) {
+< 			throw new NullPointerException();
+< 		}
+< 		if (myNodeMap.containsKey(nodeMap)) {
+< 			throw new IllegalArgumentException(nodeMap.toString());
+---
+> 		assert nodeMap != null && genNode != null;
+> 		Set genNodes = (Set) myNodeMap.get(nodeMap);
+> 		if (genNodes == null) {
+> 			genNodes = new HashSet/*<GenChildNode>*/();
+> 			myNodeMap.put(nodeMap, genNodes);
+60c60
+< 		myNodeMap.put(nodeMap, genNode);
+---
+> 		genNodes.add(genNode);
+62a63,65
+> 	/**
+> 	 * No more than 1 GenLink is allowed for link mapping.
+> 	 */
+69,70c72
+< 		assert nodeMap != null;
+< 		return myTopNodeMap.containsKey(nodeMap) || myNodeMap.containsKey(nodeMap);
+---
+> 		return isKnownTopNode(nodeMap) || isKnownChildNode(nodeMap);
+79a82,83
+> 		// We don't check stored collections as there's no means to remove element from this history,
+> 		// thus, no way to get empty collection
+88c92,95
+< 	public GenChildNode findChildNode(NodeMapping nodeMap) {
+---
+> 	/**
+> 	 * @return never <code>null</code>>
+> 	 */
+> 	public GenChildNode[] findChildNodes(NodeMapping nodeMap) {
+90c97,101
+< 		return (GenChildNode) myNodeMap.get(nodeMap);
+---
+> 		Set genNodes = (Set) myNodeMap.get(nodeMap);
+> 		if (genNodes == null) {
+> 			return new GenChildNode[0];
+> 		}
+> 		return (GenChildNode[]) genNodes.toArray(new GenChildNode[genNodes.size()]);
+98c109
+< 	public GenNode find(NodeMapping nodeMap) {
+---
+> 	public GenNode[] find(NodeMapping nodeMap) {
+101c112
+< 		return genNode != null ? genNode : findChildNode(nodeMap);
+---
+> 		return genNode != null ? new GenNode[] {genNode} : findChildNodes(nodeMap);

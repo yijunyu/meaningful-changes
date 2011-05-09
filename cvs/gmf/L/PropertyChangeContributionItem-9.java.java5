@@ -1,0 +1,102 @@
+package org.eclipse.gmf.runtime.diagram.ui.actions.internal;
+
+import java.util.List;
+
+import org.eclipse.emf.ecore.ENamedElement;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.emf.transaction.RunnableWithResult;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.actions.CustomContributionItem;
+
+import org.eclipse.gmf.runtime.diagram.ui.requests.ChangePropertyValueRequest;
+
+import org.eclipse.gmf.runtime.emf.core.util.PackageUtil;
+
+import org.eclipse.jface.util.Assert;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+public abstract class PropertyChangeContributionItem extends CustomContributionItem {
+    private String propertyId = null;
+    private String propertyName = null;
+
+    public PropertyChangeContributionItem (IWorkbenchPage workbenchPage, String id, String propertyId, String propertyName) {
+        super (workbenchPage, id);
+        Assert.isNotNull (propertyId);
+        Assert.isNotNull (propertyName);
+        setPropertyId (propertyId);
+        setPropertyName (propertyName);
+    }
+
+    protected String getPropertyId () {
+        return propertyId;
+    }
+
+    protected void setPropertyId (String propertyId) {
+        this.propertyId = propertyId;
+    }
+
+    protected String getPropertyName () {
+        return propertyName;
+    }
+
+    protected void setPropertyName (String string) {
+        propertyName = string;
+    }
+
+    protected Request createTargetRequest () {
+        return new ChangePropertyValueRequest (getPropertyName (), getPropertyId ());
+    }
+
+    protected void updateTargetRequest () {
+        ChangePropertyValueRequest request = (ChangePropertyValueRequest) getTargetRequest ();
+        request.setValue (getNewPropertyValue ());
+    }
+
+    protected Object getOperationSetPropertyValue (String id) {
+        List set = getOperationSet ();
+        if (! set.isEmpty ()) {
+            IGraphicalEditPart primaryEditPart = (IGraphicalEditPart) set.get (set.size () - 1);
+            return getPropertyValue (primaryEditPart, id);
+        }
+        return null;
+    }
+
+    protected Object getPropertyValue (final IGraphicalEditPart editPart, final String thePropertyId) {
+        try {
+            return editPart.getEditingDomain ().runExclusive (new RunnableWithResult.Impl () {
+
+                public void run () {
+                    ENamedElement element = PackageUtil.getElement (thePropertyId);
+                    if (element instanceof EStructuralFeature) setResult (editPart.getStructuralFeatureValue ((EStructuralFeature) element));
+
+                }
+
+            }
+
+            );
+        } catch (InterruptedException e) {
+            Trace.catching (DiagramActionsPlugin.getInstance (), DiagramActionsDebugOptions.EXCEPTIONS_CATCHING, getClass (), "getPropertyValue", e);
+            Log.error (DiagramActionsPlugin.getInstance (), DiagramActionsStatusCodes.IGNORED_EXCEPTION_WARNING, "getPropertyValue", e);
+            return null;
+        }
+    }
+
+    protected abstract Object getNewPropertyValue ();
+
+    protected boolean isSelectionListener () {
+        return true;
+    }
+
+}
+

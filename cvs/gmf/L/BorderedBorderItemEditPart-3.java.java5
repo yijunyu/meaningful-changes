@@ -1,0 +1,80 @@
+package org.eclipse.gmf.runtime.diagram.ui.editparts;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.GraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.ConnectionLabelsEditPolicy;
+
+import org.eclipse.gmf.runtime.diagram.ui.editpolicies.EditPolicyRoles;
+
+import org.eclipse.gmf.runtime.diagram.ui.figures.BorderItemLocator;
+
+import org.eclipse.gmf.runtime.diagram.ui.figures.BorderedNodeFigure;
+
+import org.eclipse.gmf.runtime.gef.ui.figures.NodeFigure;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public abstract class BorderedBorderItemEditPart extends AbstractBorderItemEditPart implements IBorderedShapeEditPart {
+
+    public BorderedBorderItemEditPart (View view) {
+        super (view);
+    }
+
+    protected NodeFigure createNodeFigure () {
+        return new BorderedNodeFigure (createMainFigure ());
+    }
+
+    protected abstract NodeFigure createMainFigure ();
+
+    public IFigure getMainFigure () {
+        return getBorderedFigure ().getMainFigure ();
+    }
+
+    public final BorderedNodeFigure getBorderedFigure () {
+        return (BorderedNodeFigure) getFigure ();
+    }
+
+    protected IFigure getContentPaneFor (IGraphicalEditPart editPart) {
+        if (editPart instanceof IBorderItemEditPart) {
+            return getBorderedFigure ().getBorderItemContainer ();
+        } else {
+            return getMainFigure ();
+        }
+    }
+
+    protected void addChildVisual (EditPart childEditPart, int index) {
+        IFigure childFigure = ((IGraphicalEditPart) childEditPart).getFigure ();
+        if (childEditPart instanceof IBorderItemEditPart) {
+            IFigure borderItemContainer = getContentPaneFor ((IGraphicalEditPart) childEditPart);
+            addBorderItem (borderItemContainer, (IBorderItemEditPart) childEditPart);
+        } else {
+            IFigure fig = getContentPaneFor ((IGraphicalEditPart) childEditPart);
+            fig.add (childFigure, index);
+        }
+    }
+
+    protected void removeChildVisual (EditPart child) {
+        IFigure childFigure = ((GraphicalEditPart) child).getFigure ();
+        IFigure fig = getContentPaneFor ((IGraphicalEditPart) child);
+        fig.remove (childFigure);
+    }
+
+    protected void addBorderItem (IFigure borderItemContainer, IBorderItemEditPart borderItemEditPart) {
+        borderItemContainer.add (borderItemEditPart.getFigure (), new BorderItemLocator (getMainFigure ()));
+    }
+
+    public void setLayoutConstraint (EditPart child, IFigure childFigure, Object constraint) {
+        getContentPaneFor ((IGraphicalEditPart) child).setConstraint (childFigure, constraint);
+    }
+
+    protected void createDefaultEditPolicies () {
+        super.createDefaultEditPolicies ();
+        installEditPolicy (EditPolicyRoles.CONNECTION_LABELS_ROLE, new ConnectionLabelsEditPolicy ());
+    }
+
+}
+

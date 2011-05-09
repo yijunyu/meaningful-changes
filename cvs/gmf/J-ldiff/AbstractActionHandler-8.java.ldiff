@@ -1,0 +1,67 @@
+27a28,28
+> import org.eclipse.gmf.runtime.common.ui.util.IPartSelector;
+95a97,103
+> 	 * Selects workbench parts that match the part criteria with which I was
+> 	 * contributed. I will refresh myself when the selection changes on parts
+> 	 * that match this criteria, and when such parts are activated.
+> 	 */
+> 	private IPartSelector partSelector;
+> 
+> 	/**
+148,148c156,156
+< 				if (part != null)
+---
+> 				if (part != null && contributedToPart(part))
+218a227,229
+> 			
+> 			if (contributedToPart(workbenchPart)) {
+> 				
+233a245,292
+> 	}
+> 	
+> 	/**
+> 	 * Answers whether or not I am contributed to <code>part</code>.
+> 	 * 
+> 	 * @param part
+> 	 *            the workbench part to be tested
+> 	 * @return <code>true</code> if I am contributed to this part,
+> 	 *         <code>false</code> otherwise.
+> 	 */
+> 	protected boolean contributedToPart(IWorkbenchPart part) {
+> 		return partSelector == null || partSelector.selects(workbenchPart);
+> 	}
+> 	
+> 	/**
+> 	 * Sets my part selector. If my current workbench part doesn't match the
+> 	 * part selector, I stop listening to selection, property and operation
+> 	 * history changes on that part.
+> 	 * 
+> 	 * @param partSelector
+> 	 *            my new part selector
+> 	 */
+> 	public final void setPartSelector(IPartSelector partSelector) {
+> 		
+> 		if (this.partSelector == partSelector) {
+> 			return;
+> 		}
+> 		
+> 		this.partSelector = partSelector;
+> 		IWorkbenchPart part = getWorkbenchPart();
+> 		
+> 		if (part != null && !partSelector.selects(part)) {
+> 			if (isSelectionListener()) {
+> 				ISelectionProvider provider = getWorkbenchPart().getSite()
+> 					.getSelectionProvider();
+> 				if (provider != null) {
+> 					provider.removeSelectionChangedListener(this);
+> 				}
+> 			}
+> 			if (isPropertyListener()) {
+> 				getWorkbenchPart().removePropertyListener(this);
+> 			}
+> 			if (isOperationHistoryListener()) {
+>                 getOperationHistory().removeOperationHistoryListener(this);
+> 			}
+> 		}
+> 	}
+> 

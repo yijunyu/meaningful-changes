@@ -1,0 +1,197 @@
+26a27
+> import org.eclipse.draw2d.Connection;
+62a64
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.BaseSlidableAnchor;
+65a68,72
+> import org.eclipse.gmf.runtime.draw2d.ui.graph.BorderNode;
+> import org.eclipse.gmf.runtime.draw2d.ui.graph.ConstantSizeNode;
+> import org.eclipse.gmf.runtime.draw2d.ui.graph.ConstrainedEdge;
+> import org.eclipse.gmf.runtime.draw2d.ui.graph.GMFDirectedGraphLayout;
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.routers.OrthogonalRouter;
+87c94
+<     protected static final int MIN_EDGE_PADDING = 5;
+---
+>     protected static final int MIN_EDGE_PADDING = 15;
+88a96
+>     protected static final int MIN_EDGE_END_POINTS_PADDING = 5;
+218,219c226,230
+<                 Node n = new Node(shapeEP);
+<                 n.setPadding(new Insets(NODE_PADDING));
+---
+> 
+>                 ConstantSizeNode n = new ConstantSizeNode(shapeEP);
+>                 n.setPadding(new Insets(getMapMode().DPtoLP(NODE_PADDING)));
+>                 n.setMinIncomingPadding(getMapMode().DPtoLP(MIN_EDGE_END_POINTS_PADDING));
+>                 n.setMinOutgoingPadding(getMapMode().DPtoLP(MIN_EDGE_END_POINTS_PADDING));
+226a238,240
+>                 
+>                 build_borderNodes(shapeEP, n, editPartToNodeDict);
+>                 
+233a248,268
+> 	 * Since an editpart may contain border items that may need be laid out,
+> 	 * this is the place where border nodes can be created and added to the map
+> 	 * of editparts to nodes. If border items locations don't have much
+> 	 * semantical meaning and their locations are valubale notationally it's
+> 	 * best that border nodes are created here in this method. The
+> 	 * infrastructure for creating commands to move border items around is all
+> 	 * in place already. Creates border nodes for an editpart.
+> 	 * 
+> 	 * @param parentEP
+> 	 *            the editopart
+> 	 * @param parentNode
+> 	 *            the node for the editpart
+> 	 * @param editPartToNodeDict
+> 	 *            the map of editparts to nodes
+> 	 * @since 2.1
+> 	 */
+>     protected void build_borderNodes(GraphicalEditPart parentEP, ConstantSizeNode parentNode, Map editPartToNodeDict) {
+>     	// Clients are responsible for creating border nodes
+>     }
+> 
+>     /**
+334c369
+<                     if (from instanceof IBorderItemEditPart)
+---
+>                     if (from instanceof IBorderItemEditPart && !editPartToNodeDict.containsKey(from))
+338c373
+<                     if (to instanceof IBorderItemEditPart)
+---
+>                     if (to instanceof IBorderItemEditPart && !editPartToNodeDict.containsKey(to))
+361c396
+<             if (from instanceof IBorderItemEditPart)
+---
+>             if (from instanceof IBorderItemEditPart && !editPartToNodeDict.containsKey(from))
+365c400
+<             if (to instanceof IBorderItemEditPart)
+---
+>             if (to instanceof IBorderItemEditPart && !editPartToNodeDict.containsKey(to))
+388c423
+<         Edge edge = new Edge(connectionEP, fromNode, toNode);
+---
+>     	ConstrainedEdge edge = new ConstrainedEdge(connectionEP, fromNode, toNode);
+409a445,447
+>         if (edge instanceof ConstrainedEdge && ((Connection)connectionEP.getFigure()).getConnectionRouter() instanceof OrthogonalRouter) {
+>         	((ConstrainedEdge)edge).setStyle(ConstrainedEdge.ORTHOGONAL_ROUTING_STYLE);
+>         }
+432c470
+<         return Math.min(Math.max(Math.round(translateToGraph(Rectangle.SINGLETON).width * 1.5f), MIN_EDGE_PADDING), MAX_EDGE_PADDING);
+---
+>         return Math.min(Math.max(Math.round(translateToGraph(Rectangle.SINGLETON).width * 1.5f), getMapMode().DPtoLP(MIN_EDGE_PADDING)), getMapMode().DPtoLP(MAX_EDGE_PADDING));
+481c519
+<                 List borderItems = getBorderItemEditParts(shapeEP);
+---
+>                 List borderItems = getBorderItemEditParts(shapeEP, editPartToNodeDict);
+549c587
+<     private List getBorderItemEditParts(EditPart parent) {
+---
+>     private List getBorderItemEditParts(EditPart parent, Hashtable editPartToNodeDict ) {
+554c592
+<             if( child instanceof IBorderItemEditPart ) {
+---
+>             if (!editPartToNodeDict.containsKey(child) && child instanceof IBorderItemEditPart) {
+612c650
+<     protected Command routeThrough(Edge edge, ConnectionEditPart connectEP, Node source, Node target, PointList points, int diffX, int diffY) {
+---
+>     protected Command routeThrough(Edge edge, ConnectionEditPart connectEP, Node source, Node target, PointList points, Point diff) {
+626,627c664,665
+<         double totalEdgeDiffX = diffX ;
+<         double totalEdgeDiffY = diffY ;
+---
+>         double totalEdgeDiffX = diff.preciseX() ;
+>         double totalEdgeDiffY = diff.preciseY() ;
+638c676
+<         LineSeg anchorReferencePoints = addAnchorsCommands(cc, allPoints.getFirstPoint(), allPoints.getLastPoint(), source, target, connectEP, diffX, diffY);
+---
+>         LineSeg anchorReferencePoints = addAnchorsCommands(cc, allPoints.getFirstPoint(), allPoints.getLastPoint(), source, target, connectEP, diff);
+691,692c729
+< 			Node source, Node target, ConnectionEditPart cep, int diffX,
+< 			int diffY) {
+---
+> 			Node source, Node target, ConnectionEditPart cep, Point diff) {
+695,696c732,733
+< 		sourceExt.performTranslate(diffX, diffY);
+< 		targetExt.performTranslate(diffX, diffY);
+---
+> 		sourceExt.translate(diff);
+> 		targetExt.translate(diff);
+725,726c762,763
+< 		reconnectRequest.setTargetEditPart((EditPart) source.data);
+< 		IFigure sourceFig = ((GraphicalEditPart) source.data).getFigure();
+---
+> 		reconnectRequest.setTargetEditPart(cep.getSource());
+> 		IFigure sourceFig = ((GraphicalEditPart)cep.getSource()).getFigure();
+735c772
+< 		Command sourceAnchorCommand = ((EditPart) source.data)
+---
+> 		Command sourceAnchorCommand = cep.getSource()
+738a776
+> 			if (((Connection)cep.getFigure()).getSourceAnchor() instanceof BaseSlidableAnchor) {
+744a783
+> 		}
+748,749c787,788
+< 		reconnectRequest.setTargetEditPart((EditPart) target.data);
+< 		IFigure targetFig = ((GraphicalEditPart) target.data).getFigure();
+---
+> 		reconnectRequest.setTargetEditPart(cep.getTarget());
+> 		IFigure targetFig = ((GraphicalEditPart) cep.getTarget()).getFigure();
+758c797
+< 		Command targetAnchorCommand = ((EditPart) target.data)
+---
+> 		Command targetAnchorCommand = cep.getTarget()
+761a801
+> 			if (((Connection)cep.getFigure()).getTargetAnchor() instanceof BaseSlidableAnchor) {
+764c804
+< 					* targetRatio.preciseX + targetExt.preciseX(), targetExt
+---
+> 						* targetRatio.preciseX() + targetExt.preciseX(), targetExt
+767a808
+> 		}
+843c884
+<                 Command cmd = routeThrough(edge, cep, source, target, points, diff.x, diff.y);
+---
+>                 Command cmd = routeThrough(edge, cep, source, target, points, diff);
+898c939
+<                 if (cmd != null && cmd.canExecute())
+---
+>                 if (cmd != null && cmd.canExecute()) {
+901a943,978
+>         	if (node instanceof ConstantSizeNode) {
+>         		ConstantSizeNode cn = (ConstantSizeNode) node;
+>         		for (Iterator<BorderNode> itr = cn.borderNodes.iterator(); itr.hasNext();) {
+>         			createBorderItemChangeBoundsCommand(itr.next(), cn, cc);
+>         		}
+>         	}
+>         }
+>     }
+>     
+>     private void createBorderItemChangeBoundsCommand(BorderNode bn, ConstantSizeNode parentNode, CompoundCommand cc) {
+>         ChangeBoundsRequest request = new ChangeBoundsRequest(
+>                 RequestConstants.REQ_MOVE);
+>         Rectangle parentRect = getNodeMetrics(parentNode);
+>         Rectangle borderItemRect = getNodeMetrics(bn);
+>         Dimension offset = borderItemRect.getLocation().getDifference(parentRect.getLocation());
+>         
+>         IFigure parentFigure = ((GraphicalEditPart)parentNode.data).getFigure();
+>         IFigure borderItemFigure = ((GraphicalEditPart)bn.data).getFigure();
+>         
+>         PrecisionPoint oldParentLocation = new PrecisionPoint(parentFigure.getBounds().getLocation());
+>         PrecisionPoint oldBorderItemLocation = new PrecisionPoint(borderItemFigure.getBounds().getLocation());        
+>         PrecisionPoint newBorderItemLocation = new PrecisionPoint(oldParentLocation.preciseX() + offset.preciseWidth(), oldParentLocation.preciseY() + offset.preciseHeight());
+>         parentFigure.translateToAbsolute(oldParentLocation);
+>         parentFigure.translateToAbsolute(newBorderItemLocation);
+>         borderItemFigure.translateToAbsolute(oldBorderItemLocation);
+>         
+>         PrecisionPoint delta = new PrecisionPoint(newBorderItemLocation.preciseX() - oldBorderItemLocation.preciseX(), newBorderItemLocation.preciseY() - oldBorderItemLocation.preciseY());
+>         GraphicalEditPart gep = (GraphicalEditPart) bn.data;
+>         request.setEditParts(gep);
+>         request.setMoveDelta(delta);
+>         request.setLocation(newBorderItemLocation);
+>         
+>         Command cmd = gep.getCommand(request);
+>         if (cmd != null && cmd.canExecute()) {
+>             cc.add(cmd);
+>         }
+950c1027
+<         return new DirectedGraphLayout();
+---
+>         return new GMFDirectedGraphLayout();

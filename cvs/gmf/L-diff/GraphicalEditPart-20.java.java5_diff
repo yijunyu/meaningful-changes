@@ -1,0 +1,160 @@
+138a139,142
+> import org.eclipse.gmf.runtime.notation.Node;
+> 
+> import org.eclipse.gmf.runtime.notation.NotationFactory;
+> 
+160c164
+<     private String elementGuid;
+---
+>     protected String elementGuid;
+161a166
+>     private static Node dummyNode = null;
+163,164c168,169
+<     public GraphicalEditPart (View view) {
+<         setModel (view);
+---
+>     public GraphicalEditPart (EObject model) {
+>         setModel (model);
+173,174c178,182
+<         EObject semanticProxy = ((View) getModel ()).getElement ();
+<         EObject semanticElement = ProxyUtil.resolve (MEditingDomainGetter.getMEditingDomain ((View) getModel ()), semanticProxy);
+---
+>         EObject semanticProxy = null;
+>         if (hasNotationView ()) semanticProxy = ((View) getModel ()).getElement ();
+>         else semanticProxy = (EObject) basicGetModel ();
+> 
+>         EObject semanticElement = ProxyUtil.resolve (MEditingDomainGetter.getMEditingDomain ((EObject) getModel ()), semanticProxy);
+199,201d206
+<         if (listenerFilters == null) listenerFilters = new HashMap ();
+< 
+<         DiagramEventBroker.getInstance ().addNotificationListener (element, feature, listener);
+242a248,251
+>     final protected Object basicGetModel () {
+>         return super.getModel ();
+>     }
+> 
+244c253
+<         Object model = getModel ();
+---
+>         Object model = basicGetModel ();
+248,249c257,270
+<         if (View.class.isAssignableFrom (key) && model instanceof View) {
+<             return model;
+---
+>         if (View.class.isAssignableFrom (key)) {
+>             Object _model = getModel ();
+>             if (_model instanceof View) return _model;
+> 
+>         }
+>         if (model != null && EObject.class.isAssignableFrom (key)) {
+>             EObject semanticObject = null;
+>             if (hasNotationView ()) {
+>                 semanticObject = ViewUtil.resolveSemanticElement ((View) model);
+>             } else {
+>                 EObject element = (EObject) model;
+>                 if (element.eIsProxy ()) {
+>                     semanticObject = ProxyUtil.resolve (MEditingDomainGetter.getMEditingDomain (element), element);
+>                 }
+251,252d271
+<         if (model != null && model instanceof View && EObject.class.isAssignableFrom (key)) {
+<             EObject semanticObject = ViewUtil.resolveSemanticElement ((View) model);
+297c316
+<             cmd = (Command) MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+---
+>             cmd = (Command) MEditingDomainGetter.getMEditingDomain ((EObject) getModel ()).runAsRead (new MRunnable () {
+372c391
+<         parent != null; parent = parent.getParent ()) if (parent instanceof IPrimaryEditPart) return (View) parent.getModel ();
+---
+>         parent != null; parent = parent.getParent ()) if (parent instanceof IPrimaryEditPart && parent.getModel () instanceof View) return (View) parent.getModel ();
+408c427,429
+<         return ViewUtil.getStructuralFeatureValue ((View) getModel (), feature);
+---
+>         if (hasNotationView ()) return ViewUtil.getStructuralFeatureValue ((View) getModel (), feature);
+>         else return null;
+> 
+412c433
+<         return (EObject) MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+---
+>         return (EObject) MEditingDomainGetter.getMEditingDomain ((EObject) getModel ()).runAsRead (new MRunnable () {
+415c436,445
+<                 return ViewUtil.resolveSemanticElement ((View) getModel ());
+---
+>                 Object model = getModel ();
+>                 if (model instanceof View) return ViewUtil.resolveSemanticElement ((View) getModel ());
+>                 else if (model instanceof EObject) {
+>                     EObject element = (EObject) model;
+>                     if (element.eIsProxy ()) return ProxyUtil.resolve (element);
+>                     else return element;
+> 
+>                 }
+> 
+>                 return null;
+475c505
+<         MEditingDomainGetter.getMEditingDomain ((View) getModel ()).runAsRead (new MRunnable () {
+---
+>         MEditingDomainGetter.getMEditingDomain ((EObject) getModel ()).runAsRead (new MRunnable () {
+523c553,560
+<         setVisibility (((View) getModel ()).isVisible ());
+---
+>         Object model = null;
+>         EditPart ep = this;
+>         while (! (model instanceof View) && ep != null) {
+>             model = ep.getModel ();
+>             ep = ep.getParent ();
+>         }
+>         if (model instanceof View) setVisibility (((View) model).isVisible ());
+> 
+562c599,600
+<         ViewUtil.setPropertyValue ((View) getModel (), id, value);
+---
+>         if (hasNotationView ()) ViewUtil.setPropertyValue ((View) getModel (), id, value);
+> 
+566c604,605
+<         ViewUtil.setStructuralFeatureValue ((View) getModel (), feature, value);
+---
+>         if (hasNotationView ()) ViewUtil.setStructuralFeatureValue ((View) getModel (), feature, value);
+> 
+577c616,617
+<         addListenerFilter ("View", this, (View) getModel ());
+---
+>         if (hasNotationView ()) addListenerFilter ("View", this, (View) getModel ());
+> 
+610c650
+<                 if (element instanceof EStructuralFeature && ViewUtil.isPropertySupported ((View) getModel (), prob)) local_properties.put (getAppearancePropertyIDs () [i], getStructuralFeatureValue ((EStructuralFeature) element));
+---
+>                 if (element instanceof EStructuralFeature && hasNotationView () && ViewUtil.isPropertySupported ((View) getModel (), prob)) local_properties.put (getAppearancePropertyIDs () [i], getStructuralFeatureValue ((EStructuralFeature) element));
+613c653,654
+<             properties.put (((View) getModel ()).getType (), local_properties);
+---
+>             if (hasNotationView ()) properties.put (((View) getModel ()).getType (), local_properties);
+> 
+683a725
+>         if (hasNotationView ()) {
+685c727,733
+<         EObject ref = ((View) getModel ()).getElement ();
+---
+>         } else {
+>             getViewer ().getEditPartRegistry ().put (basicGetModel (), this);
+>         }
+>         EObject ref = null;
+>         if (hasNotationView ()) ref = getNotationView ().getElement ();
+>         else ref = (EObject) basicGetModel ();
+> 
+838a887,903
+>     public boolean hasNotationView () {
+>         return true;
+>     }
+> 
+>     public Object getModel () {
+>         if (hasNotationView ()) {
+>             return super.getModel ();
+>         } else {
+>             Object _model = basicGetModel ();
+>             if (dummyNode == null) {
+>                 dummyNode = NotationFactory.eINSTANCE.createNode ();
+>             }
+>             dummyNode.setElement ((EObject) _model);
+>             return dummyNode;
+>         }
+>     }
+> 

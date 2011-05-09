@@ -1,0 +1,103 @@
+43a44
+> import org.eclipse.emf.transaction.RunnableWithResult;
+74c75
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+---
+> import org.eclipse.gmf.runtime.diagram.core.listener.DiagramEventBroker;
+82a84
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+101d102
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+297c298,300
+< 			MEditingDomainGetter.getMEditingDomain(getDiagram()).runAsRead(new MRunnable() {
+---
+> 			try {
+> 				TransactionUtil.getEditingDomain(getDiagram())
+> 					.runExclusive(new Runnable() {
+299c302
+< 				public Object run() {
+---
+> 					public void run() {
+301d303
+< 					return null;
+303a306,313
+> 			} catch (InterruptedException e) {
+> 				Trace.catching(DiagramUIPlugin.getInstance(),
+> 					DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+> 					"initializeOutlineViewer", e); //$NON-NLS-1$
+> 				Log.error(DiagramUIPlugin.getInstance(),
+> 					DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING,
+> 					"initializeOutlineViewer", e); //$NON-NLS-1$
+> 			}
+501c511
+<                     TransactionalEditingDomain editingDomain = TransactionalEditingDomain.Factory.INSTANCE
+---
+>                     TransactionalEditingDomain resourceSetEditingDomain = TransactionalEditingDomain.Factory.INSTANCE
+504c514
+<                     if (domain.equals(editingDomain)) {
+---
+>                     if (domain.equals(resourceSetEditingDomain)) {
+815d824
+< 
+858c867,874
+< 		// do nothing
+---
+> 		// Create a diagram event broker if there isn't already one for this editing domain.
+> 		TransactionalEditingDomain domain = getEditingDomain();
+> 		if (domain != null) {
+> 			DiagramEventBroker eventBroker = DiagramEventBroker.getInstance(domain);
+> 			if (eventBroker == null) {
+> 				DiagramEventBroker.startListening(domain);
+> 			}
+> 		}
+920c936,937
+<     protected EditingDomain getEditingDomain() {
+---
+>     public TransactionalEditingDomain getEditingDomain() {
+>     	if (getDiagram() != null) {
+922a940,941
+>         return null;
+>     }
+933c952
+<             TransactionalEditingDomain domain = (TransactionalEditingDomain) getEditingDomain();
+---
+>             TransactionalEditingDomain domain = getEditingDomain();
+1193c1212
+< 			DiagramRulerProvider vertProvider = new DiagramRulerProvider((TransactionalEditingDomain) getEditingDomain(),
+---
+> 			DiagramRulerProvider vertProvider = new DiagramRulerProvider(getEditingDomain(),
+1203c1222
+< 			DiagramRulerProvider horzProvider = new DiagramRulerProvider((TransactionalEditingDomain) getEditingDomain(),
+---
+> 			DiagramRulerProvider horzProvider = new DiagramRulerProvider(getEditingDomain(),
+1251c1270
+< 		if (selection instanceof IStructuredSelection) {
+---
+> 		if (selection instanceof IStructuredSelection && !selection.isEmpty()) {
+1253,1255c1272,1276
+< 			return (List) MEditingDomainGetter.getMEditingDomain(
+< 				((IStructuredSelection) selection).toList()).runAsRead(
+< 				new MRunnable() {
+---
+> 			try {
+> 				return (List) TransactionUtil.getEditingDomain(
+> 					((IAdaptable) ((IStructuredSelection) selection).toList()
+> 						.get(0)).getAdapter(View.class)).runExclusive(
+> 					new RunnableWithResult.Impl() {
+1257c1278
+< 					public Object run() {
+---
+> 						public void run() {
+1279c1300
+< 						return retval;
+---
+> 							setResult(retval);
+1281a1303,1308
+> 			} catch (InterruptedException e) {
+> 				Trace.catching(DiagramUIPlugin.getInstance(),
+> 					DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+> 					"createEditPart", e); //$NON-NLS-1$
+> 				return Collections.EMPTY_LIST;
+> 			}
+1310d1336
+<    

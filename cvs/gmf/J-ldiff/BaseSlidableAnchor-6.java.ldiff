@@ -1,0 +1,149 @@
+17,17d16
+< import org.eclipse.draw2d.PositionConstants;
+26,26d24
+< import org.eclipse.gmf.runtime.draw2d.ui.geometry.PrecisionPointList;
+36,36c34,34
+< 	extends AbstractConnectionAnchor implements OrthogonalConnectionAnchor {
+---
+> 	extends AbstractConnectionAnchor {
+42,42c40,40
+< 	// The connection anchor reference point (sometimes the same as anchor location)
+---
+> 	// The connection anchor refrence point (sometimes the same as anchor location)
+114a113,113
+> 		Rectangle rBox = getBox();
+115,115d112
+< 		PrecisionRectangle rBox = new PrecisionRectangle(getBox());
+118,118c116,116
+< 		return new PrecisionPoint(relativeReference.preciseX * rBox.preciseWidth
+---
+> 		return new Point(Math.round(relativeReference.preciseX * rBox.width
+119,119c117,117
+< 				+ rBox.preciseX, relativeReference.preciseY * rBox.preciseHeight
+---
+> 			+ rBox.x), Math.round(relativeReference.preciseY
+120,120c118,118
+< 				+ rBox.preciseY);
+---
+> 			* rBox.height + rBox.y));
+141,141c139,139
+< 	static private int STRAIGHT_LINE_TOLERANCE = 3;
+---
+> 	static private int STRAIGHT_LINE_TOLERANCE = 10;
+148,148d145
+< 		Point ownReference = normalizeToStraightlineTolerance(reference, getReferencePoint(), STRAIGHT_LINE_TOLERANCE);
+149a146,150
+> 		Point foreignReference = reference.getCopy();
+> 		Point ownReference = getReferencePoint().getCopy();
+> 		
+> 		ownReference = normalizeToStraightlineTolerance(foreignReference, ownReference, STRAIGHT_LINE_TOLERANCE);
+> 		
+150,150c151,151
+< 		Point location = getLocation(ownReference, reference);
+---
+> 		Point location = getLocation(ownReference, foreignReference);
+151a153,154
+> 			getBox().expand(1, 1).contains(foreignReference) &&
+> 			!getBox().shrink(1, 1).contains(foreignReference))
+151,151c152,152
+< 		if (location == null) {
+---
+> 		if (location == null || 
+152,152c155,155
+< 			location = getLocation(new PrecisionPoint(getBox().getCenter()), reference);
+---
+> 			location = getLocation(getBox().getCenter(), foreignReference);
+156,156d159
+< 		}
+175a179,191
+> 		Point normalizedReference = ownReference.getCopy();
+> 		if (Math.abs(foreignReference.x - ownReference.x) < tolerance || 
+> 			Math.abs(foreignReference.y - ownReference.y) < tolerance) {
+> 			LineSeg lineSeg = new LineSeg(ownReference, foreignReference);
+> 				
+> 			normalizedReference = lineSeg.perpIntersect(ownReference.x, ownReference.y);
+> 			
+> 			// account for possible rounding errors and ensure the
+> 			// resulting line is straight
+> 			if (Math.abs(normalizedReference.x - foreignReference.x) < Math.abs(normalizedReference.y - foreignReference.y))
+> 				normalizedReference.x = foreignReference.x;
+> 			else
+> 				normalizedReference.y = foreignReference.y;
+176,186d178
+< 		PrecisionPoint preciseOwnReference = new PrecisionPoint(ownReference);
+< 		PrecisionPoint normalizedReference = (PrecisionPoint)preciseOwnReference.getCopy();
+< 		PrecisionPoint preciseForeignReference = new PrecisionPoint(foreignReference);
+< 		if (Math.abs(preciseForeignReference.preciseX - preciseOwnReference.preciseX) < tolerance) {
+< 			normalizedReference.preciseX = preciseForeignReference.preciseX;
+< 			normalizedReference.updateInts();
+< 			return normalizedReference;
+< 		}
+< 		if (Math.abs(preciseForeignReference.preciseY - preciseOwnReference.preciseY) < tolerance) {
+< 			normalizedReference.preciseY = preciseForeignReference.preciseY;
+< 			normalizedReference.updateInts();
+217,217c222,222
+< 			PrecisionPointList polyList = new PrecisionPointList(((IPolygonAnchorableFigure) getOwner()).getPolygonPoints());
+---
+> 			PointList polyList = ((IPolygonAnchorableFigure) getOwner()).getPolygonPoints();
+220a226,232
+> 		Rectangle rBox = getBox();
+> 		PointList ptList = new PointList();
+> 		ptList.addPoint(rBox.getTopLeft());
+> 		ptList.addPoint(rBox.getTopRight());
+> 		ptList.addPoint(rBox.getBottomRight());
+> 		ptList.addPoint(rBox.getBottomLeft());
+> 		ptList.addPoint(rBox.getTopLeft());
+221,227d225
+< 		PrecisionRectangle r = new PrecisionRectangle(getBox());
+< 		PrecisionPointList ptList = new PrecisionPointList(5);
+< 		ptList.addPoint(new PrecisionPoint(r.preciseX, r.preciseY));
+< 		ptList.addPoint(new PrecisionPoint(r.preciseX + r.preciseWidth, r.preciseY));
+< 		ptList.addPoint(new PrecisionPoint(r.preciseX + r.preciseWidth, r.preciseY + r.preciseHeight));
+< 		ptList.addPoint(new PrecisionPoint(r.preciseX, r.preciseY + r.preciseHeight));
+< 		ptList.addPoint(new PrecisionPoint(r.preciseX, r.preciseY));
+272a278,278
+>             .getPoints().getBounds().getCopy()
+273,273d277
+<             .getPoints().getBounds()
+274,274c279,279
+<             : getOwner().getBounds();
+---
+>             : getOwner().getBounds().getCopy();
+309,345d313
+< 	public Point getOrthogonalLocation(Point orthoReference) {
+< 		PrecisionPoint ownReference = new PrecisionPoint(getReferencePoint());
+< //		PrecisionRectangle bounds = new PrecisionRectangle(getBox());
+< 		PrecisionRectangle bounds = new PrecisionRectangle(FigureUtilities.getAnchorableFigureBounds(getOwner()));
+< 		getOwner().translateToAbsolute(bounds);
+< 		bounds.expand(0.000001, 0.000001);
+< 		PrecisionPoint preciseOrthoReference = new PrecisionPoint(orthoReference);
+< 		int orientation = PositionConstants.NONE;
+< 		if (preciseOrthoReference.preciseX >= bounds.preciseX && preciseOrthoReference.preciseX <= bounds.preciseX + bounds.preciseWidth) {
+< 			ownReference.preciseX = preciseOrthoReference.preciseX;
+< 			orientation = PositionConstants.VERTICAL;
+< 		} else if (preciseOrthoReference.preciseY >= bounds.preciseY && preciseOrthoReference.preciseY <= bounds.preciseY + bounds.preciseHeight) {
+< 			ownReference.preciseY = preciseOrthoReference.preciseY;
+< 			orientation = PositionConstants.HORIZONTAL;
+< 		}
+< 		ownReference.updateInts();
+< 		
+< 		Point location = getLocation(ownReference, preciseOrthoReference);
+< 		if (location == null) {
+< 			location = getLocation(orthoReference);
+< 			orientation = PositionConstants.NONE;
+< 		}
+< 		
+< 		if (orientation != PositionConstants.NONE) {
+< 			PrecisionPoint loc = new PrecisionPoint(location);
+< 			if (orientation == PositionConstants.VERTICAL) {
+< 				loc.preciseX = preciseOrthoReference.preciseX;
+< 			} else {
+< 				loc.preciseY = preciseOrthoReference.preciseY;
+< 			}
+< 			loc.updateInts();
+< 			location = loc;
+< 		}
+< 		
+< 		return location;
+< 	}
+< 

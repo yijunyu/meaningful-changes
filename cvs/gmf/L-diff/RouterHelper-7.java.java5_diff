@@ -1,0 +1,60 @@
+25,26d24
+< import org.eclipse.draw2d.ConnectionAnchor;
+< 
+243c241
+<         if (newLine.size () < 2) return;
+---
+>         if (newLine.size () <= 1) return;
+245,261c243,267
+<         PrecisionPoint sourceAnchorPoint, targetAnchorPoint;
+<         if (newLine.size () > 2) {
+<             PrecisionPoint sourceReference = new PrecisionPoint (newLine.getPoint (1));
+<             PrecisionPoint targetReference = new PrecisionPoint (newLine.getPoint (newLine.size () - 2));
+<             conn.translateToAbsolute (sourceReference);
+<             conn.translateToAbsolute (targetReference);
+<             sourceAnchorPoint = getAnchorLocation (conn.getSourceAnchor (), sourceReference);
+<             targetAnchorPoint = getAnchorLocation (conn.getTargetAnchor (), targetReference);
+<         } else {
+<             PrecisionPoint sourceReference = getAnchorReference (conn.getTargetAnchor ());
+<             sourceAnchorPoint = getAnchorLocation (conn.getSourceAnchor (), sourceReference);
+<             targetAnchorPoint = getAnchorLocation (conn.getTargetAnchor (), sourceAnchorPoint);
+<         }
+<         conn.translateToRelative (sourceAnchorPoint);
+<         conn.translateToRelative (targetAnchorPoint);
+<         newLine.setPoint (new Point (Math.round (sourceAnchorPoint.preciseX), Math.round (sourceAnchorPoint.preciseY)), 0);
+<         newLine.setPoint (new Point (Math.round (targetAnchorPoint.preciseX), Math.round (targetAnchorPoint.preciseY)), newLine.size () - 1);
+---
+>         PrecisionPoint ptS2 = new PrecisionPoint (newLine.getPoint (1));
+>         PrecisionPoint ptAbsS2 = new PrecisionPoint (ptS2);
+>         conn.translateToAbsolute (ptAbsS2);
+>         if (newLine.size () == 2) ptAbsS2 = new PrecisionPoint (conn.getTargetAnchor ().getReferencePoint ());
+> 
+>         PrecisionPoint ptAbsS1 = new PrecisionPoint (conn.getSourceAnchor ().getLocation (ptAbsS2));
+>         PrecisionPoint ptS1 = new PrecisionPoint (ptAbsS1);
+>         conn.translateToRelative (ptS1);
+>         PrecisionPoint ptE2 = new PrecisionPoint (newLine.getPoint (newLine.size () - 2));
+>         PrecisionPoint ptAbsE2 = new PrecisionPoint (ptE2);
+>         conn.translateToAbsolute (ptAbsE2);
+>         if (newLine.size () == 2) ptAbsE2 = ptAbsS1;
+> 
+>         PrecisionPoint ptE1 = new PrecisionPoint (conn.getTargetAnchor ().getLocation (ptAbsE2));
+>         conn.translateToRelative (ptE1);
+>         newLine.setPoint (new PrecisionPoint (Math.round (ptS1.preciseX), Math.round (ptS1.preciseY)), 0);
+>         newLine.setPoint (new PrecisionPoint (Math.round (ptE1.preciseX), Math.round (ptE1.preciseY)), newLine.size () - 1);
+>         if (newLine.size () != 2) {
+>             ptS2 = ptAbsS2;
+>             conn.translateToRelative (ptS2);
+>             newLine.setPoint (new PrecisionPoint (Math.round (ptS2.preciseX), Math.round (ptS2.preciseY)), 1);
+>             ptE2 = ptAbsE2;
+>             conn.translateToRelative (ptE2);
+>             newLine.setPoint (new PrecisionPoint (Math.round (ptE2.preciseX), Math.round (ptE2.preciseY)), newLine.size () - 2);
+>         }
+389,396d394
+<     private PrecisionPoint getAnchorLocation (ConnectionAnchor anchor, Point reference) {
+<         return new PrecisionPoint (anchor.getLocation (reference));
+<     }
+< 
+<     private PrecisionPoint getAnchorReference (ConnectionAnchor anchor) {
+<         return new PrecisionPoint (anchor.getReferencePoint ());
+<     }
+< 

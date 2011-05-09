@@ -1,0 +1,71 @@
+package org.eclipse.gmf.internal.validate;
+
+import java.util.HashMap;
+
+import java.util.Iterator;
+
+import java.util.LinkedList;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.emf.ecore.EClassifier;
+
+import org.eclipse.gmf.internal.validate.expressions.AbstractExpression;
+
+import org.eclipse.gmf.internal.validate.expressions.IModelExpression;
+
+import org.eclipse.gmf.internal.validate.expressions.IParseEnvironment;
+
+public abstract class ExpressionCache {
+    private Map < String, Object > body2Entries = new HashMap < String, Object > ();
+
+    protected ExpressionCache () {
+    }
+
+    protected abstract IModelExpression createExpressionEntry (String body, EClassifier context, IParseEnvironment extEnv);
+
+    public IModelExpression getExpression (String body, EClassifier context) {
+        return getExpression (body, context, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public IModelExpression getExpression (String body, EClassifier context, IParseEnvironment env) {
+        if (body == null || context == null) {
+            throw new IllegalArgumentException ("Null expression body or context");
+        }
+        IModelExpression resultEntry = null;
+        if (body2Entries.containsKey (body)) {
+            Object prev = body2Entries.get (body);
+            if (prev instanceof AbstractExpression) {
+                IModelExpression prevEntry = (AbstractExpression) prev;
+                if (prevEntry.getContext () == context) {
+                    return prevEntry;
+                }
+            }
+            List cachedEntries = (prev instanceof List) ? (List) prev : new LinkedList ();
+            if (cachedEntries.isEmpty ()) {
+                cachedEntries.add (prev);
+                body2Entries.put (body, cachedEntries);
+            } else {
+                for (Iterator it = cachedEntries.iterator ();
+                it.hasNext ();) {
+                    AbstractExpression nextConstraint = (AbstractExpression) it.next ();
+                    if (nextConstraint.getContext () == context) {
+                        return nextConstraint;
+                    }
+                }
+            }
+            resultEntry = createExpressionEntry (body, context, env);
+            cachedEntries.add (resultEntry);
+            assert resultEntry != null;
+            return resultEntry;
+        }
+        resultEntry = createExpressionEntry (body, context, env);
+        body2Entries.put (body, resultEntry);
+        return resultEntry;
+    }
+
+}
+

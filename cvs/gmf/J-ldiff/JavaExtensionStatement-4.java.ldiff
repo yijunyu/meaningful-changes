@@ -1,0 +1,47 @@
+29a30,30
+> import org.eclipse.gmf.internal.xpand.expression.Variable;
+40a42,43
+> 	protected final Identifier instanceSlot;
+> 
+41,41d41
+<     public JavaExtensionStatement(final int start, final int end, final int line, final Identifier name,
+42a45,45
+> 			final boolean cached, final boolean isPrivate, final Identifier instanceSlot) {
+42,42c44,44
+<             final List<DeclaredParameter> formalParameters, final Identifier returnType, final Identifier defaultImplementation,
+---
+> 	public JavaExtensionStatement(final int start, final int end, final int line, final Identifier name, final List<DeclaredParameter> formalParameters, final Identifier returnType, final Identifier defaultImplementation, final Identifier javaMethod, final List<Identifier> javaParamTypes,
+43,43d44
+<             final Identifier javaMethod, final List<Identifier> javaParamTypes, final boolean cached, final boolean isPrivate) {
+47a50,50
+> 		this.instanceSlot = instanceSlot;
+65a69,69
+> 			if (Modifier.isStatic(method.getModifiers())) {
+66a71,83
+> 			} else {
+> 				if (instanceSlot == null) {
+> 					throw new EvaluationException("Non-static method may be invoked only when slot with instance object is specified", this);
+> 				}
+> 				Variable variable = ctx.getGlobalVariable(instanceSlot.getValue());
+> 				if (variable == null || variable.getValue() == null) {
+> 					throw new EvaluationException("The method '" + javaMethodToString() + "' is not static in " + javaType.getValue() + ", and there's no global variable '" + instanceSlot + "' to obtain instance from", this);
+> 				}
+> 				if (!method.getDeclaringClass().isInstance(variable.getValue())) {
+> 					throw new EvaluationException("Instance available in global vars as '" + instanceSlot + "' is not compatible with " + javaType.getValue(), this);
+> 				}
+> 				return method.invoke(variable.getValue(), parameters);
+> 			}
+88,88c105,105
+<     public Method getJavaMethod(final ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+---
+> 	private Method getJavaMethod(final ExecutionContext ctx, final Set<AnalysationIssue> issues) {
+116a134,134
+> 			if (instanceSlot == null && !Modifier.isStatic(m.getModifiers())) {
+117,117d133
+<             if (!Modifier.isStatic(m.getModifiers())) {
+118,118c135,135
+<                 issues.add(new AnalysationIssue(AnalysationIssue.FEATURE_NOT_FOUND, javaMethod.getValue() + " must be static!", javaMethod));
+---
+> 				issues.add(new AnalysationIssue(AnalysationIssue.FEATURE_NOT_FOUND, javaMethod.getValue() + " must be static (unless slot to get instance from is specified)!", javaMethod));
+120,120d136
+< 

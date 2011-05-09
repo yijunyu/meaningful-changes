@@ -1,0 +1,73 @@
+190,195c190,191
+<         WeakReference reference = (WeakReference) instanceMap
+<             .get(editingDomain);
+<         if (reference != null) {
+<             return (DiagramEventBroker) reference.get();
+<         }
+<         return null;
+---
+>     	
+>     	return initializeDiagramEventBroker(editingDomain);
+207,210c203,212
+<         DiagramEventBroker diagramEventBroker = getInstance(editingDomain);
+<         if (diagramEventBroker == null) {
+<             diagramEventBroker = new DiagramEventBroker();
+<             startListening(editingDomain, diagramEventBroker);
+---
+>     	initializeDiagramEventBroker(editingDomain);
+>     }
+> 
+> 	private static DiagramEventBroker initializeDiagramEventBroker(TransactionalEditingDomain editingDomain) {
+> 		WeakReference reference = (WeakReference) instanceMap.get(editingDomain);
+> 		if (reference == null) {
+>             DiagramEventBroker diagramEventBroker = debFactory.createDiagramEventBroker(editingDomain);
+>             editingDomain.addResourceSetListener(diagramEventBroker);
+>             reference = new WeakReference(diagramEventBroker);
+>             instanceMap.put(editingDomain, reference);
+211a214,215
+> 		
+> 		return (DiagramEventBroker) reference.get();
+215,222c219,220
+<      * Creates a new diagram event broker instance for the editing domain passed
+<      * in only if the editing domain does not already have a diagram event
+<      * broker. There is one diagram event broker per editing domain. Adds the
+<      * diagram event broker instance as a listener to the editing domain.
+<      * 
+<      * @param editingDomain
+<      * @param diagramEventBroker the <code>DiagramEventBroker</code> to add as a listener to the 
+<      * <code>TransactionalEditingDomain</code>
+---
+>      * Factory interface that can be used to create overrides of the DiagramEventBroker class
+>      * @author sshaw
+224,227c222,243
+<     public static void startListening(TransactionalEditingDomain editingDomain, DiagramEventBroker diagramEventBroker) {
+<         stopListening(editingDomain);
+<         editingDomain.addResourceSetListener(diagramEventBroker);
+<         instanceMap.put(editingDomain, new WeakReference(diagramEventBroker));
+---
+>     public static interface DiagramEventBrokerFactory {
+>     	/**
+>     	 * @param editingDomain the <code>TransactionalEditingDomain</code> that is associated
+>     	 * with the <code>DiagramEventBroker</code> instance.
+>     	 * @return the <code>DiagramEventBroker</code> instance.
+>     	 */
+>     	public DiagramEventBroker createDiagramEventBroker(TransactionalEditingDomain editingDomain); 
+>     }
+>     
+>     private static class DiagramEventBrokerFactoryImpl implements DiagramEventBrokerFactory {
+>     	public DiagramEventBroker createDiagramEventBroker(TransactionalEditingDomain editingDomain) {
+>     		return new DiagramEventBroker();
+>     	}
+>     }
+>     
+>     private static DiagramEventBrokerFactory debFactory = new DiagramEventBrokerFactoryImpl();
+>     
+>     /**
+>      * @param newDebFactory
+>      */
+>     public static void registerDiagramEventBrokerFactory(DiagramEventBrokerFactory newDebFactory) {
+>     	debFactory = newDebFactory;
+569c585
+<     private Set getInterestedNotificationListeners(Notification event,
+---
+>     final protected Set getInterestedNotificationListeners(Notification event,

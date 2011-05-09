@@ -1,0 +1,96 @@
+2c2
+<  * Copyright (c) 2006 Borland Software Corporation and others.
+---
+>  *  Copyright (c) 2006, 2007 Borland Software Corporation and others.
+13,16c13,17
+< import org.eclipse.gef.commands.Command;
+< import org.eclipse.gmf.runtime.emf.type.core.commands.DestroyElementCommand;
+< import org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest;
+< import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest;
+---
+> import java.util.ArrayList;
+> import java.util.Collection;
+> import java.util.Collections;
+> import java.util.Iterator;
+> 
+18,19c19,21
+< import org.eclipse.emf.ecore.EAnnotation;
+< import org.eclipse.gmf.runtime.notation.View;
+---
+> import org.eclipse.gef.EditPart;
+> import org.eclipse.gef.commands.Command;
+> import org.eclipse.gef.commands.CompoundCommand;
+21d22
+< 
+22a24
+> import org.eclipse.gmf.gmfgraph.FigureHandle;
+24c26
+< 
+---
+> import org.eclipse.gmf.graphdef.editor.edit.parts.PolylineEditPart;
+26c28,29
+< 
+---
+> import org.eclipse.gmf.runtime.diagram.ui.requests.EditCommandRequestWrapper;
+> import org.eclipse.gmf.runtime.emf.type.core.commands.DestroyElementCommand;
+28c31,32
+< 
+---
+> import org.eclipse.gmf.runtime.emf.type.core.requests.CreateRelationshipRequest;
+> import org.eclipse.gmf.runtime.emf.type.core.requests.DestroyElementRequest;
+29a34,35
+> import org.eclipse.gmf.runtime.notation.Edge;
+> import org.eclipse.gmf.runtime.notation.View;
+40,42c46,47
+< 		return getMSLWrapper(new DestroyElementCommand(req) {
+< 
+< 			protected EObject getElementToDestroy() {
+---
+> 		CompoundCommand cc = new CompoundCommand();
+> 		Collection allEdges = new ArrayList();
+44,48c49,56
+< 				EAnnotation annotation = view.getEAnnotation("Shortcut"); //$NON-NLS-1$
+< 				if (annotation != null) {
+< 					return view;
+< 				}
+< 				return super.getElementToDestroy();
+---
+> 		allEdges.addAll(view.getSourceEdges());
+> 		allEdges.addAll(view.getTargetEdges());
+> 		for (Iterator it = allEdges.iterator(); it.hasNext();) {
+> 			Edge nextEdge = (Edge) it.next();
+> 			EditPart nextEditPart = (EditPart) getHost().getViewer().getEditPartRegistry().get(nextEdge);
+> 			EditCommandRequestWrapper editCommandRequest = new EditCommandRequestWrapper(new DestroyElementRequest(((PolylineEditPart) getHost()).getEditingDomain(), req.isConfirmationRequired()),
+> 					Collections.EMPTY_MAP);
+> 			cc.add(nextEditPart.getCommand(editCommandRequest));
+50,51c58,59
+< 
+< 		});
+---
+> 		cc.add(getMSLWrapper(new DestroyElementCommand(req)));
+> 		return cc;
+59c67
+< 			return req.getTarget() == null ? null : getCreateCompleteIncomingDiagramElement_Figure4001Command(req);
+---
+> 			return req.getTarget() == null ? null : getCreateCompleteIncomingDiagramElementFigure_4001Command(req);
+67,68c75,78
+< 	protected Command getCreateCompleteIncomingDiagramElement_Figure4001Command(CreateRelationshipRequest req) {
+< 		if (!(req.getSource() instanceof DiagramElement)) {
+---
+> 	protected Command getCreateCompleteIncomingDiagramElementFigure_4001Command(CreateRelationshipRequest req) {
+> 		EObject sourceEObject = req.getSource();
+> 		EObject targetEObject = req.getTarget();
+> 		if (false == sourceEObject instanceof DiagramElement || false == targetEObject instanceof FigureHandle) {
+71,72c81,83
+< 		DiagramElement element = (DiagramElement) req.getSource();
+< 		if (element.getFigure() != null) {
+---
+> 		DiagramElement source = (DiagramElement) sourceEObject;
+> 		FigureHandle target = (FigureHandle) targetEObject;
+> 		if (!GMFGraphBaseItemSemanticEditPolicy.LinkConstraints.canCreateDiagramElementFigure_4001(source, target)) {
+75c86
+< 		SetRequest setReq = new SetRequest(req.getSource(), GMFGraphPackage.eINSTANCE.getDiagramElement_Figure(), req.getTarget());
+---
+> 		SetRequest setReq = new SetRequest(sourceEObject, GMFGraphPackage.eINSTANCE.getDiagramElement_Figure(), target);
+77a89
+> 

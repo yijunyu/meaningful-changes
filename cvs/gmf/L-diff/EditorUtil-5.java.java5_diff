@@ -1,0 +1,103 @@
+4a5,6
+> import java.io.IOException;
+> 
+8a11,12
+> import java.util.Collections;
+> 
+18a23,24
+> import org.eclipse.emf.common.util.URI;
+> 
+21c27
+< import org.eclipse.gmf.runtime.common.core.util.Trace;
+---
+> import org.eclipse.emf.ecore.resource.ResourceSet;
+23c29
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+---
+> import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
+25c31
+< import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+---
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+27c33
+< import org.eclipse.gmf.runtime.diagram.core.services.ViewService;
+---
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+29c35
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+---
+> import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+31c37
+< import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+---
+> import org.eclipse.gmf.runtime.diagram.core.services.ViewService;
+37,41c43
+< import org.eclipse.gmf.runtime.diagram.ui.resources.editor.internal.ui.parts.FileResourceEditorInput;
+< 
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+< 
+< import org.eclipse.gmf.runtime.emf.core.util.ResourceUtil;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.resources.editor.internal.EditorStatusCodes;
+51,58d52
+< import org.eclipse.ui.IEditorPart;
+< 
+< import org.eclipse.ui.IWorkbenchPage;
+< 
+< import org.eclipse.ui.IWorkbenchWindow;
+< 
+< import org.eclipse.ui.PlatformUI;
+< 
+61,85d54
+<     public static final IFile createAndOpenDiagram (DiagramFileCreator diagramFileCreator, IPath containerPath, String fileName, String diagramId, InputStream initialContents, String kind, IWorkbenchWindow dWindow, IProgressMonitor progressMonitor, boolean openEditor, boolean saveDiagram, PreferencesHint preferencesHint) {
+<         IFile newFile = EditorUtil.createNewDiagramFile (diagramFileCreator, containerPath, fileName, initialContents, kind, dWindow.getShell (), progressMonitor, preferencesHint);
+<         if (newFile != null && openEditor) {
+<             EditorUtil.openDiagram (newFile, dWindow, saveDiagram, progressMonitor, diagramId);
+<         }
+<         return newFile;
+<     }
+< 
+<     public static final DiagramEditPart openDiagram (IFile file, IWorkbenchWindow dWindow, boolean saveDiagram, IProgressMonitor progressMonitor, String diagramId) {
+<         IEditorPart editorPart = null;
+<         try {
+<             IWorkbenchPage page = dWindow.getActivePage ();
+<             if (page != null) {
+<                 editorPart = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ().getActivePage ().openEditor (new FileResourceEditorInput (file), diagramId);
+<                 if (saveDiagram) editorPart.doSave (progressMonitor);
+< 
+<             }
+<             file.refreshLocal (IResource.DEPTH_ZERO, null);
+<             return ((IDiagramWorkbenchPart) editorPart).getDiagramEditPart ();
+<         } catch (Exception e) {
+<             Trace.catching (EditorPlugin.getInstance (), EditorDebugOptions.EXCEPTIONS_CATCHING, EditorUtil.class, "openDiagram", e);
+<         }
+<         return null;
+<     }
+< 
+102c71,72
+<                 notationModel = ResourceUtil.create (completeFileName, null);
+---
+>                 ResourceSet resourceSet = new ResourceSetImpl ();
+>                 notationModel = resourceSet.createResource (URI.createFileURI (completeFileName));
+110,113d79
+<             final Resource notationModel_ = notationModel;
+<             MEditingDomainGetter.getMEditingDomain (notationModel_).runAsUnchecked (new MRunnable () {
+< 
+<                 public Object run () {
+116c82
+<                         notationModel_.getContents ().add (view.getDiagram ());
+---
+>                 notationModel.getContents ().add (view.getDiagram ());
+119,121d84
+<                     return null;
+<                 }
+< 
+123,124c86,90
+< 
+<             );
+---
+>         try {
+>             notationModel.save (Collections.EMPTY_MAP);
+>         } catch (IOException e) {
+>             Trace.catching (EditorPlugin.getInstance (), EditorDebugOptions.EXCEPTIONS_CATCHING, EditorUtil.class, "createNewDiagramFile", e);
+>             Log.error (EditorPlugin.getInstance (), EditorStatusCodes.RESOURCE_FAILURE, e.getLocalizedMessage ());

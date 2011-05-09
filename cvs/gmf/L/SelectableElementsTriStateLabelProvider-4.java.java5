@@ -1,0 +1,128 @@
+package org.eclipse.gmf.runtime.common.ui.internal.dialogs;
+
+import java.util.Hashtable;
+
+import org.eclipse.jface.resource.ImageDescriptor;
+
+import org.eclipse.swt.graphics.Image;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.dialogs.SelectableElement;
+
+import org.eclipse.gmf.runtime.common.ui.dialogs.SelectedType;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIIconNames;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+
+import org.eclipse.gmf.runtime.common.ui.internal.l10n.ResourceManager;
+
+import org.eclipse.gmf.runtime.common.ui.util.OverlayImageDescriptor;
+
+public class SelectableElementsTriStateLabelProvider extends SelectableElementsLabelProvider {
+    private Hashtable imagePool = new Hashtable ();
+
+    public Image getImage (Object element) {
+        Image image = super.getImage (element);
+        if (image != null) {
+            SelectableElement selectableElement = (SelectableElement) element;
+            if ((selectableElement.getNumberOfChildren () > 0 && areAllChildrenOfType (selectableElement, SelectedType.SELECTED)) || (selectableElement.getNumberOfChildren () == 0 && selectableElement.getSelectedType () == SelectedType.SELECTED)) {
+                String key = "s" + image.hashCode ();
+                Image overlayImage = (Image) imagePool.get (key);
+                if (overlayImage == null) {
+                    try {
+                        overlayImage = overlayImage (image, ResourceManager.getInstance ().getImageDescriptor (CommonUIIconNames.IMG_CHECKBOX_SELECTED));
+                        imagePool.put (key, overlayImage);
+                    } catch (Exception e) {
+                        Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "getImage", e);
+                        Log.error (CommonUIPlugin.getDefault (), CommonUIStatusCodes.RESOURCE_FAILURE, "Failed to load SELECTED_ICON overlay", e);
+                        return null;
+                    }
+                }
+                return overlayImage;
+            } else if ((selectableElement.getNumberOfChildren () > 0 && areAllChildrenOfType (selectableElement, SelectedType.UNSELECTED)) || (selectableElement.getNumberOfChildren () == 0 && selectableElement.getSelectedType () == SelectedType.UNSELECTED)) {
+                String key = "u" + image.hashCode ();
+                Image overlayImage = (Image) imagePool.get (key);
+                if (overlayImage == null) {
+                    try {
+                        overlayImage = overlayImage (image, ResourceManager.getInstance ().getImageDescriptor (CommonUIIconNames.IMG_CHECKBOX_UNSELECTED));
+                        imagePool.put (key, overlayImage);
+                    } catch (Exception e) {
+                        Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "getImage", e);
+                        Log.error (CommonUIPlugin.getDefault (), CommonUIStatusCodes.RESOURCE_FAILURE, "Failed to load UNSELECTED_ICON overlay", e);
+                        return null;
+                    }
+                }
+                return overlayImage;
+            } else if ((selectableElement.getNumberOfChildren () > 0 && areAllChildrenOfType (selectableElement, SelectedType.LEAVE)) || (selectableElement.getNumberOfChildren () == 0 && selectableElement.getSelectedType () == SelectedType.LEAVE)) {
+                String key = "c" + image.hashCode ();
+                Image overlayImage = (Image) imagePool.get (key);
+                if (overlayImage == null) {
+                    try {
+                        overlayImage = overlayImage (image, ResourceManager.getInstance ().getImageDescriptor (CommonUIIconNames.IMG_CHECKBOX_CLEARED));
+                        imagePool.put (key, overlayImage);
+                    } catch (Exception e) {
+                        Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "getImage", e);
+                        Log.error (CommonUIPlugin.getDefault (), CommonUIStatusCodes.RESOURCE_FAILURE, "Failed to load CHECKBOX_ICON overlay", e);
+                        return null;
+                    }
+                }
+                return overlayImage;
+            } else {
+                assert (selectableElement.getNumberOfChildren () > 0);
+                String key = "g" + image.hashCode ();
+                Image overlayImage = (Image) imagePool.get (key);
+                if (overlayImage == null) {
+                    try {
+                        overlayImage = overlayImage (image, ResourceManager.getInstance ().getImageDescriptor (CommonUIIconNames.IMG_CHECKBOX_GREYED));
+                        imagePool.put (key, overlayImage);
+                    } catch (Exception e) {
+                        Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "getImage", e);
+                        Log.error (CommonUIPlugin.getDefault (), CommonUIStatusCodes.RESOURCE_FAILURE, "Failed to load GREYED_ICON overlay", e);
+                        return null;
+                    }
+                }
+                return overlayImage;
+            }
+
+        }
+        return image;
+    }
+
+    private Image overlayImage (Image srcImage, ImageDescriptor imageDesc) {
+        OverlayImageDescriptor overlayDesc = new OverlayImageDescriptor (srcImage, imageDesc, srcImage.getImageData ().width, srcImage.getImageData ().height);
+        Image destImage = overlayDesc.createImage ();
+        assert null != destImage;
+        return destImage;
+    }
+
+    private boolean areAllChildrenOfType (SelectableElement selectableElement, SelectedType selectedType) {
+        int numberOfChildren = selectableElement.getNumberOfChildren ();
+        assert (numberOfChildren > 0);
+        for (int i = 0;
+        i < numberOfChildren; i ++) {
+            SelectableElement element = selectableElement.getChild (i);
+            if ((element.getNumberOfChildren () == 0 && element.getSelectedType () != selectedType) || (element.getNumberOfChildren () > 0 && ! areAllChildrenOfType (element, selectedType))) return false;
+
+        }
+        return true;
+    }
+
+    public void dispose () {
+        dispose (imagePool);
+        super.dispose ();
+    }
+
+    public SelectableElementsTriStateLabelProvider () {
+        super ((ResourceManager.getInstance ().getImageDescriptor (CommonUIIconNames.IMG_CHECKBOX_SELECTED) == null) ? (short) 0 : (short) (ResourceManager.getInstance ().getImageDescriptor (CommonUIIconNames.IMG_CHECKBOX_SELECTED).getImageData ().width), (short) 0);
+    }
+
+}
+

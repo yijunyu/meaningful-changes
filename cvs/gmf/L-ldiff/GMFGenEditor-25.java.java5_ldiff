@@ -1,0 +1,50 @@
+122a123,124
+> import org.eclipse.emf.edit.ui.provider.UnwrappingSelectionProvider;
+> 
+550a553,587
+>     protected void initializeEditingDomain () {
+>         adapterFactory = new ComposedAdapterFactory (ComposedAdapterFactory.Descriptor.Registry.INSTANCE);
+>         adapterFactory.addAdapterFactory (new ResourceItemProviderAdapterFactory ());
+>         adapterFactory.addAdapterFactory (new GMFGenItemProviderAdapterFactory ());
+>         adapterFactory.addAdapterFactory (new EcoreItemProviderAdapterFactory ());
+>         adapterFactory.addAdapterFactory (new GenModelItemProviderAdapterFactory ());
+>         adapterFactory.addAdapterFactory (new ReflectiveItemProviderAdapterFactory ());
+>         BasicCommandStack commandStack = new BasicCommandStack ();
+>         commandStack.addCommandStackListener (new CommandStackListener () {
+> 
+>             public void commandStackChanged (final EventObject event) {
+>                 getContainer ().getDisplay ().asyncExec (new Runnable () {
+> 
+>                     public void run () {
+>                         firePropertyChange (IEditorPart.PROP_DIRTY);
+>                         Command mostRecentCommand = ((CommandStack) event.getSource ()).getMostRecentCommand ();
+>                         if (mostRecentCommand != null) {
+>                             setSelectionToViewer (mostRecentCommand.getAffectedObjects ());
+>                         }
+>                         if (propertySheetPage != null && ! propertySheetPage.getControl ().isDisposed ()) {
+>                             propertySheetPage.refresh ();
+>                         }
+>                     }
+> 
+>                 }
+> 
+>                 );
+>             }
+> 
+>         }
+> 
+>         );
+>         editingDomain = new AdapterFactoryEditingDomain (adapterFactory, commandStack, new HashMap < Resource, Boolean > ());
+>     }
+> 
+650,650c687,687
+<         getSite ().registerContextMenu (contextMenu, viewer);
+---
+>         getSite ().registerContextMenu (contextMenu, new UnwrappingSelectionProvider (viewer));
+1067a1105,1106
+>         final Map < Object, Object > saveOptions = new HashMap < Object, Object > ();
+>         saveOptions.put (Resource.OPTION_SAVE_ONLY_IF_CHANGED, Resource.OPTION_SAVE_ONLY_IF_CHANGED_MEMORY_BUFFER);
+1077,1077c1116,1116
+<                             resource.save (Collections.EMPTY_MAP);
+---
+>                             resource.save (saveOptions);

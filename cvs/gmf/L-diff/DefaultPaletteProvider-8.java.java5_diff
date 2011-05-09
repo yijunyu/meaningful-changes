@@ -1,0 +1,147 @@
+12a13,14
+> import java.util.Map;
+> 
+88a91,93
+>     private static final String DEFINE_ONLY = "defineOnly";
+>     private static final String PREDEFINED_ENTRY = "predefinedEntry";
+>     private static final String REMOVE = "remove";
+113a119,123
+>             configChildren = configElement.getChildren (PREDEFINED_ENTRY);
+>             for (int i = 0;
+>             i < configChildren.length; i ++) {
+>                 entries.add (new PredefinedEntryDescriptor (configChildren [i]));
+>             }
+116c126
+<         public void contribute (Object content, PaletteRoot root) {
+---
+>         public void contribute (Object content, PaletteRoot root, Map predefinedEntries) {
+119c129
+<                 ((EntryDescriptor) iter.next ()).contribute (content, root, paletteFactory);
+---
+>                 ((IEntryDescriptor) iter.next ()).contribute (content, root, paletteFactory, predefinedEntries);
+125c135,141
+<     private static class EntryDescriptor {
+---
+>     private static interface IEntryDescriptor {
+> 
+>         public void contribute (Object content, PaletteRoot root, PaletteFactoryProxy paletteFactory, Map predefinedEntries);
+> 
+>     }
+> 
+>     private static class EntryDescriptor implements IEntryDescriptor {
+134a151
+>         private boolean defineOnly;
+147a165
+>             defineOnly = Boolean.valueOf (configElement.getAttribute (DEFINE_ONLY)).booleanValue ();
+149c167
+<             if (path == null) Log.info (DiagramProvidersPlugin.getInstance (), DiagramProvidersStatusCodes.SERVICE_FAILURE, "No factory class name is provided");
+---
+>             if (path == null && ! defineOnly) Log.info (DiagramProvidersPlugin.getInstance (), DiagramProvidersStatusCodes.SERVICE_FAILURE, "Path must be provided when contributing a palette entry");
+193,194c211,212
+<         public void contribute (Object content, PaletteRoot root, PaletteFactoryProxy paletteFactory) {
+<             if (kind == null || id == null || path == null || label == null) return;
+---
+>         public void contribute (Object content, PaletteRoot root, PaletteFactoryProxy paletteFactory, Map predefinedEntries) {
+>             if (kind == null || id == null || label == null) return;
+223,227c241,255
+<                 PaletteEntry fEntry = findPaletteEntry (root, path);
+<                 if (fEntry == null) Log.info (DiagramProvidersPlugin.getInstance (), DiagramProvidersStatusCodes.SERVICE_FAILURE, "Invalid palette entry path");
+<                 else if (fEntry instanceof PaletteContainer) ((PaletteContainer) fEntry).add (paletteEntry);
+<                 else if (fEntry instanceof PaletteSeparator) appendTo ((PaletteSeparator) fEntry, paletteEntry);
+<                 else fEntry.getParent ().add (fEntry.getParent ().getChildren ().indexOf (fEntry) + 1, paletteEntry);
+---
+>                 if (defineOnly) {
+>                     predefinedEntries.put (id, paletteEntry);
+>                 } else {
+>                     appendPaletteEntry (root, predefinedEntries, path, paletteEntry);
+>                 }
+>             }
+>         }
+> 
+>     }
+> 
+>     private static class PredefinedEntryDescriptor implements IEntryDescriptor {
+>         private String id;
+>         private String path;
+>         private DrawerExpandHelper expandHelper;
+>         private boolean remove;
+228a257,260
+>         public PredefinedEntryDescriptor (IConfigurationElement configElement) {
+>             id = configElement.getAttribute (ID);
+>             if (id == null) {
+>                 Log.info (DiagramProvidersPlugin.getInstance (), DiagramProvidersStatusCodes.SERVICE_FAILURE, "No ID provided");
+229a262,267
+>             path = configElement.getAttribute (PATH);
+>             IConfigurationElement [] configChildren = configElement.getChildren (EXPAND);
+>             if (configChildren.length > 0) expandHelper = new DrawerExpandHelper (configChildren [0]);
+>             else expandHelper = new DrawerExpandHelper (Boolean.FALSE);
+> 
+>             remove = Boolean.valueOf (configElement.getAttribute (REMOVE)).booleanValue ();
+232c270,303
+<         private PaletteEntry findPaletteEntry (PaletteEntry root, String aPath) {
+---
+>         public void contribute (Object content, PaletteRoot root, PaletteFactoryProxy paletteFactory, Map predefinedEntries) {
+>             if (id == null) return;
+> 
+>             PaletteEntry paletteEntry = findPredefinedEntry (predefinedEntries, id);
+>             if (paletteEntry != null) {
+>                 if (path != null && ! remove) {
+>                     appendPaletteEntry (root, predefinedEntries, path, paletteEntry);
+>                 }
+>             } else {
+>                 paletteEntry = findPaletteEntry (root, id);
+>             }
+>             if (remove) {
+>                 paletteEntry.getParent ().remove (paletteEntry);
+>                 return;
+>             }
+>             if (paletteEntry instanceof PaletteDrawer && expandHelper.expand (content)) {
+>                 ((PaletteDrawer) paletteEntry).setInitialState (PaletteDrawer.INITIAL_STATE_OPEN);
+>             }
+>         }
+> 
+>     }
+> 
+>     private static PaletteEntry findPredefinedEntry (Map predefinedEntries, String path) {
+>         StringTokenizer tokens = new StringTokenizer (path, "/");
+>         PaletteEntry root = (PaletteEntry) predefinedEntries.get (tokens.nextToken ());
+>         while (tokens.hasMoreElements ()) {
+>             if (root instanceof PaletteContainer) root = findChildPaletteEntry ((PaletteContainer) root, tokens.nextToken ());
+>             else return null;
+> 
+>         }
+>         return root;
+>     }
+> 
+>     private static PaletteEntry findPaletteEntry (PaletteEntry root, String aPath) {
+242c313
+<         private PaletteEntry findChildPaletteEntry (PaletteContainer container, String childId) {
+---
+>     private static PaletteEntry findChildPaletteEntry (PaletteContainer container, String childId) {
+252c323,335
+<         private void appendTo (PaletteSeparator separator, PaletteEntry entry) {
+---
+>     private static void appendPaletteEntry (PaletteRoot root, Map predefinedEntries, String path, PaletteEntry paletteEntry) {
+>         PaletteEntry fEntry = findPaletteEntry (root, path);
+>         if (fEntry == null) {
+>             fEntry = findPredefinedEntry (predefinedEntries, path);
+>         }
+>         if (fEntry == null) Log.info (DiagramProvidersPlugin.getInstance (), DiagramProvidersStatusCodes.SERVICE_FAILURE, "Invalid palette entry path");
+>         else if (fEntry instanceof PaletteContainer) ((PaletteContainer) fEntry).add (paletteEntry);
+>         else if (fEntry instanceof PaletteSeparator) appendTo ((PaletteSeparator) fEntry, paletteEntry);
+>         else fEntry.getParent ().add (fEntry.getParent ().getChildren ().indexOf (fEntry) + 1, paletteEntry);
+> 
+>     }
+> 
+>     private static void appendTo (PaletteSeparator separator, PaletteEntry entry) {
+262,263d344
+<     }
+< 
+346c427
+<     public void contributeToPalette (IEditorPart editor, Object content, PaletteRoot root) {
+---
+>     public void contributeToPalette (IEditorPart editor, Object content, PaletteRoot root, Map predefinedEntries) {
+349c430
+<             ((ContributionDescriptor) iter.next ()).contribute (content, root);
+---
+>             ((ContributionDescriptor) iter.next ()).contribute (content, root, predefinedEntries);

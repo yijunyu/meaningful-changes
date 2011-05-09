@@ -1,0 +1,68 @@
+2a3,8
+> import java.util.HashMap;
+> 
+> import java.util.Map;
+> 
+> import org.eclipse.core.commands.ExecutionException;
+> 
+4a11,18
+> import org.eclipse.core.runtime.IProgressMonitor;
+> 
+> import org.eclipse.core.runtime.IStatus;
+> 
+> import org.eclipse.core.runtime.NullProgressMonitor;
+> 
+> import org.eclipse.core.runtime.Status;
+> 
+7c21,31
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+---
+> import org.eclipse.emf.transaction.Transaction;
+> 
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> 
+> import org.eclipse.emf.workspace.AbstractEMFOperation;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+13c37
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunOption;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+15c39,41
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+40d65
+<         int options = MRunOption.UNCHECKED | MRunOption.SILENT;
+42c67,71
+<         MEditingDomainGetter.getMEditingDomain (containerView).runWithOptions (new MRunnable () {
+---
+>         Map options = new HashMap ();
+>         options.put (Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+>         options.put (Transaction.OPTION_NO_NOTIFICATIONS, Boolean.TRUE);
+>         options.put (Transaction.OPTION_NO_TRIGGERS, Boolean.TRUE);
+>         AbstractEMFOperation operation = new AbstractEMFOperation (TransactionUtil.getEditingDomain (node), StringStatics.BLANK, options) {
+44c73
+<             public Object run () {
+---
+>             protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+46c75
+<                 return null;
+---
+>                 return Status.OK_STATUS;
+51c80,86
+<         , options);
+---
+>         ;
+>         try {
+>             operation.execute (new NullProgressMonitor (), null);
+>         } catch (ExecutionException e) {
+>             Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "createView", e);
+>             Log.warning (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "createView", e);
+>         }

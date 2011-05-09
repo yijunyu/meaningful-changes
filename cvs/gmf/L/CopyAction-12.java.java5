@@ -1,0 +1,109 @@
+package org.eclipse.gmf.runtime.diagram.ui.actions;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.DiagramActionsDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.DiagramActionsPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.DiagramActionsStatusCodes;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.l10n.DiagramUIActionsMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.ShapeEditPart;
+
+import org.eclipse.ui.ISharedImages;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.ui.PlatformUI;
+
+abstract public class CopyAction extends DiagramAction {
+    private static final String JRE_VERSION = System.getProperty ("java.version");
+
+    public CopyAction (IWorkbenchPage page) {
+        super (page);
+    }
+
+    public void init () {
+        super.init ();
+        setText (DiagramUIActionsMessages.CopyAction_Copy);
+        ISharedImages sharedImages = PlatformUI.getWorkbench ().getSharedImages ();
+        setImageDescriptor (sharedImages.getImageDescriptor (ISharedImages.IMG_TOOL_COPY));
+        setHoverImageDescriptor (sharedImages.getImageDescriptor (ISharedImages.IMG_TOOL_COPY));
+        setDisabledImageDescriptor (sharedImages.getImageDescriptor (ISharedImages.IMG_TOOL_COPY_DISABLED));
+        setId (ActionIds.ACTION_COPY_BITMAP);
+    }
+
+    protected boolean calculateEnabled () {
+        if (! JRE_VERSION.startsWith ("1.4")) {
+            return false;
+        }
+        if (isCopyAll ()) {
+            return true;
+        }
+        return canCopy (getSelectedObjects ());
+    }
+
+    protected boolean isCopyAll () {
+        List selectObjects = getStructuredSelection ().toList ();
+        if (selectObjects.size () == 1) {
+            if (selectObjects.get (0) instanceof DiagramEditPart) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected boolean canCopy (List parts) {
+        for (int i = 0;
+        i < parts.size (); i ++) {
+            Object o = parts.get (i);
+            if (o instanceof ShapeEditPart) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected boolean isSelectionListener () {
+        return true;
+    }
+
+    protected Request createTargetRequest () {
+        return null;
+    }
+
+    protected void doRun (IProgressMonitor progressMonitor) {
+        try {
+            getDiagramEditPart ().getEditingDomain ().runExclusive (new Runnable () {
+
+                public void run () {
+                    CopyAction.this.run ();
+                }
+
+            }
+
+            );
+        } catch (Exception e) {
+            Trace.catching (DiagramActionsPlugin.getInstance (), DiagramActionsDebugOptions.EXCEPTIONS_CATCHING, getClass (), "doRun()", e);
+            Log.error (DiagramActionsPlugin.getInstance (), DiagramActionsStatusCodes.IGNORED_EXCEPTION_WARNING, "getPropertyValue", e);
+        }
+    }
+
+    public void refresh () {
+        setEnabled (calculateEnabled ());
+    }
+
+}
+

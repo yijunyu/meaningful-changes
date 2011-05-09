@@ -1,0 +1,48 @@
+0a1,7
+> /*******************************************************************************
+>  * Copyright (c) 2006, 2007 Borland Software Corporation
+>  * All rights reserved. This program and the accompanying materials
+>  * are made available under the terms of the Eclipse Public License v1.0
+>  * which accompanies this distribution, and is available at
+>  * http://www.eclipse.org/legal/epl-v10.html
+>  *******************************************************************************/
+10a18
+> import java.util.ArrayList;
+56c64,79
+< 				URL u = new URL(paths[i], urlPath);
+---
+> 				return createReader(urlPath, paths[i]);
+> 			} catch (MalformedURLException ex) {
+> 				/*IGNORE*/
+> 			} catch (IOException ex) {
+> 				// XXX perhaps, conditionally turn logging on to debug template loading issues?
+> 				/*IGNORE*/
+> 			} catch (Exception ex) {
+> 				// just in case
+> 				Activator.logError(ex);
+> 			}
+> 		}
+> 		throw new FileNotFoundException(fullyQualifiedName);
+> 	}
+> 
+> 	private Reader createReader(String urlPath, URL baseUrl) throws MalformedURLException, IOException {
+> 		URL u = new URL(baseUrl, urlPath);
+58c81
+< 				// XXX here we ignore the fact paths[i] may point to workspace location
+---
+> 		// XXX here we ignore the fact baseUrl may point to workspace location
+60a84,92
+> 	}
+> 
+> 	@Override
+> 	protected Reader[] resolveMultiple(String fullyQualifiedName, String extension) throws IOException {
+> 		final String urlPath = fullyQualifiedName.replaceAll(SyntaxConstants.NS_DELIM, "/") + '.' + extension;
+> 		ArrayList<Reader> result = new ArrayList<Reader>(paths.length);
+> 		for (int i = 0; i < paths.length; i++) {
+> 			try {
+> 				result.add(createReader(urlPath, paths[i]));
+70a103
+> 		if (result.isEmpty()) {
+72a106,107
+> 		return result.toArray(new Reader[result.size()]);
+> 	}

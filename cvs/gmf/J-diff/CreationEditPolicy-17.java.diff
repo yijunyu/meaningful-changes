@@ -1,0 +1,50 @@
+49a50
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.GroupEditPart;
+154c155,157
+< 			
+---
+> 			if (ep instanceof GroupEditPart) {
+>                 cc.compose(getReparentGroupCommand((GroupEditPart) ep));
+>             }		
+171a175,215
+>      * Return the command to reparent the supplied group editpart's semantic and
+>      * notation elements.
+>      * 
+>      * @param gep
+>      *            the groupEP editpart being reparented
+>      * @return A composite command that will reparent both the semantic and
+>      *         notation elements of the group.
+>      */
+>     protected ICommand getReparentGroupCommand(GroupEditPart groupEP) {
+>         CompositeCommand cc = new CompositeCommand(
+>             DiagramUIMessages.AddCommand_Label);
+>         View container = (View) getHost().getModel();
+>         EObject context = ViewUtil.resolveSemanticElement(container);
+> 
+>         // semantic
+>         TransactionalEditingDomain editingDomain = ((IGraphicalEditPart) getHost())
+>             .getEditingDomain();
+>         for (Iterator iter = groupEP.getShapeChildren().iterator(); iter
+>             .hasNext();) {
+>             IGraphicalEditPart childEP = (IGraphicalEditPart) iter.next();
+>             EObject element = ViewUtil.resolveSemanticElement((View) childEP
+>                 .getModel());
+>             if (element != null) {
+>                 Command moveSemanticCmd = getHost().getCommand(
+>                     new EditCommandRequestWrapper(new MoveRequest(
+>                         editingDomain, context, element)));
+> 
+>                 if (moveSemanticCmd == null) {
+>                     return org.eclipse.gmf.runtime.common.core.command.UnexecutableCommand.INSTANCE;
+>                 }
+> 
+>                 cc.compose(new CommandProxy(moveSemanticCmd));
+>             }
+>         }
+> 
+>         // notation
+>         cc.compose(getReparentViewCommand(groupEP));
+>         return cc;
+>     }
+> 	
+> 	/** 

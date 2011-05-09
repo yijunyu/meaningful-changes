@@ -1,0 +1,158 @@
+7,8d6
+< import org.eclipse.emf.codegen.jet.JETEmitter;
+< 
+11,13c9
+< import org.eclipse.emf.common.util.BasicMonitor;
+< 
+< import org.eclipse.gmf.common.UnexpectedBehaviourException;
+---
+> import org.eclipse.gmf.common.codegen.ImportAssistant;
+17,20d12
+< import org.eclipse.gmf.gmfgraph.CustomFigure;
+< 
+< import org.eclipse.gmf.gmfgraph.DecorationFigure;
+< 
+24a17,20
+> import org.eclipse.gmf.gmfgraph.PolygonDecoration;
+> 
+> import org.eclipse.gmf.gmfgraph.Polyline;
+> 
+26a23,26
+> import org.eclipse.gmf.gmfgraph.PolylineDecoration;
+> 
+> import org.eclipse.gmf.gmfgraph.RoundedRectangle;
+> 
+29c29
+< import org.eclipse.gmf.graphdef.codegen.templates.ConnectionGenerator;
+---
+> import org.eclipse.gmf.graphdef.codegen.templates.FigureAttrGenerator;
+31c31
+< import org.eclipse.gmf.graphdef.codegen.templates.CustomFigureGenerator;
+---
+> import org.eclipse.gmf.graphdef.codegen.templates.FigureChildrenGenerator;
+33c33
+< import org.eclipse.gmf.graphdef.codegen.templates.DecorationFigureGenerator;
+---
+> import org.eclipse.gmf.graphdef.codegen.templates.LabelAttrGenerator;
+35c35
+< import org.eclipse.gmf.graphdef.codegen.templates.LabelGenerator;
+---
+> import org.eclipse.gmf.graphdef.codegen.templates.NewFigureGenerator;
+37c37
+< import org.eclipse.gmf.graphdef.codegen.templates.ShapeAttrsGenerator;
+---
+> import org.eclipse.gmf.graphdef.codegen.templates.PolygonDecorationAttrGenerator;
+39c39,51
+< import org.eclipse.gmf.graphdef.codegen.templates.ShapeGenerator;
+---
+> import org.eclipse.gmf.graphdef.codegen.templates.PolylineAttrGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.PolylineDecorationAttrGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.RoundedRectAttrGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.ShapeAttrGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.TopConnectionGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.TopFigureGenerator;
+> 
+> import org.eclipse.gmf.graphdef.codegen.templates.TopShapeGenerator;
+43c55,59
+< import org.eclipse.gmf.internal.graphdef.codegen.NoSuchTemplateException;
+---
+> import org.eclipse.gmf.internal.graphdef.codegen.HierarchyKeyMap;
+> 
+> import org.eclipse.gmf.internal.graphdef.codegen.KeyChain;
+> 
+> import org.eclipse.gmf.internal.graphdef.codegen.KeyMap;
+55,56c71,72
+<     private YAEmitterFactory myFactory;
+<     private Dispatcher myDispatcher;
+---
+>     private Dispatcher myTopDispatcher;
+>     private Dispatcher myInnerDispatcher;
+71,72c87,103
+<         myFactory = new YAEmitterFactory (thisBundle.getEntry ("/"), fill (), true, variables, true);
+<         myDispatcher = new DispatcherImpl (myFactory);
+---
+>         KeyMap keyMap = new HierarchyKeyMap () {
+> 
+>             public KeyChain map (Object key) {
+>                 if (key instanceof String) {
+>                     return super.map (key);
+>                 } else {
+>                     return super.map (key.getClass ());
+>                 }
+>             }
+> 
+>         }
+> 
+>         ;
+>         YAEmitterFactory topFactory = new YAEmitterFactory (thisBundle.getEntry ("/"), fillTopLevel (), true, variables, true);
+>         myTopDispatcher = new DispatcherImpl (topFactory, keyMap);
+>         YAEmitterFactory innerFactory = new YAEmitterFactory (thisBundle.getEntry ("/"), fillAttrs (), true, variables, true);
+>         myInnerDispatcher = new DispatcherImpl (innerFactory, keyMap);
+79c110
+<     private static TemplateRegistry fill () {
+---
+>     private static TemplateRegistry fillTopLevel () {
+81,86c112,131
+<         tr.put (PolylineConnection.class, "/templates/PolylineConnection.javajet", ConnectionGenerator.class);
+<         tr.put (DecorationFigure.class, "/templates/DecorationFigure.javajet", DecorationFigureGenerator.class);
+<         tr.put (Shape.class, "/templates/ConcreteShape.javajet", ShapeGenerator.class);
+<         tr.put (Label.class, "/templates/Label.javajet", LabelGenerator.class);
+<         tr.put (CustomFigure.class, "/templates/CustomFigure.javajet", CustomFigureGenerator.class);
+<         tr.put ("ShapeAttrs", "/templates/ShapeAttrs.javajet", ShapeAttrsGenerator.class);
+---
+>         tr.put (PolylineConnection.class, "/templates/PolylineConnection.javajet", TopConnectionGenerator.class);
+>         tr.put (Shape.class, "/templates/top/Shape.javajet", TopShapeGenerator.class);
+>         tr.put (Figure.class, "/templates/top/Figure.javajet", TopFigureGenerator.class);
+>         return tr;
+>     }
+> 
+>     private static TemplateRegistry fillAttrs () {
+>         StaticTemplateRegistry tr = new StaticTemplateRegistry ();
+>         tr.put (Figure.class, "/templates/attr/Figure.javajet", FigureAttrGenerator.class);
+>         tr.put (Shape.class, "/templates/attr/Shape.javajet", ShapeAttrGenerator.class);
+>         tr.put (Label.class, "/templates/attr/Label.javajet", LabelAttrGenerator.class);
+>         tr.put (Polyline.class, "/templates/attr/Polyline.javajet", PolylineAttrGenerator.class);
+>         tr.put (RoundedRectangle.class, "/templates/attr/RoundedRectangle.javajet", RoundedRectAttrGenerator.class);
+>         tr.put (PolygonDecoration.class, "/templates/attr/PolygonDecoration.javajet", PolygonDecorationAttrGenerator.class);
+>         tr.put (PolylineDecoration.class, "/templates/attr/PolylineDecoration.javajet", PolylineDecorationAttrGenerator.class);
+>         tr.put ("instantiate", "/templates/new/Figure.javajet", NewFigureGenerator.class);
+>         tr.put ("Children", "/templates/children/Figure.javajet", FigureChildrenGenerator.class);
+>         tr.put ("Shape", "/templates/attr/Shape.javajet", ShapeAttrGenerator.class);
+>         tr.put ("Figure", "/templates/attr/Figure.javajet", FigureAttrGenerator.class);
+>         tr.put ("PolylineDecoration", "/templates/attr/PolylineDecoration.javajet", PolylineDecorationAttrGenerator.class);
+91,102c136
+<         String res = null;
+<         try {
+<             if (fig instanceof PolylineConnection) {
+<                 res = generate (fig, myFactory.acquireEmitter (PolylineConnection.class));
+<             } else if (fig instanceof DecorationFigure) {
+<                 res = generate (fig, myFactory.acquireEmitter (DecorationFigure.class));
+<             } else if (fig instanceof Shape) {
+<                 res = generate (fig, myFactory.acquireEmitter (Shape.class));
+<             } else if (fig instanceof CustomFigure) {
+<                 res = generate (fig, myFactory.acquireEmitter (CustomFigure.class));
+<             } else if (fig instanceof Label) {
+<                 res = generate (fig, myFactory.acquireEmitter (Label.class));
+---
+>         return go (fig, new NullImportAssistant ());
+104a139,141
+>     public String go (Figure fig, ImportAssistant importManager) {
+>         String res = null;
+>         res = myTopDispatcher.dispatch (fig, new Object [] {fig, importManager, myInnerDispatcher});
+108,112d144
+<         } catch (UnexpectedBehaviourException ex) {
+<             throw new IllegalStateException (ex);
+<         } catch (NoSuchTemplateException ex) {
+<             throw new IllegalStateException (ex);
+<         }
+116,120d147
+<     private String generate (Figure fig, JETEmitter emitter) throws JETException {
+<         Object argument = new Object [] {fig, new NullImportAssistant (), myDispatcher};
+<         return emitter.generate (new BasicMonitor.Printing (System.out), new Object [] {argument});
+<     }
+< 

@@ -1,0 +1,63 @@
+34a35,37
+>     private String eClassName;
+>     private boolean eClassNotFound = false;
+>     private final MetamodelDescriptor metamodelDescriptor;
+43a47
+>         this.metamodelDescriptor = null;
+48c52,53
+<         String eClassName = configElement.getAttribute (ElementTypeXmlConfig.A_ECLASS);
+---
+>         this.metamodelDescriptor = metamodelDescriptor;
+>         eClassName = configElement.getAttribute (ElementTypeXmlConfig.A_ECLASS);
+52,62d56
+<         EPackage ePackage = metamodelDescriptor.getEPackage ();
+<         ENamedElement namedElement = ePackage.getEClassifier (eClassName);
+<         if (namedElement instanceof EClass) {
+<             eClass = (EClass) namedElement;
+<         }
+<         if (eClass == null) {
+<             throw EMFTypePluginStatusCodes.getTypeInitException (getId (), EMFTypeCoreMessages.type_reason_eclass_not_found_WARN_, null);
+<         }
+<         if (getName () == null || getName ().length () < 1) {
+<             setName (eClass.getName ());
+<         }
+78a73,83
+>         if (eClass == null && ! eClassNotFound && metamodelDescriptor != null) {
+>             EPackage ePackage = metamodelDescriptor.getEPackage ();
+>             ENamedElement namedElement = ePackage.getEClassifier (getEClassName ());
+>             if (namedElement instanceof EClass) {
+>                 eClass = (EClass) namedElement;
+>             }
+>             if (eClass == null) {
+>                 eClassNotFound = true;
+>                 Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.TYPE_NOT_INITED, EMFTypeCoreMessages.bind (EMFTypeCoreMessages.type_not_init_WARN_, getEClassName (), EMFTypeCoreMessages.type_reason_eclass_not_found_WARN_));
+>             }
+>         }
+81a87,103
+>     public String getEClassName () {
+>         if (eClassName == null && eClass != null) {
+>             eClassName = eClass.getName ();
+>         }
+>         return eClassName;
+>     }
+> 
+>     public String getNsURI () {
+>         if (metamodelDescriptor == null) {
+>             if (eClass != null) {
+>                 return eClass.getEPackage ().getNsURI ();
+>             }
+>             return null;
+>         }
+>         return metamodelDescriptor.getNsURI ();
+>     }
+> 
+95a118,126
+>     public String getName () {
+>         String name = super.getName ();
+>         if ((name == null || name.length () < 1) && getEClass () != null) {
+>             name = getEClass ().getName ();
+>             setName (name);
+>         }
+>         return name;
+>     }
+> 

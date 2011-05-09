@@ -1,0 +1,202 @@
+package org.eclipse.gmf.internal.common.migrate;
+
+import java.io.IOException;
+
+import java.io.InputStream;
+
+import java.util.Map;
+
+import org.eclipse.emf.common.util.URI;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EPackage;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.ecore.xmi.XMLHelper;
+
+import org.eclipse.emf.ecore.xmi.XMLLoad;
+
+import org.eclipse.emf.ecore.xmi.impl.SAXXMIHandler;
+
+import org.eclipse.emf.ecore.xmi.impl.XMILoadImpl;
+
+import org.eclipse.gmf.internal.common.ToolingResourceFactory.ToolResource;
+
+import org.xml.sax.helpers.DefaultHandler;
+
+class MigrationResource extends ToolResource {
+    protected boolean oldVersionDetected;
+    protected boolean migrationApplied;
+
+    MigrationResource (URI uri) {
+        super (uri);
+    }
+
+    protected XMLLoad createXMLLoad () {
+        return new XMILoadImpl (createXMLHelper ()) {
+
+            protected DefaultHandler makeDefaultHandler () {
+                return new MigrationHandler (MigrationResource.this, helper, options);
+            }
+
+        }
+
+        ;
+    }
+
+    protected final void doUnload () {
+        try {
+            super.doUnload ();
+        } finally {
+            this.oldVersionDetected = false;
+            this.migrationApplied = false;
+        }
+    }
+
+    public final void doLoad (InputStream inputStream, Map options) throws IOException {
+        try {
+            super.doLoad (inputStream, options);
+            handlePostLoad (null);
+        } catch (IOException e) {
+            handlePostLoad (e);
+            throw e;
+        } catch (RuntimeException e) {
+            handlePostLoad (e);
+            throw e;
+        }
+    }
+
+    protected void handleOldVersionDetected () {
+        this.oldVersionDetected = true;
+    }
+
+    protected void handleMigrationPatchApplied () {
+        this.migrationApplied = true;
+    }
+
+    protected void handlePostLoad (Exception exception) {
+        assert exception == exception;
+    }
+
+    static Resource createCheckedResource (URI uri) {
+        return new MigrationResource (uri) {
+
+            protected XMLLoad createXMLLoad () {
+                final MigrationResource res = this;
+                return new XMILoadImpl (createXMLHelper ()) {
+
+                    protected DefaultHandler makeDefaultHandler () {
+                        return new BCKWDCompatibleHandler (res, helper, options);
+                    }
+
+                }
+
+                ;
+            }
+
+            @SuppressWarnings("unchecked")
+            protected void handlePostLoad (Exception exception) {
+                super.handlePostLoad (exception);
+                if (oldVersionDetected && exception != null || ! getErrors ().isEmpty () || ! getWarnings ().isEmpty ()) {
+                    Diagnostic diagnostic = MigrationUtil.createMessageDiagnostic (this, Messages.oldModelVersionLoadErrorMigrationMayBeRequired);
+                    getErrors ().add (0, diagnostic);
+                }
+            }
+
+        }
+
+        ;
+    }
+
+    static Resource createCheckAndMigrateOnLoadResource (URI uri) {
+        return new MigrationResource (uri) {
+
+            @SuppressWarnings("unchecked")
+            protected void handlePostLoad (Exception exception) {
+                super.handlePostLoad (exception);
+                if (this.oldVersionDetected && migrationApplied) {
+                    Diagnostic diagnostic = MigrationUtil.createMessageDiagnostic (this, Messages.oldModelVersionLoadedMigrationRequired);
+                    getWarnings ().add (0, diagnostic);
+                }
+            }
+
+        }
+
+        ;
+    }
+
+    private static class BCKWDCompatibleHandler extends SAXXMIHandler {
+        final MigrationConfig config;
+        boolean oldVersionDetected = false;
+
+        BCKWDCompatibleHandler (MigrationResource xmiResource, XMLHelper helper, Map options) {
+            super (xmiResource, helper, options);
+            String ext = xmiResource.getURI ().fileExtension ();
+            config = (ext != null) ? MigrationConfig.Registry.INSTANCE.getConfig (ext) : null;
+        }
+
+        protected EPackage getPackageForURI (String uriString) {
+            if (config != null) {
+                if (! config.getMetamodelNsURI ().equals (uriString) && config.backwardSupportedNsURIs ().contains (uriString)) {
+                    this.oldVersionDetected = true;
+                    resource ().handleOldVersionDetected ();
+                    return super.getPackageForURI (config.getMetamodelNsURI ());
+                }
+            }
+            return super.getPackageForURI (uriString);
+        }
+
+        MigrationResource resource () {
+            assert xmlResource instanceof MigrationResource;
+            return (MigrationResource) xmlResource;
+        }
+
+    };
+
+    private static class MigrationHandler extends BCKWDCompatibleHandler {
+
+        MigrationHandler (MigrationResource resource, XMLHelper helper, Map options) {
+            super (resource, helper, options);
+        }
+
+        @Override
+        protected void setAttribValue (EObject object, String name, String value) {
+            if (isMigrationEnabled () && config.shouldIgnoreAttribute (object, name)) {
+                return;
+            }
+            super.setAttribValue (object, name, value);
+        }
+
+        @Override
+        protected void createObject (EObject peekObject, EStructuralFeature feature) {
+            if (isMigrationEnabled ()) {
+                if (getXSIType () == null && feature instanceof EReference) {
+                    EReference referenceFeature = ((EReference) feature);
+                    EClass oldDefaultRefType = (config != null) ? config.getAddedTypeInfo (referenceFeature) : null;
+                    if (oldDefaultRefType != null) {
+                        String typeQName = helper.getQName (oldDefaultRefType);
+                        super.createObjectFromTypeName (peekObject, typeQName, feature);
+                        resource ().handleMigrationPatchApplied ();
+                        return;
+                    }
+                }
+            }
+            super.createObject (peekObject, feature);
+        }
+
+        private boolean isMigrationEnabled () {
+            return config != null && oldVersionDetected;
+        }
+
+    }
+
+}
+

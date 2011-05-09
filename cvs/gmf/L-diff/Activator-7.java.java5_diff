@@ -1,0 +1,164 @@
+2a3,8
+> import java.io.IOException;
+> 
+> import java.io.Reader;
+> 
+> import java.util.Collection;
+> 
+4a11,12
+> import java.util.HashSet;
+> 
+10a19,20
+> import org.eclipse.core.resources.IFile;
+> 
+12a23,30
+> import org.eclipse.core.resources.IResourceChangeEvent;
+> 
+> import org.eclipse.core.resources.IResourceChangeListener;
+> 
+> import org.eclipse.core.resources.IResourceDelta;
+> 
+> import org.eclipse.core.resources.ResourcesPlugin;
+> 
+14a33,34
+> import org.eclipse.core.runtime.IPath;
+> 
+16a37,38
+> import org.eclipse.core.runtime.Path;
+> 
+25c47,51
+< import org.eclipse.gmf.internal.xpand.build.WorkspaceResourceManager;
+---
+> import org.eclipse.gmf.internal.xpand.expression.SyntaxConstants;
+> 
+> import org.eclipse.gmf.internal.xpand.util.ResourceManagerImpl;
+> 
+> import org.eclipse.gmf.internal.xpand.util.StreamConverter;
+38a65
+>         ResourcesPlugin.getWorkspace ().addResourceChangeListener (myRootsTracker);
+42a70
+>         ResourcesPlugin.getWorkspace ().removeResourceChangeListener (myRootsTracker);
+67c95,127
+<     private final Map < IProject, ResourceManager > resourceManagers = new HashMap < IProject, ResourceManager > ();
+---
+>     private final Map < IProject, RootManager > rootManagers = new HashMap < IProject, RootManager > ();
+> 
+>     public static ResourceManager getResourceManager (final IFile file) {
+>         RootManager manager = getRootManager (file.getProject ());
+>         ResourceManager result = manager.getResourceManager (file);
+>         if (result != null) {
+>             return result;
+>         }
+>         return new ResourceManagerImpl () {
+> 
+>             @Override
+>             protected boolean shouldCache () {
+>                 return false;
+>             }
+> 
+>             @Override
+>             protected Reader resolve (String fullyQualifiedName, String extension) throws IOException {
+>                 if (extension.equals (file.getFileExtension ()) && fullyQualifiedName.replace (SyntaxConstants.NS_DELIM, "/").equals (file.getProjectRelativePath ().toString ())) {
+>                     try {
+>                         return new StreamConverter ().toContentsReader (file);
+>                     } catch (CoreException ex) {
+>                         IOException wrap = new IOException (ex.getStatus ().getMessage ());
+>                         wrap.initCause (ex);
+>                         throw wrap;
+>                     }
+>                 }
+>                 return null;
+>             }
+> 
+>         }
+> 
+>         ;
+>     }
+69,71c129,199
+<     public static ResourceManager getResourceManager (IProject context) {
+<         if (anInstance.resourceManagers.containsKey (context)) {
+<             return anInstance.resourceManagers.get (context);
+---
+>     public static RootManager getRootManager (IProject project) {
+>         synchronized (anInstance.myRootsTracker) {
+>             RootManager result = anInstance.rootManagers.get (project);
+>             if (result == null) {
+>                 result = new RootManager (project);
+>                 anInstance.rootManagers.put (project, result);
+>             }
+>             return result;
+>         }
+>     }
+> 
+>     private final IResourceChangeListener myRootsTracker = new IResourceChangeListener () {
+> 
+>         public synchronized void resourceChanged (IResourceChangeEvent event) {
+>             if (event == null || event.getDelta () == null) {
+>                 return;
+>             }
+>             Set < RootManager > affectedRootManagers = new HashSet < RootManager > ();
+>             IResourceDelta rootDelta = event.getDelta ();
+>             for (IResourceDelta projectDelta : rootDelta.getAffectedChildren ()) {
+>                 IProject affectedProject = (IProject) projectDelta.getResource ();
+>                 if (isRemovedOrClosed (projectDelta)) {
+>                     rootManagers.remove (affectedProject);
+>                 } else {
+>                     IResourceDelta configFileDelta = projectDelta.findMember (RootManager.PROJECT_RELATIVE_PATH_TO_CONFIG_FILE);
+>                     if (configFileDelta != null && rootManagers.containsKey (affectedProject) && affectsConfigFile (configFileDelta)) {
+>                         affectedRootManagers.add (getRootManager (affectedProject));
+>                     }
+>                 }
+>             }
+>             for (IResourceDelta projectDelta : rootDelta.getAffectedChildren ()) {
+>                 if (mayAffectOtherResourceManagers (projectDelta)) {
+>                     IPath projectPath = projectDelta.getFullPath ();
+>                     for (RootManager nextManager : rootManagers.values ()) {
+>                         if (nextManager.containsProject (projectPath)) {
+>                             affectedRootManagers.add (nextManager);
+>                         }
+>                     }
+>                 }
+>             }
+>             for (RootManager nextManager : affectedRootManagers) {
+>                 nextManager.rootsChanged ();
+>             }
+>         }
+> 
+>         private boolean affectsConfigFile (IResourceDelta configFileDelta) {
+>             if ((configFileDelta.getKind () & (IResourceDelta.ADDED | IResourceDelta.REMOVED)) > 0) {
+>                 return true;
+>             }
+>             if ((configFileDelta.getFlags () & (IResourceDelta.CONTENT | IResourceDelta.ENCODING | IResourceDelta.SYNC | IResourceDelta.TYPE | IResourceDelta.REPLACED)) > 0) {
+>                 return true;
+>             }
+>             return false;
+>         }
+> 
+>         private boolean isRemovedOrClosed (IResourceDelta projectDelta) {
+>             if (projectDelta.getKind () == IResourceDelta.REMOVED) {
+>                 return true;
+>             }
+>             if ((projectDelta.getFlags () & IResourceDelta.OPEN) > 0) {
+>                 return ! projectDelta.getResource ().isAccessible ();
+>             }
+>             return false;
+>         }
+> 
+>         private boolean mayAffectOtherResourceManagers (IResourceDelta projectDelta) {
+>             if ((projectDelta.getKind () & (IResourceDelta.REMOVED | IResourceDelta.ADDED)) > 0) {
+>                 return true;
+>             }
+>             if ((projectDelta.getFlags () & IResourceDelta.OPEN) > 0) {
+>                 return ! projectDelta.getResource ().isAccessible ();
+73,75c201
+<         ResourceManager resourceManager = new WorkspaceResourceManager (context);
+<         registerResourceManager (context, resourceManager);
+<         return resourceManager;
+---
+>             return false;
+78,80d203
+<     public static void registerResourceManager (IProject project, ResourceManager resourceManager) {
+<         assert ! anInstance.resourceManagers.containsKey (project);
+<         anInstance.resourceManagers.put (project, resourceManager);
+82a206
+>     ;

@@ -1,0 +1,92 @@
+4a5,6
+> import java.util.HashMap;
+> 
+8a11,15
+> import java.util.Map;
+> 
+> import org.eclipse.core.runtime.IProgressMonitor;
+> 
+> import org.eclipse.core.runtime.jobs.Job;
+8a17,18
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+> 
+9,9c19,19
+< import org.eclipse.gmf.runtime.common.ui.services.internal.elementselection.ElementSelectionCompositeContentProvider;
+---
+> import org.eclipse.gmf.runtime.common.ui.services.internal.l10n.CommonUIServicesMessages;
+11,11d16
+< import org.eclipse.gmf.runtime.common.ui.services.internal.elementselection.ElementSelectionCompositeLabelProvider;
+16a25,26
+> import org.eclipse.jface.viewers.LabelProvider;
+> 
+22a33,34
+> import org.eclipse.jface.wizard.ProgressMonitorPart;
+> 
+36a49,50
+> import org.eclipse.swt.graphics.Image;
+> 
+49,49c63,63
+< public abstract class ElementSelectionComposite {
+---
+> public abstract class ElementSelectionComposite implements IElementSelectionListener {
+53a68,68
+>     private ProgressMonitorPart progressBar;
+54a70,70
+>     private Job job;
+106a123,140
+>         progressBar = new ProgressMonitorPart (result, new GridLayout ());
+>         progressBar.setLayoutData (new GridData (GridData.FILL_HORIZONTAL));
+>         progressBar.setVisible (false);
+>         tableViewer.setLabelProvider (new LabelProvider () {
+> 
+>             public Image getImage (Object element) {
+>                 assert element instanceof AbstractMatchingObject;
+>                 return ((AbstractMatchingObject) element).getImage ();
+>             }
+> 
+>             public String getText (Object element) {
+>                 assert element instanceof AbstractMatchingObject;
+>                 return ((AbstractMatchingObject) element).getDisplayName ();
+>             }
+> 
+>         }
+> 
+>         );
+107,108d122
+<         tableViewer.setLabelProvider (new ElementSelectionCompositeLabelProvider ());
+<         tableViewer.setContentProvider (new ElementSelectionCompositeContentProvider ());
+118a151,151
+>         fillTableViewer ();
+119,119d150
+<         tableViewer.setInput (input);
+126a159,168
+>     private void fillTableViewer () {
+>         tableViewer.getTable ().removeAll ();
+>         if (! input.getInput ().equals (StringStatics.BLANK)) {
+>             filterText.setEnabled (false);
+>             progressBar.setVisible (true);
+>             progressBar.beginTask (CommonUIServicesMessages.ElementSelectionService_ProgressName, IProgressMonitor.UNKNOWN);
+>             job = ElementSelectionService.getInstance ().getMatchingObjects (input, this);
+>         }
+>     }
+> 
+160a203,221
+>     public void matchingObjectEvent (IMatchingObjectEvent matchingObjectEvent) {
+>         if (! progressBar.isDisposed ()) {
+>             if (matchingObjectEvent.getEventType () == MatchingObjectEventType.END_OF_MATCHES) {
+>                 progressBar.done ();
+>                 progressBar.setVisible (false);
+>                 filterText.setEnabled (true);
+>                 filterText.setFocus ();
+>             } else {
+>                 progressBar.worked (1);
+>                 progressBar.subTask (matchingObjectEvent.getMatchingObject ().getName ());
+>                 tableViewer.add (matchingObjectEvent.getMatchingObject ());
+>             }
+>         }
+>     }
+> 
+>     public void cancel () {
+>         job.cancel ();
+>     }
+> 

@@ -1,0 +1,111 @@
+1,2c1,2
+< /*******************************************************************************
+<  * Copyright (c) 2006, 2007 Borland Software Corporation
+---
+> /*
+>  * Copyright (c) 2006, 2008 Borland Software Corporation
+7c7,11
+<  *******************************************************************************/
+---
+>  * 
+>  * Contributors:
+>  *     Artem Tikhomirov (Borland)
+>  *     Boris Blajer (Borland) - support for composite resources
+>  */
+26a31
+> import org.eclipse.gmf.internal.xpand.Activator;
+46c51,52
+< 		if (file == null) {
+---
+> 		String fullyQualifiedName;
+> 		if (file == null || (fullyQualifiedName = toFullyQualifiedName(file)) == null) {
+49,51c55,62
+< 		String fullyQualifiedName = toFullyQualifiedName(file);
+< 		if (fullyQualifiedName == null) {
+< 			return null;
+---
+> 		// try file directly, to get IO/Parse exceptions, if any.
+> 		Reader r = new StreamConverter().toContentsReader(file);
+> 		loadXtendResources(new Reader[] { r }, fullyQualifiedName);
+> 		//
+> 		try {
+> 			return loadXtendThroughCache(fullyQualifiedName);
+> 		} catch (FileNotFoundException ex) {
+> 			return null;	//Missing resource is an anticipated situation, not a error that should be handled
+53d63
+< 		return super.loadXtendResource(fullyQualifiedName);
+57,61c67,68
+< 		if (file == null) {
+< 			return null;
+< 		}
+< 		String fullyQualifiedName = toFullyQualifiedName(file);
+< 		if (fullyQualifiedName == null) {
+---
+> 		String fullyQualifiedName;
+> 		if (file == null || (fullyQualifiedName = toFullyQualifiedName(file)) == null) {
+63a71,74
+> 		// try file directly, to get IO/Parse exceptions, if any.
+> 		Reader r = new StreamConverter().toContentsReader(file);
+> 		loadXpandResources(new Reader[] { r }, fullyQualifiedName);
+> 		//
+65c76,89
+< 		return super.loadXpandResource(fullyQualifiedName);
+---
+> 		try {
+> 			return loadXpandThroughCache(fullyQualifiedName);
+> 		} catch (FileNotFoundException ex) {
+> 			return null;	//Missing resource is an anticipated situation, not a error that should be handled
+> 		}
+> 	}
+> 
+> 	@Override
+> 	protected void handleParserException(ParserException ex) {
+> 		// may get here only when some referenced template/xtend file is
+> 		// broken. Since it's expected to get compiled anyway (either prior
+> 		// to compilation of its use or afterwards), error messages should get
+> 		// into problems view sooner or later.
+> 		Activator.logWarn(ex.getClass().getSimpleName() + ":" + ex.getResourceName());
+79,99d102
+< 	protected Reader resolve(String fqn, String ext) throws IOException {
+< 		IPath fp = new Path(fqn.replaceAll(SyntaxConstants.NS_DELIM, "/")).addFileExtension(ext);
+< 		IResource r = null;
+< 		for (IPath p : getResolutions(fp)) {
+< 			r = contextProject.findMember(p);
+< 			if (r != null) {
+< 				break;
+< 			}
+< 		}
+< 		if (false == r instanceof IFile) {
+< 			throw new FileNotFoundException(fp.toString());
+< 		}
+< 		try {
+< 			return new StreamConverter().toContentsReader((IFile) r);
+< 		} catch (CoreException ex) {
+< 			IOException wrap = new IOException(ex.getStatus().getMessage());
+< 			wrap.initCause(ex);
+< 			throw wrap;
+< 		}
+< 	}
+< 
+155,158c158,160
+< 		IPath[] configured = getConfiguredRoots();
+< 		IPath[] rv = new IPath[configured.length];
+< 		for (int i = 0; i < configured.length; i++) {
+< 			rv[i] = configured[i].append(p);
+---
+> 		IPath[] rv = new IPath[myConfiguredRoots.length];
+> 		for (int i = 0; i < myConfiguredRoots.length; i++) {
+> 			rv[i] = myConfiguredRoots[i].append(p);
+162,165d163
+< 	private IPath[] getConfiguredRoots() {
+< 		return myConfiguredRoots;
+< 	}
+< 
+167c165
+< 		for (IPath nextRoot : getConfiguredRoots()) {
+---
+> 		for (IPath nextRoot : myConfiguredRoots) {
+181c179
+< 	private String toFullyQualifiedName(IPath filePath) {
+---
+> 	private static String toFullyQualifiedName(IPath filePath) {

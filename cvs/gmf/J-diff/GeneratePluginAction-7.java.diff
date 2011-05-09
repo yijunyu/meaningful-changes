@@ -1,0 +1,83 @@
+20a21
+> import org.eclipse.core.runtime.Platform;
+44a46,47
+> import org.eclipse.swt.events.SelectionEvent;
+> import org.eclipse.swt.events.SelectionListener;
+80,87c83,84
+< 		StandaloneGenerator.Config config = new StandaloneGenerator.ConfigImpl(pluginId, pluginId, false);
+< 		FigureQualifiedNameSwitch fqnSwitch;
+< 		if (dialog.isUseRuntimeFigures()) {
+< 			fqnSwitch = new RuntimeFQNSwitch();
+< 		} else {
+< 			fqnSwitch = new RuntimeLiteFQNSwitch();
+< 		}
+< 		final StandaloneGenerator generator = new StandaloneGenerator(input, config, fqnSwitch);
+---
+> 		StandaloneGenerator.Config config = new StandaloneGenerator.ConfigImpl(pluginId, pluginId, dialog.isUseMapMode());
+> 		final StandaloneGenerator generator = new StandaloneGenerator(input, config, dialog.getFigureQualifiedNameSwitch());
+199c196
+< 	private static class StandaloneGeneratorOptionsDialog extends Dialog {
+---
+> 	private static class StandaloneGeneratorOptionsDialog extends FigureGeneratorOptionsDialog {
+202,204d198
+< 	    private Text errorMessageText;
+< 	    private Button useRuntimeFiguresButton;
+< 
+206c200
+< 		private boolean useRuntimeFigures;
+---
+> 		private final boolean shouldWarnLiteVerstionDoesNotSupportMapMode;
+209c203,207
+< 			super(parentShell);
+---
+> 			this(parentShell, initialPluginId, initialUseRuntimeFigures, false, pluginIdValidator);
+> 		}
+> 
+> 		public StandaloneGeneratorOptionsDialog(Shell parentShell, String initialPluginId, boolean initialUseRuntimeFigures, boolean initialUseMapMode, IInputValidator pluginIdValidator) {
+> 			super(parentShell, "Figure Gallery Generator", initialUseRuntimeFigures, initialUseMapMode);
+215,220c213
+< 			useRuntimeFigures = initialUseRuntimeFigures;
+< 		}
+< 
+< 		protected void configureShell(Shell newShell) {
+< 			super.configureShell(newShell);
+< 			newShell.setText("Figure Gallery Generator");
+---
+> 			shouldWarnLiteVerstionDoesNotSupportMapMode = Platform.getBundle("org.eclipse.gmf.codegen.lite") != null;
+223,224c216
+< 		protected Control createDialogArea(Composite parent) {
+< 			Composite result = (Composite) super.createDialogArea(parent);
+---
+> 		protected void createControls(Composite result) {
+232d223
+< 	        label.setFont(parent.getFont());
+241,249c232
+< 	        useRuntimeFiguresButton = new Button(result, SWT.CHECK);
+< 	        useRuntimeFiguresButton.setText("Utilize enhanced features of GMF runtime");
+< 	        useRuntimeFiguresButton.setSelection(useRuntimeFigures);
+< 	        errorMessageText = new Text(result, SWT.READ_ONLY);
+< 	        errorMessageText.setLayoutData(new GridData(GridData.GRAB_HORIZONTAL
+< 	                | GridData.HORIZONTAL_ALIGN_FILL));
+< 	        errorMessageText.setBackground(errorMessageText.getDisplay()
+< 	                .getSystemColor(SWT.COLOR_WIDGET_BACKGROUND));
+< 			return result;
+---
+> 			super.createControls(result);
+262,267c245,247
+< 	    public void setErrorMessage(String errorMessage) {
+< 	        errorMessageText.setText(errorMessage == null ? "" : errorMessage); //$NON-NLS-1$
+< 	        errorMessageText.getParent().update();
+< 	        Control button = getButton(IDialogConstants.OK_ID);
+< 	        if (button != null) {
+< 				button.setEnabled(errorMessage == null);
+---
+> 	    protected void warnLiteVerstionDoesNotSupportMapMode() {
+> 	    	if (shouldWarnLiteVerstionDoesNotSupportMapMode) {
+> 	    		super.warnLiteVerstionDoesNotSupportMapMode();
+272d251
+< 	    	useRuntimeFigures = useRuntimeFiguresButton.getSelection();
+280,283d258
+< 
+< 	    public boolean isUseRuntimeFigures() {
+< 	    	return useRuntimeFigures;
+< 	    }

@@ -1,0 +1,156 @@
+2,2c2,2
+<  * Copyright (c) 2006 Eclipse.org
+---
+>  * Copyright (c) 2006, 2007 Eclipse.org
+13a14,16
+> import java.util.HashSet;
+> import java.util.Set;
+> 
+14a18,19
+> import org.eclipse.core.resources.IProject;
+> import org.eclipse.core.resources.ProjectScope;
+15a21,21
+> import org.eclipse.core.runtime.Platform;
+27a34,37
+> 	private static final String PREF_KEY = "gmf_dashboard"; //$NON-NLS-1$
+> 
+> 	private static final String OPTION_PREFIX = "option_"; //$NON-NLS-1$
+> 
+51a62,64
+> 	private Set<String> enabledOptions;
+> 
+> 	private IProject project;
+52a267,269
+> 	}
+> 
+> 	private void savePreferences(Preferences prefs) {
+52,52c266,266
+< 	private Preferences prefs;
+---
+> 		savePreferences(prefs);
+54a67,67
+> 		enabledOptions = new HashSet<String>();
+56a70,76
+> 	public DashboardState(IProject project) {
+> 		this();
+> 		this.project = project;
+> 		Preferences prefs = getPreferences();
+> 		if (prefs != null) {
+> 			readOptions(prefs);
+> 			dm = read(prefs, DM_KEY);
+57,59d69
+< 	public DashboardState(Preferences prefs) {
+< 		this.prefs = prefs;
+< 		dm = read(DM_KEY);
+60,60c77,77
+< 		dgm = read(DGM_KEY);
+---
+> 			dgm = read(prefs, DGM_KEY);
+61,61c78,78
+< 		gdm = read(GDM_KEY);
+---
+> 			gdm = read(prefs, GDM_KEY);
+62,62c79,79
+< 		tdm = read(TDM_KEY);
+---
+> 			tdm = read(prefs, TDM_KEY);
+63,63c80,80
+< 		mm = read(MM_KEY);
+---
+> 			mm = read(prefs, MM_KEY);
+64a82,82
+> 		}
+64,64c81,81
+< 		gm = read(GM_KEY);
+---
+> 			gm = read(prefs, GM_KEY);
+184a203,216
+> 	public boolean getOption(String name) {
+> 		return enabledOptions.contains(name);
+> 	}
+> 
+> 	public void setOption(String name, boolean value) {
+> 		if (name == null) {
+> 			throw new IllegalArgumentException();
+> 		}
+> 		if (value) {
+> 			enabledOptions.add(name);
+> 		} else {
+> 			enabledOptions.remove(name);
+> 		}
+> 		Preferences prefs = getPreferences();
+185,185d202
+< 	private URI read(String key) {
+186a257,257
+> 		if (project == null) {
+186a218,224
+> 			return;
+> 		}
+> 		String key = OPTION_PREFIX + name;
+> 		if (value) {
+> 			prefs.put(key, "*"); //$NON-NLS-1$
+> 		} else {
+> 			prefs.remove(key);
+187a259,259
+> 		}
+187,187c258,258
+< 			return null;
+---
+> 			return;
+188a226,242
+> 		savePreferences(prefs);
+> 	}
+> 
+> 	private void readOptions(Preferences prefs) {
+> 		try {
+> 			for (String key : prefs.keys()) {
+> 				if (key.startsWith(OPTION_PREFIX)) {
+> 					enabledOptions.add(key.substring(OPTION_PREFIX.length()));
+> 				}
+> 			}
+> 		} catch (BackingStoreException e) {
+> 			IStatus status = Plugin.createError("Unable to read options", e);
+> 			Plugin.getDefault().getLog().log(status);
+> 		}
+> 	}
+> 
+> 	private URI read(Preferences prefs, String key) {
+206a264,264
+> 		Preferences prefs = getPreferences();
+214a277,312
+> 
+> 	private Preferences getPreferences() {
+> 		if (project == null) {
+> 			return null;
+> 		}
+> 		Preferences node = getExistingPreferences();
+> 		if (node != null) {
+> 			return node;
+> 		}
+> 		return new ProjectScope(project).getNode(Plugin.getPluginID()).node(PREF_KEY);
+> 	}
+> 
+> 	private Preferences getExistingPreferences() {
+> 		if (project == null) {
+> 			return null;
+> 		}
+> 		Preferences node = Platform.getPreferencesService().getRootNode().node(ProjectScope.SCOPE);
+> 		try {
+> 			if (!node.nodeExists(project.getName())) {
+> 				return null;
+> 			}
+> 			node = node.node(project.getName());
+> 			if (!node.nodeExists(Plugin.getPluginID())) {
+> 				return null;
+> 			}
+> 			node = node.node(Plugin.getPluginID());
+> 			if (!node.nodeExists(PREF_KEY)) {
+> 				return null;
+> 			}
+> 			return node.node(PREF_KEY);
+> 		} catch (BackingStoreException e) {
+> 			IStatus status = Plugin.createError("Unable to read state", e);
+> 			Plugin.getDefault().getLog().log(status);
+> 		}
+> 		return null;
+> 	}

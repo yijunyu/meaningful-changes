@@ -1,0 +1,74 @@
+8a9
+> import java.util.ArrayList;
+9a11,15
+> import java.util.Collections;
+> import java.util.HashSet;
+> import java.util.Iterator;
+> import java.util.List;
+> import java.util.Set;
+11a18
+> import org.eclipse.emf.codegen.ecore.genmodel.GenFeature;
+20a28
+> import org.eclipse.gmf.codegen.gmfgen.FeatureModelFacet;
+22a31
+> import org.eclipse.gmf.codegen.gmfgen.GenLink;
+24a34
+> import org.eclipse.gmf.codegen.gmfgen.TypeLinkModelFacet;
+364a375,431
+> 
+> 	public boolean needsGraphicalNodeEditPolicy() {
+> 		// XXX not good to collect all links just to answer this question.
+> 		// Investigate better way to find this out
+> 		return getModelFacet() != null && !getReorientedIncomingGenLinks().isEmpty();
+> 	}
+> 
+> 	public List<GenLink> getReorientedIncomingGenLinks() {
+> 		if (getModelFacet() == null) {
+> 			return Collections.emptyList();
+> 		}
+> 		// [artem] XXX not sure there might be two equal links in the genDiagram.links
+> 		// but 'set' was there in the original template. legacy is the only reason i kept it,
+> 		Set<GenLink> reorientedLinks = new HashSet<GenLink>();
+> 		for (Iterator links = getDiagram().getLinks().iterator(); links.hasNext(); ) {
+> 			GenLink genLink = (GenLink) links.next();
+> 			if (!genLink.isViewDirectionAlignedWithModel() || genLink.getModelFacet() == null) {
+> 				continue;
+> 			}
+> 			GenClass incomingClass;
+> 			GenClass outgoingClass;
+> 			if (genLink.getModelFacet() instanceof TypeLinkModelFacet) {
+> 				TypeLinkModelFacet modelFacet = (TypeLinkModelFacet) genLink.getModelFacet();
+> 				outgoingClass = modelFacet.getSourceMetaFeature() == null
+> 					? modelFacet.getContainmentMetaFeature().getGenClass()
+> 					: modelFacet.getSourceMetaFeature().getTypeGenClass();
+> 				incomingClass = modelFacet.getTargetMetaFeature().getTypeGenClass();
+> 			} else if (genLink.getModelFacet() instanceof FeatureModelFacet) {
+> 				GenFeature metaFeature = ((FeatureModelFacet) genLink.getModelFacet()).getMetaFeature();
+> 				outgoingClass = metaFeature.getGenClass();
+> 				incomingClass = metaFeature.getTypeGenClass();
+> 			} else {
+> 				continue;
+> 			}
+> 			GenClass nodeMetaClass = getModelFacet().getMetaClass();
+> 			boolean canBeSource = outgoingClass.getEcoreClass().isSuperTypeOf(nodeMetaClass.getEcoreClass());
+> 			boolean canBeTarget = incomingClass.getEcoreClass().isSuperTypeOf(nodeMetaClass.getEcoreClass());
+> /*
+>  * This logic is currently alligned with the logic in NodeItemSemanticEditPolicy.javajet i.e.:
+>  *
+>  * - we do not perform link rotation if this link could be drawn from instance of this EP 
+>  *   to the instance of this EP.
+>  *
+>  * - if link could be created in "opposite" direction (genLink.isIncomingCreationAllowed() == true)
+>  *   and this EP could be only a source of the link then we should reverse link at the end of link 
+>  *   creation
+>  *
+>  */
+> 			if (canBeSource && canBeTarget) {
+> 				continue;
+> 			}
+> 			if (genLink.isIncomingCreationAllowed() && canBeSource) {
+> 				reorientedLinks.add(genLink);
+> 			}
+> 		}
+> 		return new ArrayList<GenLink>(reorientedLinks);
+> 	}

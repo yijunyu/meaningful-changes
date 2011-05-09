@@ -1,0 +1,111 @@
+2c2
+<  * Copyright (c) 2002, 2007 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2008 IBM Corporation and others.
+30d29
+< import org.eclipse.gmf.runtime.diagram.ui.editparts.GroupEditPart;
+161,181c160,161
+< 		if (selectedItems.isEmpty()) {
+<  			return false;
+<  		}
+<  		for (Iterator i = selectedItems.iterator(); i.hasNext();) {
+<  			Object selectedObject = i.next(); 	
+<  			
+<  			if (!(selectedObject instanceof IGraphicalEditPart)){
+<  				continue;
+<  			}
+<  				
+<  			//If the selectedObject does not have a semanticElement,
+<  			//the canonical check is irrelevant.  The delete from
+<  			//diagram should apply.
+<  			IGraphicalEditPart gep = (IGraphicalEditPart)selectedObject;
+<  			Object model = gep.getModel();
+< 			if (!(model instanceof View)){
+<  				continue;
+< 			}
+< 
+<             EObject element = ((View)model).getElement();
+<  			if (element == null || element instanceof View){
+---
+> 	    boolean isCanonical = false;
+>         if ( !selectedItems.isEmpty()) {
+183,188c163,171
+<  				if (selectedObject instanceof ConnectionEditPart) {
+<  					if (!((ConnectionEditPart) selectedObject).isSemanticConnection()) {
+<  						// not a reference connection (which has no element, but whose canonical-ness should be checked)
+<  						continue;
+<  					}
+<  				} else {
+---
+>             for  (Iterator si = selectedItems.iterator(); si.hasNext() && !isCanonical;) {
+>                 Object selected = si.next();   
+>                 if ( selected instanceof EditPart ) {
+>                     EditPart child = (EditPart)selected;
+>                     View view = (View)child.getAdapter(View.class);
+> 
+>                     if (  view == null 
+>                             || view.getElement() == null
+>                             || view.getElement() instanceof View ) {
+191a175
+>                         isCanonical = false;
+193a178,182
+>                     if (child instanceof ConnectionEditPart) {
+>                         ConnectionEditPart connection = (ConnectionEditPart)child;
+>                         isCanonical = ( !connection.isSemanticConnection()
+>                                 || (isCanonical(connection.getSource())
+>                                         && isCanonical(connection.getTarget())) );
+195,204d183
+<  			//Check if container of connection is canonical. 
+<  			//A connection's container is not necessarily the connection editPart's parent.
+<  			if (selectedObject instanceof ConnectionEditPart){
+<  				ConnectionEditPart ePart = (ConnectionEditPart)selectedObject;
+<  				EditPart sEditPart = ePart.getSource();
+<                 EditPart tEditPart = ePart.getTarget();
+<  				if (isCanonical(sEditPart) && isCanonical(tEditPart))
+<  					return true;
+<  			}
+<  			//Check if container of shape is canonical.
+206,207c185
+<  				if (isCanonical(gep))
+< 					return true;
+---
+>                         isCanonical = isCanonical(child);
+210d187
+<  		return false;		
+212,221d188
+< 	
+< 	/**
+< 	 * @param gep
+< 	 * @return
+< 	 */
+< 	private boolean isCanonical(EditPart gep) {
+< 		if (gep instanceof IGraphicalEditPart){
+< 			return isCanonical((IGraphicalEditPart)gep);
+< 		}
+< 		return false;
+222a190,191
+>         return isCanonical;
+> 
+223a193
+> 	}
+229,234c199,202
+< 	private boolean isCanonical(IGraphicalEditPart gep) {
+< 		EditPart parent = gep.getParent();
+<         while (parent instanceof GroupEditPart) {
+<             parent = parent.getParent();
+<         }
+< 		if (parent instanceof IGraphicalEditPart) {
+---
+> 	private boolean isCanonical(EditPart ep) {
+> 	    EObject eObject = (EObject)ep.getAdapter(EObject.class);
+>         EditPart parent = ep.getParent();
+>         if ( eObject != null && parent != null ) { //sanity checks
+236,239c204,206
+< 			if ( cep != null ) {
+< 				if (cep.isEnabled())
+< 					return true;
+< 			}
+---
+>             return cep != null
+>                 && cep.isEnabled()
+>                 && cep.canCreate(eObject);

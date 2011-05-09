@@ -1,0 +1,65 @@
+3c3,9
+< import java.util.Collection;
+---
+> import java.util.ArrayList;
+> 
+> import java.util.Iterator;
+> 
+> import java.util.List;
+> 
+> import org.eclipse.core.resources.IFile;
+11c17,19
+< import org.eclipse.gmf.runtime.common.core.command.AbstractCommand;
+---
+> import org.eclipse.emf.ecore.resource.Resource;
+> 
+> import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+14a23,24
+> import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+> 
+17c27
+< public abstract class EditElementCommand extends AbstractCommand {
+---
+> public abstract class EditElementCommand extends AbstractTransactionalCommand {
+23c33
+<         super (label);
+---
+>         super (request.getEditingDomain (), label, getAffectedFiles (request));
+28,30c38,49
+<     public boolean isExecutable () {
+<         if (getEClass () != null) {
+<             return getEClass ().isSuperTypeOf (getEClassToEdit ());
+---
+>     protected static List getAffectedFiles (IEditCommandRequest request) {
+>         List result = new ArrayList ();
+>         List elements = request.getElementsToEdit ();
+>         if (elements != null) {
+>             for (Iterator i = elements.iterator ();
+>             i.hasNext ();) {
+>                 Resource resource = ((EObject) i.next ()).eResource ();
+>                 if (resource != null) {
+>                     IFile file = WorkspaceSynchronizer.getFile (resource);
+>                     if (file != null) {
+>                         result.add (file);
+>                     }
+32d50
+<         return true;
+34,36c52,53
+< 
+<     public boolean isUndoable () {
+<         return true;
+---
+>         }
+>         return result;
+39c56,59
+<     public boolean isRedoable () {
+---
+>     public boolean canExecute () {
+>         if (getEClass () != null) {
+>             return getEClass ().isSuperTypeOf (getEClassToEdit ());
+>         }
+71,74d90
+<     public Collection getAffectedObjects () {
+<         return request.getElementsToEdit ();
+<     }
+< 

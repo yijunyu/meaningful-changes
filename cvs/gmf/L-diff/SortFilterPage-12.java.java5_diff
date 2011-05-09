@@ -1,0 +1,366 @@
+4a5,6
+> import java.util.Arrays;
+> 
+21,22d22
+< import org.eclipse.gef.commands.CompoundCommand;
+< 
+33,34d32
+< import org.eclipse.gmf.runtime.diagram.ui.internal.dialogs.sortfilter.SortFilterRootPreferenceNode;
+< 
+71,72d68
+< import org.eclipse.jface.viewers.LabelProvider;
+< 
+149c145
+<     private LabelProvider labelProvider = null;
+---
+>     private SortFilterLabelProvider labelProvider = null;
+153,154d148
+<     private boolean sortChanged = false;
+<     private boolean filterChanged = false;
+162a157,159
+>     private List elementCollectionBackUp = Collections.EMPTY_LIST;
+>     private Sorting _sortingBackUp = _sorting;
+>     private Filtering _filteringBackUp = _filtering;
+199c196
+<             if (_filtering == Filtering.AUTOMATIC_LITERAL) filterItemsFromList ();
+---
+>             if (_filtering == Filtering.AUTOMATIC_LITERAL) refreshList ();
+301c298
+<         initFilterLists ();
+---
+>         populateFilterLists ();
+360a358
+>         updateFilteringKeysFromControls ();
+362c360,376
+<             filterItemsFromList ();
+---
+>             refreshList ();
+>         } else if (pageType == ROOT_PAGE) {
+>             PreferenceManager preferenceManager = ((SortFilterDialog) getContainer ()).getPreferenceManager ();
+>             Iterator nodes = preferenceManager.getElements (PreferenceManager.PRE_ORDER).iterator ();
+>             while (nodes.hasNext ()) {
+>                 PreferenceNode node = (PreferenceNode) nodes.next ();
+>                 SortFilterPage page = (SortFilterPage) node.getPage ();
+>                 if (page == this) {
+>                     continue;
+>                 }
+>                 if (Arrays.equals (filterStrings, page.getFilterList ())) {
+>                     page._filteringKeys = new ArrayList (_filteringKeys.size ());
+>                     page._filteringKeys.addAll (_filteringKeys);
+>                     page._filtering = _filtering;
+>                     page.populateFilterLists ();
+>                     page.refreshList ();
+>                     page.updateApplyButton ();
+364c378,381
+<         filterChanged = true;
+---
+>             }
+>         }
+> 
+>         updateApplyButton ();
+377c394
+<     void filterItemsFromList () {
+---
+>     private void updateFilteringKeysFromControls () {
+379,406d395
+<         String [] nontheFilterStrings = filterList.getItems ();
+<         TableItem [] tableItems = tableViewer.getTable ().getItems ();
+<         int filterColumn = findColumnIndexFromProperty (filterAppliesTo);
+<         if (filterColumn == - 1) return;
+< 
+<         for (int i = 0;
+<         i < theFilterStrings.length; i ++) {
+<             for (int j = 0;
+<             j < tableItems.length; j ++) {
+<                 String cell = tableItems [j].getText (filterColumn);
+<                 if (theFilterStrings [i].equals (cell)) {
+<                     ((SortFilterElement) tableViewer.getElementAt (j)).setVisible (false);
+<                     tableViewer.update (new Object [] {tableViewer.getElementAt (j)}, new String [] {getColumnProperties () [0]});
+<                 }
+<             }
+<         }
+<         for (int i = 0;
+<         i < nontheFilterStrings.length; i ++) {
+<             for (int j = 0;
+<             j < tableItems.length; j ++) {
+<                 String cell = tableItems [j].getText (filterColumn);
+<                 if (nontheFilterStrings [i].equals (cell)) {
+<                     ((SortFilterElement) tableViewer.getElementAt (j)).setVisible (true);
+<                     tableViewer.update (new Object [] {tableViewer.getElementAt (j)}, new String [] {getColumnProperties () [0]});
+<                 }
+<             }
+<         }
+<         filterChanged = true;
+420c409,420
+<         if (getApplyButton () != null) getApplyButton ().setEnabled (sortChanged || filterChanged);
+---
+>     }
+> 
+>     void refreshList () {
+>         int filterColumn = findColumnIndexFromProperty (filterAppliesTo);
+>         if (filterColumn == - 1) return;
+> 
+>         for (int j = 0;
+>         j < elementCollection.size (); j ++) {
+>             String cell = labelProvider.getColumnText (elementCollection.get (j), filterColumn);
+>             ((SortFilterElement) elementCollection.get (j)).setVisible (! _filteringKeys.contains (cell));
+>         }
+>         if (tableViewer != null) tableViewer.refresh ();
+496a497,498
+>         elementCollection = newModel;
+>         createBackUp ();
+550c552
+<         List model = (ArrayList) ((ArrayList) tableViewer.getInput ()).clone ();
+---
+>         List model = (ArrayList) ((ArrayList) tableViewer.getInput ());
+558,559c560,561
+<         tableViewer.setInput (model);
+<         _sorting = Sorting.MANUAL_LITERAL;
+---
+>         tableViewer.refresh ();
+>         _sorting = isSameOrder (elementCollection, baseElements) ? Sorting.NONE_LITERAL : Sorting.MANUAL_LITERAL;
+562,563c564
+<         sortChanged = true;
+<         getApplyButton ().setEnabled (sortChanged || filterChanged);
+---
+>         updateApplyButton ();
+570c571
+<         List model = (ArrayList) ((ArrayList) tableViewer.getInput ()).clone ();
+---
+>         List model = (ArrayList) ((ArrayList) tableViewer.getInput ());
+579,580c580,581
+<         tableViewer.setInput (model);
+<         _sorting = Sorting.MANUAL_LITERAL;
+---
+>         tableViewer.refresh ();
+>         _sorting = isSameOrder (elementCollection, baseElements) ? Sorting.NONE_LITERAL : Sorting.MANUAL_LITERAL;
+583,584c584,596
+<         sortChanged = true;
+<         getApplyButton ().setEnabled (sortChanged || filterChanged);
+---
+>         updateApplyButton ();
+>     }
+> 
+>     private boolean isSameOrder (List elements1, List elements2) {
+>         Iterator itr1 = elements1.iterator ();
+>         Iterator itr2 = elements2.iterator ();
+>         while (itr1.hasNext () && itr2.hasNext ()) {
+>             SortFilterElement element1 = (SortFilterElement) itr1.next ();
+>             SortFilterElement element2 = (SortFilterElement) itr2.next ();
+>             if (! element1.getData ().equals (element2.getData ())) return false;
+> 
+>         }
+>         return ! itr1.hasNext () && ! itr2.hasNext ();
+637d648
+<         Object [] columnNames = tableViewer.getColumnProperties ();
+639,640c650,651
+<         i < columnNames.length; i ++) {
+<             if (((String) columnNames [i]).equals (property)) return i;
+---
+>         i < collectionColumns.size (); i ++) {
+>             if (((SortFilterCollectionColumn) collectionColumns.get (i)).getCaption ().equals (property)) return i;
+653c664,668
+<         baseElements = updatedSortFilterElements;
+---
+>         baseElements = new ArrayList (updatedSortFilterElements.size ());
+>         for (Iterator itr = updatedSortFilterElements.iterator ();
+>         itr.hasNext ();) {
+>             baseElements.add (new SortFilterElement (((SortFilterElement) itr.next ()).getData ()));
+>         }
+695a711
+>         createBackUp ();
+704,712d719
+<         if (filterStrings != null) {
+<             String [] filterItems = filters.getItems ();
+<             for (int i = 0;
+<             i < filterItems.length; i ++) {
+<                 filterList.add (filterItems [i]);
+<                 filters.remove (filterItems [i]);
+<                 filterChanged = true;
+<             }
+<         }
+714d720
+<         _filteringKeys = Collections.EMPTY_LIST;
+716,725c722,725
+<         TableItem [] tableItems = tableViewer.getTable ().getItems ();
+<         for (int j = 0;
+<         j < tableItems.length; j ++) {
+<             if (! ((SortFilterElement) tableViewer.getElementAt (j)).isVisible ()) {
+<                 filterChanged = true;
+<                 ((SortFilterElement) tableViewer.getElementAt (j)).setVisible (true);
+<                 tableViewer.update (new Object [] {tableViewer.getElementAt (j)}, new String [] {getColumnProperties () [0]});
+<             }
+<             if (! ((SortFilterElement) tableViewer.getElementAt (j)).equals (baseElements.get (j))) {
+<                 sortChanged = true;
+---
+>         if (filterStrings != null) {
+>             if (! _filteringKeys.isEmpty ()) {
+>                 _filteringKeys = Collections.EMPTY_LIST;
+>                 populateFilterLists ();
+728,729d727
+<         if (tableViewer.getSorter () != null) sortChanged = true;
+< 
+739,740c737,744
+<         tableViewer.setInput (baseElements);
+<         getApplyButton ().setEnabled (sortChanged || filterChanged);
+---
+>         List input = (List) tableViewer.getInput ();
+>         input.clear ();
+>         for (int i = 0;
+>         i < baseElements.size (); i ++) {
+>             input.add (new SortFilterElement (((SortFilterElement) baseElements.get (i)).getData ()));
+>         }
+>         tableViewer.refresh ();
+>         updateApplyButton ();
+744,746c748,751
+<         Command filteringCommand = getApplyCommand ();
+<         if (filteringCommand != null && filteringCommand.canExecute ()) {
+<             editPart.getRoot ().getViewer ().getEditDomain ().getCommandStack ().execute (filteringCommand);
+---
+>         Command sortAndFilteringCommand = getApplyCommand ();
+>         if (sortAndFilteringCommand != null && sortAndFilteringCommand.canExecute ()) {
+>             editPart.getRoot ().getViewer ().getEditDomain ().getCommandStack ().execute (sortAndFilteringCommand);
+>             createBackUp ();
+747a753,759
+>         updateApplyButton ();
+>     }
+> 
+>     public Command getCommand () {
+>         if (isDirty ()) return getApplyCommand ();
+> 
+>         return null;
+751c763,764
+<         if (pageType == CHILD_PAGE) {
+---
+>         Command cmd = UnexecutableCommand.INSTANCE;
+>         if (CHILD_PAGE.equals (pageType)) {
+755,758c768,770
+<                 List model = (ArrayList) tableViewer.getInput ();
+<                 for (int j = 0;
+<                 j < model.size (); j ++) {
+<                     SortFilterElement element = (SortFilterElement) model.get (j);
+---
+>                 for (Iterator itr = elementCollection.iterator ();
+>                 itr.hasNext ();) {
+>                     SortFilterElement element = (SortFilterElement) itr.next ();
+765,768c777,779
+<                 List model = (ArrayList) tableViewer.getInput ();
+<                 for (int i = 0;
+<                 i < model.size (); i ++) {
+<                     SortFilterElement element = (SortFilterElement) model.get (i);
+---
+>                 for (Iterator itr = elementCollection.iterator ();
+>                 itr.hasNext ();) {
+>                     SortFilterElement element = (SortFilterElement) itr.next ();
+782,796c793
+<             sortChanged = false;
+<             filterChanged = false;
+<             getApplyButton ().setEnabled (sortChanged || filterChanged);
+<             return editPart.getCommand (request);
+<         } else if (pageType == ROOT_PAGE) {
+<             PreferenceManager preferenceManager = ((SortFilterDialog) getContainer ()).getPreferenceManager ();
+<             Iterator nodes = preferenceManager.getElements (PreferenceManager.PRE_ORDER).iterator ();
+<             SortFilterRootPreferenceNode rootNode = null;
+<             CompoundCommand cc = new CompoundCommand (DiagramUIMessages.Command_SortFilterCommand);
+<             while (nodes.hasNext ()) {
+<                 PreferenceNode node = (PreferenceNode) nodes.next ();
+<                 SortFilterPage page = (SortFilterPage) node.getPage ();
+<                 if (page == this) {
+<                     rootNode = (SortFilterRootPreferenceNode) node;
+<                     continue;
+---
+>             cmd = editPart.getCommand (request);
+798,806c795
+<                 ((SortFilterDialog) rootNode.getPreferenceDialog ()).showPage (node);
+<                 if (compareFilters (page.getFilterList ())) {
+<                     page.setFilterCriteria (filters.getItems ());
+<                     page.setCriteria (filterList.getItems ());
+<                     page.filterItemsFromList ();
+<                 }
+<                 cc.add (page.getApplyCommand ());
+<             }
+<             return cc;
+---
+>         return cmd;
+809,813c798,801
+<         return UnexecutableCommand.INSTANCE;
+<     }
+< 
+<     private void initFilterLists () {
+<         if (filterMap != null && ! filterMap.isEmpty ()) {
+---
+>     private void populateFilterLists () {
+>         if (filterMap != null && ! filterMap.isEmpty () && filterList != null && filters != null) {
+>             filterList.removeAll ();
+>             filters.removeAll ();
+888a877
+>             boolean newValue = ((Boolean) value).booleanValue ();
+893d881
+<                 boolean newValue = ((Boolean) value).booleanValue ();
+901d888
+<                         filterChanged = true;
+913d899
+<                 _filtering = Filtering.MANUAL_LITERAL;
+915,916c901,911
+<                 filterChanged = true;
+<                 getApplyButton ().setEnabled (sortChanged || filterChanged);
+---
+>                 _filtering = newValue ? Filtering.NONE_LITERAL : Filtering.MANUAL_LITERAL;
+>                 if (newValue) {
+>                     Iterator itr = elementCollection.iterator ();
+>                     while (itr.hasNext ()) {
+>                         if (! baseElements.contains (itr.next ())) {
+>                             _filtering = Filtering.MANUAL_LITERAL;
+>                             break;
+>                         }
+>                     }
+>                 }
+>                 updateApplyButton ();
+983c978,979
+<                 _tableViewer.setInput (newModel);
+---
+>                 elementCollection.clear ();
+>                 elementCollection.addAll (newModel);
+994,995c990
+<                 sortChanged = true;
+<                 getApplyButton ().setEnabled (sortChanged || filterChanged);
+---
+>                 updateApplyButton ();
+1017,1022c1012,1013
+<     private boolean compareFilters (String [] other) {
+<         if (filterStrings == null || other == null || filterStrings.length != other.length) return false;
+< 
+<         for (int i = 0;
+<         i < filterStrings.length; i ++) {
+<             if (filterStrings [i] != other [i]) return false;
+---
+>     protected void updateApplyButton () {
+>         if (getApplyButton () != null) getApplyButton ().setEnabled (isValid () && isDirty ());
+1025c1016,1019
+<         return true;
+---
+> 
+>     public void createControl (Composite parent) {
+>         super.createControl (parent);
+>         updateApplyButton ();
+1028,1029c1022,1023
+<     public Command getCommand () {
+<         if (filterChanged || sortChanged) return getApplyCommand ();
+---
+>     protected boolean isDirty () {
+>         if (pageType == ROOT_PAGE || _filteringBackUp != _filtering || _sortingBackUp != _sorting) return true;
+1031c1025,1036
+<         return null;
+---
+>         return ! elementCollection.equals (elementCollectionBackUp);
+>     }
+> 
+>     private void createBackUp () {
+>         _filteringBackUp = _filtering;
+>         _sortingBackUp = _sorting;
+>         elementCollectionBackUp = new ArrayList (elementCollection.size ());
+>         for (Iterator itr = elementCollection.iterator ();
+>         itr.hasNext ();) {
+>             SortFilterElement element = (SortFilterElement) itr.next ();
+>             elementCollectionBackUp.add (new SortFilterElement (element.isVisible (), element.getData ()));
+>         }

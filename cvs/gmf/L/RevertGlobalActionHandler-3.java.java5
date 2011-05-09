@@ -1,0 +1,73 @@
+package org.eclipse.gmf.runtime.common.ui.action.global.providers;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.widgets.MessageBox;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.ui.IWorkbenchWindow;
+
+import org.eclipse.ui.PlatformUI;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.ui.action.internal.l10n.ResourceManager;
+
+import org.eclipse.gmf.runtime.common.ui.editors.IRevertiblePart;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.global.AbstractGlobalActionHandler;
+
+import org.eclipse.gmf.runtime.common.ui.services.action.global.IGlobalActionContext;
+
+public class RevertGlobalActionHandler extends AbstractGlobalActionHandler {
+    private final static String CONFIRMATION_DIALOG_TITLE = ResourceManager.getI18NString ("RevertGlobalActionHandler.messageBox.title");
+    private final static String CONFIRMATION_DIALOG_MESSAGE = ResourceManager.getI18NString ("RevertGlobalActionHandler.messageBox.message");
+    private final static String CONFIRMATION_DIALOG_PROMPT = ResourceManager.getI18NString ("RevertGlobalActionHandler.messageBox.prompt");
+
+    public boolean canHandle (IGlobalActionContext context) {
+        IRevertiblePart revertablePart = getRevertablePart (context.getActivePart ());
+        if (revertablePart != null) {
+            return revertablePart.isDirty ();
+        }
+        return false;
+    }
+
+    public ICommand getCommand (IGlobalActionContext context) {
+        IRevertiblePart revertablePart = getRevertablePart (context.getActivePart ());
+        if (revertablePart != null) {
+            if (confirmRevert ()) {
+                revertablePart.doRevertToSaved ();
+            }
+        }
+        return null;
+    }
+
+    private boolean confirmRevert () {
+        IWorkbenchWindow window = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ();
+        if (window != null) {
+            String message = CONFIRMATION_DIALOG_MESSAGE + "\n\n" + CONFIRMATION_DIALOG_PROMPT;
+            MessageBox messageBox = new MessageBox (window.getShell (), SWT.YES | SWT.NO | SWT.CANCEL | SWT.ICON_QUESTION);
+            messageBox.setText (CONFIRMATION_DIALOG_TITLE);
+            messageBox.setMessage (message);
+            if (messageBox.open () == SWT.YES) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private IRevertiblePart getRevertablePart (IWorkbenchPart workbenchPart) {
+        IRevertiblePart revertablePart = null;
+        if (workbenchPart != null) {
+            if (workbenchPart instanceof IRevertiblePart) {
+                revertablePart = (IRevertiblePart) workbenchPart;
+            } else {
+                revertablePart = (IRevertiblePart) workbenchPart.getAdapter (IRevertiblePart.class);
+            }
+        }
+        return revertablePart;
+    }
+
+}
+

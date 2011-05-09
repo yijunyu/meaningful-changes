@@ -1,0 +1,109 @@
+2a3,13
+> import java.lang.reflect.InvocationTargetException;
+> 
+> import org.eclipse.core.runtime.CoreException;
+> 
+> import org.eclipse.core.runtime.IProgressMonitor;
+> 
+> import org.eclipse.emf.ecore.resource.Resource;
+> 
+> import org.eclipse.jface.dialogs.ErrorDialog;
+> 
+> import org.eclipse.jface.operation.IRunnableWithProgress;
+2a23,23
+> import org.eclipse.ui.PartInitException;
+3,3d22
+< import org.eclipse.gmf.runtime.diagram.ui.resources.editor.ide.wizards.EditorCreationWizard;
+6a17,20
+> import org.eclipse.jface.wizard.Wizard;
+> 
+> import org.eclipse.ui.INewWizard;
+> 
+9,9d22
+< public class GMFGraphCreationWizard extends EditorCreationWizard {
+10a25,40
+> import org.eclipse.ui.actions.WorkspaceModifyOperation;
+> 
+> public class GMFGraphCreationWizard extends Wizard implements INewWizard {
+>     private IWorkbench workbench;
+>     protected IStructuredSelection selection;
+>     protected GMFGraphCreationWizardPage diagramModelFilePage;
+>     protected GMFGraphCreationWizardPage domainModelFilePage;
+>     protected Resource diagram;
+>     private boolean openNewlyCreatedDiagramEditor = true;
+> 
+>     public IWorkbench getWorkbench () {
+>         return workbench;
+>     }
+> 
+>     public IStructuredSelection getSelection () {
+>         return selection;
+11,14d24
+<     public void addPages () {
+<         super.addPages ();
+<         if (page == null) {
+<             page = new GMFGraphCreationWizardPage (getWorkbench (), getSelection ());
+15a42,52
+> 
+>     public final Resource getDiagram () {
+>         return diagram;
+>     }
+> 
+>     public final boolean isOpenNewlyCreatedDiagramEditor () {
+>         return openNewlyCreatedDiagramEditor;
+>     }
+> 
+>     public void setOpenNewlyCreatedDiagramEditor (boolean openNewlyCreatedDiagramEditor) {
+>         this.openNewlyCreatedDiagramEditor = openNewlyCreatedDiagramEditor;
+16,16d41
+<         addPage (page);
+19a56,56
+>         this.workbench = workbench;
+20,20c57,57
+<         super.init (workbench, selection);
+---
+>         this.selection = selection;
+25a63,105
+>     public void addPages () {
+>         diagramModelFilePage = new GMFGraphCreationWizardPage ("DiagramModelFile", getSelection (), "gmfgraph_diagram");
+>         diagramModelFilePage.setTitle ("Create GMFGraph Diagram");
+>         diagramModelFilePage.setDescription ("Select file that will contain diagram model.");
+>         addPage (diagramModelFilePage);
+>         domainModelFilePage = new GMFGraphCreationWizardPage ("DomainModelFile", getSelection (), "gmfgraph");
+>         domainModelFilePage.setTitle ("Create GMFGraph Diagram");
+>         domainModelFilePage.setDescription ("Select file that will contain domain model.");
+>         addPage (domainModelFilePage);
+>     }
+> 
+>     public boolean performFinish () {
+>         IRunnableWithProgress op = new WorkspaceModifyOperation (null) {
+> 
+>             protected void execute (IProgressMonitor monitor) throws CoreException, InterruptedException {
+>                 diagram = GMFGraphDiagramEditorUtil.createDiagram (diagramModelFilePage.getURI (), domainModelFilePage.getURI (), monitor);
+>                 if (isOpenNewlyCreatedDiagramEditor () && diagram != null) {
+>                     try {
+>                         GMFGraphDiagramEditorUtil.openDiagram (diagram);
+>                     } catch (PartInitException e) {
+>                         ErrorDialog.openError (getContainer ().getShell (), "Error opening diagram editor", null, e.getStatus ());
+>                     }
+>                 }
+>             }
+> 
+>         }
+> 
+>         ;
+>         try {
+>             getContainer ().run (false, true, op);
+>         } catch (InterruptedException e) {
+>             return false;
+>         } catch (InvocationTargetException e) {
+>             if (e.getTargetException () instanceof CoreException) {
+>                 ErrorDialog.openError (getContainer ().getShell (), "Creation Problems", null, ((CoreException) e.getTargetException ()).getStatus ());
+>             } else {
+>                 GMFGraphDiagramEditorPlugin.getInstance ().logError ("Error creating diagram", e.getTargetException ());
+>             }
+>             return false;
+>         }
+>         return diagram != null;
+>     }
+> 

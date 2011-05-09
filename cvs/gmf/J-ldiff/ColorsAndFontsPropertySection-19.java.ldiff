@@ -1,0 +1,158 @@
+2,2c2,2
+<  * Copyright (c) 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2005, 2006 IBM Corporation and others.
+25a26,26
+> import org.eclipse.gmf.runtime.diagram.ui.l10n.DiagramUIMessages;
+39a41,42
+> import org.eclipse.swt.accessibility.AccessibleAdapter;
+> import org.eclipse.swt.accessibility.AccessibleEvent;
+236a240,244
+>         fontBoldButton.getAccessible().addAccessibleListener(new AccessibleAdapter() {
+>             public void getName(AccessibleEvent e) {
+>                 e.result = DiagramUIMessages.PropertyDescriptorFactory_FontStyle_Bold;
+>             }
+>         });
+240a249,253
+>         fontItalicButton.getAccessible().addAccessibleListener(new AccessibleAdapter() {
+>             public void getName(AccessibleEvent e) {
+>                 e.result = DiagramUIMessages.PropertyDescriptorFactory_FontStyle_Italic;
+>             }
+>         });
+259a273,277
+>         fontColorButton.getAccessible().addAccessibleListener(new AccessibleAdapter() {
+>             public void getName(AccessibleEvent e) {
+>                 e.result = DiagramUIMessages.PropertyDescriptorFactory_FontColor;
+>             }
+>         });
+260,260d272
+< 
+271a289,293
+>         lineColorButton.getAccessible().addAccessibleListener(new AccessibleAdapter() {
+>             public void getName(AccessibleEvent e) {
+>                 e.result = DiagramUIMessages.PropertyDescriptorFactory_LineColor;
+>             }
+>         });
+272,272d288
+< 
+281a303,307
+> 		fillColorButton.getAccessible().addAccessibleListener(new AccessibleAdapter() {
+>             public void getName(AccessibleEvent e) {
+>                 e.result = DiagramUIMessages.PropertyDescriptorFactory_FillColor;
+>             }
+>         });
+282,282d302
+< 
+342,342c367,367
+< 	 *            the image to draw overlay on the button after the new
+---
+>      *            the image to draw overlay on the button after the new color is
+343,343c368,368
+< 	 *            color is set
+---
+>      *            set
+344a370,372
+>      * @deprecated The preference is not being retrieved from the correct
+>      *             preference store so it is not needed, use the other
+>      *             <code>changeColor</code> method.
+349a378,399
+>         return changeColor(event, button, propertyId, commandName,
+>             imageDescriptor);
+>     }
+>     
+>     /**
+>      * @param event -
+>      *            selection event
+>      * @param button -
+>      *            event source
+>      * @param propertyId -
+>      *            id of the property
+>      * @param commandName -
+>      *            name of the command
+>      * @param imageDescriptor -
+>      *            the image to draw overlay on the button after the new color is
+>      *            set
+>      * @return - new RGB color, or null if none selected
+>      */
+>     protected RGB changeColor(SelectionEvent event, Button button,
+>             final String propertyId, String commandName,
+>             ImageDescriptor imageDescriptor) {
+> 
+351,351c401,401
+< 			.getShell(), preferenceId, IDialogConstants.BUTTON_BAR_HEIGHT);
+---
+>             .getShell(), IDialogConstants.BUTTON_BAR_HEIGHT);
+356a408,409
+>             return null;
+>         }
+356,356c407,407
+< 		if (popup.getSelectedColor() != null) {
+---
+>         if (popup.getSelectedColor() == null && !popup.useDefaultColor()) {
+357,357d407
+< 			final RGB color = popup.getSelectedColor();
+359,359d406
+< 			// Update model in response to user
+360a411,417
+>         // selectedColor should be null if we are to use the default color
+>         final RGB selectedColor = popup.getSelectedColor();
+> 
+>         final EStructuralFeature feature = (EStructuralFeature) PackageUtil
+>             .getElement(propertyId);
+> 
+>         // Update model in response to user
+361,361d410
+< 			if (color != null) {
+365a422,423
+>         RGB colorToReturn = selectedColor;
+> 
+366a425,444
+>             final IGraphicalEditPart ep = (IGraphicalEditPart) it.next();
+> 
+>             RGB color = selectedColor;
+>             if (popup.useDefaultColor()) {
+>                 Object preferredValue = ep.getPreferredValue(feature);
+>                 if (preferredValue instanceof Integer) {
+>                     color = FigureUtilities
+>                         .integerToRGB((Integer) preferredValue);
+>                 }
+>             }
+>                 
+>             // If we are using default colors, we want to return the color of the first selected element to be consistent
+>             if (colorToReturn == null) {
+>                 colorToReturn = color;
+>             }
+> 
+>             if (color != null) {
+>                 final RGB finalColor = color; // need a final variable
+>                commands.add(createCommand(commandName, ((View) ep.getModel())
+>                     .eResource(), new Runnable() {
+367,370d424
+< 					final IGraphicalEditPart ep = (IGraphicalEditPart) it
+< 						.next();
+< 					commands.add(createCommand(commandName, ((View) ep
+< 						.getModel()).eResource(), new Runnable() {
+372a447,447
+>                         ENamedElement element = PackageUtil
+373,373c448,448
+< 							ENamedElement element = PackageUtil.getElement(propertyId);
+---
+>                             .getElement(propertyId);
+374a450,451
+>                             ep.setStructuralFeatureValue(feature,
+>                                 FigureUtilities.RGBToInteger(finalColor));
+375,376d449
+< 								ep.setStructuralFeatureValue((EStructuralFeature)PackageUtil.getElement(propertyId), FigureUtilities
+< 									.RGBToInteger(color));
+387,387d461
+< 
+388,388c462,462
+< 			return color;
+---
+>         return colorToReturn;
+390,390d463
+< 		return null;
+392,392d464
+< 	}
+441,441d512
+< 		getSingleInput().refresh();

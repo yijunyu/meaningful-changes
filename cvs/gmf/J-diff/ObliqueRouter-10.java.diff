@@ -1,0 +1,84 @@
+25a26
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.IPolygonAnchorableFigure;
+27a29
+> import org.eclipse.gmf.runtime.draw2d.ui.geometry.PointListUtilities;
+31d32
+< import org.eclipse.jface.util.Assert;
+197c198,202
+<         PointList points = new PointList();
+---
+>         PointList points = calculateBendPoints(conn);
+>              
+>         routeLine(conn, 0, points);
+> 		conn.setPoints(points);
+> 	}
+198a204,212
+> 	/**
+>      * Return a point list that contains the bend points on the connections
+>      * clients can override this method to introduce calculated bend points 
+>      * on the connection 
+> 	 * @param conn the connection to get the bend points for
+> 	 * @return bend points as a Point List
+> 	 */
+> 	protected PointList calculateBendPoints(Connection conn) {
+>         PointList points = new PointList();        
+208,210c222
+<         
+<         routeLine(conn, 0, points);
+< 		conn.setPoints(points);
+---
+> 		return points;
+254c266
+< 		Rectangle startRect = null;        
+---
+> 		PointList startPolygon = null;
+256,258c268
+<             startRect = new Rectangle(sourceOwner.getBounds());
+<             sourceOwner.translateToAbsolute(startRect);
+<             conn.translateToRelative(startRect);
+---
+>             startPolygon = getFigurePolygon(sourceOwner,conn);
+261c271
+<         Rectangle endRect = null;        
+---
+>         PointList endPolygon = null;
+263,265c273
+<     		endRect = new Rectangle(targetOwner.getBounds());
+<             targetOwner.translateToAbsolute(endRect);
+<     		conn.translateToRelative(endRect);
+---
+>             endPolygon = getFigurePolygon(targetOwner,conn);
+275,276c283,284
+< 			else if ((startRect == null || !startRect.contains(pt))
+<                 && (endRect == null || !endRect.contains(pt))) {
+---
+> 			else if ((startPolygon == null || !PointListUtilities.containsPoint(startPolygon,pt))
+>                 && (endPolygon == null || !PointListUtilities.containsPoint(endPolygon,pt))) {
+292a301,323
+>      protected PointList getFigurePolygon(IFigure owner, Connection conn) {
+>         PointList polygon = new PointList();
+>         if (owner instanceof IPolygonAnchorableFigure){
+>             PointList points =  ((IPolygonAnchorableFigure)owner).getPolygonPoints();
+>             for(int index = 0 ; index < points.size(); index++){
+>                 Point point  = points.getPoint(index).getCopy();
+>                 owner.translateToAbsolute(point);
+>                 conn.translateToRelative(point);
+>                 polygon.addPoint(point);
+>             }
+>         }else {
+>            Rectangle rect =  owner.getBounds().getCopy();
+>            owner.translateToAbsolute(rect);
+>            conn.translateToRelative(rect);
+>            polygon.addPoint(rect.getTopLeft());
+>            polygon.addPoint(rect.getTopRight());
+>            polygon.addPoint(rect.getBottomRight());
+>            polygon.addPoint(rect.getBottomLeft());
+>            polygon.addPoint(rect.getTopLeft());
+>         }
+>         return polygon;
+>     }
+> 	
+412c443
+< 			Assert.isTrue(nIndex >= 0);
+---
+>             assert nIndex >= 0;

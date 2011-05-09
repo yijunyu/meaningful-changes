@@ -1,0 +1,534 @@
+package org.eclipse.gmf.runtime.diagram.ui.resources.editor.document;
+
+import java.lang.reflect.InvocationTargetException;
+
+import java.util.ArrayList;
+
+import java.util.HashMap;
+
+import java.util.HashSet;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import java.util.Set;
+
+import org.eclipse.core.runtime.CoreException;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.core.runtime.jobs.ISchedulingRule;
+
+import org.eclipse.jface.operation.IRunnableContext;
+
+import org.eclipse.jface.operation.IRunnableWithProgress;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.internal.EditorPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.resources.editor.internal.l10n.EditorMessages;
+
+public abstract class AbstractDocumentProvider implements IDocumentProvider {
+    protected static abstract class DocumentProviderOperation implements IRunnableWithProgress {
+
+        protected abstract void execute (IProgressMonitor monitor) throws CoreException;
+
+        public void run (IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
+            try {
+                execute (monitor);
+            } catch (CoreException x) {
+                throw new InvocationTargetException (x);
+            }
+        }
+
+    }
+
+    protected class ElementInfo implements IDocumentListener {
+        public Object fElement;
+        public int fCount;
+        public boolean fCanBeSaved;
+        public IDocument fDocument;
+        public boolean fIsStateValidated;
+        public IStatus fStatus;
+
+        public ElementInfo (IDocument document) {
+            fDocument = document;
+            fCount = 0;
+            fCanBeSaved = false;
+            fIsStateValidated = false;
+        }
+
+        public boolean equals (Object o) {
+            if (o instanceof ElementInfo) {
+                ElementInfo e = (ElementInfo) o;
+                return fDocument.equals (e.fDocument);
+            }
+            return false;
+        }
+
+        public int hashCode () {
+            return fDocument.hashCode ();
+        }
+
+        public void documentChanged (DocumentEvent event) {
+            fCanBeSaved = true;
+            removeUnchangedElementListeners (fElement, this);
+            fireElementDirtyStateChanged (fElement, fCanBeSaved);
+        }
+
+        public void documentAboutToBeChanged (DocumentEvent event) {
+        }
+
+    }
+
+    static final protected boolean PR10806_UC5_ENABLED = true;
+    static final protected boolean PR14469_ENABLED = false;
+    static final public IStatus STATUS_OK = new Status (IStatus.OK, EditorPlugin.getPluginId (), IStatus.OK, EditorMessages.AbstractDocumentProvider_ok, null);
+    static final public IStatus STATUS_ERROR = new Status (IStatus.ERROR, EditorPlugin.getPluginId (), IStatus.INFO, EditorMessages.AbstractDocumentProvider_error, null);
+    private Map fElementInfoMap = new HashMap ();
+    private List fElementStateListeners = new ArrayList ();
+    private IProgressMonitor fProgressMonitor;
+
+    protected AbstractDocumentProvider () {
+    }
+
+    protected abstract IDocument createDocument (Object element) throws CoreException;
+
+    protected abstract IDocument createEmptyDocument ();
+
+    protected abstract void doSaveDocument (IProgressMonitor monitor, Object element, IDocument document, boolean overwrite) throws CoreException;
+
+    protected abstract IRunnableContext getOperationRunner (IProgressMonitor monitor);
+
+    protected ISchedulingRule getSynchronizeRule (Object element) {
+        return null;
+    }
+
+    protected ISchedulingRule getValidateStateRule (Object element) {
+        return null;
+    }
+
+    protected ISchedulingRule getSaveRule (Object element) {
+        return null;
+    }
+
+    protected ISchedulingRule getResetRule (Object element) {
+        return null;
+    }
+
+    protected ElementInfo getElementInfo (Object element) {
+        return (ElementInfo) fElementInfoMap.get (element);
+    }
+
+    protected ElementInfo createElementInfo (Object element) throws CoreException {
+        return new ElementInfo (createDocument (element));
+    }
+
+    protected void disposeElementInfo (Object element, ElementInfo info) {
+    }
+
+    protected void addUnchangedElementListeners (Object element, ElementInfo info) {
+        if (info.fDocument != null) info.fDocument.addDocumentListener (info);
+
+    }
+
+    protected void removeUnchangedElementListeners (Object element, ElementInfo info) {
+        if (info.fDocument != null) info.fDocument.removeDocumentListener (info);
+
+    }
+
+    protected Iterator getConnectedElements () {
+        Set s = new HashSet ();
+        Set keys = fElementInfoMap.keySet ();
+        if (keys != null) s.addAll (keys);
+
+        return s.iterator ();
+    }
+
+    public final void connect (Object element) throws CoreException {
+        ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+        if (info == null) {
+            info = createElementInfo (element);
+            if (info == null) info = new ElementInfo (null);
+
+            info.fElement = element;
+            addUnchangedElementListeners (element, info);
+            fElementInfoMap.put (element, info);
+            if (fElementInfoMap.size () == 1) connected ();
+
+        }
+        ++ info.fCount;
+    }
+
+    protected void connected () {
+    }
+
+    public final void disconnect (Object element) {
+        ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+        if (info == null) return;
+
+        if (info.fCount == 1) {
+            fElementInfoMap.remove (element);
+            removeUnchangedElementListeners (element, info);
+            disposeElementInfo (element, info);
+            if (fElementInfoMap.size () == 0) disconnected ();
+
+        } else -- info.fCount;
+
+    }
+
+    protected void disconnected () {
+    }
+
+    public IDocument getDocument (Object element) {
+        if (element == null) return null;
+
+        ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+        return (info != null ? info.fDocument : null);
+    }
+
+    public boolean mustSaveDocument (Object element) {
+        if (element == null) return false;
+
+        ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+        return (info != null ? info.fCount == 1 && info.fCanBeSaved : false);
+    }
+
+    public boolean canSaveDocument (Object element) {
+        if (element == null) return false;
+
+        ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+        return (info != null ? info.fCanBeSaved : false);
+    }
+
+    protected void doResetDocument (Object element, IProgressMonitor monitor) throws CoreException {
+        ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+        if (info != null) {
+            IDocument original = null;
+            IStatus status = null;
+            try {
+                original = createDocument (element);
+            } catch (CoreException x) {
+                status = x.getStatus ();
+            }
+            info.fStatus = status;
+            if (original != null) {
+                fireElementContentAboutToBeReplaced (element);
+                info.fDocument.setContent (original.getContent ());
+                if (info.fCanBeSaved) {
+                    info.fCanBeSaved = false;
+                    addUnchangedElementListeners (element, info);
+                }
+                fireElementContentReplaced (element);
+                fireElementDirtyStateChanged (element, false);
+            }
+        }
+    }
+
+    protected void executeOperation (DocumentProviderOperation operation, IProgressMonitor monitor) throws CoreException {
+        try {
+            IRunnableContext runner = getOperationRunner (monitor);
+            if (runner != null) runner.run (false, false, operation);
+            else operation.run (monitor);
+
+        } catch (InvocationTargetException x) {
+            Throwable e = x.getTargetException ();
+            if (e instanceof CoreException) throw (CoreException) e;
+
+            String message = (e.getMessage () != null ? e.getMessage () : "");
+            throw new CoreException (new Status (IStatus.ERROR, EditorPlugin.getPluginId (), IStatus.ERROR, message, e));
+        } catch (InterruptedException x) {
+            String message = (x.getMessage () != null ? x.getMessage () : "");
+            throw new CoreException (new Status (IStatus.CANCEL, EditorPlugin.getPluginId (), IStatus.OK, message, x));
+        }
+    }
+
+    public final void resetDocument (final Object element) throws CoreException {
+        if (element == null) return;
+
+        executeOperation (getResetOperation (element), getProgressMonitor ());
+    }
+
+    public DocumentProviderOperation getResetOperation (final Object element) {
+        class ResetOperation extends DocumentProviderOperation implements ISchedulingRuleProvider {
+
+            protected void execute (IProgressMonitor monitor) throws CoreException {
+                doResetDocument (element, monitor);
+            }
+
+            public ISchedulingRule getSchedulingRule () {
+                return getResetRule (element);
+            }
+
+        }
+
+        return new ResetOperation ();
+    }
+
+    public final void saveDocument (IProgressMonitor monitor, final Object element, final IDocument document, final boolean overwrite) throws CoreException {
+        if (element == null) return;
+
+        executeOperation (getSaveOperation (element, document, overwrite), monitor);
+    }
+
+    public DocumentProviderOperation getSaveOperation (final Object element, final IDocument document, final boolean overwrite) {
+        class SaveOperation extends DocumentProviderOperation implements ISchedulingRuleProvider {
+
+            protected void execute (IProgressMonitor pm) throws CoreException {
+                ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+                if (info != null) {
+                    if (info.fDocument != document) {
+                        Status status = new Status (IStatus.WARNING, EditorPlugin.getPluginId (), IStatus.ERROR, EditorMessages.AbstractDocumentProvider_error_save_inuse, null);
+                        throw new CoreException (status);
+                    }
+                    doSaveDocument (pm, element, document, overwrite);
+                    if (pm != null && pm.isCanceled ()) return;
+
+                    info.fCanBeSaved = false;
+                    addUnchangedElementListeners (element, info);
+                    fireElementDirtyStateChanged (element, false);
+                } else {
+                    doSaveDocument (pm, element, document, overwrite);
+                }
+            }
+
+            public ISchedulingRule getSchedulingRule () {
+                return getSaveRule (element);
+            }
+
+        }
+
+        return new SaveOperation ();
+    }
+
+    public void aboutToChange (Object element) {
+    }
+
+    public void changed (Object element) {
+    }
+
+    public void addElementStateListener (IElementStateListener listener) {
+        assert listener != null;
+        if (! fElementStateListeners.contains (listener)) fElementStateListeners.add (listener);
+
+    }
+
+    public void removeElementStateListener (IElementStateListener listener) {
+        assert listener != null;
+        fElementStateListeners.remove (listener);
+    }
+
+    protected void fireElementDirtyStateChanged (Object element, boolean isDirty) {
+        Iterator e = new ArrayList (fElementStateListeners).iterator ();
+        while (e.hasNext ()) {
+            IElementStateListener l = (IElementStateListener) e.next ();
+            l.elementDirtyStateChanged (element, isDirty);
+        }
+    }
+
+    protected void fireElementContentAboutToBeReplaced (Object element) {
+        Iterator e = new ArrayList (fElementStateListeners).iterator ();
+        while (e.hasNext ()) {
+            IElementStateListener l = (IElementStateListener) e.next ();
+            l.elementContentAboutToBeReplaced (element);
+        }
+    }
+
+    protected void fireElementContentReplaced (Object element) {
+        Iterator e = new ArrayList (fElementStateListeners).iterator ();
+        while (e.hasNext ()) {
+            IElementStateListener l = (IElementStateListener) e.next ();
+            l.elementContentReplaced (element);
+        }
+    }
+
+    protected void fireElementDeleted (Object element) {
+        Iterator e = new ArrayList (fElementStateListeners).iterator ();
+        while (e.hasNext ()) {
+            IElementStateListener l = (IElementStateListener) e.next ();
+            l.elementDeleted (element);
+        }
+    }
+
+    protected void fireElementMoved (Object originalElement, Object movedElement) {
+        Iterator e = new ArrayList (fElementStateListeners).iterator ();
+        while (e.hasNext ()) {
+            IElementStateListener l = (IElementStateListener) e.next ();
+            l.elementMoved (originalElement, movedElement);
+        }
+    }
+
+    public long getModificationStamp (Object element) {
+        return 0;
+    }
+
+    public long getSynchronizationStamp (Object element) {
+        return 0;
+    }
+
+    public boolean isDeleted (Object element) {
+        return false;
+    }
+
+    public boolean isReadOnly (Object element) {
+        return true;
+    }
+
+    public boolean isModifiable (Object element) {
+        return false;
+    }
+
+    public boolean isStateValidated (Object element) {
+        ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+        if (info != null) return info.fIsStateValidated;
+
+        return false;
+    }
+
+    protected void doValidateState (Object element, Object computationContext) throws CoreException {
+    }
+
+    public void validateState (final Object element, final Object computationContext) throws CoreException {
+        if (element == null) return;
+
+        class ValidateStateOperation extends DocumentProviderOperation implements ISchedulingRuleProvider {
+
+            protected void execute (IProgressMonitor monitor) throws CoreException {
+                ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+                if (info == null) return;
+
+                doValidateState (element, computationContext);
+                doUpdateStateCache (element);
+                info.fIsStateValidated = true;
+                fireElementStateValidationChanged (element, true);
+            }
+
+            public ISchedulingRule getSchedulingRule () {
+                return getValidateStateRule (element);
+            }
+
+        }
+
+        executeOperation (new ValidateStateOperation (), getProgressMonitor ());
+    }
+
+    protected void doUpdateStateCache (Object element) throws CoreException {
+    }
+
+    protected boolean invalidatesState (Object element, boolean wasReadOnly) {
+        assert PR10806_UC5_ENABLED != PR14469_ENABLED;
+        boolean readOnlyChanged = (isReadOnly (element) != wasReadOnly && ! wasReadOnly);
+        if (PR14469_ENABLED) return readOnlyChanged && ! canSaveDocument (element);
+
+        return readOnlyChanged;
+    }
+
+    final public void updateStateCache (Object element) throws CoreException {
+        ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+        if (info != null) {
+            boolean wasReadOnly = isReadOnly (element);
+            doUpdateStateCache (element);
+            if (invalidatesState (element, wasReadOnly)) {
+                info.fIsStateValidated = false;
+                fireElementStateValidationChanged (element, false);
+            }
+        }
+    }
+
+    public void setCanSaveDocument (Object element) {
+        if (element != null) {
+            ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+            if (info != null) {
+                info.fCanBeSaved = true;
+                removeUnchangedElementListeners (element, info);
+                fireElementDirtyStateChanged (element, info.fCanBeSaved);
+            }
+        }
+    }
+
+    protected void fireElementStateValidationChanged (Object element, boolean isStateValidated) {
+        Iterator e = new ArrayList (fElementStateListeners).iterator ();
+        while (e.hasNext ()) {
+            Object o = e.next ();
+            if (o instanceof IElementStateListener) {
+                IElementStateListener l = (IElementStateListener) o;
+                l.elementStateValidationChanged (element, isStateValidated);
+            }
+        }
+    }
+
+    protected void fireElementStateChanging (Object element) {
+        Iterator e = new ArrayList (fElementStateListeners).iterator ();
+        while (e.hasNext ()) {
+            Object o = e.next ();
+            if (o instanceof IElementStateListener) {
+                IElementStateListener l = (IElementStateListener) o;
+                l.elementStateChanging (element);
+            }
+        }
+    }
+
+    protected void fireElementStateChangeFailed (Object element) {
+        Iterator e = new ArrayList (fElementStateListeners).iterator ();
+        while (e.hasNext ()) {
+            Object o = e.next ();
+            if (o instanceof IElementStateListener) {
+                IElementStateListener l = (IElementStateListener) o;
+                l.elementStateChangeFailed (element);
+            }
+        }
+    }
+
+    public IStatus getStatus (Object element) {
+        ElementInfo info = (ElementInfo) fElementInfoMap.get (element);
+        if (info != null) {
+            if (info.fStatus != null) return info.fStatus;
+
+            return (info.fDocument == null ? STATUS_ERROR : STATUS_OK);
+        }
+        return STATUS_ERROR;
+    }
+
+    protected void doSynchronize (Object element, IProgressMonitor monitor) throws CoreException {
+    }
+
+    public final void synchronize (final Object element) throws CoreException {
+        if (element == null) return;
+
+        class SynchronizeOperation extends DocumentProviderOperation implements ISchedulingRuleProvider {
+
+            protected void execute (IProgressMonitor monitor) throws CoreException {
+                doSynchronize (element, monitor);
+            }
+
+            public ISchedulingRule getSchedulingRule () {
+                return getSynchronizeRule (element);
+            }
+
+        }
+
+        executeOperation (new SynchronizeOperation (), getProgressMonitor ());
+    }
+
+    public IProgressMonitor getProgressMonitor () {
+        return fProgressMonitor == null ? new NullProgressMonitor () : fProgressMonitor;
+    }
+
+    public void setProgressMonitor (IProgressMonitor progressMonitor) {
+        fProgressMonitor = progressMonitor;
+    }
+
+    public boolean isSynchronized (Object element) {
+        return true;
+    }
+
+}
+

@@ -1,0 +1,150 @@
+2,2c2,2
+<  * Copyright (c) 2005 IBM Corporation and others.
+---
+>  * Copyright (c) 2005, 2006 IBM Corporation and others.
+17a18,18
+> import org.eclipse.core.commands.ExecutionException;
+21a23,24
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+22,22d22
+< 
+24a27,28
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+25a30,32
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypeDebugOptions;
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePlugin;
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePluginStatusCodes;
+29a37,39
+>  * <P>
+>  * If the request is not constructed with the editing domain through which to
+>  * create the new model element, it will be derived from the container element.
+33,33d42
+< public class CreateElementRequest
+34,34c43,43
+< 	extends AbstractEditCommandRequest {
+---
+> public class CreateElementRequest extends AbstractEditCommandRequest {
+71a81,98
+> 	 * @param editingDomain
+> 	 *            the editing domain in which I am requesting to make model
+> 	 *            changes.
+> 	 * @param container
+> 	 *            the container for the new model element
+> 	 * @param elementType
+> 	 *            the element type of the new model element
+> 	 */
+> 	public CreateElementRequest(TransactionalEditingDomain editingDomain,
+> 			EObject container, IElementType elementType) {
+> 
+> 		this(editingDomain, container, elementType, null);
+> 	}
+>     
+>     /**
+>      * Creates a request to create a new model element. The editing domain will
+>      * be derived from the <code>container</code>.
+>      * 
+79,79c106,106
+< 		this(container, elementType, null);
+---
+>         this(TransactionUtil.getEditingDomain(container), container, elementType, null);
+83,83c110,110
+< 	 * Creates a request to create a new model element.
+---
+>      * Creates a request to create a new model element. The editing domain will
+83a111,111
+>      * be derived from the result of {@link #getContainer()}.
+90,90c118,118
+< 		this(null, elementType, null);
+---
+>         this(null, null, elementType, null);
+95a124,141
+>      * @param editingDomain
+>      *            the editing domain in which I am requesting to make model
+>      *            changes.
+>      * @param elementType
+>      *            the element type of the new model element
+>      */
+>     public CreateElementRequest(TransactionalEditingDomain editingDomain,
+>             IElementType elementType) {
+> 
+>         this(editingDomain, null, elementType, null);
+>     }
+> 
+> 	/**
+> 	 * Creates a request to create a new model element.
+> 	 * 
+> 	 * @param editingDomain
+> 	 *            the editing domain in which I am requesting to make model
+> 	 *            changes.
+104a151,151
+> 	public CreateElementRequest(TransactionalEditingDomain editingDomain,
+105,105c152,152
+< 	public CreateElementRequest(EObject container, IElementType elementType,
+---
+> 			EObject container, IElementType elementType,
+108,108c155,155
+< 		super();
+---
+> 		super(editingDomain);
+114a162,181
+>      * Creates a request to create a new model element.  The editing domain will
+>      * be derived from the <code>container</code>.
+>      * 
+>      * @param container
+>      *            the container for the new model element
+>      * @param elementType
+>      *            the element type of the new model element
+>      * @param containmentFeature
+>      *            The feature in the container which will hold the new model
+>      *            element. Can be <code>null</code>, in which case a default
+>      *            feature will be used.
+>      */
+>     public CreateElementRequest(EObject container, IElementType elementType,
+>             EReference containmentFeature) {
+> 
+>         this(TransactionUtil.getEditingDomain(container), container,
+>             elementType, containmentFeature);
+>     }
+> 
+> 	/**
+187,187c254,254
+< 		if (contextCommand != null && contextCommand.isExecutable()) {
+---
+> 		if (contextCommand != null && contextCommand.canExecute()) {
+187a255,255
+>             try {
+188,188c256,256
+< 			contextCommand.execute(new NullProgressMonitor());
+---
+>                 contextCommand.execute(new NullProgressMonitor(), null);
+188a257,257
+> 
+193a263,270
+>             } catch (ExecutionException e) {
+>                 Trace.catching(EMFTypePlugin.getPlugin(),
+>                     EMFTypeDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+>                     "createContainer", e); //$NON-NLS-1$
+>                 Log.error(EMFTypePlugin.getPlugin(),
+>                     EMFTypePluginStatusCodes.COMMAND_FAILURE, e
+>                         .getLocalizedMessage(), e);
+>             }
+223,223c300,300
+< 			editContextRequest = new GetEditContextRequest(this,
+---
+> 			editContextRequest = new GetEditContextRequest(getEditingDomain(), this,
+302,302c379,379
+< 		if (contextCommand != null && contextCommand.isExecutable()) {
+---
+> 		if (contextCommand != null && contextCommand.canExecute()) {
+325a403,411
+>     
+>     public TransactionalEditingDomain getEditingDomain() {
+>         TransactionalEditingDomain result = super.getEditingDomain();
+> 
+>         if (result == null) {
+>             result = TransactionUtil.getEditingDomain(getContainer());
+>         }
+>         return result;
+>     }

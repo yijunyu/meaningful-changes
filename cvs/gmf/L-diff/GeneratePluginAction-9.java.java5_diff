@@ -1,0 +1,113 @@
+3,4d2
+< import java.io.IOException;
+< 
+7,8d4
+< import java.util.Arrays;
+< 
+45,46d40
+< import org.eclipse.emf.ecore.EObject;
+< 
+53,54d46
+< import org.eclipse.gmf.gmfgraph.FigureGallery;
+< 
+57,58d48
+< import org.eclipse.gmf.internal.graphdef.codegen.StandaloneGalleryConverter;
+< 
+95a86
+>     private ConverterOptions myOptions;
+105d95
+<         List galleries = new ArrayList (5);
+107,111c97
+<         loadFromSelection (rs, galleries);
+<         if (galleries.isEmpty ()) {
+<             MessageDialog.openInformation (getShell (), "Nothing to do", "No figure galleries found in the selected files, nothing to do");
+<             return;
+<         }
+---
+>         final Resource [] input = loadFromSelection (rs);
+117,119c103,110
+<         FigureGallery [] input = (FigureGallery []) galleries.toArray (new FigureGallery [galleries.size ()]);
+<         StandaloneGenerator.Config config = new StandaloneGenerator.ConfigImpl (pluginId, pluginId, dialog.isUseMapMode ());
+<         final StandaloneGenerator generator = new StandaloneGenerator (input, config, dialog.getFigureQualifiedNameSwitch ());
+---
+>         final StandaloneGenerator.Config config = new StandaloneGenerator.ConfigImpl (pluginId, pluginId, dialog.isUseMapMode ());
+>         final ConverterOutcome converterOutcome = new ConverterOutcome (getOptions (), input);
+>         final IStatus inputCheck = converterOutcome.checkInputAgainstOptions ();
+>         if (! inputCheck.isOK ()) {
+>             MessageDialog.openInformation (getShell (), "Nothing to do", inputCheck.getMessage ());
+>             return;
+>         }
+>         final StandaloneGenerator generator = new StandaloneGenerator (converterOutcome.getProcessor (), config, dialog.getFigureQualifiedNameSwitch ());
+124a116
+>                 setUser (true);
+133,138c125,127
+<                     StandaloneGalleryConverter converter = new StandaloneGalleryConverter (generator.getGenerationInfo ());
+<                     IStatus result = saveToFile (decideOnDestinationFile ("bundled"), converter.convertFigureGallery ());
+<                     if (result.isOK ()) {
+<                         result = saveToFile (decideOnDestinationFile ("mirrored"), converter.mirrorDiagramElements (rs.getResources ()));
+<                     }
+<                     return result;
+---
+>                     URI galleryURI = URI.createPlatformResourceURI (decideOnDestinationFile ("bundled").getFullPath ().toString ());
+>                     URI canvasURI = URI.createPlatformResourceURI (decideOnDestinationFile ("mirrored").getFullPath ().toString ());
+>                     return converterOutcome.createResources (rs, galleryURI, canvasURI, config);
+162c151
+<                     IProject p = ResourcesPlugin.getWorkspace ().getRoot ().getProject (getConfig ().getPluginID ());
+---
+>                     IProject p = ResourcesPlugin.getWorkspace ().getRoot ().getProject (config.getPluginID ());
+177,193d165
+<             private StandaloneGenerator.Config getConfig () {
+<                 return generator.getGenerationInfo ().getConfig ();
+<             }
+< 
+<             private IStatus saveToFile (IFile outputFile, EObject root) {
+<                 if (root != null) {
+<                     Resource outputResource = rs.createResource (URI.createPlatformResourceURI (outputFile.getFullPath ().toString ()));
+<                     outputResource.getContents ().add (root);
+<                     try {
+<                         outputResource.save (null);
+<                     } catch (IOException e) {
+<                         return new Status (IStatus.ERROR, "org.eclipse.gmf.graphdef.codegen.ui", 0, e.getMessage (), e);
+<                     }
+<                 }
+<                 return Status.OK_STATUS;
+<             }
+< 
+199,200c171,173
+<     private void loadFromSelection (ResourceSet rs, List galleries) {
+<         final FigureFinder extractor = new FigureFinder ();
+---
+>     private Resource [] loadFromSelection (ResourceSet rs) {
+>         Resource [] rv = new Resource [mySelectedFiles.size ()];
+>         int i = 0;
+202,203c175
+<         it.hasNext ();) {
+<             try {
+---
+>         it.hasNext (); i ++) {
+205,210c177
+<                 Resource r = rs.getResource (URI.createPlatformResourceURI (next.getFullPath ().toString ()), true);
+<                 FigureGallery [] fg = extractor.findFigures (r);
+<                 galleries.addAll (Arrays.asList (fg));
+<             } catch (Exception ex) {
+<                 ex.printStackTrace ();
+<             }
+---
+>             rv [i] = rs.getResource (URI.createPlatformResourceURI (next.getFullPath ().toString ()), true);
+211a179
+>         return rv;
+232a201,214
+>     private ConverterOptions getOptions () {
+>         if (myOptions == null) {
+>             myOptions = loadOptions ();
+>         }
+>         return myOptions;
+>     }
+> 
+>     private ConverterOptions loadOptions () {
+>         ConverterOptions options = new ConverterOptions ();
+>         options.needMirroredCanvas = true;
+>         options.needMirroredGalleries = true;
+>         return options;
+>     }
+> 

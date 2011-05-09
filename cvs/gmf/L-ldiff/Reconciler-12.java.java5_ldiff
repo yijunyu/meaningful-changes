@@ -1,0 +1,178 @@
+6a7,8
+> import java.util.LinkedHashMap;
+> 
+12a15,22
+> import java.util.Map;
+> 
+> import org.eclipse.core.runtime.IStatus;
+> 
+> import org.eclipse.core.runtime.Platform;
+> 
+> import org.eclipse.core.runtime.Status;
+> 
+16a27,28
+> import org.eclipse.emf.ecore.EStructuralFeature.Setting;
+> 
+18a31,34
+> import org.eclipse.emf.ecore.util.FeatureMapUtil;
+> 
+> import org.eclipse.gmf.internal.common.Activator;
+> 
+20a37,43
+>     private final Map < EObject, List < Setting > > myCrossRefsToFix;
+>     private final Map < EObject, EObject > myMatches;
+>     private boolean myIsMatching;
+>     private final boolean traceMatches;
+>     private final boolean traceDecision;
+>     private final boolean traceFeatureInDecision;
+>     private final boolean traceCrossRefUpdate;
+21,21d36
+<     private final MatchingSession myMatchingSession;
+24a47,53
+>         myCrossRefsToFix = new LinkedHashMap < EObject, List < Setting > > ();
+>         myMatches = new LinkedHashMap < EObject, EObject > ();
+>         final String recon = "/reconciler/", op1 = "traceMatches", op2 = "traceDecision", op3 = "/features", op4 = "traceCrossRefUpdate";
+>         traceMatches = Boolean.parseBoolean (Platform.getDebugOption (Activator.getID () + recon + op1));
+>         traceDecision = Boolean.parseBoolean (Platform.getDebugOption (Activator.getID () + recon + op2));
+>         traceFeatureInDecision = Boolean.parseBoolean (Platform.getDebugOption (Activator.getID () + recon + op2 + op3));
+>         traceCrossRefUpdate = Boolean.parseBoolean (Platform.getDebugOption (Activator.getID () + recon + op4));
+25,25d46
+<         myMatchingSession = new MatchingSession ();
+33,33c61,61
+<         return copier.copyToCurrent (currentParent, notMatchedOld);
+---
+>         return copier.copyToCurrent (currentParent, notMatchedOld, this);
+37a66,66
+>         updateCrossReferences ();
+41a71,71
+>         updateCrossReferences ();
+41,41c70,70
+<         reconcileVertex (currentRoot, oldRoot);
+---
+>         internalReconcileTree (currentRoot, oldRoot);
+42,42d70
+<         reconcileContents (currentRoot, currentRoot.eContents (), oldRoot.eContents ());
+46a76,76
+>         registerMatch (current, old);
+48a79,140
+>             if (traceDecision) {
+>                 trace (traceFeatureInDecision ? "[decision] %s (%s)" : "[decision] %s", decision.getClass ().getName (), decision.getFeature ().getName ());
+>             }
+>         }
+>     }
+> 
+>     protected void internalReconcileTree (EObject currentRoot, EObject oldRoot) {
+>         reconcileVertex (currentRoot, oldRoot);
+>         reconcileContents (currentRoot, currentRoot.eContents (), oldRoot.eContents ());
+>     }
+> 
+>     protected void registerMatch (EObject current, EObject old) {
+>         myMatches.put (old, current);
+>         if (traceMatches) {
+>             trace ("[matched]%s -> %s", old.eClass ().getName (), current.eClass ().getName ());
+>         }
+>     }
+> 
+>     protected void updateCrossReferences () {
+>         for (Map.Entry < EObject, List < Setting > > e : myCrossRefsToFix.entrySet ()) {
+>             if (myMatches.containsKey (e.getKey ())) {
+>                 EObject copied = myMatches.get (e.getKey ());
+>                 if (traceCrossRefUpdate) {
+>                     trace ("[crossRefUpd] matched %s -> %s", e.getKey (), copied);
+>                 }
+>                 for (Setting s : e.getValue ()) {
+>                     if (myMatches.containsKey (s.getEObject ())) {
+>                         EObject newOwner = myMatches.get (s.getEObject ());
+>                         if (traceCrossRefUpdate) {
+>                             trace ("[crossRefUpd] updating '%s' value of %s", s.getEStructuralFeature ().getName (), newOwner);
+>                         }
+>                         if (s.getEStructuralFeature ().isMany () || FeatureMapUtil.isMany (s.getEObject (), s.getEStructuralFeature ())) {
+>                             @SuppressWarnings("unchecked")
+>                             List < EObject > values = (List < EObject >) newOwner.eGet (s.getEStructuralFeature ());
+>                             assert ! values.contains (e.getKey ());
+>                             assert ! values.contains (copied);
+>                             values.add (copied);
+>                         } else {
+>                             newOwner.eSet (s.getEStructuralFeature (), copied);
+>                         }
+>                     } else {
+>                         if (traceCrossRefUpdate) {
+>                             trace ("[crossRefUpd] no matching owner for %s (old owner: %s)", s.getEStructuralFeature ().getName (), s.getEObject ());
+>                         }
+>                     }
+>                 }
+>             } else {
+>                 if (traceCrossRefUpdate) {
+>                     trace ("[crossRefUpd] no match for old %s", e.getKey ());
+>                 }
+>             }
+>         }
+>     }
+> 
+>     void registerCrossReferencesToUpdate (Map < EObject, Collection < Setting > > crossReferences) {
+>         for (Map.Entry < EObject, Collection < Setting > > e : crossReferences.entrySet ()) {
+>             List < Setting > entries = myCrossRefsToFix.get (e.getKey ());
+>             if (entries == null) {
+>                 entries = new LinkedList < Setting > ();
+>                 myCrossRefsToFix.put (e.getKey (), entries);
+>             }
+>             entries.addAll (e.getValue ());
+57,57c149,149
+<         myMatchingSession.match (allCurrents, allOlds, storage);
+---
+>         match (allCurrents, allOlds, storage);
+68,68c160,160
+<                 reconcileTree (nextCurrent, nextOld);
+---
+>                 internalReconcileTree (nextCurrent, nextOld);
+76,86d167
+<     private static class Pair {
+<         public EObject current;
+<         public EObject old;
+<     }
+< 
+<     private class MatchingSession {
+<         private boolean myIsMatching;
+< 
+<         public MatchingSession () {
+<         }
+< 
+87,87c168,168
+<         public void match (Collection < EObject > currents, Collection < EObject > olds, Collection < Pair > output) {
+---
+>     private void match (Collection < EObject > currents, Collection < EObject > olds, Collection < Pair > output) {
+98,99d178
+<                     Pair nextPair = acquirePair ();
+<                     nextPair.current = nextCurrent;
+100,100c179,179
+<                     nextPair.old = removeMatched (nextCurrent, myOlds);
+---
+>                 EObject matchedOld = removeMatched (nextCurrent, myOlds);
+101,101c180,180
+<                     output.add (nextPair);
+---
+>                 output.add (new Pair (nextCurrent, matchedOld));
+106,107d184
+<                     Pair nextPair = acquirePair ();
+<                     nextPair.current = null;
+108,108c185,185
+<                     nextPair.old = notMatchedOlds.next ();
+---
+>                 output.add (new Pair (null, notMatchedOlds.next ()));
+109,109d185
+<                     output.add (nextPair);
+133a210,220
+>     private static void trace (String format, Object...args) {
+>         Activator.log (new Status (IStatus.INFO, Activator.getID (), String.format (format, args)));
+>     }
+> 
+>     private static class Pair {
+>         public final EObject current;
+>         public final EObject old;
+> 
+>         public Pair (EObject cur, EObject old) {
+>             this.current = cur;
+>             this.old = old;
+134,135d209
+<         private Pair acquirePair () {
+<             return new Pair ();

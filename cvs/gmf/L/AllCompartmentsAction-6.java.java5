@@ -1,0 +1,85 @@
+package org.eclipse.gmf.runtime.diagram.ui.actions.internal;
+
+import java.util.Collections;
+
+import java.util.List;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+
+import org.eclipse.gmf.runtime.diagram.ui.actions.internal.l10n.DiagramActionsResourceManager;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.TopGraphicEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.properties.Properties;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.requests.ActionIds;
+
+import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.jface.resource.ImageDescriptor;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+public class AllCompartmentsAction extends PropertyChangeAction {
+    private Boolean visibility;
+
+    protected AllCompartmentsAction (IWorkbenchPage workbenchPage, boolean visibility) {
+        super (workbenchPage, Properties.ID_ISVISIBLE, DiagramActionsResourceManager.getI18NString ("ConstrainedFlowLayoutEditPolicy.changeVisibilityCommand.label"));
+        this.visibility = visibility ? Boolean.TRUE : Boolean.FALSE;
+    }
+
+    protected Object getNewPropertyValue () {
+        return visibility;
+    }
+
+    protected List getTargetEdiParts (EditPart editpart) {
+        List targetEPs = null;
+        if (editpart instanceof TopGraphicEditPart) {
+            final TopGraphicEditPart topEP = (TopGraphicEditPart) editpart;
+            targetEPs = (List) MEditingDomainGetter.getMEditingDomain ((View) editpart.getModel ()).runAsRead (new MRunnable () {
+
+                public Object run () {
+                    return topEP.getResizableCompartments ();
+                }
+
+            }
+
+            );
+        }
+        return (targetEPs == null || targetEPs.isEmpty ()) ? Collections.EMPTY_LIST : targetEPs;
+    }
+
+    protected String getCommandLabel () {
+        if (((Boolean) getNewPropertyValue ()).booleanValue ()) return DiagramActionsResourceManager.getI18NString ("ShowAllResizableCompartmentsAction.ShowAllText");
+        else return DiagramActionsResourceManager.getI18NString ("ShowAllResizableCompartmentsAction.HideAllText");
+
+    }
+
+    public static AllCompartmentsAction createShowAllCompartmentsAction (IWorkbenchPage workbenchPage) {
+        AllCompartmentsAction action = new AllCompartmentsAction (workbenchPage, true);
+        action.setId (ActionIds.ACTION_COMPARTMENT_ALL);
+        action.setText (DiagramActionsResourceManager.getI18NString ("ShowAllResizableCompartmentsAction.ShowAllText"));
+        action.setToolTipText (DiagramActionsResourceManager.getI18NString ("ShowAllResizableCompartmentsAction.ShowAllTooltip"));
+        ImageDescriptor imageDesc = DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_SHOW_ALL_RESIZABLE_COMPARTMENTS);
+        action.setImageDescriptor (imageDesc);
+        action.setHoverImageDescriptor (imageDesc);
+        return action;
+    }
+
+    public static AllCompartmentsAction createHideAllCompartmentsAction (IWorkbenchPage workbenchPage) {
+        AllCompartmentsAction action = new AllCompartmentsAction (workbenchPage, false);
+        action.setId (ActionIds.ACTION_COMPARTMENT_NONE);
+        action.setText (DiagramActionsResourceManager.getI18NString ("ShowAllResizableCompartmentsAction.HideAllText"));
+        action.setToolTipText (DiagramActionsResourceManager.getI18NString ("ShowAllResizableCompartmentsAction.HideAllTooltip"));
+        ImageDescriptor imageDesc = DiagramActionsResourceManager.getInstance ().getImageDescriptor (DiagramActionsResourceManager.IMAGE_HIDE_ALL_RESIZABLE_COMPARTMENTS);
+        action.setImageDescriptor (imageDesc);
+        action.setHoverImageDescriptor (imageDesc);
+        return action;
+    }
+
+}
+

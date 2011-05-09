@@ -1,0 +1,46 @@
+60a61,62
+> import org.eclipse.emf.transaction.ResourceSetChangeEvent;
+> 
+240a243,244
+> import org.eclipse.ui.PlatformUI;
+> 
+731a736,770
+>     private class DiagramEventBrokerThreadSafe extends DiagramEventBroker {
+> 
+>         public DiagramEventBrokerThreadSafe () {
+>             super ();
+>         }
+> 
+>         public void resourceSetChanged (ResourceSetChangeEvent event) {
+>             if (Display.getCurrent () == null) {
+>                 EditPartViewer viewer = getDiagramGraphicalViewer ();
+>                 if (viewer instanceof DiagramGraphicalViewer) {
+>                     DiagramGraphicalViewer dgv = (DiagramGraphicalViewer) viewer;
+>                     if (! dgv.areUpdatesDisabled ()) {
+>                         final ResourceSetChangeEvent eventToHandle = event;
+>                         PlatformUI.getWorkbench ().getDisplay ().asyncExec (new Runnable () {
+> 
+>                             public void run () {
+>                                 internal_resourceSetChanged (eventToHandle);
+>                             }
+> 
+>                         }
+> 
+>                         );
+>                         return;
+>                     }
+>                 }
+>             }
+>             super.resourceSetChanged (event);
+>         }
+> 
+>         private void internal_resourceSetChanged (ResourceSetChangeEvent event) {
+>             super.resourceSetChanged (event);
+>         }
+> 
+>     };
+> 
+743,743c782,782
+<                 DiagramEventBroker.startListening (domain);
+---
+>                 DiagramEventBroker.startListening (domain, new DiagramEventBrokerThreadSafe ());

@@ -1,0 +1,75 @@
+package org.eclipse.gmf.runtime.diagram.ui.services.layout;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.Assert;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.gef.GraphicalEditPart;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.services.layout.IInternalLayoutRunnable;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+abstract public class AbstractLayoutEditPartProvider extends AbstractLayoutNodeProvider {
+
+    public Runnable layoutLayoutNodes (List layoutNodes, boolean offsetFromBoundingBox, IAdaptable layoutHint) {
+        IGraphicalEditPart gep = (IGraphicalEditPart) layoutHint.getAdapter (IGraphicalEditPart.class);
+        Assert.isNotNull (gep, "The Graphical EditPart is null");
+        if (offsetFromBoundingBox) {
+            List editparts = new ArrayList (layoutNodes.size ());
+            Map registry = gep.getViewer ().getEditPartRegistry ();
+            Iterator nodes = layoutNodes.listIterator ();
+            while (nodes.hasNext ()) {
+                Node view = ((ILayoutNode) nodes.next ()).getNode ();
+                editparts.add (registry.get (view));
+            }
+            final Command cmdSelect = layoutEditParts (editparts, layoutHint);
+            return new IInternalLayoutRunnable () {
+
+                public void run () {
+                    cmdSelect.execute ();
+                }
+
+                public Command getCommand () {
+                    return cmdSelect;
+                }
+
+            }
+
+            ;
+        } else {
+            final Command cmdDiag = layoutEditParts (gep, layoutHint);
+            return new IInternalLayoutRunnable () {
+
+                public void run () {
+                    cmdDiag.execute ();
+                }
+
+                public Command getCommand () {
+                    return cmdDiag;
+                }
+
+            }
+
+            ;
+        }
+    }
+
+    abstract public Command layoutEditParts (GraphicalEditPart containerEditPart, IAdaptable layoutHint);
+
+    abstract public Command layoutEditParts (List selectedObjects, IAdaptable layoutHint);
+
+}
+

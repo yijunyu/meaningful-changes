@@ -1,0 +1,124 @@
+2a3,6
+> import java.util.Iterator;
+> 
+> import java.util.List;
+> 
+8a13,14
+> import org.eclipse.core.runtime.NullProgressMonitor;
+> 
+10a17,24
+> import org.eclipse.emf.ecore.EReference;
+> 
+> import org.eclipse.emf.ecore.resource.Resource;
+> 
+> import org.eclipse.emf.ecore.util.EcoreUtil;
+> 
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> 
+13c27,45
+< import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+---
+> import org.eclipse.gmf.runtime.common.core.command.ICommand;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> 
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> 
+> import org.eclipse.gmf.runtime.emf.core.internal.index.ReferenceVisitor;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.ElementTypeRegistry;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypeDebugOptions;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePlugin;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePluginStatusCodes;
+> 
+> import org.eclipse.gmf.runtime.emf.type.core.internal.l10n.EMFTypeCoreMessages;
+16a49,50
+> import org.eclipse.osgi.util.NLS;
+> 
+24a59,75
+>     public static void destroy (EObject eObject) {
+>         Resource resource = eObject.eResource ();
+>         if (resource != null) {
+>             DestroyElementRequest destroy = new DestroyElementRequest (TransactionUtil.getEditingDomain (resource), eObject, false);
+>             IElementType context = ElementTypeRegistry.getInstance ().getElementType (destroy.getEditHelperContext ());
+>             ICommand command = context.getEditCommand (destroy);
+>             if (command != null) {
+>                 try {
+>                     command.execute (new NullProgressMonitor (), null);
+>                 } catch (ExecutionException e) {
+>                     Trace.catching (EMFTypePlugin.getPlugin (), EMFTypeDebugOptions.EXCEPTIONS_CATCHING, DestroyElementCommand.class, "destroy(EObject)", e);
+>                     Log.error (EMFTypePlugin.getPlugin (), EMFTypePluginStatusCodes.COMMAND_FAILURE, NLS.bind (EMFTypeCoreMessages.destroyCommandFailed, context.getDisplayName ()), e);
+>                 }
+>             }
+>         }
+>     }
+> 
+26,27c77,81
+<         if (getElementToDestroy ().eResource () != null) {
+<             EMFCoreUtil.destroy (getElementToDestroy ());
+---
+>         EObject destructee = getElementToDestroy ();
+>         if ((destructee != null) && (destructee.eResource () != null)) {
+>             tearDownIncomingReferences (destructee);
+>             tearDownOutgoingReferences (destructee);
+>             EcoreUtil.remove (destructee);
+31a86,103
+>     protected void tearDownIncomingReferences (EObject destructee) {
+>         TearDownVisitor visitor = new TearDownVisitor (getElementToDestroy ());
+>         visitor.visitReferencers ();
+>         visitor.tearDownReferences ();
+>     }
+> 
+>     protected void tearDownOutgoingReferences (EObject destructee) {
+>         for (Iterator iter = destructee.eClass ().getEAllReferences ().iterator ();
+>         iter.hasNext ();) {
+>             EReference reference = (EReference) iter.next ();
+>             if (reference.isChangeable () && ! reference.isDerived () && ! reference.isContainer () && ! reference.isContainment () && (reference.getEOpposite () == null)) {
+>                 if (destructee.eIsSet (reference)) {
+>                     destructee.eUnset (reference);
+>                 }
+>             }
+>         }
+>     }
+> 
+39a112,146
+>     private static class TearDownVisitor extends ReferenceVisitor {
+>         private List tearDownActions = null;
+> 
+>         TearDownVisitor (EObject elementToRemove) {
+>             super (elementToRemove);
+>         }
+> 
+>         protected void visitedReferencer (final EReference reference, final EObject referencer) {
+>             if (reference.isChangeable () && ! reference.isDerived () && ! reference.isContainer ()) {
+>                 if (tearDownActions == null) {
+>                     tearDownActions = new java.util.ArrayList ();
+>                 }
+>                 tearDownActions.add (new Runnable () {
+> 
+>                     public void run () {
+>                         EcoreUtil.remove (referencer, reference, referencedObject);
+>                     }
+> 
+>                 }
+> 
+>                 );
+>             }
+>         }
+> 
+>         void tearDownReferences () {
+>             if (tearDownActions != null) {
+>                 for (Iterator iter = tearDownActions.iterator ();
+>                 iter.hasNext ();) {
+>                     ((Runnable) iter.next ()).run ();
+>                 }
+>             }
+>         }
+> 
+>     }
+> 

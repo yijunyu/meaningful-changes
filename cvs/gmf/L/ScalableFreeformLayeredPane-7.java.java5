@@ -1,0 +1,116 @@
+package org.eclipse.gmf.runtime.draw2d.ui.internal.graphics;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.SWTGraphics;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.draw2d.geometry.Translatable;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.draw2d.ui.internal.Draw2dPlugin;
+
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.IMapMode;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.SWTException;
+
+public class ScalableFreeformLayeredPane extends org.eclipse.draw2d.ScalableFreeformLayeredPane implements IMapMode {
+    boolean antiAlias = true;
+    private IMapMode mm;
+
+    protected IMapMode getMapMode () {
+        return mm;
+    }
+
+    public ScalableFreeformLayeredPane (IMapMode mm) {
+        super ();
+        this.mm = mm;
+    }
+
+    public void setAntiAlias (boolean antiAliasValue) {
+        antiAlias = antiAliasValue;
+        super.repaint ();
+    }
+
+    protected void paintClientArea (Graphics graphics) {
+        if ((graphics instanceof SWTGraphics) && antiAlias) {
+            graphics.setAntialias (SWT.ON);
+        } else {
+            graphics.setAntialias (SWT.OFF);
+        }
+        MapModeGraphics gMM = createMapModeGraphics (graphics);
+        gMM.pushState ();
+        if (getChildren ().isEmpty ()) {
+            gMM.popState ();
+            return;
+        }
+        try {
+            if (getScale () == 1.0) {
+                super.paintClientArea (gMM);
+            } else {
+                ScaledGraphics g = createScaledGraphics (gMM);
+                boolean optimizeClip = getBorder () == null || getBorder ().isOpaque ();
+                if (! optimizeClip) g.clipRect (getBounds ().getCropped (getInsets ()));
+
+                g.scale (getScale ());
+                g.pushState ();
+                paintChildren (g);
+                g.dispose ();
+                gMM.restoreState ();
+            }
+        } catch (SWTException e) {
+            Log.error (Draw2dPlugin.getInstance (), IStatus.ERROR, e.getMessage (), e);
+        }
+        gMM.popState ();
+    }
+
+    protected ScaledGraphics createScaledGraphics (MapModeGraphics gMM) {
+        ScaledGraphics g = new ScaledGraphics (gMM);
+        return g;
+    }
+
+    protected MapModeGraphics createMapModeGraphics (Graphics graphics) {
+        MapModeGraphics gMM = new MapModeGraphics (graphics, getMapMode ());
+        return gMM;
+    }
+
+    public Rectangle getClientArea (Rectangle rect) {
+        super.getClientArea (rect);
+        getMapMode ().DPtoLP (rect);
+        return rect;
+    }
+
+    public void translateToParent (Translatable t) {
+        super.translateToParent (t);
+        getMapMode ().LPtoDP (t);
+    }
+
+    public void translateFromParent (Translatable t) {
+        super.translateFromParent (t);
+        getMapMode ().DPtoLP (t);
+    }
+
+    public int DPtoLP (int deviceUnit) {
+        return getMapMode ().DPtoLP (deviceUnit);
+    }
+
+    public Translatable DPtoLP (Translatable t) {
+        return getMapMode ().DPtoLP (t);
+    }
+
+    public int LPtoDP (int logicalUnit) {
+        return getMapMode ().LPtoDP (logicalUnit);
+    }
+
+    public Translatable LPtoDP (Translatable t) {
+        return getMapMode ().LPtoDP (t);
+    }
+
+}
+

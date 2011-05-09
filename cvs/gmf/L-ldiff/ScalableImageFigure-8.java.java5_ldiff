@@ -1,0 +1,92 @@
+12a13,14
+> import org.eclipse.gmf.runtime.draw2d.ui.internal.mapmode.DiagramMapModeUtil;
+> 
+21,21c23,23
+< import org.eclipse.gmf.runtime.draw2d.ui.render.internal.DrawableRenderedImage;
+---
+> import org.eclipse.gmf.runtime.draw2d.ui.render.internal.RenderHelper;
+21a24,25
+> 
+> import org.eclipse.gmf.runtime.draw2d.ui.render.internal.RenderingListener;
+32a37,38
+> import org.eclipse.swt.graphics.RGB;
+> 
+33a40,72
+>     private RenderingListenerImpl renderingListener = new RenderingListenerImpl (this);
+>     static private class RenderingListenerImpl implements RenderingListener {
+>         private ScalableImageFigure fig;
+> 
+>         public RenderingListenerImpl (ScalableImageFigure fig) {
+>             super ();
+>             this.fig = fig;
+>         }
+> 
+>         public ScalableImageFigure getFigure () {
+>             return fig;
+>         }
+> 
+>         public void imageRendered (RenderedImage rndImg) {
+>             if (getFigure ().getParent () != null) {
+>                 getFigure ().setRenderedImage (rndImg);
+>                 getFigure ().repaint ();
+>             }
+>         }
+> 
+>         public boolean equals (Object obj) {
+>             if (obj instanceof RenderingListenerImpl) {
+>                 return ((RenderingListenerImpl) obj).getFigure ().equals (getFigure ());
+>             }
+>             return false;
+>         }
+> 
+>         public int hashCode () {
+>             return getFigure ().hashCode ();
+>         }
+> 
+>     }
+> 
+36,36d74
+<     private RenderedImage origRenderedImage = null;
+64,64c102,102
+<         this.origRenderedImage = RenderedImageFactory.getInstance (byteOS.toByteArray ());
+---
+>         this.lastRenderedImage = RenderedImageFactory.getInstance (byteOS.toByteArray ());
+80,80c118,118
+<         origRenderedImage = renderedImage;
+---
+>         lastRenderedImage = renderedImage;
+93,94d130
+<             if (getImage () == null) return preferredSize;
+< 
+127a164,167
+>         Color fill = getBackgroundColor ();
+>         Color outline = getForegroundColor ();
+>         RenderInfo newRenderInfo = getRenderedImage ().getRenderInfo ();
+>         newRenderInfo.setValues (dim.width, dim.height, isMaintainAspectRatio (), isAntiAlias (), useOriginalColors () ? (RGB) null : new RGB (fill.getRed (), fill.getGreen (), fill.getBlue ()), useOriginalColors () ? (RGB) null : new RGB (outline.getRed (), outline.getGreen (), outline.getBlue ()));
+128,128d163
+<         RenderInfo newRenderInfo = RenderedImageFactory.createInfo (dim.width, dim.height, useOriginalColors () ? null : translateSWTColorToAWTColor (getBackgroundColor ()), useOriginalColors () ? null : translateSWTColorToAWTColor (getForegroundColor ()), isMaintainAspectRatio (), isAntiAlias ());
+138,138d176
+<         int x, y;
+139a178,178
+>         setRenderedImage (RenderHelper.getInstance (DiagramMapModeUtil.getScale (MapModeUtil.getMapMode (this)), false, false, null).drawRenderedImage (graphics, getRenderedImage (), area, renderingListener));
+140,151d177
+<         y = (area.height - getBounds ().height) / 2 + area.y;
+<         x = (area.width - getBounds ().width) / 2 + area.x;
+<         if (graphics instanceof DrawableRenderedImage) {
+<             lastRenderedImage = ((DrawableRenderedImage) graphics).drawRenderedImage (getRenderedImage (new Dimension (getBounds ().width, getBounds ().height)), x, y, getBounds ().width, getBounds ().height);
+<             assert lastRenderedImage != null;
+<         } else {
+<             graphics.drawImage (getRenderedImage ().getSWTImage (), x, y);
+<         }
+<     }
+< 
+<     private java.awt.Color translateSWTColorToAWTColor (Color swtColor) {
+<         return (swtColor == null) ? null : new java.awt.Color (swtColor.getRed (), swtColor.getGreen (), swtColor.getBlue ());
+155,155c182,182
+<         return origRenderedImage;
+---
+>         return lastRenderedImage;
+159,159c186,186
+<         this.origRenderedImage = renderedImage;
+---
+>         this.lastRenderedImage = renderedImage;

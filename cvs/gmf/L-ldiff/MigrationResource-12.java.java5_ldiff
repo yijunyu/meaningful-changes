@@ -1,0 +1,329 @@
+7,7c7,7
+< import java.util.HashMap;
+---
+> import java.util.Collection;
+13,16d12
+< import org.eclipse.emf.ecore.EClass;
+< 
+< import org.eclipse.emf.ecore.EObject;
+< 
+19,22d14
+< import org.eclipse.emf.ecore.EReference;
+< 
+< import org.eclipse.emf.ecore.EStructuralFeature;
+< 
+37,37c29,29
+< public class MigrationResource extends ToolResource {
+---
+> public abstract class MigrationResource extends ToolResource {
+38,38c30,30
+<     protected boolean oldVersionDetected;
+---
+>     private boolean isOldVersionDetected;
+39,41d30
+<     protected boolean migrationApplied;
+<     private Map < EObject, Map < String, String > > ignoredAttributes;
+<     private MigrationConfig config;
+43,43c32,32
+<     MigrationResource (URI uri) {
+---
+>     protected MigrationResource (URI uri) {
+46a36,36
+>     @Override
+47,67d35
+<     protected XMLLoad createXMLLoad () {
+<         return new XMILoadImpl (createXMLHelper ()) {
+< 
+<             protected DefaultHandler makeDefaultHandler () {
+<                 return new MigrationHandler (MigrationResource.this, helper, options);
+<             }
+< 
+<         }
+< 
+<         ;
+<     }
+< 
+<     protected final void doUnload () {
+<         try {
+<             super.doUnload ();
+<         } finally {
+<             this.oldVersionDetected = false;
+<             this.migrationApplied = false;
+<         }
+<     }
+< 
+69a39,39
+>             isOldVersionDetected = false;
+70,70d38
+<             ignoredAttributes = new HashMap < EObject, Map < String, String > > ();
+71a41,41
+>             handlePostLoadSuccess ();
+72,72d40
+<             handlePostLoad (null);
+74,74c43,43
+<             handlePostLoad (e);
+---
+>             handlePostLoadException (e);
+77,77c46,46
+<             handlePostLoad (e);
+---
+>             handlePostLoadException (e);
+79,95d47
+<         } finally {
+<             ignoredAttributes = null;
+<             config = null;
+<         }
+<     }
+< 
+<     protected void handleOldVersionDetected () {
+<         this.oldVersionDetected = true;
+<     }
+< 
+<     protected void handleMigrationPatchApplied () {
+<         this.migrationApplied = true;
+<     }
+< 
+<     protected void handlePostLoad (Exception exception) {
+<         if (exception == null && config != null) {
+<             config.handleResourceLoaded (this, ignoredAttributes);
+98a51,51
+>     @Override
+99,101d50
+<     static Resource createCheckedResource (URI uri) {
+<         return new MigrationResource (uri) {
+< 
+103,103d52
+<                 final MigrationResource res = this;
+105a55,55
+>             @Override
+107,107c57,57
+<                         return new BCKWDCompatibleHandler (res, helper, options);
+---
+>                 return new SAXXMIHandler (resource, helper, options) {
+108,108d57
+<                     }
+111a89,89
+>     protected void handlePostLoadException (Exception e) {
+111,111c88,88
+< 
+---
+> 
+112,117d88
+<                 ;
+<             }
+< 
+<             protected void handlePostLoad (Exception exception) {
+<                 super.handlePostLoad (exception);
+<                 if (oldVersionDetected && exception != null || ! getErrors ().isEmpty () || ! getWarnings ().isEmpty ()) {
+118,118c90,90
+<                     Diagnostic diagnostic = MigrationUtil.createMessageDiagnostic (this, Messages.oldModelVersionLoadErrorMigrationMayBeRequired);
+---
+>         Diagnostic diagnostic = MigrationResource.createMessageDiagnostic (this, Messages.oldModelVersionLoadErrorMigrationMayBeRequired);
+119,119c91,91
+<                     getErrors ().add (0, diagnostic);
+---
+>         getErrors ().add (0, diagnostic);
+120,120d91
+<                 }
+127a82,83
+>     protected void handlePostLoadSuccess () {
+>         if (isOldVersionDetected) {
+128,133d81
+<     static Resource createCheckAndMigrateOnLoadResource (URI uri) {
+<         return new MigrationResource (uri) {
+< 
+<             protected void handlePostLoad (Exception exception) {
+<                 super.handlePostLoad (exception);
+<                 if (this.oldVersionDetected && migrationApplied) {
+134,134c84,84
+<                     Diagnostic diagnostic = MigrationUtil.createMessageDiagnostic (this, Messages.oldModelVersionLoadedMigrationRequired);
+---
+>             Diagnostic diagnostic = MigrationResource.createMessageDiagnostic (this, Messages.oldModelVersionLoadedMigrationRequired);
+135,135c85,85
+<                     getWarnings ().add (0, diagnostic);
+---
+>             getWarnings ().add (0, diagnostic);
+136,138d85
+<                 }
+<             }
+< 
+143a78,79
+>     private void handleOldVersionDetected () {
+>         isOldVersionDetected = true;
+144,149d77
+<     private static class BCKWDCompatibleHandler extends SAXXMIHandler {
+<         MigrationConfig config;
+<         protected boolean fixmePotentiallyCompatibilityIssues;
+< 
+<         BCKWDCompatibleHandler (MigrationResource xmiResource, XMLHelper helper, Map < ?, ? > options) {
+<             super (xmiResource, helper, options);
+151a59,59
+>                     @Override
+152,152d58
+<         @Override
+153,153c60,60
+<         protected EPackage getPackageForURI (String uriString) {
+---
+>                     protected EPackage getPackageForURI (String uriString) {
+154,160d60
+<             if (config == null) {
+<                 EPackage.Registry.INSTANCE.getEPackage (uriString);
+<                 String ext = xmlResource.getURI ().fileExtension ();
+<                 config = (ext != null) ? MigrationConfig.Registry.INSTANCE.getConfig (ext) : null;
+<                 resource ().config = config;
+<             }
+<             if (config != null) {
+161,161c61,61
+<                 if (! config.getMetamodelNsURI ().equals (uriString) && config.backwardSupportedNsURIs ().contains (uriString)) {
+---
+>                         if (! getMetamodelNsURI ().equals (uriString) && getBackwardSupportedURIs ().contains (uriString)) {
+162,162c62,62
+<                     resource ().handleOldVersionDetected ();
+---
+>                             handleOldVersionDetected ();
+163,163c63,63
+<                     return super.getPackageForURI (config.getMetamodelNsURI ());
+---
+>                             return super.getPackageForURI (getMetamodelNsURI ());
+164,166d63
+<                 }
+<                 if (config.getMetamodelNsURI ().equals (uriString)) {
+<                     fixmePotentiallyCompatibilityIssues = true;
+169,169c65,65
+<             return super.getPackageForURI (uriString);
+---
+>                         return super.getPackageForURI (uriString);
+172a95,98
+>     protected XMLHelper createXMLHelper () {
+>         MigrationHelperDelegate delegate = createDelegate ();
+>         assert delegate != null;
+>         return new MigrationHelper (this, delegate);
+173,179d94
+<         protected void handleUnknownFeature (String prefix, String name, boolean isElement, EObject peekObject, String value) {
+<             if (fixmePotentiallyCompatibilityIssues) {
+<                 if (config.shouldIgnoreAttribute (peekObject, name)) {
+<                     resource ().handleOldVersionDetected ();
+<                 }
+<             }
+<             super.handleUnknownFeature (prefix, name, isElement, peekObject, value);
+181a101,101
+>     protected abstract Collection < String > getBackwardSupportedURIs ();
+182,185d100
+<         MigrationResource resource () {
+<             assert xmlResource instanceof MigrationResource;
+<             return (MigrationResource) xmlResource;
+<         }
+186a103,103
+>     protected abstract MigrationHelperDelegate createDelegate ();
+187,187d102
+<     };
+188a105,105
+>     protected abstract String getMetamodelNsURI ();
+189,190d104
+<     public static class MigrationHandler extends BCKWDCompatibleHandler {
+<         private FeatureKey processedFeatureKey;
+191a107,109
+>     private static Diagnostic createMessageDiagnostic (Resource resource, final String message) {
+>         final String location = resource.getURI () == null ? null : resource.getURI ().toString ();
+>         return new Diagnostic (message, location);
+192,194d106
+<         MigrationHandler (MigrationResource resource, XMLHelper helper, Map < ?, ? > options) {
+<             super (resource, helper, options);
+<             this.processedFeatureKey = new FeatureKey ();
+196a112,114
+>     public static class Diagnostic implements Resource.Diagnostic {
+>         private final String myMessage;
+>         private final String myLocation;
+197,255d111
+<         @Override
+<         protected void setAttribValue (EObject object, String name, String value) {
+<             if ((isMigrationEnabled () || fixmePotentiallyCompatibilityIssues)) {
+<                 if (config.setAttribValue (this, object, name, value)) {
+<                     notifyMigrationApplied ();
+<                     return;
+<                 }
+<                 if (config.shouldIgnoreAttribute (object, name)) {
+<                     Map < EObject, Map < String, String > > ignoredAttributes = resource ().ignoredAttributes;
+<                     if (ignoredAttributes != null) {
+<                         Map < String, String > attrs = ignoredAttributes.get (object);
+<                         if (attrs == null) {
+<                             attrs = new HashMap < String, String > ();
+<                             ignoredAttributes.put (object, attrs);
+<                         }
+<                         attrs.put (name, value);
+<                     }
+<                     notifyMigrationApplied ();
+<                     return;
+<                 }
+<             }
+<             super.setAttribValue (object, name, value);
+<         }
+< 
+<         @Override
+<         protected void createObject (EObject peekObject, EStructuralFeature feature) {
+<             if (isMigrationEnabled ()) {
+<                 if (config.handleCreateObject (this, peekObject, feature)) {
+<                     notifyMigrationApplied ();
+<                     return;
+<                 }
+<                 processedFeatureKey.setFeature (feature);
+<                 if (getXSIType () == null && feature instanceof EReference) {
+<                     EClass oldDefaultRefType = (config != null) ? config.getAddedTypeInfo (processedFeatureKey) : null;
+<                     if (oldDefaultRefType != null) {
+<                         String typeQName = helper.getQName (oldDefaultRefType);
+<                         super.createObjectFromTypeName (peekObject, typeQName, feature);
+<                         notifyMigrationApplied ();
+<                         return;
+<                     }
+<                 }
+<             }
+<             super.createObject (peekObject, feature);
+<         }
+< 
+<         @Override
+<         protected void handleFeature (String prefix, String name) {
+<             if (isMigrationEnabled ()) {
+<                 if (config.handleFeature (this, prefix, name)) {
+<                     notifyMigrationApplied ();
+<                     return;
+<                 }
+<             }
+<             super.handleFeature (prefix, name);
+<         }
+< 
+<         public EObject createObjectFromTypeNameHook (EObject peekObject, String typeQName, EStructuralFeature feature) {
+<             return super.createObjectFromTypeName (peekObject, typeQName, feature);
+<         }
+256a116,118
+>         Diagnostic (String message, String location) {
+>             myMessage = message;
+>             myLocation = location;
+257,258d115
+<         public void handleFeatureHook (String prefix, String name) {
+<             super.handleFeature (prefix, name);
+261,261c121,121
+<         public String getXSIType () {
+---
+>         public String getMessage () {
+262,262c122,122
+<             return super.getXSIType ();
+---
+>             return myMessage;
+264a125,126
+>         public String getLocation () {
+>             return myLocation;
+265,266d124
+<         public EObject peekEObject () {
+<             return objects.peekEObject ();
+268a129,130
+>         public int getColumn () {
+>             return 0;
+269,270d128
+<         private boolean isMigrationEnabled () {
+<             return config != null && resource ().oldVersionDetected;
+272a133,134
+>         public int getLine () {
+>             return 0;
+273,274d132
+<         private void notifyMigrationApplied () {
+<             resource ().handleMigrationPatchApplied ();

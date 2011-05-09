@@ -1,0 +1,233 @@
+package org.eclipse.gmf.runtime.diagram.ui.internal.figures;
+
+import java.util.Iterator;
+
+import java.util.ListIterator;
+
+import org.eclipse.draw2d.Figure;
+
+import org.eclipse.draw2d.Graphics;
+
+import org.eclipse.draw2d.IFigure;
+
+import org.eclipse.draw2d.ScalableFreeformLayeredPane;
+
+import org.eclipse.draw2d.TreeSearch;
+
+import org.eclipse.draw2d.Viewport;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gmf.runtime.diagram.ui.figures.BorderedNodeFigure;
+
+import org.eclipse.gmf.runtime.gef.ui.figures.NodeFigure;
+
+public class BorderItemContainerFigure extends NodeFigure {
+    private Rectangle extendedBounds = new Rectangle ();
+
+    public BorderItemContainerFigure () {
+        super ();
+    }
+
+    protected void paintClientArea (Graphics graphics) {
+        if (getChildren ().isEmpty () || ! isVisible ()) return;
+
+        Rectangle clip = getParentRectangle ();
+        graphics.setClip (clip);
+        graphics.pushState ();
+        paintChildren (graphics);
+        graphics.popState ();
+        graphics.restoreState ();
+    }
+
+    public Rectangle getHandleBounds () {
+        Rectangle handleRect = null;
+        ListIterator listIterator = getChildren ().listIterator ();
+        while (listIterator.hasNext ()) {
+            Object object = listIterator.next ();
+            if (object instanceof NodeFigure && ((NodeFigure) object).isVisible ()) {
+                if (handleRect == null) {
+                    handleRect = ((NodeFigure) object).getHandleBounds ().getCopy ();
+                } else {
+                    handleRect.union (((NodeFigure) object).getHandleBounds ().getCopy ());
+                }
+            }
+        }
+        return handleRect;
+    }
+
+    public boolean containsPoint (int x, int y) {
+        for (int i = getChildren ().size ();
+        i > 0;) {
+            i --;
+            IFigure fig = (IFigure) getChildren ().get (i);
+            if (fig.containsPoint (x, y)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected IFigure findDescendantAtExcluding (int x, int y, TreeSearch search) {
+        Point pt = new Point (x, y);
+        this.translateFromParent (pt);
+        IFigure fig;
+        for (int i = getChildren ().size ();
+        i > 0;) {
+            i --;
+            fig = (IFigure) getChildren ().get (i);
+            if (fig.isVisible ()) {
+                fig = fig.findFigureAt (pt.x, pt.y, search);
+                if (fig != null) return fig;
+
+            }
+        }
+        return null;
+    }
+
+    public IFigure findFigureAt (int x, int y, TreeSearch search) {
+        if (search.prune (this)) return null;
+
+        IFigure child = findDescendantAtExcluding (x, y, search);
+        if (child != null) return child;
+
+        return null;
+    }
+
+    public IFigure findMouseEventTargetAt (int x, int y) {
+        IFigure f = findMouseEventTargetInDescendantsAt (x, y);
+        if (f != null) return f;
+
+        if (isMouseEventTarget ()) return this;
+
+        return null;
+    }
+
+    protected IFigure findMouseEventTargetInDescendantsAt (int x, int y) {
+        Point pt = new Point (x, y);
+        this.translateFromParent (pt);
+        IFigure fig;
+        for (int i = getChildren ().size ();
+        i > 0;) {
+            i --;
+            fig = (IFigure) getChildren ().get (i);
+            if (fig.isVisible () && fig.isEnabled ()) {
+                if (fig.containsPoint (pt.x, pt.y)) {
+                    fig = fig.findMouseEventTargetAt (pt.x, pt.y);
+                    return fig;
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean intersects (Rectangle rect) {
+        Rectangle rectangle = getParentRectangle ();
+        return rectangle.intersects (rect);
+    }
+
+    private Rectangle getParentRectangle () {
+        Rectangle rect = _getParentRectangle ();
+        return rect.union (getExtendedBounds ());
+    }
+
+    private Rectangle _getParentRectangle () {
+        Rectangle rect = getParent ().getParent ().getClientArea ().getCopy ();
+        IFigure port = getViewport ();
+        if (port != null) {
+            Rectangle portRect = port.getClientArea ().getCopy ();
+            if (portRect.height != 0 && portRect.width != 0) {
+                rect = portRect;
+            }
+        }
+        return rect;
+    }
+
+    private IFigure getMainFigure (BorderItemContainerFigure gf) {
+        BorderedNodeFigure gpf = (BorderedNodeFigure) gf.getParent ();
+        return gpf.getMainFigure ();
+    }
+
+    private IFigure getViewport () {
+        IFigure fig = getMainFigure (this);
+        while (fig != null) {
+            if (fig instanceof Viewport || fig instanceof ScalableFreeformLayeredPane) return fig;
+
+            fig = fig.getParent ();
+            if (fig instanceof BorderItemContainerFigure) {
+                fig = getMainFigure ((BorderItemContainerFigure) fig);
+            }
+        }
+        return null;
+    }
+
+    public void erase () {
+        if (getChildren ().isEmpty ()) {
+            super.erase ();
+        } else {
+            if (getParent () == null || ! isVisible ()) return;
+
+            repaint ();
+        }
+    }
+
+    public void repaint () {
+        if (getChildren ().isEmpty ()) {
+            super.repaint ();
+        } else {
+            if (getParent () == null || ! isVisible ()) return;
+
+            Rectangle rectBounds = getParentRectangle ();
+            getParent ().getParent ().repaint (rectBounds);
+            if (getViewport () != null) {
+                getViewport ().repaint (rectBounds);
+            }
+        }
+    }
+
+    public void invalidate () {
+        extendedBounds = null;
+        super.invalidate ();
+    }
+
+    public void validate () {
+        extendedBounds = null;
+        super.validate ();
+    }
+
+    public Rectangle getExtendedBounds () {
+        if (extendedBounds == null) extendedBounds = getExtendedBounds (getParent ()).getCopy ();
+
+        return extendedBounds;
+    }
+
+    private Rectangle getExtendedBounds (IFigure figure) {
+        if (figure == null) return getBounds ().getCopy ();
+        else {
+            Rectangle _bounds = figure.getBounds ().getCopy ();
+            if (figure instanceof BorderedNodeFigure) {
+                BorderedNodeFigure borderedFigure = (BorderedNodeFigure) figure;
+                BorderItemContainerFigure borderedItemContainer = (BorderItemContainerFigure) borderedFigure.getBorderItemContainer ();
+                if (borderedItemContainer != null) {
+                    Iterator iterator = borderedItemContainer.getChildren ().iterator ();
+                    while (iterator.hasNext ()) {
+                        Figure element = (Figure) iterator.next ();
+                        if (element instanceof BorderedNodeFigure) {
+                            BorderedNodeFigure childbFigure = (BorderedNodeFigure) element;
+                            BorderItemContainerFigure childBorderedItemContainer = (BorderItemContainerFigure) childbFigure.getBorderItemContainer ();
+                            if (childBorderedItemContainer != null) _bounds.union (childBorderedItemContainer.getExtendedBounds ());
+                            else _bounds.union (childbFigure.getBounds ());
+
+                        } else _bounds.union (element.getBounds ());
+
+                    }
+                }
+            }
+            return _bounds;
+        }
+    }
+
+}
+

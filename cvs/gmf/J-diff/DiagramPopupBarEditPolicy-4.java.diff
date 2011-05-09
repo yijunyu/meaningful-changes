@@ -1,0 +1,54 @@
+16a17
+> import org.eclipse.gef.GraphicalEditPart;
+29a31,35
+> import org.eclipse.jface.resource.ImageDescriptor;
+> import org.eclipse.swt.SWT;
+> import org.eclipse.swt.graphics.Image;
+> import org.eclipse.swt.graphics.ImageData;
+> import org.eclipse.swt.graphics.RGB;
+165,166c171,178
+< 								addPopupBarDescriptor(theToolType, IconService
+< 									.getInstance().getIcon(theToolType));
+---
+> 								
+> 								Image image = IconService.getInstance().getIcon(theToolType);
+> 								
+> 								// Workaround for mirroring and SWT.ICON issue
+> 								if (image.type == SWT.ICON && isMirrored()) {
+> 									image = convert(image);
+> 								}
+> 								addPopupBarDescriptor(theToolType, image);
+178a191,223
+> 	private boolean isMirrored() {
+> 		return ((getHost().getViewer().getControl().getStyle() & SWT.MIRRORED) != 0);
+> 	}
+> 	
+> 	private Image convert( Image srcImage) {
+> 		int height = srcImage.getBounds().height;
+> 		int width = srcImage.getBounds().width;
+> 		
+> 		ImageData srcImageData = srcImage.getImageData();
+> 		
+> 		RGB backgroundRGB = ((GraphicalEditPart) getHost()).getFigure().getBackgroundColor().getRGB();
+> 		int backgroundColor = srcImageData.palette.getPixel(backgroundRGB);		
+> 
+> 		// Set the transparent pixels to the background color
+> 		int count = 0;
+> 		for (int y = 0; y < height; y++) {
+> 			for (int x = 0; x < width; x++) {
+> 				if (((srcImageData.maskData[count>>3] >> (7-(count % 8))) & 1) == 0) {
+> 					srcImageData.setPixel(x, y, backgroundColor);
+> 				}
+> 				count++;				
+> 			}
+> 		}
+> 		srcImageData.maskData = null;
+> 
+> 		Image convertedImage = ImageDescriptor.createFromImageData(srcImageData).createImage(srcImage.getDevice());
+> 		
+> 		imagesToBeDisposed.add(convertedImage);
+> 		
+> 		return convertedImage;
+> 	}	
+> 	
+> 

@@ -1,0 +1,53 @@
+132a133,140
+>         return initializeDiagramEventBroker (editingDomain);
+>     }
+> 
+>     public static void startListening (TransactionalEditingDomain editingDomain) {
+>         initializeDiagramEventBroker (editingDomain);
+>     }
+> 
+>     private static DiagramEventBroker initializeDiagramEventBroker (TransactionalEditingDomain editingDomain) {
+134c142,147
+<         if (reference != null) {
+---
+>         if (reference == null) {
+>             DiagramEventBroker diagramEventBroker = debFactory.createDiagramEventBroker (editingDomain);
+>             editingDomain.addResourceSetListener (diagramEventBroker);
+>             reference = new WeakReference (diagramEventBroker);
+>             instanceMap.put (editingDomain, reference);
+>         }
+137c150,154
+<         return null;
+---
+> 
+>     public static interface DiagramEventBrokerFactory {
+> 
+>         public DiagramEventBroker createDiagramEventBroker (TransactionalEditingDomain editingDomain);
+> 
+140,144c157,160
+<     public static void startListening (TransactionalEditingDomain editingDomain) {
+<         DiagramEventBroker diagramEventBroker = getInstance (editingDomain);
+<         if (diagramEventBroker == null) {
+<             diagramEventBroker = new DiagramEventBroker ();
+<             startListening (editingDomain, diagramEventBroker);
+---
+>     private static class DiagramEventBrokerFactoryImpl implements DiagramEventBrokerFactory {
+> 
+>         public DiagramEventBroker createDiagramEventBroker (TransactionalEditingDomain editingDomain) {
+>             return new DiagramEventBroker ();
+145a162
+> 
+148,151c165,168
+<     public static void startListening (TransactionalEditingDomain editingDomain, DiagramEventBroker diagramEventBroker) {
+<         stopListening (editingDomain);
+<         editingDomain.addResourceSetListener (diagramEventBroker);
+<         instanceMap.put (editingDomain, new WeakReference (diagramEventBroker));
+---
+>     private static DiagramEventBrokerFactory debFactory = new DiagramEventBrokerFactoryImpl ();
+> 
+>     public static void registerDiagramEventBrokerFactory (DiagramEventBrokerFactory newDebFactory) {
+>         debFactory = newDebFactory;
+349c366
+<     private Set getInterestedNotificationListeners (Notification event, boolean preCommit) {
+---
+>     final protected Set getInterestedNotificationListeners (Notification event, boolean preCommit) {

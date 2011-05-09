@@ -1,0 +1,229 @@
+2a7,7
+> import java.io.InputStream;
+3,3d6
+< import java.io.BufferedReader;
+4,4c8,8
+< 
+---
+> 
+13,13c17,17
+< import java.util.ArrayList;
+---
+> import java.util.ArrayList;
+14a15,15
+> import java.nio.charset.Charset;
+15,15c13,13
+< import java.util.LinkedList;
+---
+> import java.net.URL;
+17a26,26
+> 
+17,17c25,25
+< import org.eclipse.core.resources.ICommand;
+---
+> import org.eclipse.core.resources.ResourcesPlugin;
+30a33,33
+> import org.eclipse.core.runtime.Platform;
+31,33d32
+< import org.eclipse.gmf.internal.xpand.Activator;
+< 
+< import org.eclipse.gmf.internal.xpand.ResourceManager;
+46a47,48
+> import org.osgi.framework.Bundle;
+> 
+48a51,51
+>     private final IPath [] myConfiguredRoots;
+49,50d50
+<     private long configStamp = IResource.NULL_STAMP;
+<     private IPath [] configuredRoots;
+52,52c53,53
+<     public WorkspaceResourceManager (IProject context) {
+---
+>     public WorkspaceResourceManager (IProject context, IPath [] configuredRoots) {
+59a62,64
+>         String fullyQualifiedName = toFullyQualifiedName (file);
+>         if (fullyQualifiedName == null) {
+>             return null;
+60,68d61
+<         assert file.getProject () == contextProject;
+<         Reader r = null;
+<         try {
+<             r = new StreamConverter ().toContentsReader (file);
+<             return super.loadXtendResource (r, toFullyQualifiedName (file));
+<         } finally {
+<             if (r != null) {
+<                 r.close ();
+<             }
+69a66,66
+>         return super.loadXtendResource (fullyQualifiedName);
+75a73,75
+>         String fullyQualifiedName = toFullyQualifiedName (file);
+>         if (fullyQualifiedName == null) {
+>             return null;
+76,84d72
+<         assert file.getProject () == contextProject;
+<         Reader r = null;
+<         try {
+<             r = new StreamConverter ().toContentsReader (file);
+<             return super.loadXpandResource (r, toFullyQualifiedName (file));
+<         } finally {
+<             if (r != null) {
+<                 r.close ();
+<             }
+85a77,78
+>         fullyQualifiedName = getNonAspectsTemplateName (fullyQualifiedName);
+>         return super.loadXpandResource (fullyQualifiedName);
+116a110,118
+>     @Override
+>     protected Reader [] resolveMultiple (String fqn, String ext) throws IOException {
+>         IPath fp = new Path (fqn.replaceAll (SyntaxConstants.NS_DELIM, "/")).addFileExtension (ext);
+>         IPath [] resolutions = getResolutions (fp);
+>         ArrayList < Reader > result = new ArrayList < Reader > (resolutions.length);
+>         for (IPath p : getResolutions (fp)) {
+>             Reader nextReader = getReader (p);
+>             if (nextReader != null) {
+>                 result.add (nextReader);
+117,117c162,162
+<     private IPath [] getResolutions (IPath p) {
+---
+>     private IPath [] getResolutions (IPath p) {
+118,118c163,163
+<         IPath [] configured = getConfiguredRoots ();
+---
+>         IPath [] configured = getConfiguredRoots ();
+118a164,164
+>         IPath [] rv = new IPath [configured.length];
+119,120d163
+<         IPath [] rv = new IPath [configured.length + 1];
+<         rv [0] = p;
+121,121c165,165
+<         for (int i = 0;
+---
+>         for (int i = 0;
+122,122c166,166
+<         i < configured.length; i ++) {
+---
+>         i < configured.length; i ++) {
+123,123c167,167
+<             rv [i + 1] = configured [i].append (p);
+---
+>             rv [i] = configured [i].append (p);
+124,125d167
+<         }
+<         return rv;
+127,143d119
+< 
+<     private IPath [] getConfiguredRoots () {
+<         IFile config = contextProject.getFile (".xpand-root");
+<         if (! config.exists ()) {
+<             return new IPath [] {new Path ("templates/")};
+<         }
+<         if (config.getModificationStamp () != configStamp) {
+<             configuredRoots = new IPath [0];
+<             final ArrayList < IPath > read = new ArrayList < IPath > ();
+<             BufferedReader in = null;
+<             try {
+<                 in = new BufferedReader (new InputStreamReader (config.getContents (), config.getCharset ()));
+<                 String line;
+<                 while ((line = in.readLine ()) != null) {
+<                     line = line.trim ();
+<                     if (line.length () > 0 && line.charAt (0) != '#') {
+<                         read.add (new Path (line));
+144a121,122
+>         if (result.isEmpty ()) {
+>             throw new FileNotFoundException (fp.toString ());
+145a124,124
+>         return result.toArray (new Reader [result.size ()]);
+146,152d123
+<             } catch (CoreException ex) {
+<             } catch (IOException ex) {
+<             } finally {
+<                 if (in != null) {
+<                     try {
+<                         in.close ();
+<                     } catch (IOException ex) {
+153a126,139
+> 
+>     private Reader getReader (IPath p) throws IOException {
+>         if (p.isAbsolute ()) {
+>             assert p.segmentCount () > 1;
+>             IProject project = ResourcesPlugin.getWorkspace ().getRoot ().getProject (p.segment (0));
+>             if (project.isAccessible ()) {
+>                 return getWorkspaceFileReader (project, p.removeFirstSegments (1));
+>             }
+>             Bundle platformBundle = Platform.getBundle (p.segment (0));
+>             if (platformBundle != null) {
+>                 URL url = platformBundle.getEntry (p.removeFirstSegments (1).toString ());
+>                 if (url != null) {
+>                     InputStream is = url.openStream ();
+>                     return new InputStreamReader (is, Charset.forName ("ISO-8859-1"));
+155a142,143
+>         } else {
+>             return getWorkspaceFileReader (contextProject, p);
+156,157d141
+<             configuredRoots = read.toArray (new IPath [read.size ()]);
+<             configStamp = config.getModificationStamp ();
+159,159c55,55
+<         return configuredRoots;
+---
+>         myConfiguredRoots = configuredRoots;
+161a148,150
+>     private Reader getWorkspaceFileReader (IProject project, IPath path) throws IOException {
+>         IResource r = project.findMember (path);
+>         if (r instanceof IFile) {
+162,163d147
+<     protected ResourceManager [] getDependenies () {
+<         LinkedList < ResourceManager > rv = new LinkedList < ResourceManager > ();
+164a152,156
+>                 return new StreamConverter ().toContentsReader ((IFile) r);
+>             } catch (CoreException ex) {
+>                 IOException wrap = new IOException (ex.getStatus ().getMessage ());
+>                 wrap.initCause (ex);
+>                 throw wrap;
+165,170d151
+<             IProject [] referencedProjects = contextProject.getReferencedProjects ();
+<             for (IProject next : referencedProjects) {
+<                 if (! next.isAccessible () || ! hasXpandBuilder (next)) {
+<                     continue;
+<                 }
+<                 rv.add (Activator.getResourceManager (next));
+172,172d157
+<         } catch (CoreException e) {
+173a159,159
+>         return null;
+173a169,169
+>         return rv;
+174,174d168
+<         return rv.toArray (new ResourceManager [rv.size ()]);
+177,180d161
+<     private static boolean hasXpandBuilder (IProject p) throws CoreException {
+<         for (ICommand c : p.getDescription ().getBuildSpec ()) {
+<             if (OawBuilder.getBUILDER_ID ().equals (c.getBuilderName ())) {
+<                 return true;
+182a171,173
+> 
+>     private IPath [] getConfiguredRoots () {
+>         return myConfiguredRoots;
+183,183c145,145
+<         return false;
+---
+>         return null;
+186a177,192
+>         for (IPath nextRoot : getConfiguredRoots ()) {
+>             if (! nextRoot.isAbsolute ()) {
+>                 if (file.getProject ().equals (contextProject) && nextRoot.isPrefixOf (file.getProjectRelativePath ())) {
+>                     return toFullyQualifiedName (file.getProjectRelativePath ().removeFirstSegments (nextRoot.segmentCount ()));
+>                 }
+>             } else {
+>                 if (nextRoot.isPrefixOf (file.getFullPath ())) {
+>                     return toFullyQualifiedName (file.getFullPath ().removeFirstSegments (nextRoot.segmentCount ()));
+>                 }
+>             }
+>         }
+>         return null;
+>     }
+> 
+>     private String toFullyQualifiedName (IPath filePath) {
+>         return filePath.removeFileExtension ().toString ().replace ("/", SyntaxConstants.NS_DELIM);
+187,187d176
+<         return file.getProjectRelativePath ().toString ().replaceAll ("/", SyntaxConstants.NS_DELIM);

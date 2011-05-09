@@ -1,0 +1,274 @@
+0a1,2
+> /******************************************************************************
+>  * Copyright (c) 2002, 2004 IBM Corporation and others.
+1,3d0
+< /**
+<  * Copyright (c) 2006 Borland Software Corporation
+<  * 
+9a9,10
+>  *    IBM Corporation - initial API and implementation 
+>  ****************************************************************************/
+10,12d8
+<  *    bblajer - initial API and implementation
+<  */
+< package org.eclipse.gmf.runtime.lite.parts;
+13a12,19
+> package org.eclipse.gmf.runtime.diagram.ui.parts;
+> 
+> import java.lang.ref.WeakReference;
+> 
+> import org.eclipse.core.resources.IFile;
+> import org.eclipse.core.resources.ResourcesPlugin;
+> import org.eclipse.core.runtime.Path;
+> import org.eclipse.emf.ecore.resource.Resource;
+13a24,30
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+> import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+> import org.eclipse.gmf.runtime.diagram.ui.DiagramUIDebugOptions;
+> import org.eclipse.gmf.runtime.diagram.ui.DiagramUIPlugin;
+> import org.eclipse.gmf.runtime.emf.core.edit.MEditingDomain;
+> import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+> import org.eclipse.gmf.runtime.emf.core.util.EObjectUtil;
+14,16d23
+< import org.eclipse.core.runtime.PlatformObject;
+< import org.eclipse.emf.common.util.URI;
+< import org.eclipse.emf.ecore.util.EcoreUtil;
+17,17c31,31
+< import org.eclipse.gmf.runtime.notation.Diagram;
+---
+> import org.eclipse.gmf.runtime.notation.Diagram;
+17a32,32
+> 
+18a62,62
+> 	/**
+18a21,21
+> import org.eclipse.jface.util.Assert;
+19a64,64
+> 	 */
+19,19c63,63
+< import org.eclipse.ui.IEditorInput;
+---
+> 	 * @see org.eclipse.ui.IEditorInput#exists()
+22a34,42
+>  * @author melaasar
+>  * @author mgoyal
+>  *
+>  * Basic implementation of the IDiagramEditorInput interface
+>  * based on the <code>FileEditorInput<code> implementation
+>  * 
+>  * This Editor input can be used only for diagrams that are 
+>  * managed by MSL. If the Diagram is floating without a resource
+>  * then DiagramEditorInput won't work properly.
+23,24d33
+<  * A simple implementation of an {@link org.eclipse.ui.IEditorInput} that may be used to open a diagram with the editing domain
+<  * specified by the diagram instance.
+25a44,47
+> public class DiagramEditorInput implements IDiagramEditorInput {
+> 
+> 	/** The editor's diagram */
+> 	private WeakReference diagram;
+26,27d43
+< public class DiagramEditorInput extends PlatformObject implements IEditorInput {
+< 	private final Diagram myDiagram;
+28a49,52
+> 	/**
+> 	 * Method DiagramEditorInput.
+> 	 * @param diagram
+> 	 */
+29a54,55
+> 		Assert.isNotNull(diagram);
+> 		setDiagram(diagram);
+30,31d53
+< 		assert diagram != null;
+< 		myDiagram = diagram;
+34a59,59
+> 		return (Diagram)diagram.get();
+35,35c137,137
+< 		return myDiagram;
+---
+> 		return getQName();
+39,40d149
+< 		return myDiagram.eResource() != null;
+< 	}
+41,41c150,150
+< 
+---
+> 
+41a151,153
+> 	/**
+> 	 * @see java.lang.Object#equals(Object)
+> 	 */
+42,42d150
+< 	@Override
+43a155,158
+> 		if (this == obj)
+> 			return true;
+> 		if (!(obj instanceof DiagramEditorInput))
+> 			return false;
+43,43c154,154
+< 	public boolean equals(Object obj) {
+---
+> 	public boolean equals(Object obj) {
+44,44d154
+< 		if (obj instanceof DiagramEditorInput) {
+45a160,160
+> 		if(getDiagram() != null)
+45,45c159,159
+< 			DiagramEditorInput that = (DiagramEditorInput) obj;
+---
+> 		DiagramEditorInput other = (DiagramEditorInput) obj;
+46,46c161,161
+< 			return this.getDiagram().equals(that.getDiagram());
+---
+> 			return getDiagram().equals(other.getDiagram());
+47a163,163
+> 			return getDiagram() == other.getDiagram();
+47,47c162,162
+< 		}
+---
+> 		else
+51,53d68
+< 	@Override
+< 	public int hashCode() {
+< 		return getDiagram().hashCode();
+55a76,85
+> 	/**
+> 	 * gets fully qualified name
+> 	 * @return <code>String</code>
+> 	 */
+> 	public String getQName() {
+> 		final String[] name = new String[1];
+> 		try {
+> 			MEditingDomainGetter.getMEditingDomain(getDiagram()).runAsRead(new MRunnable() {
+> 				public Object run() {
+> 					name[0] = EObjectUtil.getQName(getDiagram(), false);
+55a69,71
+> 	/**
+> 	 * @see org.eclipse.ui.IEditorInput#getImageDescriptor()
+> 	 */
+56,56c72,72
+< 	public ImageDescriptor getImageDescriptor() {
+---
+> 	public ImageDescriptor getImageDescriptor() {
+56a73,73
+> 		return null;
+58a88,99
+> 			});
+> 		} catch (Exception e) {
+> 			Trace.catching(
+> 				DiagramUIPlugin.getInstance(),
+> 				DiagramUIDebugOptions.EXCEPTIONS_CATCHING,
+> 				getClass(),
+> 				e.getMessage(),
+> 				e);
+> 			name[0] = null;
+> 		}
+> 		return name[0];
+> 	}
+59a101,104
+> 	
+> 	/**
+> 	 * @see org.eclipse.ui.IEditorInput#getName()
+> 	 */
+60a106,123
+> 		final String[] name = new String[1];
+> 		try {
+> 			MEditingDomainGetter.getMEditingDomain(getDiagram()).runAsRead(new MRunnable() {
+> 				public Object run() {
+> 					name[0] = EObjectUtil.getName(getDiagram()); //((IElement) getDiagram()).getFullyQualifiedName(false);
+> 					return null;
+> 				}				
+> 			});
+> 		} catch (Exception e) {
+> 			Trace.catching(
+> 				DiagramUIPlugin.getInstance(),
+> 				DiagramUIDebugOptions.EXCEPTIONS_CATCHING,
+> 				getClass(),
+> 				e.getMessage(),
+> 				e);
+> 			name[0] = null;
+> 		}
+> 		return name[0];
+61,61d105
+< 		return myDiagram.getName();
+63a126,128
+> 	/**
+> 	 * @see org.eclipse.ui.IEditorInput#getPersistable()
+> 	 */
+67a133,135
+> 	/**
+> 	 * @see org.eclipse.ui.IEditorInput#getToolTipText()
+> 	 */
+69,69d136
+< 		return getName();
+71a140,142
+> 	/**
+> 	 * @see org.eclipse.core.runtime.IAdaptable#getAdapter(Class)
+> 	 */
+72a144,145
+> 		if (adapter == Diagram.class)
+> 			return getDiagram();
+73,73c146,146
+< 		if (adapter == URI.class) {
+---
+> 		if (adapter == IFile.class)
+74,74c147,147
+< 			return EcoreUtil.getURI(myDiagram);
+---
+> 			return getStorageUnitFile();
+74a148,148
+> 		return null;
+76,76d149
+< 		return super.getAdapter(adapter);
+77a165,215
+> 
+> 	/**
+> 	 * @see java.lang.Object#hashCode()
+> 	 */
+> 	public int hashCode() {
+> 		if(getDiagram() != null)
+> 			return getDiagram().hashCode();
+> 		else
+> 			return super.hashCode();
+> 	}
+> 
+> 	/**
+> 	 * Sets the diagram.
+> 	 * @param diagram The diagram to set
+> 	 */
+> 	protected void setDiagram(Diagram diagram) {
+> 		this.diagram = new WeakReference(diagram);
+> 	}
+> 
+> 	/**
+> 	  * gets the corresponding file resource in the workspace for the diagram. 
+> 	  * Returns null if the element is not a storage unit.
+> 	  * @return File The file resource in the workspace
+> 	  */
+> 	private IFile getStorageUnitFile() {
+> 		final IFile[] file = new IFile[1];
+> 		try {
+> 			final MEditingDomain editingDomain = MEditingDomainGetter.getMEditingDomain(getDiagram());
+> 			editingDomain.runAsRead(new MRunnable() {
+> 
+> 				public Object run() {
+> 					Resource model = getDiagram().eResource();
+> 					String path = editingDomain.getResourceFileName(model);
+> 					file[0] = model != null && path != null
+> 						&& path.length() != 0 ? ResourcesPlugin.getWorkspace()
+> 						.getRoot().getFileForLocation(
+> 							new Path(path))
+> 						: null;
+> 
+> 					return null;
+> 				}
+> 			});
+> 		} catch (Exception e) {
+> 			Trace.catching(DiagramUIPlugin.getInstance(),
+> 				DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass(), e
+> 					.getMessage(), e);
+> 			file[0] = null;
+> 		}
+> 		return file[0];
+> 	}
+> 

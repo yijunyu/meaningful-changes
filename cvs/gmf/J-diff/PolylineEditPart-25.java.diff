@@ -1,0 +1,101 @@
+17a18
+> import org.eclipse.draw2d.RectangleFigure;
+18a20
+> import org.eclipse.draw2d.XYLayout;
+22a25
+> import org.eclipse.emf.ecore.EObject;
+26c29
+< import org.eclipse.gmf.gmfgraph.Shape;
+---
+> import org.eclipse.gmf.graphdef.editor.edit.policies.PolylineCanonicalEditPolicy;
+28c31
+< import org.eclipse.gmf.graphdef.editor.edit.polocies.DomainBasedXYLayoutEditPolicy;
+---
+> import org.eclipse.gmf.graphdef.editor.edit.polocies.PointContainerXYLayoutEditPolicy;
+31a35,36
+> import org.eclipse.gmf.runtime.diagram.ui.editpolicies.CreationEditPolicy;
+> import org.eclipse.gmf.runtime.diagram.ui.editpolicies.DragDropEditPolicy;
+33a39
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.ConstrainedToolbarLayout;
+69a76
+> 		installEditPolicy(EditPolicyRoles.CREATION_ROLE, new CreationEditPolicy());
+71a79,80
+> 		installEditPolicy(EditPolicyRoles.DRAG_DROP_ROLE, new DragDropEditPolicy());
+> 		installEditPolicy(EditPolicyRoles.CANONICAL_ROLE, new PolylineCanonicalEditPolicy());
+81c90
+< 		return new DomainBasedXYLayoutEditPolicy(getMapMode());
+---
+> 		return new PointContainerXYLayoutEditPolicy(getMapMode());
+107a117,125
+> 	 * @generated
+> 	 */
+> 	public EditPolicy getPrimaryDragEditPolicy() {
+> 		NonResizableEditPolicyEx editPolicy = new NonResizableEditPolicyEx();
+> 		editPolicy.setDragAllowed(false);
+> 		return editPolicy;
+> 	}
+> 
+> 	/**
+120c138,143
+< 		contentPane = setupContentPane(shape);
+---
+> 		RectangleFigure childContainer = new RectangleFigure();
+> 		childContainer.setFill(false);
+> 		childContainer.setOutline(false);
+> 		figure.add(childContainer);
+> 		childContainer.setLayoutManager(new XYLayout());
+> 		contentPane = childContainer;
+130a154,158
+> 		if (nodeShape.getLayoutManager() == null) {
+> 			ConstrainedToolbarLayout layout = new ConstrainedToolbarLayout();
+> 			layout.setSpacing(getMapMode().DPtoLP(5));
+> 			nodeShape.setLayoutManager(layout);
+> 		}
+168,171c196,203
+< 	private org.eclipse.gmf.gmfgraph.Polyline getModelFigureElement() {
+< 		Shape shape = getShape();
+< 		if (shape instanceof org.eclipse.gmf.gmfgraph.Polyline) {
+< 			org.eclipse.gmf.gmfgraph.Polyline modelFigureElement = (org.eclipse.gmf.gmfgraph.Polyline) shape;
+---
+> 	private org.eclipse.gmf.gmfgraph.Polyline getGmfgraphElement() {
+> 		View view = getNotationView();
+> 		if (view == null) {
+> 			return null;
+> 		}
+> 		EObject element = view.getElement();
+> 		if (element instanceof org.eclipse.gmf.gmfgraph.Polyline) {
+> 			org.eclipse.gmf.gmfgraph.Polyline modelFigureElement = (org.eclipse.gmf.gmfgraph.Polyline) element;
+181c213
+< 		org.eclipse.gmf.gmfgraph.Polyline modelElement = (org.eclipse.gmf.gmfgraph.Polyline) getModelFigureElement();
+---
+> 		org.eclipse.gmf.gmfgraph.Polyline modelElement = getGmfgraphElement();
+194c226
+< 		org.eclipse.gmf.gmfgraph.Polyline modelElement = (org.eclipse.gmf.gmfgraph.Polyline) getModelFigureElement();
+---
+> 		org.eclipse.gmf.gmfgraph.Polyline modelElement = getGmfgraphElement();
+222c254
+< 		final org.eclipse.gmf.gmfgraph.Polyline modelElement = (org.eclipse.gmf.gmfgraph.Polyline) getModelFigureElement();
+---
+> 		final org.eclipse.gmf.gmfgraph.Polyline modelElement = getGmfgraphElement();
+373c405
+< 		org.eclipse.gmf.gmfgraph.Polyline modelElement = (org.eclipse.gmf.gmfgraph.Polyline) getModelFigureElement();
+---
+> 		org.eclipse.gmf.gmfgraph.Polyline modelElement = getGmfgraphElement();
+397,405d428
+< 	public EditPolicy getPrimaryDragEditPolicy() {
+< 		NonResizableEditPolicyEx editPolicy = new NonResizableEditPolicyEx();
+< 		editPolicy.setDragAllowed(false);
+< 		return editPolicy;
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+426c449,453
+< 			return getPrimaryShape().getBounds();
+---
+> 			Rectangle polylineBounds = getPrimaryShape().getBounds().getCopy();
+> 			Rectangle contentPaneBounds = getContentPane().getBounds().getCopy();
+> 			contentPaneBounds.setSize(getContentPane().getPreferredSize());
+> 			return polylineBounds.getUnion(contentPaneBounds);
+> //			return polylineBounds;

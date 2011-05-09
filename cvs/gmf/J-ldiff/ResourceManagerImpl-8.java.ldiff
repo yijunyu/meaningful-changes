@@ -1,0 +1,164 @@
+2,2c2,2
+<  * Copyright (c) 2006 Eclipse.org
+---
+>  * Copyright (c) 2006, 2007 Eclipse.org
+18a19,19
+> import org.eclipse.gmf.internal.xpand.expression.SyntaxConstants;
+28,29d28
+< 		Reader r = null;
+< 		try {
+32a32,32
+> 		try {
+33,34d31
+< 			r = resolve(fullyQualifiedName, XtendResource.FILE_EXTENSION);
+< 			assert r != null;
+35,35c33,33
+< 			final XtendResource loaded = loadXtendResource(r, fullyQualifiedName);
+---
+> 			final XtendResource loaded = doLoadXtendResource(fullyQualifiedName);
+41a40,40
+> 			return null;	//Missing resource is an anticipated situation, not a error that should be handled
+42,42d39
+< 			return delegateLoadXtendResource(fullyQualifiedName);
+46a45,58
+> 		}
+> 		return null;
+> 	}
+> 
+> 	private XtendResource doLoadXtendResource(String fullyQualifiedName) throws IOException, ParserException {
+> 		Reader[] rs = resolveMultiple(fullyQualifiedName, XtendResource.FILE_EXTENSION);
+> 		assert rs != null && rs.length > 0;
+> 		XtendResource[] result = new XtendResource[rs.length];
+> 		for (int i = 0; i < rs.length; i++) {
+> 			Reader r = rs[i];
+> 			assert r != null;
+> 			try {
+> 				result[i] = loadXtendResource(r, fullyQualifiedName);
+> 				assert result[i] != null; // this is the contract of loadXpandResource
+48,48d59
+< 			if (r != null) {
+53a65,68
+> 		if (result.length == 1) {
+> 			return result[0];
+> 		}
+> 		return new CompositeXtendResource(this, result);
+54,54c148,148
+< 		return null;
+---
+> 		return result;
+58,59d71
+< 		Reader r = null;
+< 		try {
+62a75,76
+> 		try {
+> 			final XpandResource loaded = doLoadXpandResource(fullyQualifiedName);
+62a132,140
+> 	private XpandResource[] internalLoadXpandResources(String fullyQualifiedName) throws IOException, ParserException {
+> 		Reader[] rs = resolveMultiple(fullyQualifiedName, XpandResource.TEMPLATE_EXTENSION);
+> 		assert rs != null && rs.length > 0; // exception should be thrown to indicate issues with resolve
+> 		XpandResource[] result = new XpandResource[rs.length];
+> 		for (int i = 0; i < rs.length; i++) {
+> 			Reader r = rs[i];
+> 			assert r != null;
+> 			try {
+> 				result[i] = loadXpandResource(r, fullyQualifiedName);
+63,65d131
+< 			r = resolve(fullyQualifiedName, XpandResource.TEMPLATE_EXTENSION);
+< 			assert r != null; // exception should be thrown to indicate issues with resolve
+< 			final XpandResource loaded = loadXpandResource(r, fullyQualifiedName);
+66a142,145
+> 			} finally {
+> 				try {
+> 					r.close();
+> 				} catch (Exception ex) {/*IGNORE*/}
+66,66c141,141
+< 			assert loaded != null; // this is the contract of loadXpandResource
+---
+> 				assert result[i] != null; // this is the contract of loadXpandResource
+71a82,82
+> 			return null;	//Missing resource is an anticipated situation, not a error that should be handled
+72,72d81
+< 			return delegateLoadXpandResource(fullyQualifiedName);
+78,83d87
+< 		} finally {
+< 			if (r != null) {
+< 				try {
+< 					r.close();
+< 				} catch (Exception ex) {/*IGNORE*/}
+< 			}
+87a92,106
+> 	private XpandResource doLoadXpandResource(String fullyQualifiedName) throws IOException, ParserException {
+> 		XpandResource[] unadvised = internalLoadXpandResources(fullyQualifiedName);
+> 		XpandResource[] advices = null;
+> 		try {
+> 	    	String aspectsTemplateName = getAspectsTemplateName(fullyQualifiedName);
+> 	    	advices = internalLoadXpandResources(aspectsTemplateName);
+> 		} catch (FileNotFoundException e) {
+> 		} catch (IOException ex) {
+> 			// XXX come up with better handling
+> 			Activator.logWarn(ex.getMessage());
+> 		} catch (ParserException ex) {
+> 			handleParserException(fullyQualifiedName, ex);
+> 		}
+> 		if (advices == null && unadvised.length == 1) {
+> 			return unadvised[0];
+88,92d91
+< 	protected XtendResource delegateLoadXtendResource(String fullyQualifiedName) {
+< 		for (ResourceManager next : getDependenies()) {
+< 			XtendResource r = next.loadXtendResource(fullyQualifiedName);
+< 			if (r != null) {
+< 				return r;
+93a108,108
+> 		return new CompositeXpandResource(this, unadvised, advices);
+94a110,123
+> 
+> 	/**
+> 	 * XXX: only to simplify tests, should be private or inlined
+> 	 */
+> 	protected String getAspectsTemplateName(String fullyQualifiedName) {
+> 		return ASPECT_PREFIX + fullyQualifiedName;
+> 	}
+> 
+> 	/**
+> 	 * If the given fully-qualified name is an aspect, transforms it to its "host" fully-qualified name. Otherwise,
+> 	 * returns the given fully-qualified name.
+> 	 */
+> 	protected String getNonAspectsTemplateName(String possiblyAspectedFullyQualifiedName) {
+> 		if (possiblyAspectedFullyQualifiedName == null) {
+96a126,130
+> 		if (possiblyAspectedFullyQualifiedName.startsWith(ASPECT_PREFIX)) {
+> 			return possiblyAspectedFullyQualifiedName.substring(ASPECT_PREFIX.length());
+> 		}
+> 		return possiblyAspectedFullyQualifiedName;
+> 	}
+98,102d131
+< 	protected XpandResource delegateLoadXpandResource(String fullyQualifiedName) {
+< 		for (ResourceManager next : getDependenies()) {
+< 			XpandResource r = next.loadXpandResource(fullyQualifiedName);
+< 			if (r != null) {
+< 				return r;
+105,105d147
+< 		return null;
+114a158,158
+> 	 * @deprecated use {@link #resolveMultiple(String, String)} instead.
+115a160,160
+> 	@Deprecated
+118a164,169
+> 	 * Returns an array of resolutions, in the order from newest to oldest. 
+> 	 * This is to enable one template to partially override only a subset of parent templates. 
+> 	 * By default, returns an array consisting of one Reader, the one that {@link #resolve(String, String)} returns.
+> 	 * Subclasses should override.
+> 	 * @return never return <code>null</code> or an empty array, throw exception instead
+> 	 * @throws IOException in case resource can't be read. Throw {@link java.io.FileNotFoundException} to indicate resource was not found. 
+119,120d163
+< 	 * Override if your implementation supports dependenices
+< 	 * @return never null
+121a171,172
+> 	protected Reader[] resolveMultiple(String fullyQualifiedName, String extension) throws IOException {
+> 		return new Reader[] {resolve(fullyQualifiedName, extension)};
+122,123d170
+< 	protected ResourceManager[] getDependenies() {
+< 		return new ResourceManager[0];
+151a201,202
+> 
+> 	private static final String ASPECT_PREFIX = "aspects" + SyntaxConstants.NS_DELIM;	//$NON-NLS-1$

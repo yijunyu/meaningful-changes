@@ -1,0 +1,175 @@
+54a55,56
+> import org.eclipse.swt.accessibility.ACC;
+> 
+85c87,89
+< import org.eclipse.swt.widgets.Label;
+---
+> import org.eclipse.swt.widgets.ToolBar;
+> 
+> import org.eclipse.swt.widgets.ToolItem;
+95c99
+<     protected Button fillColorButton;
+---
+>     protected ToolItem fillColorButton;
+99,100c103,105
+<     private Button fontBoldButton;
+<     private Button fontItalicButton;
+---
+>     private ToolBar toolBar;
+>     private ToolItem fontBoldButton;
+>     private ToolItem fontItalicButton;
+102,103c107,108
+<     protected Button fontColorButton;
+<     protected Button lineColorButton;
+---
+>     protected ToolItem fontColorButton;
+>     protected ToolItem lineColorButton;
+175c180
+<         Composite toolBar = new Composite (parent, SWT.SHADOW_NONE);
+---
+>         toolBar = new ToolBar (parent, SWT.FLAT);
+178c183
+<         fontBoldButton = new Button (toolBar, SWT.TOGGLE);
+---
+>         fontBoldButton = new ToolItem (toolBar, SWT.CHECK);
+180,199d184
+<         fontBoldButton.getAccessible ().addAccessibleListener (new AccessibleAdapter () {
+< 
+<             public void getName (AccessibleEvent e) {
+<                 e.result = DiagramUIMessages.PropertyDescriptorFactory_FontStyle_Bold;
+<             }
+< 
+<         }
+< 
+<         );
+<         fontItalicButton = new Button (toolBar, SWT.TOGGLE);
+<         fontItalicButton.setImage (DiagramUIPropertiesImages.get (DiagramUIPropertiesImages.IMG_ITALIC));
+<         fontItalicButton.getAccessible ().addAccessibleListener (new AccessibleAdapter () {
+< 
+<             public void getName (AccessibleEvent e) {
+<                 e.result = DiagramUIMessages.PropertyDescriptorFactory_FontStyle_Italic;
+<             }
+< 
+<         }
+< 
+<         );
+208a194,197
+>         fontBoldButton.setToolTipText (DiagramUIMessages.FontStyleAction_bold_tooltip);
+>         fontItalicButton = new ToolItem (toolBar, SWT.CHECK);
+>         fontItalicButton.setImage (DiagramUIPropertiesImages.get (DiagramUIPropertiesImages.IMG_ITALIC));
+>         fontItalicButton.setToolTipText (DiagramUIMessages.PropertyDescriptorFactory_FontStyle_Italic);
+218,219c207
+<         new Label (toolBar, SWT.LEFT);
+<         fontColorButton = new Button (toolBar, SWT.PUSH);
+---
+>         fontColorButton = new ToolItem (toolBar, SWT.DROP_DOWN);
+221,229c209
+<         fontColorButton.getAccessible ().addAccessibleListener (new AccessibleAdapter () {
+< 
+<             public void getName (AccessibleEvent e) {
+<                 e.result = DiagramUIMessages.PropertyDescriptorFactory_FontColor;
+<             }
+< 
+<         }
+< 
+<         );
+---
+>         fontColorButton.setToolTipText (DiagramUIMessages.PropertyDescriptorFactory_FontColor);
+239,240c219
+<         new Label (toolBar, SWT.LEFT);
+<         lineColorButton = new Button (toolBar, SWT.PUSH);
+---
+>         lineColorButton = new ToolItem (toolBar, SWT.DROP_DOWN);
+242,250c221
+<         lineColorButton.getAccessible ().addAccessibleListener (new AccessibleAdapter () {
+< 
+<             public void getName (AccessibleEvent e) {
+<                 e.result = DiagramUIMessages.PropertyDescriptorFactory_LineColor;
+<             }
+< 
+<         }
+< 
+<         );
+---
+>         lineColorButton.setToolTipText (DiagramUIMessages.PropertyDescriptorFactory_LineColor);
+260c231
+<         fillColorButton = new Button (toolBar, SWT.PUSH);
+---
+>         fillColorButton = new ToolItem (toolBar, SWT.DROP_DOWN);
+262c233,235
+<         fillColorButton.getAccessible ().addAccessibleListener (new AccessibleAdapter () {
+---
+>         fillColorButton.setToolTipText (DiagramUIMessages.PropertyDescriptorFactory_FillColor);
+>         fillColorButton.setEnabled (false);
+>         toolBar.getAccessible ().addAccessibleListener (new AccessibleAdapter () {
+265c238,246
+<                 e.result = DiagramUIMessages.PropertyDescriptorFactory_FillColor;
+---
+>                 if (e.childID != ACC.CHILDID_SELF) {
+>                     ToolItem item = toolBar.getItem (e.childID);
+>                     if (item != null) {
+>                         String toolTip = item.getToolTipText ();
+>                         if (toolTip != null) {
+>                             e.result = toolTip;
+>                         }
+>                     }
+>                 }
+271d251
+<         fillColorButton.setEnabled (false);
+296a277,280
+>     protected RGB changeColor (SelectionEvent event, ToolItem toolItem, String preferenceId, final String propertyId, String commandName, ImageDescriptor imageDescriptor) {
+>         return changeColor (event, toolItem, propertyId, commandName, imageDescriptor);
+>     }
+> 
+347a332,382
+>     protected RGB changeColor (SelectionEvent event, ToolItem toolItem, final String propertyId, String commandName, ImageDescriptor imageDescriptor) {
+>         ColorPalettePopup popup = new ColorPalettePopup (toolItem.getParent ().getShell (), IDialogConstants.BUTTON_BAR_HEIGHT);
+>         popup.setPreviousColor (previousColor);
+>         Rectangle r = toolItem.getBounds ();
+>         Point location = toolItem.getParent ().toDisplay (r.x, r.y);
+>         popup.open (new Point (location.x, location.y + r.height));
+>         if (popup.getSelectedColor () == null && ! popup.useDefaultColor ()) {
+>             return null;
+>         }
+>         final RGB selectedColor = popup.getSelectedColor ();
+>         final EStructuralFeature feature = (EStructuralFeature) PackageUtil.getElement (propertyId);
+>         List commands = new ArrayList ();
+>         Iterator it = getInputIterator ();
+>         RGB colorToReturn = selectedColor;
+>         RGB color = selectedColor;
+>         while (it.hasNext ()) {
+>             final IGraphicalEditPart ep = (IGraphicalEditPart) it.next ();
+>             color = selectedColor;
+>             if (popup.useDefaultColor ()) {
+>                 Object preferredValue = ep.getPreferredValue (feature);
+>                 if (preferredValue instanceof Integer) {
+>                     color = FigureUtilities.integerToRGB ((Integer) preferredValue);
+>                 }
+>             }
+>             if (colorToReturn == null) {
+>                 colorToReturn = color;
+>             }
+>             if (color != null) {
+>                 final RGB finalColor = color;
+>                 commands.add (createCommand (commandName, ((View) ep.getModel ()).eResource (), new Runnable () {
+> 
+>                     public void run () {
+>                         ENamedElement element = PackageUtil.getElement (propertyId);
+>                         if (element instanceof EStructuralFeature) ep.setStructuralFeatureValue (feature, FigureUtilities.RGBToInteger (finalColor));
+> 
+>                     }
+> 
+>                 }
+> 
+>                 ));
+>             }
+>         }
+>         if (! commands.isEmpty ()) {
+>             executeAsCompositeCommand (commandName, commands);
+>             Image overlyedImage = new ColorOverlayImageDescriptor (imageDescriptor.getImageData (), color).createImage ();
+>             disposeImage (toolItem.getImage ());
+>             toolItem.setImage (overlyedImage);
+>         }
+>         return colorToReturn;
+>     }
+> 

@@ -1,0 +1,190 @@
+package org.eclipse.gmf.internal.common.codegen;
+
+import java.io.ByteArrayInputStream;
+
+import java.io.IOException;
+
+import java.util.Arrays;
+
+import java.util.Enumeration;
+
+import java.util.LinkedHashMap;
+
+import java.util.LinkedList;
+
+import java.util.Map;
+
+import org.eclipse.gmf.internal.common.Activator;
+
+import org.eclipse.osgi.util.ManifestElement;
+
+import org.osgi.framework.BundleException;
+
+public class ManifestFileMerge {
+    private static final String IGNORE_MERGE_HEADER = "GMF-IgnoreMerge";
+    private String [] myIgnoredHeaders;
+    private final String myLineSeparator;
+
+    public ManifestFileMerge () {
+        this (System.getProperties ().getProperty ("line.separator"));
+    }
+
+    public ManifestFileMerge (String lineSeparator) {
+        assert lineSeparator != null;
+        myLineSeparator = lineSeparator;
+    }
+
+    public String process (String oldText, String newText) {
+        try {
+            cleanIgnoredHeaders ();
+            LinkedHashMap < String, String > oldHeaders = new LinkedHashMap < String, String > ();
+            ManifestElement.parseBundleManifest (new ByteArrayInputStream (oldText.getBytes ("UTF8")), oldHeaders);
+            LinkedHashMap < String, String > newHeaders = new LinkedHashMap < String, String > ();
+            ManifestElement.parseBundleManifest (new ByteArrayInputStream (newText.getBytes ("UTF8")), newHeaders);
+            initializeIgnoredHeaders (oldHeaders);
+            for (String newHeader : newHeaders.keySet ()) {
+                if (! isIgnoredHeader (newHeader)) {
+                    if (oldHeaders.containsKey (newHeader)) {
+                        String oldValue = oldHeaders.get (newHeader);
+                        String newValue = newHeaders.get (newHeader);
+                        if (isMultivalued (oldValue) || isMultivalued (newValue)) {
+                            oldHeaders.put (newHeader, mergeMultivalued (newHeader, oldValue, newValue));
+                        } else {
+                            oldHeaders.put (newHeader, newValue);
+                        }
+                    } else {
+                        oldHeaders.put (newHeader, newHeaders.get (newHeader));
+                    }
+                }
+            }
+            return format (oldHeaders);
+        } catch (IOException ex) {
+            return newText;
+        } catch (BundleException ex) {
+            Activator.logError ("Error merging MANIFEST.MF", ex);
+            return newText;
+        }
+    }
+
+    protected String format (Map < String, String > oldHeaders) throws BundleException {
+        StringBuilder sb = new StringBuilder ();
+        for (Map.Entry < String, String > e : oldHeaders.entrySet ()) {
+            sb.append (e.getKey ());
+            sb.append (':');
+            sb.append (' ');
+            sb.append (formatValue (e.getKey (), e.getValue ()));
+            sb.append (myLineSeparator);
+        }
+        return sb.toString ();
+    }
+
+    protected CharSequence formatValue (String headerHint, String value) throws BundleException {
+        if (! isMultivalued (value)) {
+            return value;
+        }
+        ManifestElement [] values = ManifestElement.parseHeader (headerHint, value);
+        assert values.length > 0;
+        StringBuilder sb = new StringBuilder ();
+        sb.append (formatValue (values [0]));
+        for (int i = 1;
+        i < values.length; i ++) {
+            sb.append (',');
+            sb.append (myLineSeparator);
+            sb.append (' ');
+            sb.append (formatValue (values [i]));
+        }
+        return sb;
+    }
+
+    protected CharSequence formatValue (ManifestElement element) {
+        StringBuilder sb = new StringBuilder (element.getValue ());
+        for (Enumeration < ? > en = element.getDirectiveKeys ();
+        en != null && en.hasMoreElements ();) {
+            final String directiveKey = (String) en.nextElement ();
+            for (String v : element.getDirectives (directiveKey)) {
+                sb.append (';');
+                sb.append (directiveKey);
+                sb.append (':');
+                sb.append ('=');
+                sb.append (v);
+            }
+        }
+        for (Enumeration < ? > en = element.getKeys ();
+        en != null && en.hasMoreElements ();) {
+            final String attrKey = (String) en.nextElement ();
+            for (String v : element.getAttributes (attrKey)) {
+                sb.append (';');
+                sb.append (attrKey);
+                sb.append ('=');
+                sb.append ('"');
+                sb.append (v);
+                sb.append ('"');
+            }
+        }
+        return sb;
+    }
+
+    private boolean isIgnoredHeader (String header) {
+        assert myIgnoredHeaders != null;
+        return Arrays.binarySearch (myIgnoredHeaders, header) >= 0;
+    }
+
+    private void initializeIgnoredHeaders (LinkedHashMap < String, String > oldHeaders) throws BundleException {
+        if (! oldHeaders.containsKey (IGNORE_MERGE_HEADER)) {
+            myIgnoredHeaders = new String [0];
+            return;
+        }
+        ManifestElement [] values = ManifestElement.parseHeader (IGNORE_MERGE_HEADER, oldHeaders.get (IGNORE_MERGE_HEADER));
+        if (values == null) {
+            myIgnoredHeaders = new String [0];
+            return;
+        }
+        myIgnoredHeaders = new String [values.length];
+        for (int i = 0;
+        i < values.length; i ++) {
+            myIgnoredHeaders [i] = values [i].getValue ();
+        }
+        Arrays.sort (myIgnoredHeaders);
+    }
+
+    private void cleanIgnoredHeaders () {
+        myIgnoredHeaders = null;
+    }
+
+    private boolean isMultivalued (String value) {
+        return value.indexOf (',') > 0;
+    }
+
+    private String mergeMultivalued (String header, String oldValue, String newValue) throws BundleException {
+        ManifestElement [] oldValues = ManifestElement.parseHeader (header, oldValue);
+        if (oldValues == null || oldValues.length == 0) {
+            return newValue;
+        }
+        String [] lookupValues = new String [oldValues.length];
+        for (int i = 0;
+        i < oldValues.length; i ++) {
+            lookupValues [i] = oldValues [i].getValue ();
+        }
+        Arrays.sort (lookupValues);
+        LinkedList < ManifestElement > additionalElements = new LinkedList < ManifestElement > ();
+        for (ManifestElement n : ManifestElement.parseHeader (header, newValue)) {
+            if (Arrays.binarySearch (lookupValues, n.getValue ()) < 0) {
+                additionalElements.add (n);
+            }
+        }
+        StringBuilder sb = new StringBuilder ();
+        for (ManifestElement me : oldValues) {
+            sb.append (formatValue (me));
+            sb.append (',');
+        }
+        for (ManifestElement me : additionalElements) {
+            sb.append (formatValue (me));
+            sb.append (',');
+        }
+        assert sb.charAt (sb.length () - 1) == ',';
+        sb.setLength (sb.length () - 1);
+        return sb.toString ();
+    }
+
+}
+

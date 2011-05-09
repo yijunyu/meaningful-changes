@@ -1,0 +1,128 @@
+3,4d2
+< import java.lang.reflect.InvocationTargetException;
+< 
+13,16d10
+< import java.util.Map;
+< 
+< import org.eclipse.core.runtime.IProgressMonitor;
+< 
+23,23c19,19
+< import org.eclipse.gmf.internal.graphdef.codegen.Activator;
+---
+> import org.eclipse.gmf.internal.graphdef.codegen.Activator;
+24,25d19
+< 
+< import org.eclipse.gmf.internal.xpand.BufferOutput;
+27,27c21,21
+< import org.eclipse.gmf.internal.xpand.XpandFacade;
+---
+> import org.eclipse.gmf.internal.xpand.ResourceManager;
+29,29c17,17
+< import org.eclipse.gmf.internal.xpand.expression.Variable;
+---
+> import org.eclipse.gmf.internal.common.codegen.XpandTextEmitter;
+32,32c24,24
+<     private final MapModeCodeGenStrategy myMapModeStrategy;
+---
+>     private final ResourceManager myResourceManager;
+34a27,28
+>         assert mapModeStrategy != null;
+>         myResourceManager = Activator.createResourceEngine (mapModeStrategy);
+35,35d26
+<         myMapModeStrategy = mapModeStrategy;
+39,49d31
+<         return new XpandTextEmitter (myMapModeStrategy) {
+< 
+<             public String generate (IProgressMonitor monitor, Object [] arguments) throws InterruptedException, InvocationTargetException, UnexpectedBehaviourException {
+<                 StringBuilder result = new StringBuilder ();
+<                 createEngine (result).evaluate ("plugin::BuildProperties::Init", new Object (), null);
+<                 return result.toString ();
+<             }
+< 
+<         }
+< 
+<         ;
+53,53c32,32
+<         return new XpandTextEmitter (myMapModeStrategy) {
+---
+>         return new XpandTextEmitter (myResourceManager, "plugin::BuildProperties::Init", getClass ().getClassLoader ());
+54a38,39
+>             @Override
+>             protected Object [] extractArguments (Object [] arguments) {
+55,55d37
+<             public String generate (IProgressMonitor monitor, Object [] arguments) throws InterruptedException, InvocationTargetException, UnexpectedBehaviourException {
+58,58d41
+<                 StringBuilder result = new StringBuilder ();
+59,59c42,42
+<                 Object [] params = new Object [] {config.getPluginFriendlyName (), config.getPluginProviderName ()};
+---
+>                 return new Object [] {config.getPluginFriendlyName (), config.getPluginProviderName ()};
+60,61d42
+<                 createEngine (result).evaluate ("plugin::PluginProperties::Init", new Object (), params);
+<                 return result.toString ();
+70,70c36,36
+<         return new XpandTextEmitter (myMapModeStrategy) {
+---
+>         return new XpandTextEmitter (myResourceManager, "plugin::PluginProperties::Init", getClass ().getClassLoader ()) {
+71a53,55
+>             @Override
+>             protected Object [] extractArguments (Object [] arguments) {
+>                 assert arguments != null && arguments.length > 1 && arguments [0] instanceof Config && arguments [1] instanceof String [];
+72,75d52
+<             public String generate (IProgressMonitor monitor, Object [] arguments) throws InterruptedException, InvocationTargetException, UnexpectedBehaviourException {
+<                 assert arguments != null && arguments.length > 0 && arguments [0] instanceof Object [];
+<                 Object [] actualArgs = (Object []) arguments [0];
+<                 assert actualArgs.length > 1 && actualArgs [0] instanceof Config && actualArgs [1] instanceof String [];
+76,76c56,56
+<                 Config config = (Config) actualArgs [0];
+---
+>                 Config config = (Config) arguments [0];
+81,81c61,61
+<                 requiredBundles.addAll (Arrays.asList ((String []) actualArgs [1]));
+---
+>                 requiredBundles.addAll (Arrays.asList ((String []) arguments [1]));
+83,83d62
+<                 StringBuilder result = new StringBuilder ();
+84,84c63,63
+<                 Object [] params = new Object [] {config.getPluginID (), config.getPluginActivatorPackageName () + '.' + config.getPluginActivatorClassName (), exportedPackages, requiredBundles,};
+---
+>                 return new Object [] {config.getPluginID (), config.getPluginActivatorPackageName () + '.' + config.getPluginActivatorClassName (), exportedPackages, requiredBundles,};
+85,86d63
+<                 createEngine (result).evaluate ("plugin::Manifest::Init", new Object (), params);
+<                 return result.toString ();
+94a72,72
+>         return new XpandTextEmitter (myResourceManager, "plugin::Activator::Init", getClass ().getClassLoader ()) {
+95,95c51,51
+<         return new XpandTextEmitter (myMapModeStrategy) {
+---
+>         return new XpandTextEmitter (myResourceManager, "plugin::Manifest::Init", getClass ().getClassLoader ()) {
+96a74,75
+>             @Override
+>             protected Object [] extractArguments (Object [] arguments) {
+97,97d73
+<             public String generate (IProgressMonitor monitor, Object [] arguments) throws InterruptedException, InvocationTargetException, UnexpectedBehaviourException {
+100,100d77
+<                 StringBuilder result = new StringBuilder ();
+101,101c78,78
+<                 Object [] params = new Object [] {config.getPluginActivatorPackageName (), config.getPluginActivatorClassName (), config.getPluginID (),};
+---
+>                 return new Object [] {config.getPluginActivatorPackageName (), config.getPluginActivatorClassName (), config.getPluginID (),};
+102,103d78
+<                 createEngine (result).evaluate ("plugin::Activator::Init", new Object (), params);
+<                 return result.toString ();
+111,125d85
+<     private static abstract class XpandTextEmitter implements TextEmitter {
+<         protected final MapModeCodeGenStrategy myMapModeStrategy;
+< 
+<         protected XpandTextEmitter (MapModeCodeGenStrategy mapModeStrategy) {
+<             myMapModeStrategy = mapModeStrategy;
+<         }
+< 
+<         protected XpandFacade createEngine (StringBuilder result) {
+<             final Map < String, StringBuilder > slots = Collections.emptyMap ();
+<             final List < Variable > globals = Collections.emptyList ();
+<             return Activator.createTemplateEngine (myMapModeStrategy, new BufferOutput (result, slots), globals);
+<         }
+< 
+<     }
+< 

@@ -1,0 +1,426 @@
+package org.eclipse.gmf.runtime.emf.clipboard.core;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.HashSet;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import java.util.Set;
+
+import org.eclipse.emf.common.util.URI;
+
+import org.eclipse.emf.ecore.EAttribute;
+
+import org.eclipse.emf.ecore.EClass;
+
+import org.eclipse.emf.ecore.ENamedElement;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.EReference;
+
+import org.eclipse.emf.ecore.InternalEObject;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.ecore.xmi.XMLResource;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.internal.ClipboardPlugin;
+
+public final class ClipboardSupportUtil {
+    public static final int NONE = - 1;
+    private static final String ONE = "1";
+    private static final String UNDERSCORE = "_";
+    private static final String RESOLVE = "resolve";
+    private static final EReference [] EMPTY_REF_ARRAY = new EReference [0];
+
+    private ClipboardSupportUtil () {
+        super ();
+    }
+
+    public static Collection getCopyElements (Collection elements) {
+        Iterator it = elements.iterator ();
+        EObject element = null;
+        Set set = new HashSet ();
+        while (it.hasNext ()) {
+            element = (EObject) it.next ();
+            set.add (element);
+        }
+        elements.clear ();
+        elements.addAll (getUniqueElementsAncestry (set));
+        return elements;
+    }
+
+    private static Set getUniqueElementsAncestry (Set elementSet) {
+        Iterator it = elementSet.iterator ();
+        EObject container = null;
+        while (it.hasNext ()) {
+            container = ((EObject) it.next ()).eContainer ();
+            while (container != null) {
+                if (elementSet.contains (container)) {
+                    it.remove ();
+                    break;
+                }
+                container = container.eContainer ();
+            }
+        }
+        return elementSet;
+    }
+
+    public static List setEObjectList (EObject eObject, EReference reference, List referencedObjects) {
+        if (isOkToSetEList (eObject, reference)) {
+            if (reference.isContainment ()) {
+                sendCreateEvent (referencedObjects);
+            }
+            eObject.eSet (reference, referencedObjects);
+        }
+        return referencedObjects;
+    }
+
+    public static boolean isOkToSetEList (EObject eObject, EReference reference) {
+        if (reference.isChangeable () && (reference.isDerived () == false)) {
+            return true;
+        }
+        return false;
+    }
+
+    public static List appendEObjectListAt (EObject eObject, EReference reference, List referencedObjects) {
+        List list = new ArrayList ();
+        EObject childEObject = null;
+        Iterator childIt = referencedObjects.iterator ();
+        while (childIt.hasNext ()) {
+            childEObject = (EObject) childIt.next ();
+            childEObject = appendEObjectAt (eObject, reference, childEObject);
+            if (childEObject != null) {
+                list.add (childEObject);
+            }
+        }
+        return list;
+    }
+
+    public static EObject appendEObjectAt (EObject eObject, EReference reference, EObject referencedObject) {
+        if (isOkToAppendEObjectAt (eObject, reference, referencedObject) == false) {
+            return null;
+        }
+        if (reference.isContainment ()) {
+            sendCreateEvent (referencedObject);
+        }
+        ((Collection) eObject.eGet (reference)).add (referencedObject);
+        return referencedObject;
+    }
+
+    public static EObject appendEObject (Resource resource, EObject referencedObject) {
+        sendCreateEvent (referencedObject);
+        resource.getContents ().add (referencedObject);
+        return referencedObject;
+    }
+
+    public static EObject setEObject (EObject eObject, EReference reference, EObject referencedObject) {
+        if (isOkToSetEObject (eObject, reference, referencedObject) == false) {
+            return null;
+        }
+        if (reference.isContainment ()) {
+            sendCreateEvent (referencedObject);
+        }
+        eObject.eSet (reference, referencedObject);
+        return referencedObject;
+    }
+
+    public static void setEAttribute (EObject eObject, EAttribute attribute, Object value) {
+        if (isOkToSetEAttribute (eObject, attribute, value)) {
+            eObject.eSet (attribute, value);
+        }
+    }
+
+    private static IClipboardSupport createClipboardSupport (EObject eObject) {
+        return ClipboardUtil.createClipboardSupport (eObject.eClass ());
+    }
+
+    public static void sendCreateEvent (EObject eObject) {
+        IClipboardSupport cSupport = createClipboardSupport (eObject);
+        if (null != cSupport) cSupport.sendCreateNotification (eObject);
+
+    }
+
+    public static void sendCreateEvent (List eObjects) {
+        for (Iterator i = eObjects.iterator ();
+        i.hasNext ();) sendCreateEvent ((EObject) i.next ());
+
+    }
+
+    public static boolean isOkToSetEAttribute (EObject eObject, EAttribute attribute, Object value) {
+        if ((value != null) && (attribute != null)) {
+            return attribute.isChangeable ();
+        }
+        return false;
+    }
+
+    public static void destroyEObject (EObject eObject, EReference reference) {
+        if (isOkToDestroyEObject (eObject, reference) == false) {
+            return;
+        }
+        EObject current = (EObject) eObject.eGet (reference);
+        if (current == null) {
+            return;
+        }
+        if (reference.isContainment ()) {
+            createClipboardSupport (current).destroy (current);
+        } else {
+            eObject.eSet (reference, null);
+        }
+    }
+
+    public static void destroyEObjectInCollection (EObject eObject, EReference reference, EObject referencedObject) {
+        if (isOkToDestroyEObjectInCollection (eObject, reference) == false) {
+            return;
+        }
+        if (reference.isContainment ()) {
+            createClipboardSupport (referencedObject).destroy (referencedObject);
+        } else {
+            ((Collection) eObject.eGet (reference)).remove (referencedObject);
+        }
+    }
+
+    public static void destroyEObjectInResource (EObject referencedObject) {
+        createClipboardSupport (referencedObject).destroy (referencedObject);
+    }
+
+    public static boolean isOkToAppendEObjectAt (EObject eObject, EReference reference, EObject referencedObject) {
+        if (reference.isChangeable () && (reference.isDerived () == false)) {
+            int lowerBound = reference.getLowerBound ();
+            int upperBound = reference.getUpperBound ();
+            if (lowerBound != upperBound) {
+                if (eObject.eIsSet (reference)) {
+                    List list = (List) eObject.eGet (reference);
+                    return (((upperBound == NONE) || (list.size () < upperBound)) && (list.contains (referencedObject) == false));
+                } else {
+                    return ((upperBound == NONE) || (upperBound > 0));
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean isOkToSetEObject (EObject eObject, EReference reference, EObject referencedObject) {
+        if (reference.isChangeable () && (reference.isDerived () == false)) {
+            Object value = eObject.eGet (reference);
+            return ((referencedObject != null) && (value != referencedObject));
+        }
+        return false;
+    }
+
+    public static boolean isOkToDestroyEObject (EObject eObject, EReference reference) {
+        if (reference.isChangeable ()) {
+            Object value = eObject.eGet (reference);
+            return (value != null);
+        }
+        return false;
+    }
+
+    public static boolean isOkToDestroyEObjectInCollection (EObject eObject, EReference reference) {
+        if (reference.isChangeable () && (reference.isDerived () == false)) {
+            int lowerBound = reference.getLowerBound ();
+            int upperBound = reference.getUpperBound ();
+            if ((lowerBound != upperBound) && (eObject.eIsSet (reference))) {
+                List list = (List) eObject.eGet (reference);
+                return (list.size () > lowerBound);
+            }
+        }
+        return false;
+    }
+
+    private static ENamedElement matchName (ENamedElement [] elements, String name, boolean trySubNames) {
+        for (int i = 0;
+        i < elements.length; ++ i) {
+            if (elements [i].getName ().equalsIgnoreCase (name)) {
+                return elements [i];
+            }
+        }
+        if (trySubNames) {
+            for (int i = 0;
+            i < elements.length; ++ i) {
+                if ((elements [i].getName ().indexOf (name) != NONE) || (name.indexOf (elements [i].getName ()) != NONE)) {
+                    return elements [i];
+                }
+            }
+        }
+        return null;
+    }
+
+    public static boolean isChild (EObject eParent, EObject eObject) {
+        EObject eContainer = eObject.eContainer ();
+        while (eContainer != null) {
+            if (eContainer.equals (eParent)) {
+                return true;
+            }
+            eContainer = eContainer.eContainer ();
+        }
+        return false;
+    }
+
+    public static boolean hasNameCollision (EObject eObject1, EObject eObject2) {
+        if (eObject1.eClass ().equals (eObject2.eClass ())) {
+            IClipboardSupport cs = createClipboardSupport (eObject1);
+            if (eObject1.equals (eObject2)) {
+                return false;
+            } else if (isNameable (eObject1)) {
+                String childEObjectName = cs.getName (eObject2);
+                if (! isEmptyName (childEObjectName)) {
+                    if (childEObjectName.equalsIgnoreCase (cs.getName (eObject1))) {
+                        return true;
+                    }
+                }
+            }
+
+        }
+        return false;
+    }
+
+    private static boolean isEmptyName (String elementName) {
+        return (elementName == null) || (elementName.length () == 0);
+    }
+
+    private static boolean isNameable (EObject eObject) {
+        return createClipboardSupport (eObject).isNameable (eObject);
+    }
+
+    public static boolean hasNameCollision (Collection list, EObject eObject) {
+        Iterator it = list.iterator ();
+        EObject eOther = null;
+        while (it.hasNext ()) {
+            eOther = (EObject) it.next ();
+            if (hasNameCollision (eOther, eObject)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void rename (Collection list, EObject eObject, String prefix) {
+        if (isNameable (eObject) == false) {
+            return;
+        }
+        String new_name = null;
+        String name = createClipboardSupport (eObject).getName (eObject);
+        String prefix_underscore = prefix + UNDERSCORE;
+        if (name.startsWith (prefix_underscore)) {
+            int close_index = name.indexOf (UNDERSCORE, prefix_underscore.length ());
+            if (close_index != NONE) {
+                String copy_prefix = name.substring (0, close_index);
+                int open_index = copy_prefix.indexOf (UNDERSCORE);
+                String copy_count_str = copy_prefix.substring (open_index + 1);
+                try {
+                    int copy_count = Integer.parseInt (copy_count_str);
+                    String name_proper = name.substring (close_index + 1).trim ();
+                    new_name = prefix_underscore + ++ copy_count + UNDERSCORE + name_proper;
+                } catch (NumberFormatException nfe) {
+                    ClipboardPlugin.catching (ClipboardSupportUtil.class, "rename", nfe);
+                    new_name = null;
+                }
+            }
+        }
+        if (new_name == null) {
+            new_name = prefix_underscore + ONE + UNDERSCORE + name;
+        }
+        createClipboardSupport (eObject).setName (eObject, new_name);
+        if (hasNameCollision (list, eObject)) {
+            rename (list, eObject, prefix);
+        }
+    }
+
+    public static boolean containsAny (Collection collection1, Collection collection2) {
+        Iterator it = collection2.iterator ();
+        while (it.hasNext ()) {
+            if (collection1.contains (it.next ())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static EObject resolve (EObject proxy, Map idToEObjectMap) {
+        URI proxyUri = ((InternalEObject) proxy).eProxyURI ();
+        if (proxyUri != null) {
+            try {
+                String id = getProxyID (proxyUri);
+                if ((id == null) || (id.length () == 0)) {
+                    id = proxyUri.fragment ();
+                }
+                EObject resolvedObject = (EObject) idToEObjectMap.get (id);
+                if (resolvedObject != null && resolvedObject != proxy) {
+                    return resolve (resolvedObject, idToEObjectMap);
+                }
+            } catch (Exception exception) {
+                ClipboardPlugin.catching (ClipboardSupportUtil.class, RESOLVE, exception);
+            }
+        }
+        return proxy;
+    }
+
+    public static EObject resolve (EObject proxy, XMLResource resource) {
+        URI proxyUri = ((InternalEObject) proxy).eProxyURI ();
+        if (proxyUri != null) {
+            try {
+                String id = getProxyID (proxyUri);
+                if ((id == null) || (id.length () == 0)) {
+                    id = proxyUri.fragment ();
+                }
+                EObject resolvedObject = resource.getEObject (id);
+                if (resolvedObject != null && resolvedObject != proxy) {
+                    return resolve (resolvedObject, resource);
+                }
+            } catch (Exception exception) {
+                ClipboardPlugin.catching (ClipboardSupportUtil.class, RESOLVE, exception);
+            }
+        }
+        return proxy;
+    }
+
+    private static String getProxyID (URI proxyUri) {
+        String uriFragment = proxyUri.fragment ();
+        int index = uriFragment.indexOf ('?');
+        return index != - 1 ? uriFragment.substring (0, index) : uriFragment;
+    }
+
+    public static EReference getPasteContainmentFeature (EObject parentEObject, EObject eObject, EReference originalReference) {
+        List compatibleRefrencesList = new ArrayList ();
+        EClass parentEClass = parentEObject.eClass ();
+        EClass childEClass = eObject.eClass ();
+        Iterator it = parentEClass.getEAllReferences ().iterator ();
+        EReference parentReference = null;
+        while (it.hasNext ()) {
+            parentReference = (EReference) it.next ();
+            if (parentReference.isContainment ()) {
+                if ((originalReference != null) && parentReference.equals (originalReference)) {
+                    return parentReference;
+                }
+                if ((parentReference.isChangeable ()) && (parentReference.isDerived () == false)) {
+                    if (createClipboardSupport (parentEObject).canContain (parentEObject, parentReference, childEClass)) {
+                        compatibleRefrencesList.add (parentReference);
+                    }
+                }
+            }
+        }
+        if (compatibleRefrencesList.size () == 0) {
+            return null;
+        } else if (compatibleRefrencesList.size () == 1) {
+            return (EReference) compatibleRefrencesList.get (0);
+        }
+
+        EReference [] references = (EReference []) compatibleRefrencesList.toArray (EMPTY_REF_ARRAY);
+        EReference ref = null;
+        if (originalReference != null) {
+            ref = (EReference) ClipboardSupportUtil.matchName (references, originalReference.getName (), true);
+        }
+        return (ref == null) ? (EReference) ClipboardSupportUtil.matchName (references, childEClass.getName (), true) : ref;
+    }
+
+}
+

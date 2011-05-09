@@ -1,0 +1,69 @@
+2a3,4
+> import java.util.ArrayList;
+> 
+4a7,16
+> import java.util.Collections;
+> 
+> import java.util.HashSet;
+> 
+> import java.util.Iterator;
+> 
+> import java.util.List;
+> 
+> import java.util.Set;
+> 
+6a19,20
+> import org.eclipse.emf.codegen.ecore.genmodel.GenFeature;
+> 
+24a39,40
+> import org.eclipse.gmf.codegen.gmfgen.FeatureModelFacet;
+> 
+28a45,46
+> import org.eclipse.gmf.codegen.gmfgen.GenLink;
+> 
+32a51,52
+> import org.eclipse.gmf.codegen.gmfgen.TypeLinkModelFacet;
+> 
+224a245,286
+>     public boolean needsGraphicalNodeEditPolicy () {
+>         return getModelFacet () != null && ! getReorientedIncomingGenLinks ().isEmpty ();
+>     }
+> 
+>     public List < GenLink > getReorientedIncomingGenLinks () {
+>         if (getModelFacet () == null) {
+>             return Collections.emptyList ();
+>         }
+>         Set < GenLink > reorientedLinks = new HashSet < GenLink > ();
+>         for (Iterator links = getDiagram ().getLinks ().iterator ();
+>         links.hasNext ();) {
+>             GenLink genLink = (GenLink) links.next ();
+>             if (! genLink.isViewDirectionAlignedWithModel () || genLink.getModelFacet () == null) {
+>                 continue;
+>             }
+>             GenClass incomingClass;
+>             GenClass outgoingClass;
+>             if (genLink.getModelFacet () instanceof TypeLinkModelFacet) {
+>                 TypeLinkModelFacet modelFacet = (TypeLinkModelFacet) genLink.getModelFacet ();
+>                 outgoingClass = modelFacet.getSourceMetaFeature () == null ? modelFacet.getContainmentMetaFeature ().getGenClass () : modelFacet.getSourceMetaFeature ().getTypeGenClass ();
+>                 incomingClass = modelFacet.getTargetMetaFeature ().getTypeGenClass ();
+>             } else if (genLink.getModelFacet () instanceof FeatureModelFacet) {
+>                 GenFeature metaFeature = ((FeatureModelFacet) genLink.getModelFacet ()).getMetaFeature ();
+>                 outgoingClass = metaFeature.getGenClass ();
+>                 incomingClass = metaFeature.getTypeGenClass ();
+>             } else {
+>                 continue;
+>             }
+> 
+>             GenClass nodeMetaClass = getModelFacet ().getMetaClass ();
+>             boolean canBeSource = outgoingClass.getEcoreClass ().isSuperTypeOf (nodeMetaClass.getEcoreClass ());
+>             boolean canBeTarget = incomingClass.getEcoreClass ().isSuperTypeOf (nodeMetaClass.getEcoreClass ());
+>             if (canBeSource && canBeTarget) {
+>                 continue;
+>             }
+>             if (genLink.isIncomingCreationAllowed () && canBeSource) {
+>                 reorientedLinks.add (genLink);
+>             }
+>         }
+>         return new ArrayList < GenLink > (reorientedLinks);
+>     }
+> 

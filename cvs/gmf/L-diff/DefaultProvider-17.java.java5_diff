@@ -1,0 +1,120 @@
+22a23,24
+> import org.eclipse.core.runtime.Assert;
+> 
+24a27,28
+> import org.eclipse.draw2d.IFigure;
+> 
+33,34d36
+< import org.eclipse.draw2d.geometry.PrecisionDimension;
+< 
+36a39,40
+> import org.eclipse.draw2d.geometry.PrecisionRectangle;
+> 
+66a71,72
+> import org.eclipse.gef.requests.ReconnectRequest;
+> 
+92a99,100
+> import org.eclipse.gmf.runtime.draw2d.ui.geometry.LineSeg;
+> 
+94a103,104
+> import org.eclipse.gmf.runtime.draw2d.ui.geometry.PrecisionPointList;
+> 
+101,102d110
+< import org.eclipse.jface.util.Assert;
+< 
+203c211,212
+<         return translateFromGraph (rect);
+---
+>         PrecisionRectangle preciseRect = new PrecisionRectangle (rect);
+>         return translateFromGraph (preciseRect);
+417,418c426,427
+<         int totalEdgeDiffX = diffX;
+<         int totalEdgeDiffY = diffY;
+---
+>         double totalEdgeDiffX = diffX;
+>         double totalEdgeDiffY = diffY;
+425,426c434,435
+<             totalEdgeDiffX += targetExt.x;
+<             totalEdgeDiffY += targetExt.y;
+---
+>             totalEdgeDiffX += targetExt.preciseX ();
+>             totalEdgeDiffY += targetExt.preciseY ();
+428c437
+<         PointList allPoints = new PointList (routePoints.size ());
+---
+>         PrecisionPointList allPoints = new PrecisionPointList (routePoints.size ());
+431c440
+<             allPoints.addPoint (routePoints.getPoint (i).x + totalEdgeDiffX, routePoints.getPoint (i).y + totalEdgeDiffY);
+---
+>             allPoints.addPrecisionPoint (routePoints.getPoint (i).preciseX () + totalEdgeDiffX, routePoints.getPoint (i).preciseY () + totalEdgeDiffY);
+433,437d441
+<         Rectangle sourceExt = getNodeMetrics (source);
+<         Point ptSourceReference = sourceExt.getCenter ().getTranslated (diffX, diffY);
+<         Rectangle targetExt = getNodeMetrics (target);
+<         Point ptTargetReference = targetExt.getCenter ().getTranslated (diffX, diffY);
+<         SetAllBendpointRequest request = new SetAllBendpointRequest (RequestConstants.REQ_SET_ALL_BENDPOINT, allPoints, ptSourceReference, ptTargetReference);
+438a443,444
+>         LineSeg anchorReferencePoints = addAnchorsCommands (cc, allPoints.getFirstPoint (), allPoints.getLastPoint (), source, target, connectEP, diffX, diffY);
+>         SetAllBendpointRequest request = new SetAllBendpointRequest (RequestConstants.REQ_SET_ALL_BENDPOINT, allPoints, anchorReferencePoints.getOrigin (), anchorReferencePoints.getTerminus ());
+455a462,496
+>     protected LineSeg addAnchorsCommands (CompoundCommand cc, Point sourceAnchorLocation, Point targetAnchorLocation, Node source, Node target, ConnectionEditPart cep, int diffX, int diffY) {
+>         Rectangle sourceExt = getNodeMetrics (source);
+>         Rectangle targetExt = getNodeMetrics (target);
+>         sourceExt.performTranslate (diffX, diffY);
+>         targetExt.performTranslate (diffX, diffY);
+>         Point resultantSourceAnchorReference = sourceExt.getCenter ();
+>         Point resultantTargetAnchorReference = targetExt.getCenter ();
+>         PrecisionPoint sourceRatio = new PrecisionPoint ((sourceAnchorLocation.preciseX () - sourceExt.preciseX ()) / sourceExt.preciseWidth (), (sourceAnchorLocation.preciseY () - sourceExt.preciseY ()) / sourceExt.preciseHeight ());
+>         PrecisionPoint targetRatio = new PrecisionPoint ((targetAnchorLocation.preciseX () - targetExt.preciseX ()) / targetExt.preciseWidth (), (targetAnchorLocation.preciseY () - targetExt.preciseY ()) / targetExt.preciseHeight ());
+>         ReconnectRequest reconnectRequest = new ReconnectRequest (org.eclipse.gef.RequestConstants.REQ_RECONNECT_SOURCE);
+>         reconnectRequest.setConnectionEditPart (cep);
+>         reconnectRequest.setTargetEditPart ((EditPart) source.data);
+>         IFigure sourceFig = ((GraphicalEditPart) source.data).getFigure ();
+>         Point sourceAnchorReference = new PrecisionPoint (sourceFig.getBounds ().preciseX () + sourceRatio.preciseX () * sourceFig.getBounds ().preciseWidth (), sourceFig.getBounds ().preciseY () + sourceRatio.preciseY () * sourceFig.getBounds ().preciseHeight ());
+>         sourceFig.translateToAbsolute (sourceAnchorReference);
+>         reconnectRequest.setLocation (sourceAnchorReference);
+>         Command sourceAnchorCommand = ((EditPart) source.data).getCommand (reconnectRequest);
+>         if (sourceAnchorCommand != null && sourceAnchorCommand.canExecute ()) {
+>             cc.add (sourceAnchorCommand);
+>             resultantSourceAnchorReference = new PrecisionPoint (sourceExt.preciseWidth () * sourceRatio.preciseX () + sourceExt.preciseX (), targetExt.preciseHeight () * sourceRatio.preciseY () + sourceExt.preciseY ());
+>         }
+>         reconnectRequest.setType (org.eclipse.gef.RequestConstants.REQ_RECONNECT_TARGET);
+>         reconnectRequest.setTargetEditPart ((EditPart) target.data);
+>         IFigure targetFig = ((GraphicalEditPart) target.data).getFigure ();
+>         Point targetAnchorReference = new PrecisionPoint (targetFig.getBounds ().preciseX () + targetRatio.preciseX () * targetFig.getBounds ().preciseWidth (), targetFig.getBounds ().preciseY () + targetRatio.preciseY () * targetFig.getBounds ().preciseHeight ());
+>         targetFig.translateToAbsolute (targetAnchorReference);
+>         reconnectRequest.setLocation (targetAnchorReference);
+>         Command targetAnchorCommand = ((EditPart) target.data).getCommand (reconnectRequest);
+>         if (targetAnchorCommand != null && targetAnchorCommand.canExecute ()) {
+>             cc.add (targetAnchorCommand);
+>             resultantTargetAnchorReference = new PrecisionPoint (targetExt.preciseWidth () * targetRatio.preciseX + targetExt.preciseX (), targetExt.preciseHeight () * targetRatio.preciseY () + targetExt.preciseY ());
+>         }
+>         return new LineSeg (resultantSourceAnchorReference, resultantTargetAnchorReference);
+>     }
+> 
+470c511
+<         PointList points = new PointList (10);
+---
+>         PointList points = new PrecisionPointList (10);
+498c539
+<         points.addPoint (start.getTopLeft ());
+---
+>         points.addPoint (start.getLocation ());
+505,507c546
+<                 int x = nodeExt.x;
+<                 int y = nodeExt.y;
+<                 points.addPoint (x + nodeExt.width / 2, y + nodeExt.height / 2);
+---
+>                 points.addPoint (nodeExt.getCenter ());
+511c550
+<         points.addPoint (end.getTopLeft ());
+---
+>         points.addPoint (end.getLocation ());
+530c569
+<                 Point ptLocation = new Point (nodeExt.x + diff.x, nodeExt.y + diff.y);
+---
+>                 Point ptLocation = new PrecisionPoint (nodeExt.preciseX () + diff.preciseX (), nodeExt.preciseY () + diff.preciseY ());
+534c573
+<                 PrecisionPoint delta = new PrecisionPoint (ptLocation.x - ptOldLocation.preciseX, ptLocation.y - ptOldLocation.preciseY);
+---
+>                 PrecisionPoint delta = new PrecisionPoint (ptLocation.preciseX () - ptOldLocation.preciseX (), ptLocation.preciseY () - ptOldLocation.preciseY ());

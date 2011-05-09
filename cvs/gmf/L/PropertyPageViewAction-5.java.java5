@@ -1,0 +1,175 @@
+package org.eclipse.gmf.runtime.emf.ui.properties.actions;
+
+import java.util.ArrayList;
+
+import java.util.Collections;
+
+import java.util.Comparator;
+
+import java.util.HashMap;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.jface.action.Action;
+
+import org.eclipse.jface.dialogs.MessageDialog;
+
+import org.eclipse.jface.preference.IPreferencePage;
+
+import org.eclipse.jface.preference.PreferenceManager;
+
+import org.eclipse.jface.preference.PreferenceNode;
+
+import org.eclipse.jface.resource.ImageDescriptor;
+
+import org.eclipse.jface.viewers.ISelection;
+
+import org.eclipse.jface.viewers.IStructuredSelection;
+
+import org.eclipse.swt.widgets.Display;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.ui.plugin.AbstractUIPlugin;
+
+import org.eclipse.ui.views.properties.IPropertyDescriptor;
+
+import org.eclipse.ui.views.properties.IPropertySource;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.dialogs.PropertiesDialog;
+
+import org.eclipse.gmf.runtime.common.ui.services.properties.extended.PropertyPagePropertyDescriptor;
+
+import org.eclipse.gmf.runtime.emf.core.exceptions.MSLActionAbandonedException;
+
+import org.eclipse.gmf.runtime.emf.core.util.OperationUtil;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesDebugOptions;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.EMFPropertiesPlugin;
+
+import org.eclipse.gmf.runtime.emf.ui.properties.internal.l10n.EMFUIPropertiesMessages;
+
+import com.ibm.icu.text.Collator;
+
+public class PropertyPageViewAction extends Action {
+
+    public PropertyPageViewAction () {
+        super (EMFUIPropertiesMessages.PropertyPageViewAction_label, AbstractUIPlugin.imageDescriptorFromPlugin (EMFPropertiesPlugin.getPluginId (), "icons/property_page.gif"));
+        setToolTipText (EMFUIPropertiesMessages.PropertyPageViewAction_tooltip);
+    }
+
+    public void run () {
+        Trace.trace (EMFPropertiesPlugin.getDefault (), EMFPropertiesDebugOptions.METHODS_ENTERING, "PropertyPageViewActionDelegate.doRun Entering");
+        IWorkbenchPage page = EMFPropertiesPlugin.getActivePage ();
+        if (page != null) {
+            final ISelection selection = page.getSelection ();
+            if (selection != null && selection instanceof IStructuredSelection) {
+                try {
+                    OperationUtil.runAsRead (new Runnable () {
+
+                        public void run () {
+                            List propertyPages = getMergedPropertyPages ((IStructuredSelection) selection);
+                            if (! propertyPages.isEmpty ()) {
+                                Collections.sort (propertyPages, new Comparator () {
+
+                                    public int compare (Object o1, Object o2) {
+                                        IPreferencePage p1 = (IPreferencePage) o1;
+                                        IPreferencePage p2 = (IPreferencePage) o2;
+                                        String s1 = p1.getTitle ();
+                                        String s2 = p2.getTitle ();
+                                        return Collator.getInstance ().compare (s1, s2);
+                                    }
+
+                                }
+
+                                );
+                                PropertiesDialog dialog = new PropertiesDialog (Display.getCurrent ().getActiveShell (), new PreferenceManager ());
+                                for (Iterator iter = propertyPages.iterator ();
+                                iter.hasNext ();) {
+                                    dialog.getPreferenceManager ().addToRoot (new PreferenceNode (StringStatics.BLANK, (IPreferencePage) iter.next ()));
+                                }
+                                dialog.create ();
+                                dialog.open ();
+                            } else {
+                                MessageDialog.openInformation (Display.getCurrent ().getActiveShell (), EMFUIPropertiesMessages.PropertyPageViewAction_NoPropertiesMessageBox_Title, EMFUIPropertiesMessages.PropertyPageViewAction_NoPropertiesMessageBox_Message);
+                            }
+                        }
+
+                    }
+
+                    );
+                } catch (MSLActionAbandonedException e) {
+                    e.printStackTrace ();
+                }
+            }
+        }
+        Trace.trace (EMFPropertiesPlugin.getDefault (), EMFPropertiesDebugOptions.METHODS_EXITING, "PropertyPageViewActionDelegate.doRun Exiting");
+    }
+
+    private List getMergedPropertyPages (IStructuredSelection selection) {
+        List mergedDescriptors = computeMergedPropertyDescriptors (selection);
+        List mergedPages = new ArrayList ();
+        if (mergedDescriptors != null) {
+            for (Iterator i = mergedDescriptors.iterator ();
+            i.hasNext ();) {
+                PropertyPagePropertyDescriptor descriptor = (PropertyPagePropertyDescriptor) i.next ();
+                List pages = descriptor.createPropertyPages ();
+                pages.removeAll (mergedPages);
+                mergedPages.addAll (pages);
+            }
+        }
+        return mergedPages;
+    }
+
+    private List computeMergedPropertyDescriptors (IStructuredSelection selection) {
+        if (selection.size () == 0) return new ArrayList (0);
+
+        Map [] propertyDescriptorMaps = new Map [selection.size ()];
+        Iterator i = selection.iterator ();
+        for (int index = 0;
+        i.hasNext (); index ++) {
+            Object object = i.next ();
+            IPropertySource source = (IPropertySource) ((IAdaptable) object).getAdapter (IPropertySource.class);
+            if (source == null) {
+                return new ArrayList (0);
+            }
+            propertyDescriptorMaps [index] = computePropertyDescriptorsFor (source);
+        }
+        Map intersection = propertyDescriptorMaps [0];
+        for (int p = 1;
+        p < propertyDescriptorMaps.length; p ++) {
+            Object [] ids = intersection.keySet ().toArray ();
+            for (int j = 0;
+            j < ids.length; j ++) {
+                Object object = propertyDescriptorMaps [p].get (ids [j]);
+                if (object == null || ! ((IPropertyDescriptor) intersection.get (ids [j])).isCompatibleWith ((IPropertyDescriptor) object)) intersection.remove (ids [j]);
+
+            }
+        }
+        return new ArrayList (intersection.values ());
+    }
+
+    private Map computePropertyDescriptorsFor (IPropertySource source) {
+        IPropertyDescriptor [] descriptors = source.getPropertyDescriptors ();
+        Map result = new HashMap (descriptors.length * 2 + 1);
+        for (int i = 0;
+        i < descriptors.length; i ++) {
+            if (descriptors [i] instanceof PropertyPagePropertyDescriptor) result.put (descriptors [i].getId (), descriptors [i]);
+
+        }
+        return result;
+    }
+
+}
+

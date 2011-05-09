@@ -1,0 +1,173 @@
+package org.eclipse.gmf.runtime.emf.commands.core.command;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.commands.operations.IOperationApprover;
+
+import org.eclipse.core.commands.operations.IUndoableOperation;
+
+import org.eclipse.core.commands.operations.OperationHistoryFactory;
+
+import org.eclipse.core.resources.IFile;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.transaction.Transaction;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.util.CompositeChangeDescription;
+
+import org.eclipse.emf.workspace.AbstractEMFOperation;
+
+import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+public abstract class AbstractTransactionalCommand extends AbstractEMFOperation implements ICommand {
+
+    protected static List getWorkspaceFiles (EObject eObject) {
+        List result = new ArrayList ();
+        if (eObject != null) {
+            Resource resource = eObject.eResource ();
+            if (resource != null) {
+                IFile file = WorkspaceSynchronizer.getFile (resource);
+                if (file != null) {
+                    result.add (file);
+                }
+            }
+        }
+        return result;
+    }
+
+    protected static List getWorkspaceFiles (List eObjects) {
+        List result = new ArrayList ();
+        for (Iterator i = eObjects.iterator ();
+        i.hasNext ();) {
+            Object next = i.next ();
+            if (next instanceof EObject) {
+                Resource resource = ((EObject) next).eResource ();
+                if (resource != null) {
+                    IFile file = WorkspaceSynchronizer.getFile (resource);
+                    if (file != null) {
+                        result.add (file);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    private final List affectedFiles;
+    private CommandResult commandResult;
+
+    public AbstractTransactionalCommand (TransactionalEditingDomain domain, String label, List affectedFiles) {
+        this (domain, label, null, affectedFiles);
+    }
+
+    public AbstractTransactionalCommand (TransactionalEditingDomain domain, String label, Map options, List affectedFiles) {
+        super (domain, label, options);
+        if (affectedFiles == null) {
+            this.affectedFiles = new ArrayList ();
+        } else {
+            this.affectedFiles = affectedFiles;
+        }
+    }
+
+    public List getAffectedFiles () {
+        return affectedFiles;
+    }
+
+    public final CommandResult getCommandResult () {
+        return commandResult;
+    }
+
+    protected final void setResult (CommandResult result) {
+        this.commandResult = result;
+    }
+
+    public ICommand compose (IUndoableOperation operation) {
+        if (operation != null) {
+            return new CompositeTransactionalCommand (getEditingDomain (), getLabel ()).compose (this).compose (operation);
+        }
+        return this;
+    }
+
+    public ICommand reduce () {
+        return this;
+    }
+
+    protected abstract CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException;
+
+    protected void didUndo (Transaction tx) {
+        if (tx.getChangeDescription () != null && ! tx.getChangeDescription ().isEmpty ()) {
+            ((CompositeChangeDescription) getChange ()).add (tx.getChangeDescription ());
+        }
+    }
+
+    protected void didRedo (Transaction tx) {
+        if (tx.getChangeDescription () != null && ! tx.getChangeDescription ().isEmpty ()) {
+            ((CompositeChangeDescription) getChange ()).add (tx.getChangeDescription ());
+        }
+    }
+
+    protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+        CommandResult result = doExecuteWithResult (monitor, info);
+        setResult (result);
+        cleanup ();
+        return result != null ? result.getStatus () : Status.OK_STATUS;
+    }
+
+    protected IStatus doUndo (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+        IStatus status = super.doUndo (monitor, info);
+        CommandResult result = new CommandResult (status);
+        setResult (result);
+        return status;
+    }
+
+    protected IStatus doRedo (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+        IStatus status = super.doRedo (monitor, info);
+        CommandResult result = new CommandResult (status);
+        setResult (result);
+        return status;
+    }
+
+    protected IStatus aggregateStatuses (List statuses) {
+        IStatus status = super.aggregateStatuses (statuses);
+        CommandResult result = getCommandResult ();
+        if (result == null) {
+            result = new CommandResult (status);
+            setResult (result);
+        } else if (status != result.getStatus ()) {
+            result = new CommandResult (status, result.getReturnValue ());
+            setResult (result);
+        }
+
+        return status;
+    }
+
+    protected void cleanup () {
+    }
+
+}
+

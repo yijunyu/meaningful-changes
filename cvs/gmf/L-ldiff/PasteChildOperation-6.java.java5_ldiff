@@ -1,0 +1,112 @@
+20a21,22
+> import org.eclipse.emf.ecore.resource.Resource;
+> 
+140,140c142,142
+<     protected EObject getSuitableParentUsingAncestry (String preferredTypeName) {
+---
+>     protected PasteTarget getSuitableParentUsingAncestry (String preferredTypeName) {
+141,141c143,143
+<         EObject suitableParent = getSuitableParentUsingAncestry (getParentEObject (), preferredTypeName, true);
+---
+>         PasteTarget suitableParent = getSuitableParentUsingAncestry (getParentTarget (), preferredTypeName, true);
+143,143c145,145
+<             suitableParent = getSuitableParentUsingAncestry (getParentEObject (), preferredTypeName, false);
+---
+>             suitableParent = getSuitableParentUsingAncestry (getParentTarget (), preferredTypeName, false);
+147a150,150
+>     private PasteTarget getSuitableParentUsingAncestry (PasteTarget potentialParent, String preferredTypeName, boolean strictMatch) {
+148,148d149
+<     private EObject getSuitableParentUsingAncestry (EObject potentialParentObject, String preferredTypeName, boolean strictMatch) {
+149a152,153
+>         if (suitableParent == null && ! potentialParent.isResource ()) {
+>             EObject potentialParentObject = (EObject) potentialParent.getObject ();
+149,149c151,151
+<         EObject suitableParent = checkPotentialParent (potentialParentObject, preferredTypeName, strictMatch);
+---
+>         PasteTarget suitableParent = checkPotentialParent (potentialParent, preferredTypeName, strictMatch);
+152,152c156,156
+<             suitableParent = checkPotentialParent (potentialParentObject, preferredTypeName, strictMatch);
+---
+>                 suitableParent = checkPotentialParent (new PasteTarget (potentialParentObject), preferredTypeName, strictMatch);
+152a157,157
+>             }
+170,170c175,175
+<                         if (ClipboardSupportUtil.isChild (getParentEObject (), mergeTarget)) {
+---
+>                         if ((getParentTarget ().isResource () && getParentTarget ().getObject () == mergeTarget.eResource ()) || ClipboardSupportUtil.isChild (getParentEObject (), mergeTarget)) {
+256,256c261,261
+<             EObject possibleParent = getSuitableParentUsingAncestry (getLoadedDirectContainerEObject ().eClass ().getInstanceClassName ());
+---
+>             PasteTarget possibleParent = getSuitableParentUsingAncestry (getLoadedDirectContainerEObject ().eClass ().getInstanceClassName ());
+272a278,281
+>     public PasteTarget getParentTarget () {
+>         return getParentPasteProcess ().getPasteTarget ();
+>     }
+> 
+309,309c318,318
+<             element = doPasteInto (getParentEObject ());
+---
+>             element = doPasteInto (getParentTarget ());
+312,312c321,321
+<                     EObject possibleParent = getSuitableParentUsingAncestry (getChildObjectInfo ().containerClass);
+---
+>                     PasteTarget possibleParent = getSuitableParentUsingAncestry (getChildObjectInfo ().containerClass);
+336a346,356
+>     protected EObject doPasteInto (PasteTarget pasteTarget) {
+>         if (pasteTarget != null) {
+>             if (pasteTarget.isResource ()) {
+>                 return doPasteInto ((Resource) pasteTarget.getObject ());
+>             } else {
+>                 return doPasteInto ((EObject) pasteTarget.getObject ());
+>             }
+>         }
+>         return null;
+>     }
+> 
+357a378,388
+>     protected EObject doPasteInto (Resource pasteIntoResource) {
+>         EObject childElement = null;
+>         if (handleCollision (null, pasteIntoResource.getContents (), getEObject (), getChildObjectInfo ())) {
+>             childElement = ClipboardSupportUtil.appendEObject (pasteIntoResource, getEObject ());
+>         } else if (getPastedElement () != null) {
+>             childElement = getPastedElement ();
+>         }
+> 
+>         return childElement;
+>     }
+> 
+384a416,416
+>     private PasteTarget checkPotentialParent (PasteTarget potentialParent, String preferredTypeName, boolean strictMatch) {
+385,385d415
+<     private EObject checkPotentialParent (EObject potentialParentObject, String preferredTypeName, boolean strictMatch) {
+386,386c417,417
+<         if ((potentialParentObject instanceof EAnnotation) == false) {
+---
+>         if ((potentialParent.getObject () instanceof EAnnotation) == false) {
+386a418,423
+>             if (potentialParent.isResource ()) {
+>                 if (preferredTypeName == null || strictMatch == false) {
+>                     return potentialParent;
+>                 }
+>             } else {
+>                 EObject potentialParentObject = (EObject) potentialParent.getObject ();
+388,388c425,425
+<                 return potentialParentObject;
+---
+>                     return potentialParent;
+390,390c427,427
+<                 return potentialParentObject;
+---
+>                     return potentialParent;
+393a431,431
+>         }
+418a457,459
+>                         if (reference == null) {
+>                             ClipboardSupportUtil.destroyEObjectInResource (object);
+>                         } else {
+419a461,461
+>                         }
+567a610,610
+>         if (! getParentTarget ().isResource ()) {
+573a617,617
+>         }

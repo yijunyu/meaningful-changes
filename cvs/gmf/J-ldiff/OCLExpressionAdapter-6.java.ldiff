@@ -1,0 +1,190 @@
+15,15d14
+< import java.util.Iterator;
+17a17,17
+> import org.eclipse.emf.ecore.EClass;
+19a20,25
+> import org.eclipse.emf.ecore.EEnumLiteral;
+> import org.eclipse.emf.ecore.EObject;
+> import org.eclipse.emf.ecore.EOperation;
+> import org.eclipse.emf.ecore.EPackage;
+> import org.eclipse.emf.ecore.EParameter;
+> import org.eclipse.emf.ecore.EStructuralFeature;
+20a37,46
+> import org.eclipse.ocl.Environment;
+> import org.eclipse.ocl.ParserException;
+> import org.eclipse.ocl.Query;
+> import org.eclipse.ocl.ecore.CallOperationAction;
+> import org.eclipse.ocl.ecore.CollectionType;
+> import org.eclipse.ocl.ecore.Constraint;
+> import org.eclipse.ocl.ecore.EcoreEnvironment;
+> import org.eclipse.ocl.ecore.EcoreEnvironmentFactory;
+> import org.eclipse.ocl.ecore.SendSignalAction;
+> import org.eclipse.ocl.ecore.TypeType;
+21,23d36
+< import org.eclipse.emf.ocl.expressions.CollectionItem;
+< import org.eclipse.emf.ocl.expressions.CollectionLiteralExp;
+< import org.eclipse.emf.ocl.expressions.CollectionLiteralPart;
+24,24c47,47
+< import org.eclipse.emf.ocl.expressions.ExpressionsFactory;
+---
+> import org.eclipse.ocl.expressions.ExpressionsFactory;
+25,26d47
+< import org.eclipse.emf.ocl.expressions.OCLExpression;
+< import org.eclipse.emf.ocl.expressions.TypeExp;
+27,27c48,48
+< import org.eclipse.emf.ocl.expressions.Variable;
+---
+> import org.eclipse.ocl.expressions.Variable;
+28,40d48
+< import org.eclipse.emf.ocl.expressions.util.ExpressionsUtil;
+< import org.eclipse.emf.ocl.parser.EcoreEnvironment;
+< import org.eclipse.emf.ocl.parser.EcoreEnvironmentFactory;
+< import org.eclipse.emf.ocl.parser.Environment;
+< import org.eclipse.emf.ocl.parser.EnvironmentFactory;
+< import org.eclipse.emf.ocl.parser.ParserException;
+< import org.eclipse.emf.ocl.parser.SemanticException;
+< import org.eclipse.emf.ocl.query.Query;
+< import org.eclipse.emf.ocl.query.QueryFactory;
+< import org.eclipse.emf.ocl.types.CollectionType;
+< import org.eclipse.emf.ocl.types.TypeType;
+< import org.eclipse.emf.ocl.types.impl.TypeUtil;
+< import org.eclipse.emf.ocl.types.util.Types;
+57a56,58
+> 	private Query<EClassifier, EClass, EObject> query;
+> 	private Environment<EPackage, EClassifier, EOperation, EStructuralFeature, EEnumLiteral, EParameter, EObject, 
+> 				CallOperationAction, SendSignalAction, Constraint, EClass, EObject> env;
+58,58d55
+< 	private Query query;
+63a64,66
+> 			EcoreEnvironmentFactory factory = EcoreEnvironmentFactory.INSTANCE;
+> 			org.eclipse.ocl.ecore.OCL ocl = null;			
+> 			
+64a68,68
+> 				if(extEnv.getImportRegistry() != null) { 					
+64,64c67,67
+< 			if(extEnv == null) {
+---
+> 			if(extEnv != null) {
+65,67d67
+< 				this.query = QueryFactory.eINSTANCE.createQuery(body, context);
+< 			} else {
+< 				EnvironmentFactory factory = extEnv.getImportRegistry() == null ?
+68,68c69,69
+< 						EnvironmentFactory.ECORE_INSTANCE : new EcoreEnvironmentFactory(extEnv.getImportRegistry());
+---
+> 					factory = new EcoreEnvironmentFactory(extEnv.getImportRegistry());
+68a70,70
+> 				}
+69,69d69
+< 				Environment env = factory.createClassifierContext(context);
+70a72,75
+> 				ocl = org.eclipse.ocl.ecore.OCL.newInstance(factory);
+> 				this.env = ocl.getEnvironment(); 
+> 				
+> 				for(String varName : extEnv.getVariableNames()) {
+71,72d71
+< 				for (Iterator it = extEnv.getVariableNames().iterator(); it.hasNext();) {
+< 					String varName = (String)it.next();
+75,75c78,78
+< 					Variable varDecl = ExpressionsFactory.eINSTANCE.createVariable();
+---
+> 					Variable<EClassifier, EParameter> varDecl = ExpressionsFactory.eINSTANCE.createVariable();
+78,78c81,81
+< 					env.addElement(varDecl.getName(), varDecl, false);
+---
+> 					env.addElement(varDecl.getName(), varDecl, true);
+79a83,85
+> 			} else {
+> 				ocl = org.eclipse.ocl.ecore.OCL.newInstance(EcoreEnvironmentFactory.INSTANCE);
+> 				this.env = (EcoreEnvironment)ocl.getEnvironment();				
+80,81d82
+< 				OCLExpression oclExpression = ExpressionsUtil.createQuery(env, body, true);
+< 				this.query = QueryFactory.eINSTANCE.createQuery(oclExpression);
+82a87,91
+> 
+> 			org.eclipse.ocl.ecore.OCL.Helper helper = ocl.createOCLHelper();
+> 			helper.setContext(context);			
+> 			this.query = ocl.createQuery(helper.createQuery(body));
+> 			
+104a114,117
+> 		if(env == null) {
+> 			return false;
+> 		}
+> 		
+105,105c118,118
+< 		EClassifier oclType = EcoreEnvironment.getOCLType(ecoreType);
+---
+> 		EClassifier oclType =  env.getUMLReflection().getOCLType(ecoreType);
+112a126,128
+> 		if(env == null || typedElement.getEType() == null) {
+> 			return false;
+> 		}
+113,113c129,129
+< 		EClassifier oclType = EcoreEnvironment.getOCLType(typedElement);
+---
+> 		EClassifier oclType = env.getUMLReflection().getOCLType(typedElement);
+128a145,151
+> 		if(query != null) {
+> 			query.getEvaluationEnvironment().clear();			
+> 			for (String varName : extEnvironment.getVariableNames()) {
+> 				query.getEvaluationEnvironment().add(varName, extEnvironment.getValueOf(varName));
+> 			}
+> 		}
+> 
+129,129d144
+< 		// TODO - add custom variables !!!
+133,133c155,155
+< 	private static Object filterOCLInvalid(Object object) {
+---
+> 	private Object filterOCLInvalid(Object object) {
+134,134c156,156
+< 		return object == Types.OCL_INVALID ? null : object;
+---
+> 		return (env != null && object == env.getOCLStandardLibrary().getOclInvalid()) ? null : object;
+137,137c159,159
+< 	boolean isOclConformantTo(EClassifier anotherOclType) {
+---
+> 	private boolean isOclConformantTo(EClassifier anotherOclType) {
+158,158c180,180
+< 		// handle OCL TypeType meta-types
+---
+> 		// handle OCL TypeType
+159a182,182
+> 			EClassifier thisRefferedClassifier = ((TypeType)thisOclType).getReferredType();	
+160,163d181
+< 			// There is no way of getting the reffered type directly from the TypeType
+< 			// Handle only, TypeExp here as there should be no other use-case producing TypeType 
+< 			// except for the type literal.			
+< 			EClassifier thisRefferedClassifier = getReferredType(query.getExpression());	
+186,216d204
+< 	static EClassifier getReferredType(OCLExpression oclExpression) {
+< 		EClassifier referredType = null;
+< 		if(oclExpression instanceof TypeExp) {
+< 			// There is no way of getting the reffered type directly from the TypeType
+< 			// Handle only, TypeExp here as there should be no other use-case producing TypeType 
+< 			// except for the type literal.
+< 			referredType = ((TypeExp)oclExpression).getReferredType();
+< 		} else if(oclExpression instanceof CollectionLiteralExp) {
+< 			for (Iterator it = ((CollectionLiteralExp)oclExpression).getPart().iterator(); it.hasNext();) {
+< 				CollectionLiteralPart nextPart = (CollectionLiteralPart) it.next();
+< 				
+< 				if(nextPart.getType() instanceof TypeType && nextPart instanceof CollectionItem) {
+< 					EClassifier nextType = getReferredType(((CollectionItem)nextPart).getItem());
+< 					if(referredType == null) {
+< 						referredType = nextType;
+< 					} else {
+< 						try {
+< 							if(nextType != null) {
+< 								referredType = TypeUtil.commonSuperType(referredType, nextType);
+< 							}
+< 						} catch (SemanticException e) {
+< 							// Should never happen as the OCL expression should have been successfully parsed
+< 							assert false;
+< 							return null;
+< 						}
+< 					}
+< 				}
+< 			}
+< 		}
+< 		return referredType;
+< 	}

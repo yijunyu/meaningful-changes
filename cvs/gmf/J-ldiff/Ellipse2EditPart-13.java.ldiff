@@ -1,0 +1,524 @@
+2,2c2,2
+<  * Copyright (c) 2006 Borland Software Corporation and others.
+---
+>  *  Copyright (c) 2006, 2007 Borland Software Corporation and others.
+16,16d15
+< 
+22,22d20
+< 
+27a26,26
+> import org.eclipse.draw2d.geometry.Point;
+28,28d25
+< 
+30,30d27
+< 
+32,32d28
+< 
+34,34d29
+< 
+36,36d30
+< 
+39,39d32
+< 
+41,41d33
+< 
+48,48c424,424
+< import org.eclipse.gmf.gmfgraph.Point;
+---
+> 								org.eclipse.gmf.gmfgraph.Point topLeft;
+52,52d42
+< 
+54,54d43
+< import org.eclipse.gmf.graphdef.editor.edit.policies.Ellipse2GraphicalNodeEditPolicy;
+56,56d44
+< 
+58,58d45
+< 
+60,60d46
+< 
+62,62d47
+< 
+68,68d52
+< 
+71,71d54
+< 
+96,96d78
+< 	private EllipseFigure myFigure;
+98,98d80
+< 	// TODO: use myFigure?
+102,102d83
+< 	protected Figure myNodeFigure;
+106a91,99
+> 	protected void createDefaultEditPolicies() {
+> 		installEditPolicy(EditPolicyRoles.CREATION_ROLE, new CreationEditPolicy());
+> 
+> 		super.createDefaultEditPolicies();
+> 		installEditPolicy(EditPolicyRoles.SEMANTIC_ROLE, new Ellipse2ItemSemanticEditPolicy());
+> 		installEditPolicy(EditPolicyRoles.DRAG_DROP_ROLE, new DragDropEditPolicy());
+> 		installEditPolicy(EditPolicyRoles.CANONICAL_ROLE, new Ellipse2CanonicalEditPolicy());
+> 		installEditPolicy(EditPolicy.LAYOUT_ROLE, createLayoutEditPolicy());
+> 	}
+107,107c79,79
+< 	protected IFigure primaryShape;
+---
+> 	protected IFigure primaryShape;
+111a104,129
+> 	protected LayoutEditPolicy createLayoutEditPolicy() {
+> 		XYLayoutEditPolicy lep = new XYLayoutEditPolicy() {
+> 
+> 			protected EditPolicy createChildEditPolicy(EditPart child) {
+> 				EditPolicy result = super.createChildEditPolicy(child);
+> 				if (result == null) {
+> 					return new ResizableShapeEditPolicy();
+> 				}
+> 				return result;
+> 			}
+> 
+> 			protected Point getLayoutOrigin() {
+> 				return ((GraphicalEditPart) getHost()).getContentPane().getClientArea().getLocation();
+> 			}
+> 
+> 			protected Rectangle getCurrentConstraintFor(org.eclipse.gef.GraphicalEditPart child) {
+> 				Rectangle result = super.getCurrentConstraintFor(child);
+> 				if (result == null) {
+> 					IFigure fig = child.getFigure();
+> 					result = fig.getBounds().getCopy();
+> 				}
+> 				return result;
+> 			}
+> 
+> 		};
+> 		return lep;
+112,112c84,84
+< 	public Ellipse2EditPart(View view) {
+---
+> 	public Ellipse2EditPart(View view) {
+113,113c85,85
+< 		super(view);
+---
+> 		super(view);
+113a86,86
+> 	}
+261,261c390,390
+< 							Point location = modelElement.getLocation();
+---
+> 							org.eclipse.gmf.gmfgraph.Point location = modelElement.getLocation();
+281,281c410,410
+< 							myNodeFigure.setLocation(new org.eclipse.draw2d.geometry.Point(bounds.getX(), bounds.getY()));
+---
+> 							myNodeFigure.setLocation(new Point(bounds.getX(), bounds.getY()));
+295,295d423
+< 								Point topLeft;
+455a585,586
+> 	protected LayoutManager getFigureLayoutManager() {
+> 		return myFigure.getLayoutManager();
+455a135,142
+> 	protected IFigure createNodeShape() {
+> 		EllipseFigure figure = new EllipseFigure();
+> 		figure.setUseLocalCoordinates(true);
+> 		myFigure = figure;
+> 		Ellipse modelElement = (Ellipse) ((View) getModel()).getElement();
+> 		if (modelElement != null) {
+> 			{
+> 				layoutDataChanged(modelElement.getLayoutData());
+456,477d134
+< 	protected void createDefaultEditPolicies() {
+< 		installEditPolicy(EditPolicyRoles.CREATION_ROLE, new CreationEditPolicy());
+< 		super.createDefaultEditPolicies();
+< 		installEditPolicy(EditPolicyRoles.SEMANTIC_ROLE, new Ellipse2ItemSemanticEditPolicy());
+< 		installEditPolicy(EditPolicy.GRAPHICAL_NODE_ROLE, new Ellipse2GraphicalNodeEditPolicy());
+< 		installEditPolicy(EditPolicyRoles.DRAG_DROP_ROLE, new DragDropEditPolicy());
+< 		installEditPolicy(EditPolicyRoles.CANONICAL_ROLE, new Ellipse2CanonicalEditPolicy());
+< 		installEditPolicy(EditPolicy.LAYOUT_ROLE, createLayoutEditPolicy());
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected LayoutEditPolicy createLayoutEditPolicy() {
+< 		XYLayoutEditPolicy lep = new XYLayoutEditPolicy() {
+< 
+< 			protected EditPolicy createChildEditPolicy(EditPart child) {
+< 				EditPolicy result = super.createChildEditPolicy(child);
+< 				if (result == null) {
+< 					return new ResizableShapeEditPolicy();
+< 				}
+< 				return result;
+478a144,145
+> 			{
+> 				layoutChanged(modelElement.getLayout());
+478,478c143,143
+< 			}
+---
+> 			}
+479,481d143
+< 
+< 			protected org.eclipse.draw2d.geometry.Point getLayoutOrigin() {
+< 				return ((GraphicalEditPart) getHost()).getContentPane().getClientArea().getLocation();
+482a147,148
+> 			{
+> 				myFigure.setOutline(modelElement.isOutline());
+482,482c146,146
+< 			}
+---
+> 			}
+483,490d146
+< 
+< 			protected Rectangle getCurrentConstraintFor(org.eclipse.gef.GraphicalEditPart child) {
+< 				Rectangle result = super.getCurrentConstraintFor(child);
+< 				if (result == null) {
+< 					IFigure fig = child.getFigure();
+< 					result = fig.getBounds().getCopy();
+< 				}
+< 				return result;
+491,491c149,149
+< 			}
+---
+> 			}
+492,505d149
+< 
+< 		};
+< 		return lep;
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected IFigure createNodeShape() {
+< 		EllipseFigure figure = new EllipseFigure();
+< 		figure.setUseLocalCoordinates(true);
+< 		myFigure = figure;
+< 		Ellipse modelElement = (Ellipse) ((View) getModel()).getElement();
+< 		if (modelElement != null) {
+506,506c150,150
+< 			{
+---
+> 			{
+506a151,151
+> 				myFigure.setFill(modelElement.isFill());
+507,507d150
+< 				layoutDataChanged(modelElement.getLayoutData());
+508,508c152,152
+< 			}
+---
+> 			}
+509,509c153,153
+< 			{
+---
+> 			{
+509a154,154
+> 				myFigure.setLineWidth(modelElement.getLineWidth());
+510,510d153
+< 				layoutChanged(modelElement.getLayout());
+511,511c155,155
+< 			}
+---
+> 			}
+512,512c156,156
+< 			{
+---
+> 			{
+512a157,157
+> 				myFigure.setLineStyle(getLineStyle(modelElement.getLineKind()));
+513,513d156
+< 				myFigure.setOutline(modelElement.isOutline());
+514,514c158,158
+< 			}
+---
+> 			}
+515,515c159,159
+< 			{
+---
+> 			{
+515a160,160
+> 				myFigure.setFillXOR(modelElement.isXorFill());
+516,516d159
+< 				myFigure.setFill(modelElement.isFill());
+517,517c161,161
+< 			}
+---
+> 			}
+518a163,163
+> 				myFigure.setOutlineXOR(modelElement.isXorOutline());
+518,518c162,162
+< 			{
+---
+> 			{
+519,519d162
+< 				myFigure.setLineWidth(modelElement.getLineWidth());
+520,520c164,164
+< 			}
+---
+> 			}
+521,529d164
+< 			{
+< 				myFigure.setLineStyle(getLineStyle(modelElement.getLineKind()));
+< 			}
+< 			{
+< 				myFigure.setFillXOR(modelElement.isXorFill());
+< 			}
+< 			{
+< 				myFigure.setOutlineXOR(modelElement.isXorOutline());
+< 			}
+530,530c165,165
+< 		}
+---
+> 		}
+531,531c166,166
+< 		return primaryShape = figure;
+---
+> 		return primaryShape = figure;
+532,532c167,167
+< 	}
+---
+> 	}
+533,533c168,168
+< 
+---
+> 
+534,534c169,169
+< 	/**
+---
+> 	/**
+535,535c170,170
+< 	 * @generated
+---
+> 	 * @generated
+536,536c171,171
+< 	 */
+---
+> 	 */
+537,537c172,172
+< 	public EllipseFigure getPrimaryShape() {
+---
+> 	public EllipseFigure getPrimaryShape() {
+538,538c173,173
+< 		return (EllipseFigure) primaryShape;
+---
+> 		return (EllipseFigure) primaryShape;
+539,539c174,174
+< 	}
+---
+> 	}
+540,540c175,175
+< 
+---
+> 
+541,541c176,176
+< 	/**
+---
+> 	/**
+542,542c177,177
+< 	 * @generated
+---
+> 	 * @generated
+543,543c178,178
+< 	 */
+---
+> 	 */
+544a180,182
+> 		DefaultSizeNodeFigure result = new DefaultSizeNodeFigure(getMapMode().DPtoLP(0), getMapMode().DPtoLP(0));
+> 		myNodeFigure = result;
+> 		return result;
+544,544c179,179
+< 	protected NodeFigure createNodePlate() {
+---
+> 	protected NodeFigure createNodePlate() {
+545,545d179
+< 		return new DefaultSizeNodeFigure(getMapMode().DPtoLP(0), getMapMode().DPtoLP(0));
+546,546c183,183
+< 	}
+---
+> 	}
+547,547c184,184
+< 
+---
+> 
+548,548c185,185
+< 	/**
+---
+> 	/**
+549,549c186,186
+< 	 * Creates figure for this edit part.
+---
+> 	 * Creates figure for this edit part.
+550,550c187,187
+< 	 * 
+---
+> 	 * 
+551,551c188,188
+< 	 * Body of this method does not depend on settings in generation model
+---
+> 	 * Body of this method does not depend on settings in generation model
+552,552c189,189
+< 	 * so you may safely remove <i>generated</i> tag and modify it.
+---
+> 	 * so you may safely remove <i>generated</i> tag and modify it.
+553,553c190,190
+< 	 * 
+---
+> 	 * 
+554,554c191,191
+< 	 * @generated
+---
+> 	 * @generated
+555,555c192,192
+< 	 */
+---
+> 	 */
+556,556c193,193
+< 	protected NodeFigure createNodeFigure() {
+---
+> 	protected NodeFigure createNodeFigure() {
+557,557c194,194
+< 		NodeFigure figure = createNodePlate();
+---
+> 		NodeFigure figure = createNodePlate();
+558,558d194
+< 		myNodeFigure = figure;
+559,559c195,195
+< 		figure.setLayoutManager(new StackLayout());
+---
+> 		figure.setLayoutManager(new StackLayout());
+560,560c196,196
+< 		IFigure shape = createNodeShape();
+---
+> 		IFigure shape = createNodeShape();
+561,561c197,197
+< 		figure.add(shape);
+---
+> 		figure.add(shape);
+562,562c198,198
+< 		contentPane = setupContentPane(shape);
+---
+> 		contentPane = setupContentPane(shape);
+563a200,247
+> 	}
+> 
+> 	/**
+> 	 * Default implementation treats passed figure as content pane.
+> 	 * Respects layout one may have set for generated figure.
+> 	 * @param nodeShape instance of generated figure class
+> 	 * @generated
+> 	 */
+> 	protected IFigure setupContentPane(IFigure nodeShape) {
+> 		if (nodeShape.getLayoutManager() == null) {
+> 			nodeShape.setLayoutManager(new FreeformLayout() {
+> 
+> 				public Object getConstraint(IFigure figure) {
+> 					Object result = constraints.get(figure);
+> 					if (result == null) {
+> 						result = new Rectangle(0, 0, -1, -1);
+> 					}
+> 					return result;
+> 				}
+> 			});
+> 		}
+> 		return nodeShape; // use nodeShape itself as contentPane
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	public IFigure getContentPane() {
+> 		if (contentPane != null) {
+> 			return contentPane;
+> 		}
+> 		return super.getContentPane();
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	private EllipseFigure myFigure;
+> 
+> 	// TODO: use myFigure?
+> 	/**
+> 	 * @generated
+> 	 */
+> 	protected Figure myNodeFigure;
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+563,563c199,199
+< 		return figure;
+---
+> 		return figure;
+567,569d589
+< 	 * Default implementation treats passed figure as content pane.
+< 	 * Respects layout one may have set for generated figure.
+< 	 * @param nodeShape instance of generated figure class
+571a592,593
+> 	protected void setFigureLayoutManager(LayoutManager layoutManager) {
+> 		myFigure.setLayoutManager(layoutManager);
+572,585d591
+< 	protected IFigure setupContentPane(IFigure nodeShape) {
+< 		if (nodeShape.getLayoutManager() == null) {
+< 			nodeShape.setLayoutManager(new FreeformLayout() {
+< 
+< 				public Object getConstraint(IFigure figure) {
+< 					Object result = constraints.get(figure);
+< 					if (result == null) {
+< 						result = new Rectangle(0, 0, -1, -1);
+< 					}
+< 					return result;
+< 				}
+< 			});
+< 		}
+< 		return nodeShape; // use nodeShape itself as contentPane
+591,593d598
+< 	public IFigure getContentPane() {
+< 		if (contentPane != null) {
+< 			return contentPane;
+595,595d606
+< 		return super.getContentPane();
+642,658d598
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected LayoutManager getFigureLayoutManager() {
+< 		return myFigure.getLayoutManager();
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	protected void setFigureLayoutManager(LayoutManager layoutManager) {
+< 		myFigure.setLayoutManager(layoutManager);
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+659,659c599,599
+< 	protected void refreshBounds() {
+---
+> 	protected void refreshBounds() {
+660,660c600,600
+< 		if (((View) getParent().getModel()).getElement() instanceof FigureMarker) {
+---
+> 		if (((View) getParent().getModel()).getElement() instanceof FigureMarker) {
+661,661c601,601
+< 			int width = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Width())).intValue();
+---
+> 			int width = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Width())).intValue();
+662,662c602,602
+< 			int height = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Height())).intValue();
+---
+> 			int height = ((Integer) getStructuralFeatureValue(NotationPackage.eINSTANCE.getSize_Height())).intValue();
+663,663c603,603
+< 			myNodeFigure.setPreferredSize(new org.eclipse.draw2d.geometry.Dimension(width, height));
+---
+> 			myNodeFigure.setPreferredSize(new org.eclipse.draw2d.geometry.Dimension(width, height));
+664,664c604,604
+< 		} else {
+---
+> 		} else {
+665,665c605,605
+< 			super.refreshBounds();
+---
+> 			super.refreshBounds();
+666,667d605
+< 		}
+< 	}

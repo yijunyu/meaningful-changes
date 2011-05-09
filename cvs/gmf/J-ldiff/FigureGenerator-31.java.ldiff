@@ -1,0 +1,99 @@
+22,22c23,23
+< import org.eclipse.gmf.common.codegen.ImportAssistant;
+---
+> import org.eclipse.gmf.gmfgraph.FigureDescriptor;
+36,36d47
+< 	private static final String VAR_OUTPUT_METHODS = "outputAdditionalMethods";
+37a49,49
+> 
+37,37c48,48
+< 	private static final String VAR_PACKAGE_STMT = "packageStatement";
+---
+> 	private String packageStatement;
+41,41d38
+< 	private static final String SLOT_METHODS = "additionalMethods";
+47,50d43
+< 	private Variable packageStatement;
+< 
+< 	private StringBuilder additionalMethods;
+< 
+60a56,56
+> 	public FigureGenerator(String runtimeToken, String packageStmt, boolean asInnerClass) {
+61,61d55
+< 	public FigureGenerator(String runtimeToken, boolean asInnerClass) {
+62,62c57,57
+< 		this(runtimeToken, MapModeCodeGenStrategy.DYNAMIC, "getMapMode().", asInnerClass);
+---
+> 		this(runtimeToken, packageStmt, MapModeCodeGenStrategy.DYNAMIC, "getMapMode().", asInnerClass);
+65,65c60,60
+< 	public FigureGenerator(String runtimeToken, MapModeCodeGenStrategy mapModeStrategy, String mapModeAccessor, boolean asInnerClass) {
+---
+> 	public FigureGenerator(String runtimeToken, String packageStmt, MapModeCodeGenStrategy mapModeStrategy, String mapModeAccessor, boolean asInnerClass) {
+66,66c61,61
+< 		this(runtimeToken, mapModeStrategy, mapModeAccessor, asInnerClass, null);
+---
+> 		this(runtimeToken, packageStmt, mapModeStrategy, mapModeAccessor, asInnerClass, null);
+69,69c64,64
+< 	public FigureGenerator(String runtimeToken, MapModeCodeGenStrategy mapModeStrategy, String mapModeAccessor, boolean asInnerClass, URL[] dynamicTemplates) {
+---
+> 	public FigureGenerator(String runtimeToken, String packageStmt, MapModeCodeGenStrategy mapModeStrategy, String mapModeAccessor, boolean asInnerClass, URL[] dynamicTemplates) {
+70a66,66
+> 		this.packageStatement = packageStmt;
+83,90d78
+< 		packageStatement = new Variable(VAR_PACKAGE_STMT, "");
+< 		globals.add(packageStatement);
+< 		additionalMethods = new StringBuilder();
+< 		globals.add(new Variable(VAR_OUTPUT_METHODS, "") {
+< 			public Object getValue() {
+< 				return additionalMethods.toString();
+< 			}
+< 		});
+99,99d86
+< 		slots.put(SLOT_METHODS, additionalMethods);
+106a94,98
+> 	public String getPackageName() {
+> 		return packageStatement;
+> 	}
+> 
+> 	public String fqnSwitch(Figure figure) {
+107,107d93
+< 	public String go(Figure figure, ImportAssistant importAssistant) {
+109,109d99
+< 		additionalMethods.setLength(0);
+110a101,117
+> 		xpandFacade.evaluate("Runtime::fqn", figure, null);
+> 		return result.toString();
+> 	}
+> 	
+> 	/**
+> 	 * @param packageStmt can be null if asInnerClass was true
+> 	 * @param figure
+> 	 */
+> 	public String go(FigureDescriptor figure) {
+> 		result.setLength(0);
+> 		additionalFields.setLength(0);
+> 		if (myIsInnerClassCode) {
+> 			xpandFacade.evaluate("top::Descriptor::Inner", figure, null);
+> 		} else {
+> 			xpandFacade.evaluate("top::Descriptor::Top", figure, new Object[] { packageStatement });
+> 		}
+> 		return result.toString();
+111,116d100
+< 		StringBuffer ss = new StringBuffer();
+< 		importAssistant.emitPackageStatement(ss);
+< 		packageStatement.setValue(ss.toString());
+< 		xpandFacade.evaluate("top::Figure::FigureClass", figure, new Object[] {myIsInnerClassCode});
+< 		final String resultString = result.toString();
+< 		return resultString;
+119a121,121
+> 		if (arguments == null || arguments.length != 1 || false == arguments[0] instanceof FigureDescriptor) {
+120,120d120
+< 		if (arguments == null || arguments.length != 2 || false == arguments[0] instanceof Figure || false == arguments[1] instanceof ImportAssistant) {
+121,121c122,122
+< 			throw new UnexpectedBehaviourException("(Figure, ImportAssistant) expected as arguments, not " + arguments);
+---
+> 			throw new UnexpectedBehaviourException("(FigureDescriptor) expected as arguments, not " + arguments);
+123,123c124,124
+< 		return go((Figure) arguments[0], (ImportAssistant) arguments[1]);
+---
+> 		return go((FigureDescriptor) arguments[0]);

@@ -1,0 +1,455 @@
+15a16
+> import java.util.HashSet;
+19a21
+> import java.util.Set;
+22d23
+< import org.eclipse.emf.ecore.EClass;
+26,27d26
+< import org.eclipse.gmf.gmfgraph.Canvas;
+< import org.eclipse.gmf.gmfgraph.DiagramElement;
+29a29
+> import org.eclipse.gmf.graphdef.editor.edit.parts.ChildAccessEditPart;
+32d31
+< import org.eclipse.gmf.graphdef.editor.edit.parts.DiagramElementFigureEditPart;
+33a33
+> import org.eclipse.gmf.graphdef.editor.edit.parts.Ellipse3EditPart;
+34a35
+> import org.eclipse.gmf.graphdef.editor.edit.parts.FigureDescriptorEditPart;
+37a39
+> import org.eclipse.gmf.graphdef.editor.edit.parts.Polyline3EditPart;
+39a42
+> import org.eclipse.gmf.graphdef.editor.edit.parts.Rectangle3EditPart;
+41a45
+> import org.eclipse.gmf.graphdef.editor.edit.parts.RoundedRectangle3EditPart;
+42a47,49
+> import org.eclipse.gmf.graphdef.editor.part.GMFGraphDiagramUpdater;
+> import org.eclipse.gmf.graphdef.editor.part.GMFGraphLinkDescriptor;
+> import org.eclipse.gmf.graphdef.editor.part.GMFGraphNodeDescriptor;
+44d50
+< import org.eclipse.gmf.graphdef.editor.providers.GMFGraphElementTypes;
+52,53d57
+< import org.eclipse.gmf.runtime.emf.core.util.EObjectAdapter;
+< import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+65a70,74
+> 	Set myFeaturesToSynchronize;
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+67,68d75
+< 		List result = new LinkedList();
+< 		EObject modelObject = ((View) getHost().getModel()).getElement();
+70,98c77,79
+< 		EObject nextValue;
+< 		int nodeVID;
+< 		for (Iterator values = ((Canvas) modelObject).getCompartments().iterator(); values.hasNext();) {
+< 			nextValue = (EObject) values.next();
+< 			nodeVID = GMFGraphVisualIDRegistry.getNodeVisualID(viewObject, nextValue);
+< 			if (CompartmentEditPart.VISUAL_ID == nodeVID) {
+< 				result.add(nextValue);
+< 			}
+< 		}
+< 		for (Iterator values = ((Canvas) modelObject).getNodes().iterator(); values.hasNext();) {
+< 			nextValue = (EObject) values.next();
+< 			nodeVID = GMFGraphVisualIDRegistry.getNodeVisualID(viewObject, nextValue);
+< 			if (NodeEditPart.VISUAL_ID == nodeVID) {
+< 				result.add(nextValue);
+< 			}
+< 		}
+< 		for (Iterator values = ((Canvas) modelObject).getConnections().iterator(); values.hasNext();) {
+< 			nextValue = (EObject) values.next();
+< 			nodeVID = GMFGraphVisualIDRegistry.getNodeVisualID(viewObject, nextValue);
+< 			if (ConnectionEditPart.VISUAL_ID == nodeVID) {
+< 				result.add(nextValue);
+< 			}
+< 		}
+< 		for (Iterator values = ((Canvas) modelObject).getFigures().iterator(); values.hasNext();) {
+< 			nextValue = (EObject) values.next();
+< 			nodeVID = GMFGraphVisualIDRegistry.getNodeVisualID(viewObject, nextValue);
+< 			if (FigureGalleryEditPart.VISUAL_ID == nodeVID) {
+< 				result.add(nextValue);
+< 			}
+---
+> 		List result = new LinkedList();
+> 		for (Iterator it = GMFGraphDiagramUpdater.getCanvas_1000SemanticChildren(viewObject).iterator(); it.hasNext();) {
+> 			result.add(((GMFGraphNodeDescriptor) it.next()).getModelElement());
+106a88,94
+> 		return true;
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+> 	protected boolean isOrphaned(Collection semanticChildren, final View view) {
+108c96
+< 			return view.isSetElement() && (view.getElement() == null || view.getElement().eIsProxy());
+---
+> 			return GMFGraphDiagramUpdater.isShortcutOrphaned(view);
+110,111c98,99
+< 		int nodeVID = GMFGraphVisualIDRegistry.getVisualID(view);
+< 		switch (nodeVID) {
+---
+> 		int visualID = GMFGraphVisualIDRegistry.getVisualID(view);
+> 		switch (visualID) {
+116c104
+< 			return true;
+---
+> 			return !semanticChildren.contains(view.getElement()) || visualID != GMFGraphVisualIDRegistry.getNodeVisualID((View) getHost().getModel(), view.getElement());
+130a119,132
+> 	protected Set getFeaturesToSynchronize() {
+> 		if (myFeaturesToSynchronize == null) {
+> 			myFeaturesToSynchronize = new HashSet();
+> 			myFeaturesToSynchronize.add(GMFGraphPackage.eINSTANCE.getCanvas_Compartments());
+> 			myFeaturesToSynchronize.add(GMFGraphPackage.eINSTANCE.getCanvas_Nodes());
+> 			myFeaturesToSynchronize.add(GMFGraphPackage.eINSTANCE.getCanvas_Connections());
+> 			myFeaturesToSynchronize.add(GMFGraphPackage.eINSTANCE.getCanvas_Figures());
+> 		}
+> 		return myFeaturesToSynchronize;
+> 	}
+> 
+> 	/**
+> 	 * @generated
+> 	 */
+179,184c181,183
+< 	private Collection myLinkDescriptors = new LinkedList();
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	private Map myEObject2ViewMap = new HashMap();
+---
+> 	private Diagram getDiagram() {
+> 		return ((View) getHost().getModel()).getDiagram();
+> 	}
+190,191c189,190
+< 		try {
+< 			collectAllLinks(getDiagram());
+---
+> 		Map domain2NotationMap = new HashMap();
+> 		Collection linkDescriptors = collectAllLinks(getDiagram(), domain2NotationMap);
+193,194c192,193
+< 			for (Iterator diagramLinks = existingLinks.iterator(); diagramLinks.hasNext();) {
+< 				Edge nextDiagramLink = (Edge) diagramLinks.next();
+---
+> 		for (Iterator linksIterator = existingLinks.iterator(); linksIterator.hasNext();) {
+> 			Edge nextDiagramLink = (Edge) linksIterator.next();
+199,201c198,200
+< 				for (Iterator modelLinkDescriptors = myLinkDescriptors.iterator(); modelLinkDescriptors.hasNext();) {
+< 					LinkDescriptor nextLinkDescriptor = (LinkDescriptor) modelLinkDescriptors.next();
+< 					if (diagramLinkObject == nextLinkDescriptor.getLinkElement() && diagramLinkSrc == nextLinkDescriptor.getSource() && diagramLinkDst == nextLinkDescriptor.getDestination()
+---
+> 			for (Iterator LinkDescriptorsIterator = linkDescriptors.iterator(); LinkDescriptorsIterator.hasNext();) {
+> 				GMFGraphLinkDescriptor nextLinkDescriptor = (GMFGraphLinkDescriptor) LinkDescriptorsIterator.next();
+> 				if (diagramLinkObject == nextLinkDescriptor.getModelElement() && diagramLinkSrc == nextLinkDescriptor.getSource() && diagramLinkDst == nextLinkDescriptor.getDestination()
+203,204c202,203
+< 						diagramLinks.remove();
+< 						modelLinkDescriptors.remove();
+---
+> 					linksIterator.remove();
+> 					LinkDescriptorsIterator.remove();
+209,213c208
+< 			return createConnections(myLinkDescriptors);
+< 		} finally {
+< 			myLinkDescriptors.clear();
+< 			myEObject2ViewMap.clear();
+< 		}
+---
+> 		return createConnections(linkDescriptors, domain2NotationMap);
+219,234c214,216
+< 	private void collectAllLinks(View view) {
+< 		EObject modelElement = view.getElement();
+< 		int diagramElementVisualID = GMFGraphVisualIDRegistry.getVisualID(view);
+< 		switch (diagramElementVisualID) {
+< 		case CompartmentEditPart.VISUAL_ID:
+< 		case NodeEditPart.VISUAL_ID:
+< 		case ConnectionEditPart.VISUAL_ID:
+< 		case FigureGalleryEditPart.VISUAL_ID:
+< 		case RectangleEditPart.VISUAL_ID:
+< 		case Rectangle2EditPart.VISUAL_ID:
+< 		case EllipseEditPart.VISUAL_ID:
+< 		case RoundedRectangleEditPart.VISUAL_ID:
+< 		case PolylineEditPart.VISUAL_ID:
+< 		case Ellipse2EditPart.VISUAL_ID:
+< 		case RoundedRectangle2EditPart.VISUAL_ID:
+< 		case Polyline2EditPart.VISUAL_ID:
+---
+> 	private Collection collectAllLinks(View view, Map domain2NotationMap) {
+> 		Collection result = new LinkedList();
+> 		switch (GMFGraphVisualIDRegistry.getVisualID(view)) {
+236,237c218,310
+< 			myEObject2ViewMap.put(modelElement, view);
+< 			storeLinks(modelElement, getDiagram());
+---
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getCanvas_1000ContainedLinks(view));
+> 			break;
+> 		}
+> 		case CompartmentEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getCompartment_2005ContainedLinks(view));
+> 			break;
+> 		}
+> 		case NodeEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getNode_2006ContainedLinks(view));
+> 			break;
+> 		}
+> 		case ConnectionEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getConnection_2007ContainedLinks(view));
+> 			break;
+> 		}
+> 		case FigureGalleryEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getFigureGallery_2008ContainedLinks(view));
+> 			break;
+> 		}
+> 		case FigureDescriptorEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getFigureDescriptor_3009ContainedLinks(view));
+> 			break;
+> 		}
+> 		case RectangleEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getRectangle_3010ContainedLinks(view));
+> 			break;
+> 		}
+> 		case Rectangle2EditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getRectangle_3011ContainedLinks(view));
+> 			break;
+> 		}
+> 		case EllipseEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getEllipse_3012ContainedLinks(view));
+> 			break;
+> 		}
+> 		case RoundedRectangleEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getRoundedRectangle_3013ContainedLinks(view));
+> 			break;
+> 		}
+> 		case PolylineEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getPolyline_3014ContainedLinks(view));
+> 			break;
+> 		}
+> 		case Ellipse2EditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getEllipse_3015ContainedLinks(view));
+> 			break;
+> 		}
+> 		case RoundedRectangle2EditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getRoundedRectangle_3016ContainedLinks(view));
+> 			break;
+> 		}
+> 		case Polyline2EditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getPolyline_3017ContainedLinks(view));
+> 			break;
+> 		}
+> 		case Rectangle3EditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getRectangle_3018ContainedLinks(view));
+> 			break;
+> 		}
+> 		case Ellipse3EditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getEllipse_3019ContainedLinks(view));
+> 			break;
+> 		}
+> 		case RoundedRectangle3EditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getRoundedRectangle_3020ContainedLinks(view));
+> 			break;
+> 		}
+> 		case Polyline3EditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getPolyline_3021ContainedLinks(view));
+> 			break;
+> 		}
+> 		case ChildAccessEditPart.VISUAL_ID: {
+> 			domain2NotationMap.put(view.getElement(), view);
+> 			result.addAll(GMFGraphDiagramUpdater.getChildAccess_4002ContainedLinks(view));
+> 			break;
+239d311
+< 		default: {
+242,243c314
+< 				View childView = (View) children.next();
+< 				collectAllLinks(childView);
+---
+> 			result.addAll(collectAllLinks((View) children.next(), domain2NotationMap));
+244a316,317
+> 		for (Iterator edges = view.getSourceEdges().iterator(); edges.hasNext();) {
+> 			result.addAll(collectAllLinks((View) edges.next(), domain2NotationMap));
+245a319
+> 		return result;
+251,254c325
+< 	private Collection createConnections(Collection linkDescriptors) {
+< 		if (linkDescriptors.isEmpty()) {
+< 			return Collections.EMPTY_LIST;
+< 		}
+---
+> 	private Collection createConnections(Collection linkDescriptors, Map domain2NotationMap) {
+257,259c328,330
+< 			final LinkDescriptor nextLinkDescriptor = (LinkDescriptor) linkDescriptorsIterator.next();
+< 			EditPart sourceEditPart = getEditPartFor(nextLinkDescriptor.getSource());
+< 			EditPart targetEditPart = getEditPartFor(nextLinkDescriptor.getDestination());
+---
+> 			final GMFGraphLinkDescriptor nextLinkDescriptor = (GMFGraphLinkDescriptor) linkDescriptorsIterator.next();
+> 			EditPart sourceEditPart = getEditPart(nextLinkDescriptor.getSource(), domain2NotationMap);
+> 			EditPart targetEditPart = getEditPart(nextLinkDescriptor.getDestination(), domain2NotationMap);
+286,287c357,358
+< 	private EditPart getEditPartFor(EObject modelElement) {
+< 		View view = (View) myEObject2ViewMap.get(modelElement);
+---
+> 	private EditPart getEditPart(EObject domainModelElement, Map domain2NotationMap) {
+> 		View view = (View) domain2NotationMap.get(domainModelElement);
+293,438d363
+< 
+< 	/**
+< 	 *@generated
+< 	 */
+< 	private void storeLinks(EObject container, Diagram diagram) {
+< 		EClass containerMetaclass = container.eClass();
+< 		storeFeatureModelFacetLinks(container, containerMetaclass, diagram);
+< 		storeTypeModelFacetLinks(container, containerMetaclass);
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	private void storeTypeModelFacetLinks(EObject container, EClass containerMetaclass) {
+< 	}
+< 
+< 	/**
+< 	 *@generated
+< 	 */
+< 	private void storeFeatureModelFacetLinks(EObject container, EClass containerMetaclass, Diagram diagram) {
+< 
+< 		if (GMFGraphPackage.eINSTANCE.getDiagramElement().isSuperTypeOf(containerMetaclass)) {
+< 			EObject nextDestination = (EObject) ((DiagramElement) container).getFigure();
+< 			myLinkDescriptors.add(new LinkDescriptor(container, nextDestination, GMFGraphElementTypes.DiagramElementFigure_4001, DiagramElementFigureEditPart.VISUAL_ID));
+< 
+< 		}
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	private Diagram getDiagram() {
+< 		return ((View) getHost().getModel()).getDiagram();
+< 	}
+< 
+< 	/**
+< 	 * @generated
+< 	 */
+< 	private class LinkDescriptor {
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		private EObject mySource;
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		private EObject myDestination;
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		private EObject myLinkElement;
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		private int myVisualID;
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		private IAdaptable mySemanticAdapter;
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		protected LinkDescriptor(EObject source, EObject destination, EObject linkElement, IElementType elementType, int linkVID) {
+< 			this(source, destination, linkVID);
+< 			myLinkElement = linkElement;
+< 			final IElementType elementTypeCopy = elementType;
+< 			mySemanticAdapter = new EObjectAdapter(linkElement) {
+< 
+< 				public Object getAdapter(Class adapter) {
+< 					if (IElementType.class.equals(adapter)) {
+< 						return elementTypeCopy;
+< 					}
+< 					return super.getAdapter(adapter);
+< 				}
+< 			};
+< 		}
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		protected LinkDescriptor(EObject source, EObject destination, IElementType elementType, int linkVID) {
+< 			this(source, destination, linkVID);
+< 			myLinkElement = null;
+< 			final IElementType elementTypeCopy = elementType;
+< 			mySemanticAdapter = new IAdaptable() {
+< 
+< 				public Object getAdapter(Class adapter) {
+< 					if (IElementType.class.equals(adapter)) {
+< 						return elementTypeCopy;
+< 					}
+< 					return null;
+< 				}
+< 			};
+< 		}
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		private LinkDescriptor(EObject source, EObject destination, int linkVID) {
+< 			mySource = source;
+< 			myDestination = destination;
+< 			myVisualID = linkVID;
+< 		}
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		protected EObject getSource() {
+< 			return mySource;
+< 		}
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		protected EObject getDestination() {
+< 			return myDestination;
+< 		}
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		protected EObject getLinkElement() {
+< 			return myLinkElement;
+< 		}
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		protected int getVisualID() {
+< 			return myVisualID;
+< 		}
+< 
+< 		/**
+< 		 * @generated
+< 		 */
+< 		protected IAdaptable getSemanticAdapter() {
+< 			return mySemanticAdapter;
+< 		}
+< 	}
+< 

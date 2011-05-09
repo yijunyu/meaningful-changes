@@ -1,0 +1,66 @@
+13a14
+> import java.util.Collection;
+30a32
+> import org.eclipse.emf.ecore.EStructuralFeature.Setting;
+60c62,63
+< 	private EPackage.Registry registry;
+---
+> 	private EPackage.Registry registry = new EPackageRegistryImpl(EPackage.Registry.INSTANCE);
+> 	private HashSet<URI> myProcessedMetaModels = new HashSet<URI>();
+97,99c100,105
+< 		Object registry = context.get(EPackageRegistryImpl.class);
+< 		assert registry == null || registry instanceof EPackage.Registry : "registry must be EPackage.Registry"; //$NON-NLS-1$
+< 		return (EPackage.Registry)registry;
+---
+> 		Object value = context.get(ExternModelImport.class);
+> 		assert value == null || value instanceof ExternModelImport : "incorrect object registered as ExternModelImport: " + value.getClass(); //$NON-NLS-1$
+> 		if (value instanceof ExternModelImport) {
+> 			return ((ExternModelImport) value).registry;
+> 		}
+> 		return null;
+123,124c129,143
+< 		EPackage.Registry registryToInit = registry != null ? registry : EPackage.Registry.INSTANCE;
+< 		for (EObject next : EcoreUtil.ExternalCrossReferencer.find(root).keySet()) {
+---
+> 		Resource metaModelResource = root.eClass().getEPackage().eResource();
+> 		if (!myProcessedMetaModels.contains(metaModelResource.getURI())) {
+> 			for (EObject nextResourceElement : metaModelResource.getContents()) {
+> 				if (nextResourceElement instanceof EPackage) {
+> 					registerLocally((EPackage) nextResourceElement);
+> 				}
+> 			}
+> 			registerReferencedMetaModels(EcoreUtil.ExternalCrossReferencer.find(metaModelResource));
+> 			myProcessedMetaModels.add(metaModelResource.getURI());
+> 		}
+> 		registerReferencedMetaModels(EcoreUtil.ExternalCrossReferencer.find(root));
+> 	}
+> 	
+> 	private void registerReferencedMetaModels(Map<EObject, Collection<Setting>> externalCrossReferences) {
+> 		for (EObject next : externalCrossReferences.keySet()) {
+141d159
+< 			
+143,145c161
+< 				// force the package to be initialized in registry, in case a package descriptor is registered
+< 				// Note: this is required for successfull ocl environment lookup of EClassifiers from external meta-models
+< 				registryToInit.getEPackage(nextPackage.getNsURI()); 
+---
+> 				registerLocally(nextPackage);
+149a166,170
+> 	private void registerLocally(EPackage nextPackage) {
+> 		// force the package to be initialized in registry, in case a package descriptor is registered
+> 		// Note: this is required for successfull ocl environment lookup of EClassifiers from external meta-models
+> 		registry.put(nextPackage.getNsURI(), registry.getEPackage(nextPackage.getNsURI()));
+> 	}
+160c181
+< 				EPackage p = EPackage.Registry.INSTANCE.getEPackage(importVal);
+---
+> 				EPackage p = registry.getEPackage(importVal);
+161a183
+> 					registerLocally(p);
+226,227c248
+< 					// force package initialization
+< 					EPackage.Registry.INSTANCE.getEPackage(ePackage.getNsURI());
+---
+> 					registerLocally(ePackage);
+233a255
+> 	

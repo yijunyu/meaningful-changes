@@ -1,0 +1,375 @@
+package org.eclipse.gmf.runtime.draw2d.ui.internal.routers;
+
+import org.eclipse.draw2d.Connection;
+
+import org.eclipse.draw2d.ConnectionAnchor;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.Ray;
+
+import org.eclipse.draw2d.geometry.Rectangle;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.LineSeg;
+
+import org.eclipse.gmf.runtime.draw2d.ui.geometry.PointListUtilities;
+
+import org.eclipse.gmf.runtime.draw2d.ui.mapmode.MapMode;
+
+public class RectilinearRouter extends ObliqueRouter implements OrthogonalRouter {
+
+    protected boolean removeSegmentsInViews (Connection conn, PointList newLine) {
+        PointList newPoints = new PointList (newLine.size ());
+        Point ptStart = new Point (newLine.getFirstPoint ());
+        Point ptEnd = new Point (newLine.getLastPoint ());
+        for (int i = 0;
+        i < newLine.size (); i ++) {
+            if (i != 0 && i != newLine.size () - 1) newPoints.addPoint (new Point (newLine.getPoint (i)));
+
+        }
+        if (newPoints.size () < 3) return false;
+
+        int lastIntersect = 0;
+        int count = 0;
+        boolean found = false;
+        boolean bChanged = false;
+        if (conn.getSourceAnchor ().getOwner () == null) return false;
+
+        Rectangle startRect = new Rectangle (conn.getSourceAnchor ().getOwner ().getBounds ());
+        conn.getSourceAnchor ().getOwner ().translateToAbsolute (startRect);
+        conn.translateToRelative (startRect);
+        for (int i = 0;
+        i < newPoints.size () - 1; i ++) {
+            boolean in1 = startRect.contains (newPoints.getPoint (i));
+            boolean in2 = startRect.contains (newPoints.getPoint (i + 1));
+            if (in1 != in2) {
+                lastIntersect = count;
+                found = true;
+            } else if (! (in1 || in2)) {
+                break;
+            }
+
+            ++ count;
+        }
+        if (found) {
+            for (int i = 0;
+            i <= lastIntersect; ++ i) {
+                newPoints.removePoint (0);
+                bChanged = true;
+            }
+        }
+        lastIntersect = count = newLine.size () - 1;
+        found = false;
+        if (conn.getTargetAnchor ().getOwner () == null) return false;
+
+        Rectangle endRect = new Rectangle (conn.getTargetAnchor ().getOwner ().getBounds ());
+        conn.getTargetAnchor ().getOwner ().translateToAbsolute (endRect);
+        conn.translateToRelative (endRect);
+        for (int i = newPoints.size () - 1;
+        i > 0; i --) {
+            boolean in1 = endRect.contains (newPoints.getPoint (i));
+            boolean in2 = endRect.contains (newPoints.getPoint (i - 1));
+            if (in1 != in2) {
+                lastIntersect = count;
+                found = true;
+            } else if (! (in1 || in2)) {
+                break;
+            }
+
+            -- count;
+        }
+        if (found) {
+            for (int i = newPoints.size () - 1;
+            i >= lastIntersect; -- i) {
+                newPoints.removePoint (newPoints.size () - 1);
+                bChanged = true;
+            }
+        }
+        if (newPoints.size () != newLine.size ()) {
+            newLine.removeAllPoints ();
+            newLine.addPoint (ptStart);
+            for (int i = 0;
+            i < newPoints.size (); i ++) newLine.addPoint (new Point (newPoints.getPoint (i)));
+
+            newLine.addPoint (ptEnd);
+        }
+        return bChanged;
+    }
+
+    protected boolean updateToBiTerminal (Connection conn, PointList newLine) {
+        boolean retVal = false;
+        if (newLine.size () == 2) {
+            Point ptOrig = new Point (newLine.getPoint (0));
+            Point ptTerm = new Point (newLine.getPoint (1));
+            Dimension offsets = new Dimension (10, 10);
+            conn.translateToRelative (offsets);
+            Rectangle bBoxF, bBoxT;
+            if (conn.getSourceAnchor ().getOwner () != null) {
+                bBoxF = new Rectangle (conn.getSourceAnchor ().getOwner ().getBounds ());
+                conn.getSourceAnchor ().getOwner ().translateToAbsolute (bBoxF);
+                conn.translateToRelative (bBoxF);
+            } else bBoxF = new Rectangle (ptOrig.x - offsets.width / 2, ptOrig.y - offsets.height / 2, offsets.width, offsets.height);
+
+            if (conn.getTargetAnchor ().getOwner () != null) {
+                bBoxT = new Rectangle (conn.getTargetAnchor ().getOwner ().getBounds ());
+                conn.getTargetAnchor ().getOwner ().translateToAbsolute (bBoxT);
+                conn.translateToRelative (bBoxT);
+            } else bBoxT = new Rectangle (ptTerm.x - offsets.width / 2, ptTerm.y - offsets.height / 2, offsets.width, offsets.height);
+
+            int ix1 = Math.max (bBoxF.getLeft ().x, bBoxT.getLeft ().x);
+            int ix2 = Math.min (bBoxF.getRight ().x, bBoxT.getRight ().x);
+            Point posF = bBoxF.getCenter ();
+            Point posT = bBoxT.getCenter ();
+            Ray origSeg = new Ray (ptOrig, ptTerm);
+            boolean isOblique = (origSeg.y != 0 && origSeg.x != 0);
+            if (ix1 <= ix2) {
+                if (isOblique || ptOrig.x < ix1 || ptOrig.x > ix2) {
+                    if (isOblique && ptOrig.x > ix1 && ptOrig.x < ix2) posF.x = ptOrig.x;
+                    else posF.x = ix1 + (ix2 - ix1) / 2;
+
+                    posT.x = posF.x;
+                    newLine.removeAllPoints ();
+                    newLine.addPoint (posF);
+                    newLine.addPoint (posT);
+                    retVal = true;
+                }
+            } else {
+                int iy1 = Math.max (bBoxF.getTop ().y, bBoxT.getTop ().y);
+                int iy2 = Math.min (bBoxF.getBottom ().y, bBoxT.getBottom ().y);
+                if (iy1 <= iy2) {
+                    if (isOblique || ptOrig.y < iy1 || ptOrig.y > iy2) {
+                        if (isOblique && ptOrig.y > iy1 && ptOrig.y < iy2) posF.y = ptOrig.y;
+                        else posF.y = iy1 + (iy2 - iy1) / 2;
+
+                        posT.y = posF.y;
+                        newLine.removeAllPoints ();
+                        newLine.addPoint (posF);
+                        newLine.addPoint (posT);
+                        retVal = true;
+                    }
+                }
+            }
+        }
+        return retVal;
+    }
+
+    protected void resetEndPointsToEdge (Connection conn, PointList newLine) {
+        if (isReorienting (conn)) {
+            super.resetEndPointsToEdge (conn, newLine);
+            return;
+        }
+        LineSeg edgeLine1 = OrthogonalRouterUtilities.getOrthogonalLineSegToAnchorLoc (conn, conn.getSourceAnchor (), newLine.getPoint (1));
+        LineSeg edgeLine2 = OrthogonalRouterUtilities.getOrthogonalLineSegToAnchorLoc (conn, conn.getTargetAnchor (), newLine.getPoint (newLine.size () - 2));
+        if (edgeLine1 != null && edgeLine2 != null) {
+            newLine.setPoint (edgeLine1.getOrigin (), 0);
+            if (newLine.size () > 2) {
+                for (int i = 0;
+                i < 2; i ++) {
+                    Point ptCurrent = newLine.getPoint (i);
+                    Point ptNext = newLine.getPoint (i + 1);
+                    makeOrthogonal (ptCurrent, ptNext);
+                    newLine.setPoint (ptNext, i + 1);
+                }
+            }
+            newLine.setPoint (edgeLine2.getOrigin (), newLine.size () - 1);
+            if (newLine.size () > 2) {
+                for (int i = newLine.size () - 1;
+                i >= newLine.size () - 2; i --) {
+                    Point ptCurrent = newLine.getPoint (i);
+                    Point ptNext = newLine.getPoint (i - 1);
+                    makeOrthogonal (ptCurrent, ptNext);
+                    newLine.setPoint (ptNext, i - 1);
+                }
+            }
+        } else super.resetEndPointsToEdge (conn, newLine);
+
+    }
+
+    private void makeOrthogonal (Point ptCurrent, Point ptNext) {
+        if (Math.abs (ptNext.x - ptCurrent.x) < Math.abs (ptNext.y - ptCurrent.y)) {
+            ptNext.x = ptCurrent.x;
+        } else {
+            ptNext.y = ptCurrent.y;
+        }
+    }
+
+    private static int CONNECTION_OFFSET = 26;
+
+    protected void updateIfNotRectilinear (Connection conn, PointList newLine) {
+        boolean isRectilinear = true;
+        for (int i = 0;
+        i < newLine.size () - 1; i ++) {
+            Ray segVector = new Ray (newLine.getPoint (i), newLine.getPoint (i + 1));
+            if (segVector.x != 0 && segVector.y != 0) {
+                isRectilinear = false;
+                break;
+            }
+        }
+        if (! isRectilinear && ! updateToBiTerminal (conn, newLine)) {
+            OrthogonalRouterUtilities.resetEndPointsToCenter (conn, newLine);
+            PointList oldPoints = PointListUtilities.copyPoints (newLine);
+            PointList newPoints = new PointList ();
+            newPoints.addPoint (oldPoints.removePoint (0));
+            while (oldPoints.size () > 0) {
+                if (oldPoints.size () >= 2) {
+                    Point p0 = newPoints.getLastPoint ();
+                    Point p1 = oldPoints.removePoint (0);
+                    Point p2 = oldPoints.removePoint (0);
+                    if (Math.abs (p2.y - p0.y) > Math.abs (p2.x - p0.x)) {
+                        newPoints.addPoint (new Point (p1.x, p0.y));
+                        newPoints.addPoint (new Point (p1.x, p2.y));
+                    } else {
+                        newPoints.addPoint (new Point (p0.x, p1.y));
+                        newPoints.addPoint (new Point (p2.x, p1.y));
+                    }
+                    newPoints.addPoint (p2);
+                } else if (oldPoints.size () == 1) {
+                    Point p0 = newPoints.getLastPoint ();
+                    Point p1 = oldPoints.removePoint (0);
+                    if (Math.abs (p1.y - p0.y) > Math.abs (p1.x - p0.x)) {
+                        newPoints.addPoint (new Point (p1.x, p0.y));
+                    } else {
+                        newPoints.addPoint (new Point (p0.x, p1.y));
+                    }
+                    newPoints.addPoint (p1);
+                }
+
+            }
+            oldPoints.removeAllPoints ();
+            oldPoints.addPoint (newPoints.removePoint (0));
+            while (newPoints.size () >= 2) {
+                Point p0 = oldPoints.getLastPoint ();
+                Point p1 = newPoints.getPoint (0);
+                Point p2 = newPoints.getPoint (1);
+                if (p0.x == p1.x && p0.x == p2.x) {
+                    newPoints.removePoint (0);
+                } else if (p0.y == p1.y && p0.y == p2.y) {
+                    newPoints.removePoint (0);
+                } else {
+                    oldPoints.addPoint (newPoints.removePoint (0));
+                }
+
+            }
+            while (newPoints.size () > 0) {
+                oldPoints.addPoint (newPoints.removePoint (0));
+            }
+            newLine.removeAllPoints ();
+            for (int i = 0;
+            i < oldPoints.size (); i ++) newLine.addPoint (oldPoints.getPoint (i));
+
+        }
+    }
+
+    protected boolean checkEndSegments (Connection conn, PointList newLine) {
+        boolean bOk = true;
+        Dimension connection_offset = new Dimension (CONNECTION_OFFSET, 0);
+        conn.translateToRelative (connection_offset);
+        if (newLine.size () > 2) {
+            Point ptFix = new Point (newLine.getPoint (1));
+            if (! checkEndSegment (conn, conn.getSourceAnchor (), ptFix, connection_offset.width / 2)) {
+                newLine.setPoint (ptFix, 1);
+                Point ptNext = newLine.getPoint (2);
+                makeOrthogonal (ptFix, ptNext);
+                newLine.setPoint (ptNext, 2);
+                bOk = false;
+            }
+            ptFix = new Point (newLine.getPoint (newLine.size () - 2));
+            if (! checkEndSegment (conn, conn.getTargetAnchor (), ptFix, connection_offset.width / 2)) {
+                newLine.setPoint (ptFix, newLine.size () - 2);
+                Point ptNext = newLine.getPoint (newLine.size () - 3);
+                makeOrthogonal (ptFix, ptNext);
+                newLine.setPoint (ptNext, newLine.size () - 3);
+                bOk = false;
+            }
+        }
+        return bOk;
+    }
+
+    protected void straightenPoints (PointList newLine) {
+        for (int i = 0;
+        i < newLine.size () - 1; i ++) {
+            Point ptCurrent = newLine.getPoint (i);
+            Point ptNext = newLine.getPoint (i + 1);
+            makeOrthogonal (ptCurrent, ptNext);
+            newLine.setPoint (ptNext, i + 1);
+        }
+    }
+
+    protected boolean checkEndSegment (Connection conn, ConnectionAnchor anchor, Point ptNext, int offset) {
+        LineSeg seg = OrthogonalRouterUtilities.getOrthogonalLineSegToAnchorLoc (conn, anchor, ptNext);
+        if (seg != null) {
+            if (seg.length () < offset) {
+                seg.pointOn (offset, LineSeg.KeyPoint.ORIGIN, ptNext);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static final int maxRoutingDepth = 10;
+
+    public void routeLine (Connection conn, int nestedRoutingDepth, PointList newLine) {
+        boolean skipNormalization = (routerFlags & ROUTER_FLAG_SKIPNORMALIZATION) != 0;
+        int nStartSize = newLine.size ();
+        if (isReorienting (conn)) {
+            super.routeLine (conn, nestedRoutingDepth, newLine);
+            checkEndSegments (conn, newLine);
+            resetEndPointsToEdge (conn, newLine);
+            return;
+        }
+        if (checkSelfRelConnection (conn, newLine)) {
+            checkEndSegments (conn, newLine);
+            resetEndPointsToEdge (conn, newLine);
+            return;
+        }
+        updateIfNotRectilinear (conn, newLine);
+        boolean normalizationChangedLine = false;
+        if (! skipNormalization) {
+            normalizationChangedLine = removeSegmentsInViews (conn, newLine);
+            normalizationChangedLine |= removePointsInViews (conn, newLine);
+            Dimension tolerance = new Dimension (3, 0);
+            if (! isFeedback (conn)) tolerance = (Dimension) MapMode.translateToLP (tolerance);
+
+            normalizationChangedLine |= PointListUtilities.normalizeSegments (newLine, tolerance.width);
+        }
+        checkEndSegments (conn, newLine);
+        resetEndPointsToEdge (conn, newLine);
+        straightenPoints (newLine);
+        if (normalizationChangedLine) {
+            if (nestedRoutingDepth < maxRoutingDepth) {
+                nestedRoutingDepth ++;
+                routeLine (conn, nestedRoutingDepth, newLine);
+                if (nestedRoutingDepth != 0) nestedRoutingDepth --;
+
+            }
+        } else {
+            Rectangle startRect = new Rectangle (conn.getSourceAnchor ().getOwner ().getBounds ());
+            conn.getSourceAnchor ().getOwner ().translateToAbsolute (startRect);
+            conn.translateToRelative (startRect);
+            Dimension buffer = new Dimension (2, 2);
+            conn.translateToRelative (buffer);
+            startRect.expand (buffer.width, buffer.height);
+            Rectangle endRect = new Rectangle (conn.getTargetAnchor ().getOwner ().getBounds ());
+            conn.getTargetAnchor ().getOwner ().translateToAbsolute (endRect);
+            conn.translateToRelative (endRect);
+            endRect.expand (buffer.width, buffer.height);
+            if (! startRect.contains (newLine.getPoint (0)) || ! endRect.contains (newLine.getPoint (newLine.size () - 1)) || newLine.size () - nStartSize >= 2) {
+                newLine.removeAllPoints ();
+                Point r1 = conn.getSourceAnchor ().getReferencePoint ();
+                conn.translateToRelative (r1);
+                newLine.addPoint (r1);
+                Point r2 = conn.getTargetAnchor ().getReferencePoint ();
+                conn.translateToRelative (r2);
+                newLine.addPoint (r2);
+                updateIfNotRectilinear (conn, newLine);
+                resetEndPointsToEdge (conn, newLine);
+            }
+        }
+    }
+
+}
+

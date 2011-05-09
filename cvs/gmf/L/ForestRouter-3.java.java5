@@ -1,0 +1,148 @@
+package org.eclipse.gmf.runtime.draw2d.ui.internal.routers;
+
+import java.util.HashMap;
+
+import org.eclipse.draw2d.BendpointConnectionRouter;
+
+import org.eclipse.draw2d.Connection;
+
+import org.eclipse.draw2d.ConnectionAnchor;
+
+import org.eclipse.draw2d.ConnectionRouter;
+
+import org.eclipse.draw2d.geometry.Dimension;
+
+import org.eclipse.draw2d.geometry.Point;
+
+import org.eclipse.draw2d.geometry.PointList;
+
+import org.eclipse.draw2d.geometry.PrecisionPoint;
+
+public class ForestRouter extends BendpointConnectionRouter implements OrthogonalRouter {
+    private HashMap connections = new HashMap ();
+    private HashMap trunkVertexes = new HashMap ();
+    private class AnchorKey {
+        private ConnectionAnchor anchor;
+        private Object qualifier;
+
+        AnchorKey (ConnectionAnchor anchor, Object qualifier) {
+            this.anchor = anchor;
+            this.qualifier = qualifier;
+        }
+
+        public boolean equals (Object object) {
+            boolean isEqual = false;
+            AnchorKey hashKey;
+            if (object instanceof AnchorKey) {
+                hashKey = (AnchorKey) object;
+                ConnectionAnchor hkA1 = hashKey.getAnchor ();
+                Object hkA2 = hashKey.getQualifier ();
+                isEqual = (hkA1.equals (anchor) && hkA2.equals (qualifier));
+            }
+            return isEqual;
+        }
+
+        public ConnectionAnchor getAnchor () {
+            return anchor;
+        }
+
+        public Object getQualifier () {
+            return qualifier;
+        }
+
+        public int hashCode () {
+            return anchor.hashCode () ^ qualifier.hashCode ();
+        }
+
+    }
+
+    public void invalidate (Connection conn) {
+        if (conn.getSourceAnchor () == null || conn.getTargetAnchor () == null) return;
+
+        ConnectionRouter connectionRouter = getSubRouter (conn);
+        if (connectionRouter != null) connectionRouter.invalidate (conn);
+
+    }
+
+    public void remove (Connection conn) {
+        if (conn.getSourceAnchor () == null || conn.getTargetAnchor () == null) return;
+
+        ConnectionRouter connectionRouter = getSubRouter (conn);
+        if (connectionRouter != null) connectionRouter.remove (conn);
+
+        super.remove (conn);
+    }
+
+    public void route (Connection conn) {
+        if (conn.getTargetAnchor ().getOwner () == null || conn.getSourceAnchor ().getOwner () == null) {
+            PointList points = conn.getPoints ();
+            points.removeAllPoints ();
+            Point ref1 = conn.getTargetAnchor ().getReferencePoint ();
+            Point ref2 = conn.getSourceAnchor ().getReferencePoint ();
+            PrecisionPoint precisePt = new PrecisionPoint ();
+            precisePt.setLocation (conn.getSourceAnchor ().getLocation (ref1));
+            conn.translateToRelative (precisePt);
+            points.addPoint (precisePt);
+            precisePt.setLocation (conn.getTargetAnchor ().getLocation (ref2));
+            conn.translateToRelative (precisePt);
+            points.addPoint (precisePt);
+            conn.setPoints (points);
+            return;
+        }
+        TreeRouter treeRouter = getSubRouter (conn);
+        Dimension trunk = treeRouter.getTrunkVertex ();
+        if (trunk != null) {
+            AnchorKey trunkKey = new AnchorKey (conn.getTargetAnchor (), trunk);
+            trunkVertexes.remove (trunkKey);
+        }
+        if (treeRouter != null) {
+            treeRouter.route (conn);
+            trunk = treeRouter.getTrunkVertex ();
+            Dimension adjustedTrunk = accountForTrunkOverlap (trunk, conn);
+            if (! adjustedTrunk.equals (trunk)) {
+                treeRouter.setTrunkVertex (adjustedTrunk);
+                treeRouter.invalidate (conn);
+            }
+        }
+    }
+
+    private Dimension accountForTrunkOverlap (Dimension trunk, Connection conn) {
+        if (conn.getTargetAnchor () == null || conn.getTargetAnchor ().getOwner () == null) return trunk;
+
+        AnchorKey trunkKey = new AnchorKey (conn.getTargetAnchor (), trunk);
+        int ownerExt = conn.getTargetAnchor ().getOwner ().getBounds ().width / 2;
+        int trunkExt = trunk.width;
+        if (conn instanceof ITreeConnection) {
+            if (((ITreeConnection) conn).getOrientation () == ITreeConnection.Orientation.HORIZONTAL) {
+                ownerExt = conn.getTargetAnchor ().getOwner ().getBounds ().height / 2;
+                trunkExt = trunk.height;
+            }
+        }
+        if (trunkVertexes.get (trunkKey) == null || Math.abs (trunkExt) > ownerExt) {
+            trunkVertexes.put (trunkKey, new Boolean (true));
+            return trunk;
+        } else {
+            Dimension newTrunk = new Dimension (trunk);
+            newTrunk.expand (10, 10);
+            return accountForTrunkOverlap (newTrunk, conn);
+        }
+    }
+
+    public TreeRouter getSubRouter (Connection conn) {
+        if (conn.getTargetAnchor () == null) return null;
+
+        String hint = "base";
+        if (conn instanceof ITreeConnection) {
+            hint = ((ITreeConnection) conn).getHint ();
+        }
+        AnchorKey connectionKey = new AnchorKey (conn.getTargetAnchor (), hint);
+        TreeRouter connectionRouter = (TreeRouter) connections.get (connectionKey);
+        if (connectionRouter == null) {
+            connectionRouter = new TreeRouter ();
+            connections.put (connectionKey, connectionRouter);
+        }
+        return connectionRouter;
+    }
+
+}
+

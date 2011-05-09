@@ -1,0 +1,98 @@
+4a5,12
+> import java.util.HashSet;
+> 
+> import java.util.Iterator;
+> 
+> import java.util.Map;
+> 
+> import java.util.Set;
+> 
+8a17,22
+> import org.eclipse.emf.ecore.EStructuralFeature.Setting;
+> 
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+> import org.eclipse.emf.transaction.util.TransactionUtil;
+> 
+13c27
+< import org.eclipse.gmf.runtime.emf.core.util.EMFCoreUtil;
+---
+> import org.eclipse.gmf.runtime.emf.core.util.CrossReferenceAdapter;
+18a33,34
+> import org.eclipse.gmf.runtime.emf.type.core.requests.IEditCommandRequest;
+> 
+28a45,55
+>     public ICommand getBeforeEditCommand (IEditCommandRequest request) {
+>         if (request instanceof DestroyDependentsRequest) {
+>             return getBeforeDestroyDependentsCommand ((DestroyDependentsRequest) request);
+>         }
+>         return null;
+>     }
+> 
+>     public ICommand getAfterEditCommand (IEditCommandRequest request) {
+>         return null;
+>     }
+> 
+31,33c58,59
+<         ICommand result = null;
+<         Collection semanticReferencers = EMFCoreUtil.getReferencers (destructee, new EReference [] {NotationPackage.Literals.VIEW__ELEMENT});
+<         result = CompositeCommand.compose (result, request.getDestroyDependentsCommand (semanticReferencers));
+---
+>         CrossReferenceAdapter crossReferenceAdapter = getCrossReferenceAdapter (request, destructee);
+>         ICommand result = getDestroyDependentsCommand (destructee, request, NotationPackage.Literals.VIEW__ELEMENT, crossReferenceAdapter);
+35,37c61
+<             Collection nodeEntryKeys = EMFCoreUtil.getReferencers (destructee, new EReference [] {NotationPackage.Literals.NODE_ENTRY__KEY});
+<             result = CompositeCommand.compose (result, request.getDestroyDependentsCommand (nodeEntryKeys));
+<         }
+---
+>             result = CompositeCommand.compose (result, getDestroyDependentsCommand (destructee, request, NotationPackage.Literals.NODE_ENTRY__KEY, crossReferenceAdapter));
+39a64
+>                 if (view.eIsSet (NotationPackage.Literals.VIEW__SOURCE_EDGES)) {
+40a66,67
+>                 }
+>                 if (view.eIsSet (NotationPackage.Literals.VIEW__TARGET_EDGES)) {
+42a70,71
+>             }
+>         }
+45a75,115
+>     private CrossReferenceAdapter getCrossReferenceAdapter (DestroyDependentsRequest request, EObject destructee) {
+>         CrossReferenceAdapter crossReferenceAdapter = null;
+>         Map cacheMaps = (Map) request.getParameter ("Cache_Maps");
+>         if (cacheMaps != null) {
+>             crossReferenceAdapter = (CrossReferenceAdapter) cacheMaps.get ("CrossRefAdapter");
+>         }
+>         if (crossReferenceAdapter == null) {
+>             crossReferenceAdapter = CrossReferenceAdapter.getExistingCrossReferenceAdapter (destructee);
+>             if (crossReferenceAdapter == null) {
+>                 TransactionalEditingDomain domain = TransactionUtil.getEditingDomain (destructee);
+>                 if (domain != null) {
+>                     crossReferenceAdapter = CrossReferenceAdapter.getCrossReferenceAdapter (domain.getResourceSet ());
+>                 }
+>             }
+>         }
+>         return crossReferenceAdapter;
+>     }
+> 
+>     private ICommand getDestroyDependentsCommand (EObject destructee, DestroyDependentsRequest request, EReference eRef, CrossReferenceAdapter crossReferenceAdapter) {
+>         if (crossReferenceAdapter != null) {
+>             Collection revRefs = crossReferenceAdapter.getNonNavigableInverseReferences (destructee);
+>             if (revRefs.isEmpty () == false) {
+>                 Set set = null;
+>                 Iterator it = revRefs.iterator ();
+>                 while (it.hasNext ()) {
+>                     Setting setting = (Setting) it.next ();
+>                     if (setting.getEStructuralFeature () == eRef) {
+>                         if (set == null) {
+>                             set = new HashSet ();
+>                         }
+>                         set.add (setting.getEObject ());
+>                     }
+>                 }
+>                 if (set != null) {
+>                     return request.getDestroyDependentsCommand (set);
+>                 }
+>             }
+>         }
+>         return null;
+>     }
+> 

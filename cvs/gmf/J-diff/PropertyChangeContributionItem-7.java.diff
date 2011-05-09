@@ -1,0 +1,46 @@
+17a18
+> import org.eclipse.emf.transaction.RunnableWithResult;
+19,22c20,21
+< import org.eclipse.jface.util.Assert;
+< import org.eclipse.ui.IWorkbenchPage;
+< 
+< import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+---
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+26,28c25,27
+< import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+< import org.eclipse.gmf.runtime.emf.core.util.MetaModelUtil;
+< import org.eclipse.gmf.runtime.notation.View;
+---
+> import org.eclipse.gmf.runtime.emf.core.util.PackageUtil;
+> import org.eclipse.jface.util.Assert;
+> import org.eclipse.ui.IWorkbenchPage;
+149,151c148,154
+< 		return MEditingDomainGetter.getMEditingDomain((View)editPart.getModel()).runAsRead(new MRunnable() {
+< 			public Object run() {
+< 				ENamedElement element = MetaModelUtil.getElement(thePropertyId);
+---
+> 		try {
+> 			return editPart.getEditingDomain().runExclusive(
+> 				new RunnableWithResult.Impl() {
+> 
+> 					public void run() {
+> 						ENamedElement element = PackageUtil
+> 							.getElement(thePropertyId);
+153,154c156,157
+< 					return editPart.getStructuralFeatureValue((EStructuralFeature)element);
+< 				return null;
+---
+> 							setResult(editPart
+> 								.getStructuralFeatureValue((EStructuralFeature) element));
+156a160,168
+> 		} catch (InterruptedException e) {
+> 			Trace.catching(DiagramActionsPlugin.getInstance(),
+> 				DiagramActionsDebugOptions.EXCEPTIONS_CATCHING, getClass(),
+> 				"getPropertyValue", e); //$NON-NLS-1$
+> 			Log.error(DiagramActionsPlugin.getInstance(),
+> 				DiagramActionsStatusCodes.IGNORED_EXCEPTION_WARNING,
+> 				"getPropertyValue", e); //$NON-NLS-1$
+> 			return null;
+> 		}

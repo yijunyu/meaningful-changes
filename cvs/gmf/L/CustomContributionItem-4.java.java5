@@ -1,0 +1,179 @@
+package org.eclipse.gmf.runtime.diagram.ui.internal.actions;
+
+import java.util.ArrayList;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gef.EditPartViewer;
+
+import org.eclipse.gef.Request;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.commands.CommandStack;
+
+import org.eclipse.gef.commands.CompoundCommand;
+
+import org.eclipse.gef.commands.UnexecutableCommand;
+
+import org.eclipse.ui.IWorkbenchPage;
+
+import org.eclipse.gmf.runtime.common.ui.action.AbstractContributionItem;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.DiagramEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.editparts.IGraphicalEditPart;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.DiagramCommandStack;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramEditDomain;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramGraphicalViewer;
+
+import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+
+public abstract class CustomContributionItem extends AbstractContributionItem {
+    private Request targetRequest;
+    private List _operationSet = Collections.EMPTY_LIST;
+
+    public CustomContributionItem (IWorkbenchPage workbenchPage, String id) {
+        super (workbenchPage, id);
+    }
+
+    public void dispose () {
+        targetRequest = null;
+        _operationSet = null;
+        super.dispose ();
+    }
+
+    protected void doRun (IProgressMonitor progressMonitor) {
+        updateTargetRequest ();
+        execute (getCommand (), progressMonitor);
+    }
+
+    public void refresh () {
+        _operationSet = null;
+        updateTargetRequest ();
+        super.refresh ();
+    }
+
+    protected boolean calculateEnabled () {
+        Command command = getCommand ();
+        return command != null && command.canExecute ();
+    }
+
+    protected final void execute (Command command, IProgressMonitor progressMonitor) {
+        if (command == null || ! command.canExecute ()) return;
+
+        if (getDiagramCommandStack () != null) getDiagramCommandStack ().execute (command, progressMonitor);
+
+    }
+
+    protected DiagramCommandStack getDiagramCommandStack () {
+        Object stack = getWorkbenchPart ().getAdapter (CommandStack.class);
+        return (stack instanceof DiagramCommandStack) ? (DiagramCommandStack) stack : null;
+    }
+
+    protected Command getCommand () {
+        return getCommand (getTargetRequest ());
+    }
+
+    protected Command getCommand (Request request) {
+        List operationSet = getOperationSet ();
+        Iterator editParts = operationSet.iterator ();
+        CompoundCommand command = new CompoundCommand (getCommandLabel ());
+        while (editParts.hasNext ()) {
+            EditPart editPart = (EditPart) editParts.next ();
+            Command curCommand = editPart.getCommand (request);
+            if (curCommand != null) {
+                command.add (curCommand);
+            }
+        }
+        return command.isEmpty () || command.size () != operationSet.size () ? UnexecutableCommand.INSTANCE : (Command) command;
+    }
+
+    protected String getCommandLabel () {
+        return null;
+    }
+
+    protected Request getTargetRequest () {
+        if (targetRequest == null) targetRequest = createTargetRequest ();
+
+        return targetRequest;
+    }
+
+    protected abstract Request createTargetRequest ();
+
+    protected void updateTargetRequest () {
+    }
+
+    protected List getSelectedObjects () {
+        return getStructuredSelection ().toList ();
+    }
+
+    protected final List getOperationSet () {
+        if (_operationSet == null) {
+            _operationSet = createOperationSet ();
+            if (_operationSet == null) _operationSet = Collections.EMPTY_LIST;
+
+        }
+        return _operationSet;
+    }
+
+    protected List createOperationSet () {
+        List selection = getSelectedObjects ();
+        if (selection.isEmpty () || ! (selection.get (0) instanceof IGraphicalEditPart)) return Collections.EMPTY_LIST;
+
+        Iterator selectedEPs = selection.iterator ();
+        List targetedEPs = new ArrayList ();
+        while (selectedEPs.hasNext ()) {
+            EditPart selectedEP = (EditPart) selectedEPs.next ();
+            targetedEPs.addAll (getTargetEditParts (selectedEP));
+        }
+        return targetedEPs.isEmpty () ? Collections.EMPTY_LIST : targetedEPs;
+    }
+
+    protected List getTargetEditParts (EditPart editpart) {
+        EditPart targetEP = editpart.getTargetEditPart (getTargetRequest ());
+        return (targetEP == null) ? Collections.EMPTY_LIST : Collections.singletonList (targetEP);
+    }
+
+    protected IDiagramEditDomain getDiagramEditDomain () {
+        return (IDiagramEditDomain) getWorkbenchPart ().getAdapter (IDiagramEditDomain.class);
+    }
+
+    protected IDiagramWorkbenchPart getDiagramWorkbenchPart () {
+        return getWorkbenchPart () instanceof IDiagramWorkbenchPart ? (IDiagramWorkbenchPart) getWorkbenchPart () : null;
+    }
+
+    protected DiagramEditPart getDiagramEditPart () {
+        IDiagramWorkbenchPart editor = getDiagramWorkbenchPart ();
+        return editor != null ? editor.getDiagramEditPart () : null;
+    }
+
+    protected IDiagramGraphicalViewer getDiagramGraphicalViewer () {
+        IDiagramWorkbenchPart part = getDiagramWorkbenchPart ();
+        return part != null ? part.getDiagramGraphicalViewer () : null;
+    }
+
+    protected List filterEditPartsMatching (List list, EditPartViewer.Conditional condition) {
+        List matchList = new ArrayList ();
+        Iterator iter = list.iterator ();
+        while (iter.hasNext ()) {
+            EditPart ep = (EditPart) iter.next ();
+            if (condition.evaluate (ep)) matchList.add (ep);
+
+        }
+        return matchList;
+    }
+
+}
+

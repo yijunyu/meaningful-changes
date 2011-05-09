@@ -1,0 +1,133 @@
+13a14,17
+> import java.util.HashMap;
+> import java.util.List;
+> import java.util.Map;
+> 
+14a19,20
+> import org.eclipse.core.runtime.IProgressMonitor;
+> import org.eclipse.emf.ecore.EClass;
+15a22,25
+> import org.eclipse.emf.ecore.EPackage;
+> import org.eclipse.emf.ecore.resource.Resource;
+> import org.eclipse.emf.ecore.xmi.XMLResource;
+> import org.eclipse.gmf.gmfgraph.Canvas;
+16a27,28
+> import org.eclipse.gmf.gmfgraph.provider.GMFGraphEditPlugin;
+> import org.eclipse.gmf.internal.bridge.resolver.DomainModelSourceImpl;
+21a34,34
+> import org.eclipse.gmf.internal.common.ui.ModelSelectionPage;
+22a36,36
+> import org.eclipse.ui.actions.WorkspaceModifyOperation;
+28a43,44
+> 	protected ModelSelectionPage graphicalModelSelectionPage;
+> 
+30a47,70
+> 	/**
+> 	 * Returns true if wizard operates in reconcile mode.
+> 	 * Resource must be available if returns true.
+> 	 */
+> 	protected boolean isInReconcileMode() {
+> 		return graphicalModelSelectionPage != null && graphicalModelSelectionPage.getResource() != null;
+> 	}
+> 
+> 	public boolean performFinish() {
+> 		if (isInReconcileMode()) {
+> 			reconcileModel();
+> 			try {
+> 				saveModel(graphicalModelSelectionPage.getResource());
+> 			} catch (Exception exception) {
+> 				GMFGraphEditPlugin.INSTANCE.log(exception);
+> 				return false;
+> 			}
+> 			WizardUtil.openEditor(graphicalModelSelectionPage.getResource().getURI());
+> 			return true;
+> 		} else {
+> 			return super.performFinish();
+> 		}
+> 	}
+> 
+32,32c72,72
+< 		GraphDefBuilder builder = new GraphDefBuilder();
+---
+> 		GraphDefBuilder builder = new GraphDefBuilder(null);
+35a76,110
+> 	@SuppressWarnings("unchecked")
+> 	protected void reconcileModel() {
+> 		Canvas existingCanvas = null;
+> 		for (EObject element : (List<? extends EObject>) graphicalModelSelectionPage.getResource().getContents()) {
+> 			if (element instanceof Canvas) {
+> 				existingCanvas = (Canvas) element;
+> 				break;
+> 			}
+> 		}
+> 		GraphDefBuilder builder = new GraphDefBuilder(existingCanvas);
+> 		Canvas canvas = builder.process(graphicalDefinitionPage.getModel());
+> 		if (canvas != null && existingCanvas != canvas) {
+> 			graphicalModelSelectionPage.getResource().getContents().add(canvas);
+> 		}
+> 	}
+> 
+> 	@SuppressWarnings("unchecked")
+> 	protected void saveModel(final Resource resource) throws Exception {
+> 		WorkspaceModifyOperation operation = new WorkspaceModifyOperation() {
+> 
+> 			protected void execute(IProgressMonitor progressMonitor) {
+> 				try {
+> 					Map options = new HashMap();
+> 					options.put(XMLResource.OPTION_ENCODING, "UTF-8"); //$NON-NLS-1$
+> 					resource.save(options);
+> 				} catch (Exception exception) {
+> 					GMFGraphEditPlugin.INSTANCE.log(exception);
+> 				} finally {
+> 					progressMonitor.done();
+> 				}
+> 			}
+> 		};
+> 		getContainer().run(false, false, operation);
+> 	}
+> 
+36a112,119
+> 		ResourceLocationProvider rloc = new ResourceLocationProvider(selection);
+> 		final boolean reconcileMode = !rloc.getSelectedURIs("gmfgraph", true).isEmpty(); // enabled when gmfgraph model selected
+> 		if (reconcileMode) {
+> 			graphicalModelSelectionPage = new ModelSelectionPage("GraphicalModelSelectionPage", rloc) {
+> 
+> 				protected String getModelFileExtension() {
+> 					return "gmfgraph"; //$NON-NLS-1$
+> 				}
+37,37d111
+< 		super.addPages();
+38a121,131
+> 				protected void setResource(Resource resource) {
+> 					super.setResource(resource);
+> 					setPageComplete(getResource() != null);
+> 				}
+> 			};
+> 			graphicalModelSelectionPage.setPageComplete(false);
+> 			graphicalModelSelectionPage.setTitle("Graphical Definition Model");
+> 			graphicalModelSelectionPage.setDescription("Select graphical definition model to update. New diagram elements will be added to this model.");
+> 			addPage(graphicalModelSelectionPage);
+> 		} else {
+> 			super.addPages();
+44a138,138
+> 		}
+46,46d139
+< 		ResourceLocationProvider rloc = new ResourceLocationProvider(selection);
+52a146,158
+> 
+> 			protected DomainModelSourceImpl createDomainModelSource(EPackage contents, EClass diagramElement) {
+> 				if (isInReconcileMode()) {
+> 					return new DomainModelSourceImpl(contents, diagramElement) {
+> 
+> 						public boolean isDisabled(EObject domainElement) {
+> 							return GraphDefBuilder.getDiagramElement(graphicalModelSelectionPage.getResource().getAllContents(), domainElement) != null;
+> 						}
+> 					};
+> 				}
+> 				return super.createDomainModelSource(contents, diagramElement);
+> 			}
+> 		};
+52,52c145,145
+< 		graphicalDefinitionPage = new DefinitionPage("GraphicalDefinitionPage", new StructureBuilder(new StructureResolver(), true), domainModelSelectionPage); //$NON-NLS-1$
+---
+> 		graphicalDefinitionPage = new DefinitionPage("GraphicalDefinitionPage", new StructureBuilder(new StructureResolver(), true), domainModelSelectionPage) { //$NON-NLS-1$

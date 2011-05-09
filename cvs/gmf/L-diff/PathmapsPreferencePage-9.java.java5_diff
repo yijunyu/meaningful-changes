@@ -1,0 +1,846 @@
+2a3,8
+> import java.io.File;
+> 
+> import java.util.Arrays;
+> 
+> import java.util.HashMap;
+> 
+7c13
+< import java.util.Set;
+---
+> import java.util.Map;
+9,11c15
+< import org.eclipse.core.resources.IPathVariableChangeEvent;
+< 
+< import org.eclipse.core.resources.IPathVariableChangeListener;
+---
+> import java.util.Set;
+16a21,22
+> import org.eclipse.core.runtime.CoreException;
+> 
+19c25
+< import org.eclipse.emf.common.CommonPlugin;
+---
+> import org.eclipse.core.runtime.Path;
+28a35,36
+> import org.eclipse.jface.dialogs.ErrorDialog;
+> 
+30a39,44
+> import org.eclipse.jface.viewers.CheckStateChangedEvent;
+> 
+> import org.eclipse.jface.viewers.CheckboxTableViewer;
+> 
+> import org.eclipse.jface.viewers.ICheckStateListener;
+> 
+34a49,50
+> import org.eclipse.jface.viewers.ISelection;
+> 
+52a69,70
+> import org.eclipse.osgi.util.NLS;
+> 
+57,63c75
+< import org.eclipse.swt.events.ControlAdapter;
+< 
+< import org.eclipse.swt.events.ControlEvent;
+< 
+< import org.eclipse.swt.events.MouseEvent;
+< 
+< import org.eclipse.swt.events.MouseTrackAdapter;
+---
+> import org.eclipse.swt.events.SelectionAdapter;
+67,68d78
+< import org.eclipse.swt.events.SelectionListener;
+< 
+73,74d82
+< import org.eclipse.swt.graphics.Point;
+< 
+87,89c95
+< import org.eclipse.swt.widgets.TableColumn;
+< 
+< import org.eclipse.swt.widgets.TableItem;
+---
+> import org.eclipse.ui.ISharedImages;
+100,102c106,107
+<     private ScrolledComposite referencedPathVariablesScroll;
+<     private TableViewer referencedPathVariables;
+<     private StringsContentProvider referencedPathVariablesContent;
+---
+>     private static final String NAME_ATTRIBUTE = "name";
+>     private IPathVariableManager pathVariableManager = ResourcesPlugin.getWorkspace ().getPathVariableManager ();
+104,109c109,117
+<     private TableViewer pathVariables;
+<     private StringsContentProvider pathVariablesContent;
+<     private Button add;
+<     private Button remove;
+<     private IPathVariableChangeListener pathVariableChangeListener;
+<     private boolean disposed = true;
+---
+>     private CheckboxTableViewer pathVariables;
+>     private PathVariableContentProvider pathVariablesContent;
+>     private Button newVariable;
+>     private Button editVariable;
+>     private Button removeVariable;
+>     private Map variableChanges = new HashMap ();
+>     private Object addedToken = new Object ();
+>     private Object changedToken = new Object ();
+>     private Object removedToken = new Object ();
+118,122c126
+<         composite.setLayout (new GridLayout (3, false));
+<         gridData = new GridData (GridData.FILL_HORIZONTAL);
+<         gridData.grabExcessHorizontalSpace = true;
+<         gridData.horizontalSpan = 2;
+<         composite.setLayoutData (gridData);
+---
+>         composite.setLayout (new GridLayout (2, false));
+127c131
+<         gridData.horizontalSpan = 3;
+---
+>         gridData.horizontalSpan = 2;
+129,136c133
+<         Composite pathVariablesComposite = new Composite (composite, SWT.NONE);
+<         pathVariablesComposite.setLayout (new GridLayout (1, false));
+<         gridData = new GridData (GridData.FILL_HORIZONTAL | GridData.FILL_VERTICAL);
+<         gridData.grabExcessHorizontalSpace = true;
+<         gridData.grabExcessVerticalSpace = true;
+<         gridData.horizontalSpan = 1;
+<         pathVariablesComposite.setLayoutData (gridData);
+<         Label pathVariablesLabel = new Label (pathVariablesComposite, SWT.LEFT);
+---
+>         Label pathVariablesLabel = new Label (composite, SWT.LEFT);
+144c141
+<         pathVariablesScroll = new ScrolledComposite (pathVariablesComposite, SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
+---
+>         pathVariablesScroll = new ScrolledComposite (composite, SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
+152c149
+<         pathVariables = new TableViewer (pathVariablesScroll, SWT.MULTI);
+---
+>         pathVariables = CheckboxTableViewer.newCheckList (pathVariablesScroll, SWT.MULTI);
+154,166c151
+<         TableColumn column = new TableColumn (pathVariables.getTable (), SWT.LEFT);
+<         column.setMoveable (false);
+<         column.setResizable (false);
+<         pathVariables.getTable ().addControlListener (new ControlAdapter () {
+< 
+<             public void controlResized (ControlEvent e) {
+<                 pathVariables.getTable ().getColumn (0).setWidth (pathVariables.getTable ().getClientArea ().width);
+<             }
+< 
+<         }
+< 
+<         );
+<         pathVariablesContent = new StringsContentProvider ();
+---
+>         pathVariablesContent = new PathVariableContentProvider ();
+168,169c153,154
+<         pathVariables.setLabelProvider (new StringsLabelProvider ());
+<         pathVariables.setComparator (new StringsViewerComparator ());
+---
+>         pathVariables.setLabelProvider (new PathVariableLabelProvider ());
+>         pathVariables.setComparator (new PathVariableViewerComparator ());
+172,199d156
+<         add = new Button (buttonComposite, SWT.CENTER);
+<         add.setText (EMFUIMessages.PathmapsPreferencePage_addChevron);
+<         gridData = new GridData (GridData.FILL_HORIZONTAL);
+<         gridData.grabExcessHorizontalSpace = true;
+<         gridData.grabExcessVerticalSpace = false;
+<         gridData.horizontalSpan = 1;
+<         add.setLayoutData (gridData);
+<         Button addAll = new Button (buttonComposite, SWT.CENTER);
+<         addAll.setText (EMFUIMessages.PathmapsPreferencePage_addAllChevron);
+<         gridData = new GridData (GridData.FILL_HORIZONTAL);
+<         gridData.grabExcessHorizontalSpace = true;
+<         gridData.grabExcessVerticalSpace = false;
+<         addAll.setLayoutData (gridData);
+<         remove = new Button (buttonComposite, SWT.CENTER);
+<         remove.setText (EMFUIMessages.PathmapsPreferencePage_removeChevron);
+<         gridData = new GridData (GridData.FILL_HORIZONTAL);
+<         gridData.grabExcessHorizontalSpace = true;
+<         gridData.grabExcessVerticalSpace = false;
+<         gridData.horizontalSpan = 1;
+<         gridData.verticalIndent = 10;
+<         remove.setLayoutData (gridData);
+<         Button removeAll = new Button (buttonComposite, SWT.CENTER);
+<         removeAll.setText (EMFUIMessages.PathmapsPreferencePage_removeAllChevron);
+<         gridData = new GridData (GridData.FILL_HORIZONTAL);
+<         gridData.grabExcessHorizontalSpace = true;
+<         gridData.grabExcessVerticalSpace = false;
+<         gridData.horizontalSpan = 1;
+<         removeAll.setLayoutData (gridData);
+203a161
+>         gridData.verticalAlignment = GridData.BEGINNING;
+205,233c163,172
+<         Composite referencedPathVariablesComposite = new Composite (composite, SWT.NONE);
+<         referencedPathVariablesComposite.setLayout (new GridLayout (1, false));
+<         gridData = new GridData (GridData.FILL_HORIZONTAL | GridData.FILL_VERTICAL);
+<         gridData.grabExcessHorizontalSpace = true;
+<         gridData.grabExcessVerticalSpace = true;
+<         gridData.horizontalSpan = 1;
+<         referencedPathVariablesComposite.setLayoutData (gridData);
+<         Label referencedPathVariablesLabel = new Label (referencedPathVariablesComposite, SWT.LEFT);
+<         gridData = new GridData (GridData.FILL_HORIZONTAL | GridData.FILL_VERTICAL);
+<         gridData.grabExcessHorizontalSpace = true;
+<         gridData.grabExcessVerticalSpace = false;
+<         gridData.horizontalSpan = 1;
+<         gridData.verticalIndent = 20;
+<         referencedPathVariablesLabel.setLayoutData (gridData);
+<         referencedPathVariablesLabel.setText (EMFUIMessages.PathmapsPreferencePage_pathVariablesUsedInModeling);
+<         referencedPathVariablesScroll = new ScrolledComposite (referencedPathVariablesComposite, SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
+<         referencedPathVariablesScroll.setExpandHorizontal (true);
+<         referencedPathVariablesScroll.setExpandVertical (true);
+<         gridData = new GridData (GridData.FILL_HORIZONTAL | GridData.FILL_VERTICAL);
+<         gridData.grabExcessHorizontalSpace = true;
+<         gridData.grabExcessVerticalSpace = true;
+<         gridData.horizontalSpan = 1;
+<         referencedPathVariablesScroll.setLayoutData (gridData);
+<         referencedPathVariables = new TableViewer (referencedPathVariablesScroll, SWT.MULTI);
+<         referencedPathVariablesScroll.setContent (referencedPathVariables.getTable ());
+<         column = new TableColumn (referencedPathVariables.getTable (), SWT.LEFT);
+<         column.setMoveable (false);
+<         column.setResizable (false);
+<         referencedPathVariables.getTable ().addControlListener (new ControlAdapter () {
+---
+>         newVariable = new Button (buttonComposite, SWT.CENTER);
+>         newVariable.setText (EMFUIMessages.PathmapsPreferencePage_newVariable);
+>         setButtonLayoutData (newVariable);
+>         editVariable = new Button (buttonComposite, SWT.CENTER);
+>         editVariable.setText (EMFUIMessages.PathmapsPreferencePage_editVariable);
+>         setButtonLayoutData (editVariable);
+>         removeVariable = new Button (buttonComposite, SWT.CENTER);
+>         removeVariable.setText (EMFUIMessages.PathmapsPreferencePage_removeVariable);
+>         setButtonLayoutData (removeVariable);
+>         pathVariables.addSelectionChangedListener (new ISelectionChangedListener () {
+235,236c174,175
+<             public void controlResized (ControlEvent e) {
+<                 referencedPathVariables.getTable ().getColumn (0).setWidth (referencedPathVariables.getTable ().getClientArea ().width);
+---
+>             public void selectionChanged (SelectionChangedEvent event) {
+>                 pathVariableSelected (event.getSelection ());
+242,246c181
+<         referencedPathVariablesContent = new StringsContentProvider ();
+<         referencedPathVariables.setContentProvider (referencedPathVariablesContent);
+<         referencedPathVariables.setLabelProvider (new StringsLabelProvider (true));
+<         referencedPathVariables.setComparator (new StringsViewerComparator ());
+<         composite.addControlListener (new ControlAdapter () {
+---
+>         pathVariables.addCheckStateListener (new ICheckStateListener () {
+248,249c183,184
+<             public void controlResized (ControlEvent e) {
+<                 adjustScrollpanes ();
+---
+>             public void checkStateChanged (CheckStateChangedEvent event) {
+>                 pathVariableChecked (event, (PathVariableEntry) event.getElement ());
+255c190
+<         pathVariables.getTable ().addMouseTrackListener (new MouseTrackAdapter () {
+---
+>         newVariable.addSelectionListener (new SelectionAdapter () {
+257,264c192,193
+<             public void mouseHover (MouseEvent e) {
+<                 TableItem item = pathVariables.getTable ().getItem (new Point (e.x, e.y));
+<                 String tip = null;
+<                 if (item != null) {
+<                     String var = item.getText (0);
+<                     tip = getValue (var, false);
+<                 }
+<                 pathVariables.getTable ().setToolTipText (tip);
+---
+>             public void widgetSelected (SelectionEvent e) {
+>                 addPathVariable ();
+270c199
+<         pathVariables.addSelectionChangedListener (new ISelectionChangedListener () {
+---
+>         editVariable.addSelectionListener (new SelectionAdapter () {
+272,282c201,202
+<             public void selectionChanged (SelectionChangedEvent event) {
+<                 if (! event.getSelection ().isEmpty ()) {
+<                     referencedPathVariables.setSelection (new StructuredSelection ());
+<                     remove.setEnabled (true);
+<                     if (! validateAdditions ((IStructuredSelection) event.getSelection (), true)) {
+<                         add.setEnabled (false);
+<                     } else {
+<                         setMessage (null);
+<                         add.setEnabled (true);
+<                     }
+<                 }
+---
+>             public void widgetSelected (SelectionEvent e) {
+>                 editPathVariable (pathVariables.getSelection ());
+288c208
+<         referencedPathVariables.getTable ().addMouseTrackListener (new MouseTrackAdapter () {
+---
+>         removeVariable.addSelectionListener (new SelectionAdapter () {
+290,297c210,211
+<             public void mouseHover (MouseEvent e) {
+<                 TableItem item = referencedPathVariables.getTable ().getItem (new Point (e.x, e.y));
+<                 String tip = null;
+<                 if (item != null) {
+<                     String var = item.getText (0);
+<                     tip = getValue (var, true);
+<                 }
+<                 referencedPathVariables.getTable ().setToolTipText (tip);
+---
+>             public void widgetSelected (SelectionEvent e) {
+>                 removePathVariable (pathVariables.getSelection ());
+303c217,221
+<         referencedPathVariables.addSelectionChangedListener (new ISelectionChangedListener () {
+---
+>         initializeContents ();
+>         applyDialogFont (composite);
+>         pathVariableSelected (pathVariables.getSelection ());
+>         return composite;
+>     }
+305,310c223,226
+<             public void selectionChanged (SelectionChangedEvent event) {
+<                 if (! event.getSelection ().isEmpty ()) {
+<                     add.setEnabled (true);
+<                     pathVariables.setSelection (new StructuredSelection ());
+<                     if (! validateRemovals ((IStructuredSelection) event.getSelection (), true)) {
+<                         remove.setEnabled (false);
+---
+>     private void pathVariableChecked (CheckStateChangedEvent event, PathVariableEntry entry) {
+>         if (event.getChecked ()) {
+>             if (validateSelection (entry, false)) {
+>                 entry.setSelected (true);
+312,313c228
+<                         setMessage (null);
+<                         remove.setEnabled (true);
+---
+>                 event.getCheckable ().setChecked (entry, false);
+314a230,234
+>         } else {
+>             if (validateDeselection (entry, false)) {
+>                 entry.setSelected (false);
+>             } else {
+>                 event.getCheckable ().setChecked (entry, true);
+317d236
+< 
+320,331c239,242
+<         );
+<         add.addSelectionListener (new SelectionListener () {
+< 
+<             public void widgetSelected (SelectionEvent e) {
+<                 IStructuredSelection selection = (IStructuredSelection) pathVariables.getSelection ();
+<                 for (Iterator iter = selection.iterator ();
+<                 iter.hasNext ();) {
+<                     String name = (String) iter.next ();
+<                     pathVariablesContent.remove (name);
+<                     referencedPathVariablesContent.add (name);
+<                     adjustScrollpanes ();
+<                 }
+---
+>     private void pathVariableSelected (ISelection selection) {
+>         IStructuredSelection ssel = (IStructuredSelection) selection;
+>         editVariable.setEnabled (validateEdit (ssel, false));
+>         removeVariable.setEnabled (validateRemove (ssel, false));
+334c245,250
+<             public void widgetDefaultSelected (SelectionEvent e) {
+---
+>     private void markAdded (String variableName) {
+>         Object currentChange = variableChanges.get (variableName);
+>         if (currentChange == removedToken) {
+>             variableChanges.put (variableName, changedToken);
+>         } else if (currentChange != changedToken) {
+>             variableChanges.put (variableName, addedToken);
+339,342c255,256
+<         );
+<         addAll.addSelectionListener (new SelectionListener () {
+< 
+<             public void widgetDefaultSelected (SelectionEvent e) {
+---
+>     boolean isAdded (String variableName) {
+>         return variableChanges.get (variableName) == addedToken;
+345,355c259,264
+<             public void widgetSelected (SelectionEvent e) {
+<                 Object [] items = pathVariablesContent.getElements (null);
+<                 for (int i = items.length - 1;
+<                 i >= 0; i --) {
+<                     if (validateAdditions (new StructuredSelection (items [i]), false)) {
+<                         String name = (String) items [i];
+<                         pathVariablesContent.remove (name);
+<                         referencedPathVariablesContent.add (name);
+<                         adjustScrollpanes ();
+<                     }
+<                 }
+---
+>     private void markRemoved (String variableName) {
+>         Object currentChange = variableChanges.get (variableName);
+>         if (currentChange == addedToken) {
+>             variableChanges.remove (variableName);
+>         } else {
+>             variableChanges.put (variableName, removedToken);
+357d265
+< 
+360,371c268,269
+<         );
+<         remove.addSelectionListener (new SelectionListener () {
+< 
+<             public void widgetSelected (SelectionEvent e) {
+<                 IStructuredSelection selection = (IStructuredSelection) referencedPathVariables.getSelection ();
+<                 for (Iterator iter = selection.iterator ();
+<                 iter.hasNext ();) {
+<                     String name = (String) iter.next ();
+<                     referencedPathVariablesContent.remove (name);
+<                     pathVariablesContent.add (name);
+<                     adjustScrollpanes ();
+<                 }
+---
+>     boolean isRemoved (String variableName) {
+>         return variableChanges.get (variableName) == removedToken;
+374c272,276
+<             public void widgetDefaultSelected (SelectionEvent e) {
+---
+>     private void markChanged (String variableName) {
+>         Object currentChange = variableChanges.get (variableName);
+>         if (currentChange == addedToken) {
+>         } else {
+>             variableChanges.put (variableName, changedToken);
+376d277
+< 
+379,382c280,281
+<         );
+<         removeAll.addSelectionListener (new SelectionListener () {
+< 
+<             public void widgetDefaultSelected (SelectionEvent e) {
+---
+>     boolean isChanged (String variableName) {
+>         return variableChanges.get (variableName) == changedToken;
+385,394c284,288
+<             public void widgetSelected (SelectionEvent e) {
+<                 Object [] items = referencedPathVariablesContent.getElements (null);
+<                 for (int i = items.length - 1;
+<                 i >= 0; i --) {
+<                     if (validateRemovals (new StructuredSelection (items [i]), false)) {
+<                         String name = (String) items [i];
+<                         referencedPathVariablesContent.remove (name);
+<                         pathVariablesContent.add (name);
+<                         adjustScrollpanes ();
+<                     }
+---
+>     boolean isLocationDefined (IPath location) {
+>         for (Iterator iter = pathVariablesContent.entries.iterator ();
+>         iter.hasNext ();) {
+>             if (location.equals (((PathVariableEntry) iter.next ()).getLocationPath ())) {
+>                 return true;
+397c291
+< 
+---
+>         return false;
+400,409c294,304
+<         );
+<         initializeContents ();
+<         pathVariableChangeListener = new IPathVariableChangeListener () {
+< 
+<             public void pathVariableChanged (IPathVariableChangeEvent event) {
+<                 referencedPathVariables.getTable ().getDisplay ().asyncExec (new Runnable () {
+< 
+<                     public void run () {
+<                         if (! PathmapsPreferencePage.this.disposed) {
+<                             performDefaults ();
+---
+>     private void addPathVariable () {
+>         NewPathVariableDialog dlg = NewPathVariableDialog.openNew (this);
+>         if (dlg != null) {
+>             String name = dlg.getVariableName ();
+>             IPath location = dlg.getVariableLocation ();
+>             markAdded (name);
+>             PathVariableEntry entry = new PathVariableEntry (name, location);
+>             entry.setSelected (true);
+>             pathVariablesContent.add (entry);
+>             pathVariables.setChecked (entry, true);
+>             pathVariables.setSelection (new StructuredSelection (entry));
+412a308,327
+>     private void editPathVariable (ISelection selection) {
+>         PathVariableEntry entry = null;
+>         if (selection instanceof IStructuredSelection) {
+>             IStructuredSelection ssel = (IStructuredSelection) selection;
+>             if (! ssel.isEmpty ()) {
+>                 entry = (PathVariableEntry) ssel.getFirstElement ();
+>             }
+>         }
+>         if (entry != null) {
+>             String oldName = entry.getName ();
+>             NewPathVariableDialog dlg = NewPathVariableDialog.openEdit (this, oldName, entry.getLocation ());
+>             if (dlg != null) {
+>                 String newName = dlg.getVariableName ();
+>                 IPath newLocation = dlg.getVariableLocation ();
+>                 boolean nameChanged = ! oldName.equals (newName);
+>                 if (nameChanged) {
+>                     markAdded (newName);
+>                     markRemoved (oldName);
+>                 } else {
+>                     markChanged (oldName);
+414,415c329,331
+< 
+<                 );
+---
+>                 entry.setName (newName);
+>                 entry.setLocation (newLocation);
+>                 pathVariables.update (entry, nameChanged ? new String [] {NAME_ATTRIBUTE} : null);
+417d332
+< 
+419,424d333
+< 
+<         ;
+<         ResourcesPlugin.getWorkspace ().getPathVariableManager ().addChangeListener (pathVariableChangeListener);
+<         disposed = false;
+<         applyDialogFont (composite);
+<         return composite;
+427,431c336,341
+<     private void adjustScrollpanes () {
+<         pathVariablesScroll.setMinSize (pathVariables.getTable ().computeSize (SWT.DEFAULT, SWT.DEFAULT));
+<         pathVariablesScroll.layout ();
+<         referencedPathVariablesScroll.setMinSize (referencedPathVariables.getTable ().computeSize (SWT.DEFAULT, SWT.DEFAULT));
+<         referencedPathVariablesScroll.layout ();
+---
+>     private void removePathVariable (ISelection selection) {
+>         Iterator entries = null;
+>         if (selection instanceof IStructuredSelection) {
+>             IStructuredSelection ssel = (IStructuredSelection) selection;
+>             if (! ssel.isEmpty ()) {
+>                 entries = ssel.iterator ();
+433,444d342
+< 
+<     private String getValue (String pathVariable, boolean includeRegistered) {
+<         String result = null;
+<         if (includeRegistered && PathmapManager.isRegisteredPathVariable (pathVariable)) {
+<             String path = PathmapManager.getRegisteredValue (pathVariable);
+<             if (path != null) {
+<                 URI uri = URI.createURI (path);
+<                 uri = CommonPlugin.resolve (uri);
+<                 if (uri.isFile ()) {
+<                     path = uri.toFileString ();
+<                 } else {
+<                     path = uri.toString ();
+446c344,349
+<                 result = path;
+---
+>         if (entries != null) {
+>             while (entries.hasNext ()) {
+>                 PathVariableEntry entry = (PathVariableEntry) entries.next ();
+>                 String name = entry.getName ();
+>                 markRemoved (name);
+>                 pathVariablesContent.remove (entry);
+448,452d350
+<         } else {
+<             IPathVariableManager pathVarMgr = ResourcesPlugin.getWorkspace ().getPathVariableManager ();
+<             IPath path = pathVarMgr.getValue (pathVariable);
+<             if (path != null) {
+<                 result = path.toOSString ();
+455,459d352
+<         return result;
+<     }
+< 
+<     private boolean validateAdditions (IStructuredSelection selection, boolean showError) {
+<         if (selection.isEmpty ()) return false;
+461,463c354,355
+<         for (Iterator iter = selection.iterator ();
+<         iter.hasNext ();) {
+<             String name = (String) iter.next ();
+---
+>     private boolean validateSelection (PathVariableEntry entry, boolean showError) {
+>         String name = entry.getName ();
+475a368,376
+>         return true;
+>     }
+> 
+>     private boolean validateDeselection (PathVariableEntry entry, boolean showError) {
+>         if (entry.isRequired ()) {
+>             if (showError) {
+>                 setMessage (EMFUIMessages.PathmapsPreferencePage_registeredPathVariableErrorMessage, ERROR);
+>             }
+>             return false;
+480,481c381,393
+<     private boolean validateRemovals (IStructuredSelection selection, boolean showError) {
+<         if (selection.isEmpty ()) return false;
+---
+>     private boolean validateEdit (IStructuredSelection selection, boolean showError) {
+>         if (selection.isEmpty () || (selection.size () > 1)) {
+>             return false;
+>         }
+>         String name = ((PathVariableEntry) selection.getFirstElement ()).getName ();
+>         if (PathmapManager.isRegisteredPathVariable (name)) {
+>             if (showError) {
+>                 setMessage (EMFUIMessages.PathmapsPreferencePage_registeredPathVariableErrorMessage, ERROR);
+>             }
+>             return false;
+>         }
+>         return true;
+>     }
+482a395,398
+>     private boolean validateRemove (IStructuredSelection selection, boolean showError) {
+>         if (selection.isEmpty ()) {
+>             return false;
+>         }
+485c401
+<             String name = (String) iter.next ();
+---
+>             String name = ((PathVariableEntry) iter.next ()).getName ();
+498,500c414
+<         add.setEnabled (true);
+<         remove.setEnabled (true);
+<         referencedPathVariables.setInput (new HashSet (PathmapManager.getAllPathVariables ()));
+---
+>         variableChanges.clear ();
+502,507c416,430
+<         Set available = new HashSet ();
+<         String [] pathVariableNames = ResourcesPlugin.getWorkspace ().getPathVariableManager ().getPathVariableNames ();
+<         for (int i = 0;
+<         i < pathVariableNames.length; i ++) {
+<             if (! currentVariables.contains (pathVariableNames [i])) {
+<                 available.add (pathVariableNames [i]);
+---
+>         Set allVariables = new HashSet ();
+>         Set checkedVariables = new HashSet ();
+>         Set pathVariableNames = new HashSet ();
+>         pathVariableNames.addAll (Arrays.asList (pathVariableManager.getPathVariableNames ()));
+>         pathVariableNames.addAll (PathmapManager.getAllPathVariables ());
+>         for (Iterator iter = pathVariableNames.iterator ();
+>         iter.hasNext ();) {
+>             String name = (String) iter.next ();
+>             PathVariableEntry entry;
+>             if (PathmapManager.isRegisteredPathVariable (name)) {
+>                 String value = PathmapManager.getRegisteredValue (name);
+>                 try {
+>                     URI uri = URI.createURI (value);
+>                     if (uri.isFile ()) {
+>                         value = uri.toFileString ();
+508a432
+>                 } catch (RuntimeException e) {
+510c434,448
+<         pathVariables.setInput (available);
+---
+>                 entry = new PathVariableEntry (name, value);
+>                 checkedVariables.add (entry);
+>                 allVariables.add (entry);
+>             } else if (PathmapManager.isCompatiblePathVariable (name)) {
+>                 entry = new PathVariableEntry (name, pathVariableManager.getValue (name));
+>                 if (currentVariables.contains (entry.getName ())) {
+>                     checkedVariables.add (entry);
+>                     entry.setSelected (true);
+>                 }
+>                 allVariables.add (entry);
+>             }
+> 
+>         }
+>         pathVariables.setInput (allVariables);
+>         pathVariables.setCheckedElements (checkedVariables.toArray ());
+522,526c460,471
+<         Object [] nonReferencedPathVariables = pathVariablesContent.getElements (null);
+<         for (int i = 0;
+<         i < nonReferencedPathVariables.length; i ++) {
+<             String variableName = (String) nonReferencedPathVariables [i];
+<             PathmapManager.removePathVariableReference (variableName);
+---
+>         Set currentVariables = PathmapManager.getPathVariableReferences ();
+>         try {
+>             for (Iterator iter = variableChanges.keySet ().iterator ();
+>             iter.hasNext ();) {
+>                 String name = (String) iter.next ();
+>                 if (isRemoved (name)) {
+>                     if (pathVariableManager.isDefined (name)) {
+>                         pathVariableManager.setValue (name, null);
+>                     }
+>                     PathmapManager.removePathVariableReference (name);
+>                     iter.remove ();
+>                 }
+528,529c473
+<         Set currentVariables = PathmapManager.getAllPathVariables ();
+<         Object [] variablesToReference = referencedPathVariablesContent.getElements (null);
+---
+>             Object [] variables = pathVariablesContent.getElements (null);
+531,534c475,485
+<         i < variablesToReference.length; i ++) {
+<             String variableName = (String) variablesToReference [i];
+<             if (! currentVariables.contains (variableName)) {
+<                 PathmapManager.addPathVariableReference (variableName);
+---
+>             i < variables.length; i ++) {
+>                 PathVariableEntry entry = (PathVariableEntry) variables [i];
+>                 String name = entry.getName ();
+>                 if (isChanged (name) || isAdded (name) && ! pathVariableManager.isDefined (name)) {
+>                     pathVariableManager.setValue (name, new Path (entry.getLocation ()));
+>                     variableChanges.remove (name);
+>                 }
+>                 if (entry.isSelected () && ! currentVariables.contains (name)) {
+>                     PathmapManager.addPathVariableReference (name);
+>                 } else if (! entry.isSelected () && currentVariables.contains (name)) {
+>                     PathmapManager.removePathVariableReference (name);
+535a487
+> 
+538a491,493
+>         } catch (CoreException e) {
+>             ErrorDialog.openError (getShell (), EMFUIMessages.PathmapsPreferencePage_promptTitle, EMFUIMessages.PathmapsPreferencePage_updateFailed, e.getStatus ());
+>             return false;
+540,547d494
+< 
+<     public void dispose () {
+<         disposed = true;
+<         if (pathVariableChangeListener != null) {
+<             ResourcesPlugin.getWorkspace ().getPathVariableManager ().removeChangeListener (pathVariableChangeListener);
+<             pathVariableChangeListener = null;
+<         }
+<         super.dispose ();
+550,551c497,498
+<     private static class StringsContentProvider implements IStructuredContentProvider {
+<         private Set strings;
+---
+>     private static class PathVariableContentProvider implements IStructuredContentProvider {
+>         private Set entries;
+554,555c501,502
+<         StringsContentProvider () {
+<             strings = new HashSet ();
+---
+>         PathVariableContentProvider () {
+>             entries = new HashSet ();
+558,561c505,508
+<         void add (String string) {
+<             if (! strings.contains (string)) {
+<                 strings.add (string);
+<                 table.add (string);
+---
+>         void add (PathVariableEntry entry) {
+>             if (! entries.contains (entry)) {
+>                 entries.add (entry);
+>                 table.add (entry);
+565,568c512,515
+<         void remove (String string) {
+<             if (strings.contains (string)) {
+<                 strings.remove (string);
+<                 table.remove (string);
+---
+>         void remove (PathVariableEntry entry) {
+>             if (entries.contains (entry)) {
+>                 entries.remove (entry);
+>                 table.remove (entry);
+573c520
+<             return strings.toArray ();
+---
+>             return entries.toArray ();
+577c524
+<             strings = (Set) newInput;
+---
+>             entries = (Set) newInput;
+586,587c533
+<     private static class StringsLabelProvider implements ITableLabelProvider, IColorProvider {
+<         private final boolean isReferencedPathVariables;
+---
+>     private static class PathVariableLabelProvider implements ITableLabelProvider, IColorProvider {
+590,595c536,537
+<         StringsLabelProvider () {
+<             this (false);
+<         }
+< 
+<         StringsLabelProvider (boolean isReferencedPathVariables) {
+<             this.isReferencedPathVariables = isReferencedPathVariables;
+---
+>         PathVariableLabelProvider () {
+>             super ();
+599c541,543
+<             if (isReferencedPathVariables && PathmapManager.isRegisteredPathVariable ((String) element)) {
+---
+>             PathVariableEntry entry = (PathVariableEntry) element;
+>             String name = entry.getName ();
+>             if (PathmapManager.isRegisteredPathVariable (name)) {
+600a545,546
+>             } else if (! isDirectory (entry.getLocation ())) {
+>                 return MslUIPlugin.getDefault ().getWorkbench ().getSharedImages ().getImage (ISharedImages.IMG_OBJS_WARN_TSK);
+601a548
+> 
+604a552,556
+>         private boolean isDirectory (String location) {
+>             File file = new File (location);
+>             return file.exists () && file.isDirectory ();
+>         }
+> 
+613c565,569
+<             return (columnIndex == 0) ? (String) element : null;
+---
+>             if (columnIndex != 0) {
+>                 return null;
+>             }
+>             PathVariableEntry entry = (PathVariableEntry) element;
+>             return NLS.bind (EMFUIMessages.PathmapsPreferencePage_variablePattern, entry.getName (), entry.getLocation ());
+643c599
+<     private static class StringsViewerComparator extends ViewerComparator {
+---
+>     private static class PathVariableViewerComparator extends ViewerComparator {
+645c601
+<         StringsViewerComparator () {
+---
+>         PathVariableViewerComparator () {
+648a605,608
+>         public boolean isSorterProperty (Object element, String property) {
+>             return NAME_ATTRIBUTE.equals (property);
+>         }
+> 
+650c610,678
+<             return PathmapManager.isRegisteredPathVariable ((String) element) ? 1 : 0;
+---
+>             return PathmapManager.isRegisteredPathVariable (((PathVariableEntry) element).getName ()) ? 1 : 0;
+>         }
+> 
+>     }
+> 
+>     private static final class PathVariableEntry {
+>         private String name;
+>         private String location;
+>         private IPath locationPath;
+>         private final boolean required;
+>         private boolean selected;
+> 
+>         PathVariableEntry (String name, IPath location) {
+>             this (name, location.toPortableString (), false);
+>             this.locationPath = location;
+>         }
+> 
+>         PathVariableEntry (String name, String location) {
+>             this (name, location, true);
+>         }
+> 
+>         private PathVariableEntry (String name, String location, boolean required) {
+>             this.name = name;
+>             this.location = location;
+>             this.required = required;
+>             selected = required;
+>         }
+> 
+>         boolean isRequired () {
+>             return required;
+>         }
+> 
+>         String getName () {
+>             return name;
+>         }
+> 
+>         void setName (String name) {
+>             if (! isRequired ()) {
+>                 this.name = name;
+>             }
+>         }
+> 
+>         String getLocation () {
+>             return location;
+>         }
+> 
+>         IPath getLocationPath () {
+>             return locationPath;
+>         }
+> 
+>         void setLocation (IPath location) {
+>             if (! isRequired ()) {
+>                 this.locationPath = location;
+>                 this.location = location.toPortableString ();
+>             }
+>         }
+> 
+>         boolean isSelected () {
+>             return selected;
+>         }
+> 
+>         void setSelected (boolean selected) {
+>             if (! isRequired ()) {
+>                 this.selected = selected;
+>             }
+>         }
+> 
+>         public String toString () {
+>             return getName () + " - " + getLocation ();

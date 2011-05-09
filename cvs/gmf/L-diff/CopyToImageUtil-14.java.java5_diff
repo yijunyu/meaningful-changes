@@ -1,0 +1,73 @@
+24a25,26
+> import org.eclipse.core.runtime.Assert;
+> 
+63,64d64
+< import org.eclipse.jface.util.Assert;
+< 
+99,103c99,101
+<         boolean found = false;
+<         DiagramGenerator gen = null;
+<         if (format.equals (ImageFileFormat.SVG)) {
+<             gen = new DiagramSVGGenerator (diagramEP);
+<             gen.createSWTImageDescriptorForDiagram ();
+---
+>         DiagramGenerator gen = getDiagramGenerator (diagramEP, format);
+>         List editParts = diagramEP.getPrimaryEditParts ();
+>         copyToImage (gen, editParts, gen.calculateImageRectangle (editParts), destination, format, monitor);
+105d102
+<             saveSVGToFile (destination, (DiagramSVGGenerator) gen, monitor);
+107,116d103
+<         } else if (format.equals (ImageFileFormat.JPEG) || format.equals (ImageFileFormat.PNG)) {
+<             String exportFormat = ImageExporter.JPEG_FILE;
+<             if (format.equals (ImageFileFormat.PNG)) exportFormat = ImageExporter.PNG_FILE;
+< 
+<             gen = new DiagramImageGenerator (diagramEP);
+<             java.awt.Image image = gen.createAWTImageForDiagram ();
+<             if (image instanceof BufferedImage) {
+<                 ImageExporter.exportToFile (destination, (BufferedImage) image, exportFormat, monitor);
+<                 found = true;
+<             }
+119,121c106,108
+<         if (! found) {
+<             gen = new DiagramImageGenerator (diagramEP);
+<             Image image = gen.createSWTImageDescriptorForDiagram ().createImage ();
+---
+>     public void copyToImage (DiagramEditPart diagramEP, List selection, IPath destination, ImageFileFormat format, IProgressMonitor monitor) throws CoreException {
+>         DiagramGenerator gen = getDiagramGenerator (diagramEP, format);
+>         copyToImage (gen, selection, gen.calculateImageRectangle (selection), destination, format, monitor);
+123,124d109
+<             saveToFile (destination, image, format, monitor);
+<             image.dispose ();
+126,127c111,117
+<         monitor.worked (1);
+<         return gen;
+---
+> 
+>     protected DiagramGenerator getDiagramGenerator (DiagramEditPart diagramEP, ImageFileFormat format) {
+>         if (format.equals (ImageFileFormat.SVG)) {
+>             return new DiagramSVGGenerator (diagramEP);
+>         } else {
+>             return new DiagramImageGenerator (diagramEP);
+>         }
+130c120
+<     public void copyToImage (DiagramEditPart diagramEP, List selection, IPath destination, ImageFileFormat format, IProgressMonitor monitor) throws CoreException {
+---
+>     protected void copyToImage (DiagramGenerator gen, List editParts, org.eclipse.swt.graphics.Rectangle imageRect, IPath destination, ImageFileFormat format, IProgressMonitor monitor) throws CoreException {
+133,134c123
+<             DiagramSVGGenerator gen = new DiagramSVGGenerator (diagramEP);
+<             gen.createSWTImageDescriptorForParts (selection);
+---
+>             gen.createSWTImageDescriptorForParts (editParts, imageRect);
+136c125
+<             saveSVGToFile (destination, gen, monitor);
+---
+>             saveSVGToFile (destination, (DiagramSVGGenerator) gen, monitor);
+142c131,132
+<             java.awt.Image image = new DiagramImageGenerator (diagramEP).createAWTImageForParts (selection);
+---
+>             java.awt.Image image = gen.createAWTImageForParts (editParts, imageRect);
+>             monitor.worked (1);
+150c140
+<             Image image = new DiagramImageGenerator (diagramEP).createSWTImageDescriptorForParts (selection).createImage ();
+---
+>             Image image = gen.createSWTImageDescriptorForParts (editParts, imageRect).createImage ();

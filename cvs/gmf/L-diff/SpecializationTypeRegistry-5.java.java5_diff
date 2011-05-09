@@ -1,0 +1,125 @@
+22a23,24
+> import java.util.NoSuchElementException;
+> 
+180,181c182
+<                 List matchingAdvice = getAdviceMatching (eObject, Collections.singletonList (adviceDescriptor));
+<                 if (! matchingAdvice.isEmpty ()) {
+---
+>                 if (adviceMatches (eObject, adviceDescriptor)) {
+202,203c203
+<     private List getAdviceMatching (EObject eObject, Collection editHelperAdviceDescriptors) {
+<         List result = new ArrayList ();
+---
+>     private boolean adviceMatches (EObject eObject, IEditHelperAdviceDescriptor editHelperAdviceDescriptor) {
+205,208c205
+<         for (Iterator i = editHelperAdviceDescriptors.iterator ();
+<         i.hasNext ();) {
+<             IEditHelperAdviceDescriptor nextAdviceDescriptor = (IEditHelperAdviceDescriptor) i.next ();
+<             IContainerDescriptor container = nextAdviceDescriptor.getContainerDescriptor ();
+---
+>         IContainerDescriptor container = editHelperAdviceDescriptor.getContainerDescriptor ();
+212c209
+<                     continue;
+---
+>                 return false;
+220,223c217,218
+<                 IElementMatcher matcher = nextAdviceDescriptor.getMatcher ();
+<                 if (matcher == null || (matcher != null && matcher.matches (eObject))) {
+<                     result.add (nextAdviceDescriptor);
+<                 }
+---
+>             IElementMatcher matcher = editHelperAdviceDescriptor.getMatcher ();
+>             return (matcher == null) || matcher.matches (eObject);
+228,234c223,224
+<                         IElementMatcher matcher = nextAdviceDescriptor.getMatcher ();
+<                         if (matcher == null) {
+<                             result.add (nextAdviceDescriptor);
+<                         } else if (matcher.matches (eObject)) {
+<                             result.add (nextAdviceDescriptor);
+<                         }
+< 
+---
+>                     IElementMatcher matcher = editHelperAdviceDescriptor.getMatcher ();
+>                     return (matcher == null) || matcher.matches (eObject);
+238,239c228
+<         }
+<         return result;
+---
+>         return false;
+284c273
+<         List result = new ArrayList ();
+---
+>         LinkedHashSet result = new LinkedHashSet ();
+299c288
+<         return result;
+---
+>         return new ArrayList (result);
+322,325c311
+<         Set adviceDescriptors = (Set) adviceBindings.get (elementTypeId);
+<         if (adviceDescriptors != null) {
+<             List matchingAdviceDescriptors = getAdviceMatching (eObject, adviceDescriptors);
+<             for (Iterator j = matchingAdviceDescriptors.iterator ();
+---
+>         for (Iterator j = getAdviceBindings (elementTypeId);
+327a314,316
+>             if (! adviceMatches (eObject, nextAdviceDescriptor)) {
+>                 continue;
+>             }
+335d323
+<         }
+341,343c329
+<         Set adviceDescriptors = (Set) adviceBindings.get (elementTypeId);
+<         if (adviceDescriptors != null) {
+<             for (Iterator j = adviceDescriptors.iterator ();
+---
+>         for (Iterator j = getAdviceBindings (elementTypeId);
+352a339,381
+>         return result;
+>     }
+> 
+>     private Iterator getAdviceBindings (String elementTypeId) {
+>         class MultiIterator implements Iterator {
+>             private Iterator current;
+>             private Collection [] collections;
+>             private int index = 0;
+> 
+>             MultiIterator (Collection [] collections) {
+>                 this.collections = collections;
+>                 current = nextIterator ();
+>             }
+> 
+>             public boolean hasNext () {
+>                 while (current != null) {
+>                     if (current.hasNext ()) {
+>                         return true;
+>                     }
+>                     current = nextIterator ();
+>                 }
+>                 return false;
+>             }
+> 
+>             public Object next () {
+>                 if (! hasNext ()) {
+>                     throw new NoSuchElementException ();
+>                 }
+>                 return current.next ();
+>             }
+> 
+>             public void remove () {
+>                 throw new UnsupportedOperationException ();
+>             }
+> 
+>             private Iterator nextIterator () {
+>                 Iterator result = null;
+>                 while ((result == null) && (index < collections.length)) {
+>                     if (collections [index] != null) {
+>                         result = collections [index].iterator ();
+>                         collections [index] = null;
+>                     }
+>                     index ++;
+356a386,390
+>         }
+> 
+>         return new MultiIterator (new Collection [] {(Collection) adviceBindings.get (elementTypeId), (Collection) adviceBindings.get ("*"),});
+>     }
+> 

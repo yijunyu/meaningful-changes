@@ -1,0 +1,156 @@
+package org.eclipse.gmf.runtime.common.core.service;
+
+import java.util.ArrayList;
+
+import java.util.Arrays;
+
+import java.util.Collections;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.ListIterator;
+
+import org.eclipse.gmf.runtime.common.core.service.Service.ProviderDescriptor;
+
+import org.eclipse.gmf.runtime.common.core.util.EnumeratedType;
+
+public abstract class ExecutionStrategy extends EnumeratedType {
+    public static final ProviderPriority [] PRIORITIES = {ProviderPriority.HIGHEST, ProviderPriority.HIGH, ProviderPriority.MEDIUM, ProviderPriority.LOW, ProviderPriority.LOWEST};
+    private static int nextOrdinal = 0;
+    public static final ExecutionStrategy FIRST = new ExecutionStrategy ("First") {
+
+        public List execute (Service service, IOperation operation) {
+            List results = Collections.EMPTY_LIST;
+            for (int i = 0;
+            i < PRIORITIES.length; i ++) {
+                List targets = getProviders (service, this, PRIORITIES [i], operation);
+                if (! targets.isEmpty ()) {
+                    results = Collections.singletonList (operation.execute ((IProvider) targets.get (0)));
+                    break;
+                }
+            }
+            return results;
+        }
+
+        public List getUncachedProviders (Service service, ProviderPriority priority, IOperation operation) {
+            List providers = getProviders (service, priority);
+            for (ListIterator i = providers.listIterator ();
+            i.hasNext ();) {
+                ProviderDescriptor descriptor = (ProviderDescriptor) i.next ();
+                if (descriptor.provides (operation)) {
+                    return Collections.singletonList (descriptor.getProvider ());
+                }
+            }
+            return Collections.EMPTY_LIST;
+        }
+
+    }
+
+    ;
+    public static final ExecutionStrategy LAST = new ExecutionStrategy ("Last") {
+
+        public List execute (Service service, IOperation operation) {
+            List results = Collections.EMPTY_LIST;
+            for (int i = PRIORITIES.length - 1;
+            i >= 0; i --) {
+                List targets = getProviders (service, this, PRIORITIES [i], operation);
+                int size = targets.size ();
+                if (size != 0) {
+                    results = Collections.singletonList (operation.execute ((IProvider) targets.get (size - 1)));
+                    break;
+                }
+            }
+            return results;
+        }
+
+        public List getUncachedProviders (Service service, ProviderPriority priority, IOperation operation) {
+            List providers = getProviders (service, priority);
+            for (ListIterator i = providers.listIterator (providers.size ());
+            i.hasPrevious ();) {
+                ProviderDescriptor descriptor = (ProviderDescriptor) i.previous ();
+                if (descriptor.provides (operation)) {
+                    return Collections.singletonList (descriptor.getProvider ());
+                }
+            }
+            return Collections.EMPTY_LIST;
+        }
+
+    }
+
+    ;
+    public static final ExecutionStrategy FORWARD = new ExecutionStrategy ("Forward") {
+
+        public List execute (Service service, IOperation operation) {
+            List results = new ArrayList ();
+            for (int i = 0;
+            i < PRIORITIES.length; i ++) {
+                List targets = getProviders (service, this, PRIORITIES [i], operation);
+                for (int j = 0;
+                j < targets.size (); j ++) {
+                    results.add (operation.execute ((IProvider) targets.get (j)));
+                }
+            }
+            return results;
+        }
+
+    }
+
+    ;
+    public static final ExecutionStrategy REVERSE = new ExecutionStrategy ("Reverse") {
+
+        public List execute (Service service, IOperation operation) {
+            List results = new ArrayList ();
+            for (int i = PRIORITIES.length - 1;
+            i >= 0; i --) {
+                List targets = getProviders (service, this, PRIORITIES [i], operation);
+                for (int j = targets.size () - 1;
+                j >= 0; j --) {
+                    results.add (operation.execute ((IProvider) targets.get (j)));
+                }
+            }
+            return results;
+        }
+
+    }
+
+    ;
+    private static final ExecutionStrategy [] VALUES = {FIRST, LAST, FORWARD, REVERSE};
+
+    protected ExecutionStrategy (String name) {
+        super (name, nextOrdinal ++);
+    }
+
+    protected ExecutionStrategy (String name, int ordinal) {
+        super (name, ordinal);
+    }
+
+    protected List getValues () {
+        return Collections.unmodifiableList (Arrays.asList (VALUES));
+    }
+
+    public abstract List execute (Service service, IOperation operation);
+
+    public List getUncachedProviders (Service service, ProviderPriority priority, IOperation operation) {
+        List targets = new ArrayList ();
+        for (Iterator i = getProviders (service, priority).iterator ();
+        i.hasNext ();) {
+            ProviderDescriptor descriptor = (ProviderDescriptor) i.next ();
+            if (descriptor.provides (operation)) {
+                targets.add (descriptor.getProvider ());
+            }
+        }
+        return targets;
+    }
+
+    protected final List getProviders (Service service, ProviderPriority priority) {
+        return service.getProviders (priority);
+    }
+
+    protected final List getProviders (Service service, ExecutionStrategy strategy, ProviderPriority priority, IOperation operation) {
+        return service.getProviders (strategy, priority, operation);
+    }
+
+}
+

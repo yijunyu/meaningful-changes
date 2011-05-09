@@ -1,0 +1,168 @@
+package org.eclipse.gmf.runtime.diagram.ui.view.factories;
+
+import java.util.HashMap;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.emf.ecore.EObject;
+
+import org.eclipse.emf.transaction.Transaction;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.emf.transaction.impl.InternalTransaction;
+
+import org.eclipse.emf.transaction.impl.InternalTransactionalEditingDomain;
+
+import org.eclipse.emf.workspace.AbstractEMFOperation;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.core.preferences.PreferencesHint;
+
+import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+
+import org.eclipse.gmf.runtime.notation.LayoutConstraint;
+
+import org.eclipse.gmf.runtime.notation.Node;
+
+import org.eclipse.gmf.runtime.notation.NotationFactory;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+public class BasicNodeViewFactory extends AbstractViewFactory {
+    private static final Map options = new HashMap ();
+
+    static {
+        options.put (Transaction.OPTION_UNPROTECTED, Boolean.TRUE);
+        options.put (Transaction.OPTION_NO_NOTIFICATIONS, Boolean.TRUE);
+        options.put (Transaction.OPTION_NO_TRIGGERS, Boolean.TRUE);
+    }
+
+    private static final Map setElementOptions = new HashMap ();
+
+    static {
+        options.put (Transaction.OPTION_UNPROTECTED, Boolean.FALSE);
+        options.put (Transaction.OPTION_NO_NOTIFICATIONS, Boolean.TRUE);
+        options.put (Transaction.OPTION_NO_TRIGGERS, Boolean.TRUE);
+    }
+
+    public View createView (final IAdaptable semanticAdapter, final View containerView, final String semanticHint, final int index, boolean persisted, final PreferencesHint preferencesHint) {
+        setPreferencesHint (preferencesHint);
+        final Node node = createNode ();
+        List styles = createStyles (node);
+        if (styles.size () > 0) {
+            node.getStyles ().addAll (styles);
+        }
+        LayoutConstraint layoutConstraint = createLayoutConstraint ();
+        if (layoutConstraint != null) {
+            node.setLayoutConstraint (layoutConstraint);
+        }
+        node.setType (semanticHint);
+        ViewUtil.insertChildView (containerView, node, index, persisted);
+        final EObject semanticEl = semanticAdapter == null ? null : (EObject) semanticAdapter.getAdapter (EObject.class);
+        if (semanticEl == null) node.setElement (null);
+        else if (requiresElement (semanticAdapter, containerView)) {
+            TransactionalEditingDomain domain = getEditingDomain (semanticEl, containerView);
+            if (domain != null) {
+                AbstractEMFOperation operation = new AbstractEMFOperation (domain, StringStatics.BLANK, setElementOptions) {
+
+                    protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+                        node.setElement (semanticEl);
+                        return Status.OK_STATUS;
+                    }
+
+                }
+
+                ;
+                try {
+                    operation.execute (new NullProgressMonitor (), null);
+                } catch (ExecutionException e) {
+                    Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "createView", e);
+                    Log.warning (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "createView", e);
+                }
+            }
+        }
+
+        TransactionalEditingDomain domain = getEditingDomain (semanticEl, containerView);
+        if (domain != null) {
+            if (isUnProtectedSilentTransactionInProgress (domain)) {
+                decorateView (containerView, node, semanticAdapter, semanticHint, index, true);
+            } else {
+                AbstractEMFOperation operation = new AbstractEMFOperation (domain, StringStatics.BLANK, options) {
+
+                    protected IStatus doExecute (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+                        decorateView (containerView, node, semanticAdapter, semanticHint, index, true);
+                        return Status.OK_STATUS;
+                    }
+
+                }
+
+                ;
+                try {
+                    operation.execute (new NullProgressMonitor (), null);
+                } catch (ExecutionException e) {
+                    Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "createView", e);
+                    Log.warning (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.IGNORED_EXCEPTION_WARNING, "createView", e);
+                }
+            }
+        }
+        return node;
+    }
+
+    protected void decorateView (View containerView, View view, IAdaptable semanticAdapter, String semanticHint, int index, boolean persisted) {
+        initializeFromPreferences (view);
+    }
+
+    protected LayoutConstraint createLayoutConstraint () {
+        return null;
+    }
+
+    protected Node createNode () {
+        return NotationFactory.eINSTANCE.createNode ();
+    }
+
+    protected static boolean isUnProtectedSilentTransactionInProgress (TransactionalEditingDomain domain) {
+        if (domain instanceof InternalTransactionalEditingDomain) {
+            InternalTransactionalEditingDomain internalEditingDomain = (InternalTransactionalEditingDomain) domain;
+            InternalTransaction transaction = internalEditingDomain.getActiveTransaction ();
+            if (transaction != null && ! transaction.isReadOnly ()) {
+                Object unprotectedMode = transaction.getOptions ().get (Transaction.OPTION_UNPROTECTED);
+                if (Boolean.TRUE.equals (unprotectedMode)) {
+                    Object noNotificationMode = transaction.getOptions ().get (Transaction.OPTION_NO_NOTIFICATIONS);
+                    Object noTriggersMode = transaction.getOptions ().get (Transaction.OPTION_NO_TRIGGERS);
+                    if (Boolean.TRUE.equals (noNotificationMode) && Boolean.TRUE.equals (noTriggersMode)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+}
+

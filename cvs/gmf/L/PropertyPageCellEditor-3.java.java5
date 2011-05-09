@@ -1,0 +1,367 @@
+package org.eclipse.gmf.runtime.common.ui.services.properties.extended;
+
+import java.text.MessageFormat;
+
+import java.util.Arrays;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.jface.preference.PreferenceManager;
+
+import org.eclipse.jface.preference.PreferenceNode;
+
+import org.eclipse.jface.viewers.DialogCellEditor;
+
+import org.eclipse.jface.viewers.ISelectionProvider;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.events.KeyAdapter;
+
+import org.eclipse.swt.events.KeyEvent;
+
+import org.eclipse.swt.events.ModifyEvent;
+
+import org.eclipse.swt.events.ModifyListener;
+
+import org.eclipse.swt.events.MouseAdapter;
+
+import org.eclipse.swt.events.MouseEvent;
+
+import org.eclipse.swt.events.TraverseEvent;
+
+import org.eclipse.swt.events.TraverseListener;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.swt.widgets.Control;
+
+import org.eclipse.swt.widgets.Text;
+
+import org.eclipse.ui.dialogs.PropertyDialogAction;
+
+import org.eclipse.ui.dialogs.PropertyPage;
+
+import org.eclipse.ui.views.properties.IPropertyDescriptor;
+
+import org.eclipse.ui.views.properties.IPropertySource;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.common.ui.dialogs.PropertiesDialog;
+
+import org.eclipse.gmf.runtime.common.ui.services.properties.PropertiesService;
+
+public class PropertyPageCellEditor extends DialogCellEditor {
+    private Text text;
+    private ModifyListener modifyListener;
+    private boolean isSelection = false;
+    private boolean isDeleteable = false;
+    private boolean isSelectable = false;
+    ISelectionProvider selectionProvider;
+    private final PropertyPagePropertyDescriptor propertyDescriptor;
+    private Object value = null;
+
+    public PropertyPageCellEditor (Composite parent, PropertyPagePropertyDescriptor descriptor) {
+        this (parent, descriptor, SWT.NONE);
+    }
+
+    public PropertyPageCellEditor (Composite parent, PropertyPagePropertyDescriptor descriptor, int style) {
+        super (parent, style);
+        propertyDescriptor = descriptor;
+    }
+
+    private PropertyPagePropertyDescriptor getPropertyDescriptor () {
+        return propertyDescriptor;
+    }
+
+    protected Control createContents (Composite cell) {
+        setText (new Text (cell, getStyle ()));
+        text.addKeyListener (new KeyAdapter () {
+
+            public void keyPressed (KeyEvent e) {
+                keyReleaseOccured (e);
+                if ((getControl () == null) || getControl ().isDisposed ()) return;
+
+                checkSelection ();
+                checkDeleteable ();
+                checkSelectable ();
+            }
+
+        }
+
+        );
+        text.addTraverseListener (new TraverseListener () {
+
+            public void keyTraversed (TraverseEvent e) {
+                if (e.detail == SWT.TRAVERSE_ESCAPE || e.detail == SWT.TRAVERSE_RETURN) {
+                    e.doit = false;
+                }
+            }
+
+        }
+
+        );
+        text.addMouseListener (new MouseAdapter () {
+
+            public void mouseUp (MouseEvent e) {
+                checkSelection ();
+                checkDeleteable ();
+                checkSelectable ();
+            }
+
+        }
+
+        );
+        text.setFont (cell.getFont ());
+        text.setBackground (cell.getBackground ());
+        text.setText (StringStatics.BLANK);
+        text.addModifyListener (getModifyListener ());
+        return getText ();
+    }
+
+    protected void updateContents (Object aValue) {
+        if (getText () == null) {
+            return;
+        }
+        String aText = StringStatics.BLANK;
+        if (aValue != null) {
+            aText = aValue.toString ();
+        }
+        getText ().setText (aText);
+    }
+
+    protected Object openDialogBox (Control cellEditorWindow) {
+        PropertiesDialog dialog = new PropertiesDialog (getControl ().getShell (), new PreferenceManager ());
+        PropertyPagePropertyDescriptor realDescriptor = null;
+        if (getValue () instanceof ElementValue) {
+            Object element = ((ElementValue) getValue ()).getElement ();
+            if (element instanceof PropertyPagePropertyDescriptor) {
+                realDescriptor = (PropertyPagePropertyDescriptor) element;
+            }
+        }
+        List pages = null;
+        if (realDescriptor != null) {
+            pages = realDescriptor.createPropertyPages ();
+        } else {
+            pages = getPropertyDescriptor ().createPropertyPages ();
+        }
+        for (Iterator i = pages.iterator ();
+        i.hasNext ();) {
+            PropertyPage page = (PropertyPage) i.next ();
+            if (realDescriptor != null) {
+                final IPropertySource source = realDescriptor.getPropertySource ();
+                page.setElement (new IAdaptable () {
+
+                    public Object getAdapter (Class adapter) {
+                        if (adapter.equals (IPropertySource.class)) {
+                            return source;
+                        }
+                        return null;
+                    }
+
+                }
+
+                );
+            }
+            dialog.getPreferenceManager ().addToRoot (new PreferenceNode (StringStatics.BLANK, page));
+        }
+        dialog.create ();
+        dialog.open ();
+        for (Iterator i = pages.iterator ();
+        i.hasNext ();) {
+            PropertyPage page = (PropertyPage) i.next ();
+            IAdaptable adaptable = page.getElement ();
+            if (adaptable != null) {
+                IPropertySource source = (IPropertySource) adaptable.getAdapter (IPropertySource.class);
+                if (source instanceof IExtendedPropertySource) {
+                    Object element = ((IExtendedPropertySource) source).getElement ();
+                    IPropertySource propertySource = PropertiesService.getInstance ().getPropertySource (element);
+                    assert null != propertySource;
+                    for (Iterator j = Arrays.asList (propertySource.getPropertyDescriptors ()).iterator ();
+                    j.hasNext ();) {
+                        IPropertyDescriptor descriptor = (IPropertyDescriptor) j.next ();
+                        if (descriptor.getId ().equals (getPropertyDescriptor ().getId ())) {
+                            setValue (new ElementValue (source, propertySource.getPropertyValue (descriptor.getId ())));
+                            fireApplyEditorValue ();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private Text getText () {
+        return text;
+    }
+
+    private void setText (Text text) {
+        this.text = text;
+    }
+
+    protected void doSetFocus () {
+        if (getText () != null) {
+            getText ().selectAll ();
+            getText ().setFocus ();
+            checkSelection ();
+            checkDeleteable ();
+            checkSelectable ();
+        }
+    }
+
+    protected Object doGetValue () {
+        String aText = getText ().getText ();
+        if (value instanceof ElementValue) {
+            ((ElementValue) value).setValue (aText);
+            return value;
+        }
+        return aText;
+    }
+
+    protected void doSetValue (Object aValue) {
+        this.value = aValue;
+        assert null != getText ();
+        getText ().removeModifyListener (getModifyListener ());
+        getText ().setText (aValue.toString ());
+        getText ().addModifyListener (getModifyListener ());
+    }
+
+    private ModifyListener getModifyListener () {
+        if (modifyListener == null) {
+            modifyListener = new ModifyListener () {
+
+                public void modifyText (ModifyEvent e) {
+                    editOccured (e);
+                }
+
+            }
+
+            ;
+        }
+        return modifyListener;
+    }
+
+    protected void editOccured (ModifyEvent e) {
+        String aValue = text.getText ();
+        if (aValue == null) {
+            aValue = StringStatics.BLANK;
+        }
+        Object typedValue = aValue;
+        boolean oldValidState = isValueValid ();
+        boolean newValidState = isCorrect (typedValue);
+        if (typedValue == null && newValidState) {
+            assert (false) : "Validator isn't limiting the cell editor's type range";
+        }
+        if (! newValidState) {
+            setErrorMessage (MessageFormat.format (getErrorMessage (), new Object [] {aValue}));
+        }
+        valueChanged (oldValidState, newValidState);
+    }
+
+    private void checkDeleteable () {
+        boolean oldIsDeleteable = isDeleteable;
+        isDeleteable = isDeleteEnabled ();
+        if (oldIsDeleteable != isDeleteable) {
+            fireEnablementChanged (DELETE);
+        }
+    }
+
+    private void checkSelectable () {
+        boolean oldIsSelectable = isSelectable;
+        isSelectable = isSelectAllEnabled ();
+        if (oldIsSelectable != isSelectable) {
+            fireEnablementChanged (SELECT_ALL);
+        }
+    }
+
+    private void checkSelection () {
+        boolean oldIsSelection = isSelection;
+        isSelection = text.getSelectionCount () > 0;
+        if (oldIsSelection != isSelection) {
+            fireEnablementChanged (COPY);
+            fireEnablementChanged (CUT);
+        }
+    }
+
+    public boolean isCopyEnabled () {
+        if (text == null || text.isDisposed ()) return false;
+
+        return text.getSelectionCount () > 0;
+    }
+
+    public boolean isCutEnabled () {
+        if (text == null || text.isDisposed ()) return false;
+
+        return text.getSelectionCount () > 0;
+    }
+
+    public boolean isDeleteEnabled () {
+        if (text == null || text.isDisposed ()) return false;
+
+        return text.getSelectionCount () > 0 || text.getCaretPosition () < text.getCharCount ();
+    }
+
+    public boolean isPasteEnabled () {
+        if (text == null || text.isDisposed ()) return false;
+
+        return true;
+    }
+
+    public boolean isSaveAllEnabled () {
+        if (text == null || text.isDisposed ()) return false;
+
+        return true;
+    }
+
+    public boolean isSelectAllEnabled () {
+        if (text == null || text.isDisposed ()) return false;
+
+        return text.getCharCount () > 0;
+    }
+
+    public void performCopy () {
+        text.copy ();
+    }
+
+    public void performCut () {
+        text.cut ();
+        checkSelection ();
+        checkDeleteable ();
+        checkSelectable ();
+    }
+
+    public void performDelete () {
+        if (text.getSelectionCount () > 0) text.insert (StringStatics.BLANK);
+        else {
+            int pos = text.getCaretPosition ();
+            if (pos < text.getCharCount ()) {
+                text.setSelection (pos, pos + 1);
+                text.insert (StringStatics.BLANK);
+            }
+        }
+        checkSelection ();
+        checkDeleteable ();
+        checkSelectable ();
+    }
+
+    public void performPaste () {
+        text.paste ();
+        checkSelection ();
+        checkDeleteable ();
+        checkSelectable ();
+    }
+
+    public void performSelectAll () {
+        text.selectAll ();
+        checkSelection ();
+        checkDeleteable ();
+    }
+
+}
+

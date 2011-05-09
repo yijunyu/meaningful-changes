@@ -1,0 +1,73 @@
+package org.eclipse.gmf.runtime.common.ui.services.elementselection;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.jobs.Job;
+
+import org.eclipse.gmf.runtime.common.core.service.AbstractProvider;
+
+import org.eclipse.gmf.runtime.common.core.service.IOperation;
+
+import org.eclipse.gmf.runtime.common.ui.services.internal.l10n.CommonUIServicesMessages;
+
+import org.eclipse.osgi.util.NLS;
+
+public abstract class AbstractElementSelectionProvider extends AbstractProvider implements IElementSelectionProvider {
+    private IElementSelectionInput elementSelectionInput;
+    private IElementSelectionListener elementSelectionListener;
+
+    public boolean provides (IOperation operation) {
+        return true;
+    }
+
+    public ElementSelectionServiceJob getMatchingObjects (IElementSelectionInput input, IElementSelectionListener listener) {
+        elementSelectionInput = input;
+        ElementSelectionServiceJob job = createSelectionJob ();
+        elementSelectionListener = listener;
+        return job;
+    }
+
+    protected ElementSelectionServiceJob createSelectionJob () {
+        ElementSelectionServiceJob job = new ElementSelectionServiceJob (getJobName (), this);
+        job.setPriority (Job.SHORT);
+        return job;
+    }
+
+    public Object resolve (IMatchingObject object) {
+        return null;
+    }
+
+    public void run (IProgressMonitor monitor) {
+    }
+
+    protected String getJobName () {
+        String providerName = getClass ().getName ().substring (getClass ().getName ().lastIndexOf ('.') + 1);
+        String filter = getElementSelectionInput ().getInput ();
+        return NLS.bind (CommonUIServicesMessages.ElementSelectionService_JobName, new String [] {providerName, filter});
+    }
+
+    protected void fireEndOfMatchesEvent () {
+        IMatchingObject matchingObject = new AbstractMatchingObject (null, null, null, this);
+        MatchingObjectEvent matchingObjectEvent = new MatchingObjectEvent (MatchingObjectEventType.END_OF_MATCHES, matchingObject);
+        fireMatchingObjectEvent (matchingObjectEvent);
+    }
+
+    protected void fireMatchingObjectEvent (IMatchingObject matchingObject) {
+        MatchingObjectEvent matchingObjectEvent = new MatchingObjectEvent (MatchingObjectEventType.MATCH, matchingObject);
+        fireMatchingObjectEvent (matchingObjectEvent);
+    }
+
+    protected void fireMatchingObjectEvent (IMatchingObjectEvent matchingObjectEvent) {
+        getElementSelectionListener ().matchingObjectEvent (matchingObjectEvent);
+    }
+
+    protected IElementSelectionInput getElementSelectionInput () {
+        return elementSelectionInput;
+    }
+
+    protected IElementSelectionListener getElementSelectionListener () {
+        return elementSelectionListener;
+    }
+
+}
+

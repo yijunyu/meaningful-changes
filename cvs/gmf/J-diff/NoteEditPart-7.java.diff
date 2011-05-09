@@ -1,0 +1,124 @@
+13a14,17
+> import java.lang.ref.WeakReference;
+> import java.util.Collection;
+> import java.util.Iterator;
+> 
+14a19,24
+> import org.eclipse.emf.common.notify.Notification;
+> import org.eclipse.emf.ecore.EStructuralFeature;
+> import org.eclipse.emf.ecore.resource.Resource;
+> import org.eclipse.emf.transaction.NotificationFilter;
+> import org.eclipse.emf.transaction.ResourceSetChangeEvent;
+> import org.eclipse.emf.transaction.ResourceSetListenerImpl;
+24a35,36
+> import org.eclipse.gmf.runtime.diagram.ui.preferences.IPreferenceConstants;
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.FigureUtilities;
+26a39
+> import org.eclipse.gmf.runtime.notation.NotationPackage;
+27a41,42
+> import org.eclipse.jface.preference.IPreferenceStore;
+> import org.eclipse.jface.preference.PreferenceConverter;
+38a54,58
+>     // resource listener
+>     private ResourceListener listener = null;
+>     
+>     private boolean diagramLinkMode = false;
+> 
+60c80,81
+< 				  notationView.getType().length() == 0))
+---
+> 				  notationView.getType().length() == 0)){
+>                 diagramLinkMode = true;
+62a84
+> 		}
+98a121,210
+>     
+>     public Object getPreferredValue(EStructuralFeature feature) {
+>         Object preferenceStore = getDiagramPreferencesHint()
+>             .getPreferenceStore();
+>         if (preferenceStore instanceof IPreferenceStore) {
+>             if (feature == NotationPackage.eINSTANCE.getLineStyle_LineColor()) {
+>                 
+>                 return FigureUtilities.RGBToInteger(PreferenceConverter
+>                     .getColor((IPreferenceStore) preferenceStore,
+>                         IPreferenceConstants.PREF_NOTE_LINE_COLOR));
+>                 
+>             } else if (feature == NotationPackage.eINSTANCE
+>                 .getFillStyle_FillColor()) {
+>                 
+>                 return FigureUtilities.RGBToInteger(PreferenceConverter
+>                     .getColor((IPreferenceStore) preferenceStore,
+>                         IPreferenceConstants.PREF_NOTE_FILL_COLOR));
+>                 
+>             }
+>         }
+> 
+>         return super.getPreferredValue(feature);
+>     } 
+>     
+>     private class ResourceListener extends ResourceSetListenerImpl{
+>         private WeakReference resourceRef = null; 
+>         private EditPart editPart= null;
+>         public ResourceListener(Resource resource, EditPart editPart){
+>             resourceRef = new WeakReference(resource);
+>             this.editPart = editPart;
+>         }
+>         
+>         /**
+>          * Disposes my context from the operation history when a resource is
+>          * unloaded from my editing domain.
+>          */
+>         public void resourceSetChanged(ResourceSetChangeEvent event) {
+>             if (editPart ==null || resourceRef.get()==null)
+>                 return;
+>             boolean unloaded = isResourceUnloaded(event.getNotifications());
+>             if (unloaded && editPart.isActive()) {
+>                 editPart.refresh();
+>             }
+>         }
+>         
+>         /**
+>          * Finds resources that have sent unload notifications.
+>          * 
+>          * @param notifications
+>          *            notifications received from a transaction
+>          * @return a set of resources that the notifications indicate have been
+>          *         unloaded, or <code>null</code> if none
+>          */
+>         private boolean isResourceUnloaded(Collection notifications) {
+>             for (Iterator iter = notifications.iterator(); iter.hasNext();) {
+>                 Notification next = (Notification) iter.next();
+>                 if (next.getNotifier()!=resourceRef.get())
+>                     return false;
+>                 if (NotificationFilter.RESOURCE_UNLOADED.matches(next)) {
+>                     return true;
+>                 }
+>             }
+>             return false;
+>         }
+> 
+>         public boolean isPostcommitOnly() {
+>             // only interested in post-commit "resourceSetChanged" event
+>             return true;
+>         }
+> 
+>     }
+>     
+>     protected void addSemanticListeners() {
+>         // the resource listener is needed only in diagram link mode
+>         if (diagramLinkMode){
+>             if (listener==null){
+>                 listener = new ResourceListener(getNotationView().getElement().eResource(),this);
+>             }
+>             getEditingDomain().addResourceSetListener(listener);
+>         }
+>         super.addSemanticListeners();
+>     }
+> 
+>     protected void removeSemanticListeners() {
+>         //the resource listener is needed only in diagram link mode
+>         if (listener!=null)
+>             getEditingDomain().removeResourceSetListener(listener);
+>         super.removeSemanticListeners();
+>     }
+> 

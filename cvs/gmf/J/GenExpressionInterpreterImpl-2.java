@@ -1,0 +1,298 @@
+/**
+ * <copyright>
+ * </copyright>
+ *
+ * $Id: GenExpressionInterpreterImpl.java,v 1.1 2006/04/13 15:41:17 radvorak Exp $
+ */
+package org.eclipse.gmf.codegen.gmfgen.impl;
+
+import java.util.Collection;
+
+import org.eclipse.emf.codegen.util.CodeGenUtil;
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.common.util.EList;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.impl.ENotificationImpl;
+import org.eclipse.emf.ecore.util.EDataTypeUniqueEList;
+import org.eclipse.gmf.codegen.gmfgen.GMFGenPackage;
+import org.eclipse.gmf.codegen.gmfgen.GenExpressionInterpreter;
+import org.eclipse.gmf.codegen.gmfgen.ValueExpression;
+
+/**
+ * <!-- begin-user-doc -->
+ * An implementation of the model object '<em><b>Gen Expression Interpreter</b></em>'.
+ * <!-- end-user-doc -->
+ * <p>
+ * The following features are implemented:
+ * <ul>
+ *   <li>{@link org.eclipse.gmf.codegen.gmfgen.impl.GenExpressionInterpreterImpl#getLanguage <em>Language</em>}</li>
+ *   <li>{@link org.eclipse.gmf.codegen.gmfgen.impl.GenExpressionInterpreterImpl#getClassName <em>Class Name</em>}</li>
+ *   <li>{@link org.eclipse.gmf.codegen.gmfgen.impl.GenExpressionInterpreterImpl#getRequiredPluginIDs <em>Required Plugin IDs</em>}</li>
+ * </ul>
+ * </p>
+ *
+ * @generated
+ */
+public class GenExpressionInterpreterImpl extends GenExpressionProviderBaseImpl implements GenExpressionInterpreter {
+	/**
+	 * The default value of the '{@link #getLanguage() <em>Language</em>}' attribute.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see #getLanguage()
+	 * @generated
+	 * @ordered
+	 */
+	protected static final String LANGUAGE_EDEFAULT = null;
+
+	/**
+	 * The cached value of the '{@link #getLanguage() <em>Language</em>}' attribute.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see #getLanguage()
+	 * @generated
+	 * @ordered
+	 */
+	protected String language = LANGUAGE_EDEFAULT;
+
+	/**
+	 * The default value of the '{@link #getClassName() <em>Class Name</em>}' attribute.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see #getClassName()
+	 * @generated
+	 * @ordered
+	 */
+	protected static final String CLASS_NAME_EDEFAULT = null;
+
+	/**
+	 * The cached value of the '{@link #getClassName() <em>Class Name</em>}' attribute.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see #getClassName()
+	 * @generated
+	 * @ordered
+	 */
+	protected String className = CLASS_NAME_EDEFAULT;
+
+	/**
+	 * The cached value of the '{@link #getRequiredPluginIDs() <em>Required Plugin IDs</em>}' attribute list.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see #getRequiredPluginIDs()
+	 * @generated
+	 * @ordered
+	 */
+	protected EList requiredPluginIDs = null;
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected GenExpressionInterpreterImpl() {
+		super();
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected EClass eStaticClass() {
+		return GMFGenPackage.eINSTANCE.getGenExpressionInterpreter();
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public String getClassNameGen() {
+		return className;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated NOT
+	 */
+	public String getClassName() {
+		String value = getClassNameGen();
+		if(value == null || value.length() == 0) {
+			String prefix = ((GenEditorGeneratorImpl) getContainer().getEditorGen()).getDomainModelCapName();
+			value = prefix + CodeGenUtil.validJavaIdentifier(getLanguage().toUpperCase()) + "Factory"; //$NON-NLS-1$
+		}
+		return value;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public void setClassName(String newClassName) {
+		String oldClassName = className;
+		className = newClassName;
+		if (eNotificationRequired())
+			eNotify(new ENotificationImpl(this, Notification.SET, GMFGenPackage.GEN_EXPRESSION_INTERPRETER__CLASS_NAME, oldClassName, className));
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EList getRequiredPluginIDs() {
+		if (requiredPluginIDs == null) {
+			requiredPluginIDs = new EDataTypeUniqueEList(String.class, this, GMFGenPackage.GEN_EXPRESSION_INTERPRETER__REQUIRED_PLUGIN_IDS);
+		}
+		return requiredPluginIDs;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public String getLanguageGen() {
+		return language;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated NOT
+	 */
+	public String getLanguage() {
+		String value = getLanguageGen();
+		if(value == null || value.length() == 0) {
+			value = "ocl"; //$NON-NLS-1$
+		}
+		return value;
+	}	
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public void setLanguage(String newLanguage) {
+		String oldLanguage = language;
+		language = newLanguage;
+		if (eNotificationRequired())
+			eNotify(new ENotificationImpl(this, Notification.SET, GMFGenPackage.GEN_EXPRESSION_INTERPRETER__LANGUAGE, oldLanguage, language));
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated NOT
+	 */
+	public String getQualifiedClassName() {
+		return getContainer().getExpressionsPackageName() + "." + getClassName(); //$NON-NLS-1$
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated NOT
+	 */
+	public String getExpressionAccessor(ValueExpression expression) {
+		return "getExpression"; //$NON-NLS-1$
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public Object eGet(int featureID, boolean resolve, boolean coreType) {
+		switch (featureID) {
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__LANGUAGE:
+				return getLanguage();
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__CLASS_NAME:
+				return getClassName();
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__REQUIRED_PLUGIN_IDS:
+				return getRequiredPluginIDs();
+		}
+		return super.eGet(featureID, resolve, coreType);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public void eSet(int featureID, Object newValue) {
+		switch (featureID) {
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__LANGUAGE:
+				setLanguage((String)newValue);
+				return;
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__CLASS_NAME:
+				setClassName((String)newValue);
+				return;
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__REQUIRED_PLUGIN_IDS:
+				getRequiredPluginIDs().clear();
+				getRequiredPluginIDs().addAll((Collection)newValue);
+				return;
+		}
+		super.eSet(featureID, newValue);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public void eUnset(int featureID) {
+		switch (featureID) {
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__LANGUAGE:
+				setLanguage(LANGUAGE_EDEFAULT);
+				return;
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__CLASS_NAME:
+				setClassName(CLASS_NAME_EDEFAULT);
+				return;
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__REQUIRED_PLUGIN_IDS:
+				getRequiredPluginIDs().clear();
+				return;
+		}
+		super.eUnset(featureID);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public boolean eIsSet(int featureID) {
+		switch (featureID) {
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__LANGUAGE:
+				return LANGUAGE_EDEFAULT == null ? language != null : !LANGUAGE_EDEFAULT.equals(language);
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__CLASS_NAME:
+				return CLASS_NAME_EDEFAULT == null ? className != null : !CLASS_NAME_EDEFAULT.equals(className);
+			case GMFGenPackage.GEN_EXPRESSION_INTERPRETER__REQUIRED_PLUGIN_IDS:
+				return requiredPluginIDs != null && !requiredPluginIDs.isEmpty();
+		}
+		return super.eIsSet(featureID);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public String toString() {
+		if (eIsProxy()) return super.toString();
+
+		StringBuffer result = new StringBuffer(super.toString());
+		result.append(" (language: ");
+		result.append(language);
+		result.append(", className: ");
+		result.append(className);
+		result.append(", requiredPluginIDs: ");
+		result.append(requiredPluginIDs);
+		result.append(')');
+		return result.toString();
+	}
+
+} //GenExpressionInterpreterImpl

@@ -1,0 +1,59 @@
+90a91,92
+> import org.eclipse.swt.widgets.Display;
+> 
+157a160,214
+>     public List copyToConstrainedImage (Diagram diagram, IPath destination, ImageFileFormat format, int maxWidth, int maxHeight, IProgressMonitor monitor, PreferencesHint preferencesHint, boolean useMargins) throws CoreException {
+>         List partInfo = Collections.EMPTY_LIST;
+>         DiagramEditor openedDiagramEditor = DiagramEditorUtil.findOpenedDiagramEditorForID (ViewUtil.getIdStr (diagram));
+>         if (openedDiagramEditor != null) {
+>             DiagramEditPart diagramEP = openedDiagramEditor.getDiagramEditPart ();
+>             DiagramGenerator generator = copyToConstrainedImage (diagramEP, destination, diagramEP.getPrimaryEditParts (), format, maxWidth, maxHeight, monitor, useMargins);
+>             partInfo = generator.getConstrainedDiagramPartInfo (openedDiagramEditor.getDiagramEditPart (), maxWidth, maxHeight, useMargins);
+>         } else {
+>             Shell shell = new Shell ();
+>             try {
+>                 DiagramEditPart diagramEP = createDiagramEditPart (diagram, shell, preferencesHint);
+>                 Assert.isNotNull (diagramEP);
+>                 DiagramGenerator generator = copyToConstrainedImage (diagramEP, destination, diagramEP.getPrimaryEditParts (), format, maxWidth, maxHeight, monitor, useMargins);
+>                 partInfo = generator.getConstrainedDiagramPartInfo (diagramEP, maxWidth, maxHeight, useMargins);
+>             } finally {
+>                 shell.dispose ();
+>             }
+>         }
+>         return partInfo;
+>     }
+> 
+>     public DiagramGenerator copyToConstrainedImage (DiagramEditPart diagramEP, IPath destination, List editParts, ImageFileFormat format, int maxWidth, int maxHeight, IProgressMonitor monitor, boolean useMargins) throws CoreException {
+>         DiagramGenerator gen = getDiagramGenerator (diagramEP, format);
+>         copyToConstrainedImage (gen, editParts, destination, format, maxWidth, maxHeight, monitor, useMargins);
+>         monitor.worked (1);
+>         return gen;
+>     }
+> 
+>     private void copyToConstrainedImage (DiagramGenerator gen, List editParts, IPath destination, ImageFileFormat format, int maxWidth, int maxHeight, IProgressMonitor monitor, boolean useMargins) throws CoreException {
+>         boolean found = false;
+>         if (format.equals (ImageFileFormat.SVG) || format.equals (ImageFileFormat.PDF)) {
+>             gen.createConstrainedSWTImageDecriptorForParts (editParts, maxWidth, maxHeight, useMargins);
+>             monitor.worked (1);
+>             saveToFile (destination, (DiagramSVGGenerator) gen, format, monitor);
+>             found = true;
+>         } else if (format.equals (ImageFileFormat.JPEG) || format.equals (ImageFileFormat.PNG)) {
+>             String exportFormat = ImageExporter.JPEG_FILE;
+>             if (format.equals (ImageFileFormat.PNG)) exportFormat = ImageExporter.PNG_FILE;
+> 
+>             java.awt.Image image = gen.createConstrainedAWTImageForParts (editParts, maxWidth, maxHeight, useMargins);
+>             monitor.worked (1);
+>             if (image instanceof BufferedImage) {
+>                 ImageExporter.exportToFile (destination, (BufferedImage) image, exportFormat, monitor);
+>                 found = true;
+>             }
+>         }
+> 
+>         if (! found) {
+>             Image image = gen.createConstrainedSWTImageDecriptorForParts (editParts, maxWidth, maxHeight, useMargins).createImage ();
+>             monitor.worked (1);
+>             saveToFile (destination, image, format, monitor);
+>             image.dispose ();
+>         }
+>     }
+> 

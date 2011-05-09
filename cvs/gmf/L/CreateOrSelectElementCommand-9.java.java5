@@ -1,0 +1,128 @@
+package org.eclipse.gmf.runtime.diagram.ui.commands;
+
+import java.util.List;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.runtime.Assert;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.util.ObjectAdapter;
+
+import org.eclipse.gmf.runtime.common.ui.dialogs.PopupDialog;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.commands.ElementTypeLabelProvider;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.l10n.InternalDiagramUIMessages;
+
+import org.eclipse.gmf.runtime.diagram.ui.menus.PopupMenu;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+import org.eclipse.gmf.runtime.emf.ui.dialogs.AbstractSelectElementDialog;
+
+import org.eclipse.jface.viewers.ILabelProvider;
+
+import org.eclipse.jface.window.Window;
+
+import org.eclipse.osgi.util.NLS;
+
+import org.eclipse.swt.widgets.Shell;
+
+public class CreateOrSelectElementCommand extends PopupMenuCommand {
+    public static final String UNSPECIFIED = InternalDiagramUIMessages.CreateOrSelectElementCommand_PopupMenu_UnspecifiedMenuItem_Text;
+    public static final String SELECT_EXISTING = InternalDiagramUIMessages.CreateOrSelectElementCommand_PopupMenu_SelectExistingElementMenuItem_Text;
+    public static final String CREATE_WITHOUT_BINDING = InternalDiagramUIMessages.CreateOrSelectElementCommand_PopupMenu_CreateWithoutBindingMenuItem_Text;
+    static public class LabelProvider extends ElementTypeLabelProvider {
+
+        public String getText (Object object) {
+            String text = super.getText (object);
+            if (object instanceof IElementType) {
+                return NLS.bind (InternalDiagramUIMessages.CreateOrSelectElementCommand_PopupMenu_CreateMenuItem_Text, text);
+            }
+            return text;
+        }
+
+    }
+
+    private ObjectAdapter resultAdapter = new ObjectAdapter ();
+    private AbstractSelectElementDialog selectElementDialog;
+
+    public CreateOrSelectElementCommand (Shell parentShell, List content) {
+        this (parentShell, content, POPUP_MENU);
+    }
+
+    public CreateOrSelectElementCommand (Shell parentShell, List content, int style) {
+        this (InternalDiagramUIMessages.CreateOrSelectElementCommand_Label, parentShell, content, style);
+    }
+
+    public CreateOrSelectElementCommand (String label, Shell parentShell, List content) {
+        this (label, parentShell, content, POPUP_MENU);
+    }
+
+    public CreateOrSelectElementCommand (String label, Shell parentShell, List content, int style) {
+        super (label, parentShell);
+        if (style == POPUP_DIALOG) {
+            setPopupDialog (new PopupDialog (parentShell, content, getLabelProvider ()));
+        } else {
+            setPopupMenu (new PopupMenu (content, getLabelProvider ()));
+        }
+    }
+
+    public CreateOrSelectElementCommand (Shell parentShell, PopupMenu popupMenu) {
+        super (InternalDiagramUIMessages.CreateOrSelectElementCommand_Label, parentShell, popupMenu);
+    }
+
+    protected CommandResult doExecuteWithResult (IProgressMonitor progressMonitor, org.eclipse.core.runtime.IAdaptable info) throws ExecutionException {
+        CommandResult cmdResult = super.doExecuteWithResult (progressMonitor, info);
+        if (! cmdResult.getStatus ().isOK ()) {
+            return cmdResult;
+        }
+        Object result = cmdResult.getReturnValue ();
+        if (result != null) {
+            if (result.equals (SELECT_EXISTING)) {
+                AbstractSelectElementDialog dialog = getSelectElementDialog ();
+                Assert.isNotNull (dialog);
+                if (dialog.open () != Window.OK) {
+                    return CommandResult.newCancelledCommandResult ();
+                }
+                List selectedElements = dialog.getSelectedElements ();
+                if (selectedElements == null) {
+                    progressMonitor.setCanceled (true);
+                    return CommandResult.newCancelledCommandResult ();
+                } else if (dialog.isMultiSelectable ()) {
+                    resultAdapter.setObject (selectedElements);
+                    return CommandResult.newOKCommandResult (selectedElements);
+                } else {
+                    resultAdapter.setObject (selectedElements.get (0));
+                    return CommandResult.newOKCommandResult (selectedElements.get (0));
+                }
+
+            } else {
+                resultAdapter.setObject (result);
+            }
+        }
+        return cmdResult;
+    }
+
+    protected AbstractSelectElementDialog getSelectElementDialog () {
+        return selectElementDialog;
+    }
+
+    public void setSelectElementDialog (AbstractSelectElementDialog dialog) {
+        this.selectElementDialog = dialog;
+    }
+
+    public ObjectAdapter getResultAdapter () {
+        return resultAdapter;
+    }
+
+    protected ILabelProvider getLabelProvider () {
+        return new LabelProvider ();
+    }
+
+}
+

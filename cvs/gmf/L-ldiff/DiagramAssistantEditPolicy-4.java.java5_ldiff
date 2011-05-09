@@ -1,0 +1,93 @@
+14a15,20
+> import org.eclipse.gmf.runtime.diagram.core.internal.util.MEditingDomainGetter;
+> 
+> import org.eclipse.gmf.runtime.diagram.core.util.ViewUtil;
+> 
+> import org.eclipse.gmf.runtime.diagram.ui.editparts.GraphicalEditPart;
+> 
+16a23,30
+> import org.eclipse.gmf.runtime.diagram.ui.parts.IDiagramWorkbenchPart;
+> 
+> import org.eclipse.gmf.runtime.emf.core.edit.MRunnable;
+> 
+> import org.eclipse.gmf.runtime.notation.View;
+> 
+> import org.eclipse.jface.preference.IPreferenceStore;
+> 
+18a33,40
+> import org.eclipse.ui.IWorkbenchPage;
+> 
+> import org.eclipse.ui.IWorkbenchPart;
+> 
+> import org.eclipse.ui.IWorkbenchWindow;
+> 
+> import org.eclipse.ui.PlatformUI;
+> 
+31a54,54
+>                 if (shouldShowDiagramAssistant ()) {
+34a58,58
+>         }
+52,52c76,76
+<             if (part.hasFocus ()) {
+---
+>             if (part.hasFocus () && shouldShowDiagramAssistant ()) {
+79a104,158
+>     protected boolean shouldShowDiagramAssistant () {
+>         return isPreferenceOn () && getHost ().isActive () && isHostEditable () && isHostResolvable () && isDiagramPartActive ();
+>     }
+> 
+>     protected boolean isPreferenceOn () {
+>         String prefName = getPreferenceName ();
+>         if (prefName == null) {
+>             return true;
+>         }
+>         IPreferenceStore preferenceStore = (IPreferenceStore) ((IGraphicalEditPart) getHost ()).getDiagramPreferencesHint ().getPreferenceStore ();
+>         return preferenceStore.getBoolean (prefName);
+>     }
+> 
+>     String getPreferenceName () {
+>         return null;
+>     }
+> 
+>     private boolean isHostEditable () {
+>         if (getHost () instanceof GraphicalEditPart) {
+>             return ((GraphicalEditPart) getHost ()).isEditModeEnabled ();
+>         }
+>         return true;
+>     }
+> 
+>     private boolean isHostResolvable () {
+>         final View view = (View) getHost ().getModel ();
+>         if (view.getElement () != null) {
+>             Boolean retval = (Boolean) MEditingDomainGetter.getMEditingDomain (view).runAsRead (new MRunnable () {
+> 
+>                 public Object run () {
+>                     return ViewUtil.resolveSemanticElement (view) != null ? Boolean.TRUE : Boolean.FALSE;
+>                 }
+> 
+>             }
+> 
+>             );
+>             return retval.booleanValue ();
+>         }
+>         return true;
+>     }
+> 
+>     private boolean isDiagramPartActive () {
+>         IWorkbenchWindow window = PlatformUI.getWorkbench ().getActiveWorkbenchWindow ();
+>         if (window != null) {
+>             IWorkbenchPage page = window.getActivePage ();
+>             if (page != null) {
+>                 IWorkbenchPart activePart = page.getActivePart ();
+>                 if (activePart instanceof IDiagramWorkbenchPart) {
+>                     return ((IDiagramWorkbenchPart) activePart).getDiagramEditPart ().getRoot ().equals (((IGraphicalEditPart) getHost ()).getRoot ());
+>                 }
+>             }
+>         }
+>         return false;
+>     }
+> 
+80a160,160
+>         if (shouldShowDiagramAssistant ()) {
+82a163,163
+>     }

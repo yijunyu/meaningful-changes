@@ -1,0 +1,243 @@
+package org.eclipse.gmf.runtime.common.ui.resources;
+
+import java.util.Arrays;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import org.eclipse.core.resources.IFile;
+
+import org.eclipse.core.resources.IFolder;
+
+import org.eclipse.core.resources.IMarkerDelta;
+
+import org.eclipse.core.resources.IResource;
+
+import org.eclipse.core.resources.IResourceChangeEvent;
+
+import org.eclipse.core.resources.IResourceChangeListener;
+
+import org.eclipse.core.resources.IResourceDelta;
+
+import org.eclipse.core.resources.IResourceDeltaVisitor;
+
+import org.eclipse.core.resources.IWorkspaceRunnable;
+
+import org.eclipse.core.resources.ResourcesPlugin;
+
+import org.eclipse.core.runtime.CoreException;
+
+import org.eclipse.core.runtime.IPath;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.core.runtime.content.IContentType;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+
+import org.eclipse.gmf.runtime.common.ui.internal.resources.FileChangeEvent;
+
+import org.eclipse.gmf.runtime.common.ui.internal.resources.FileChangeEventType;
+
+import org.eclipse.gmf.runtime.common.ui.internal.resources.IFileChangeManager;
+
+import org.eclipse.gmf.runtime.common.ui.internal.resources.MarkerChangeEvent;
+
+import org.eclipse.gmf.runtime.common.ui.internal.resources.MarkerChangeEventType;
+
+public class FileChangeManager implements IResourceChangeListener, IResourceDeltaVisitor, IFileChangeManager {
+    private static FileChangeManager INSTANCE = new FileChangeManager ();
+
+    public static FileChangeManager getInstance () {
+        return INSTANCE;
+    }
+
+    private FileObserverManager fileObserverManager = new FileObserverManager ();
+
+    private FileChangeManager () {
+        super ();
+        ResourcesPlugin.getWorkspace ().addResourceChangeListener (this, IResourceChangeEvent.POST_CHANGE);
+    }
+
+    public final void resourceChanged (IResourceChangeEvent event) {
+        switch (event.getType ()) {
+            case IResourceChangeEvent.POST_CHANGE :
+                try {
+                    event.getDelta ().accept (this);
+                } catch (CoreException e) {
+                    Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "resourceChanged", e);
+                    Log.warning (CommonUIPlugin.getDefault (), CommonUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getMessage (), e);
+                }
+                break;
+            default :
+                break;
+        }
+    }
+
+    public final boolean visit (IResourceDelta delta) {
+        switch (delta.getKind ()) {
+            case IResourceDelta.ADDED :
+                if ((delta.getFlags () & IResourceDelta.MOVED_FROM) != 0) {
+                    if (delta.getMovedFromPath ().removeLastSegments (1).equals (delta.getResource ().getFullPath ().removeLastSegments (1))) {
+                        trace ("...FileChangeManager: Resource " + getAbsolutePath (delta.getResource ()) + " was renamed from " + delta.getMovedFromPath ().toOSString ());
+                        if (delta.getResource () instanceof IFile) {
+                            FileChangeEvent event = new FileChangeEvent (FileChangeEventType.RENAMED, (IFile) getMovedFromResource (delta), (IFile) delta.getResource ());
+                            fileObserverManager.notify (event);
+                        }
+                    } else {
+                        trace ("...FileChangeManager: Resource " + getAbsolutePath (delta.getResource ()) + " was moved from " + delta.getMovedFromPath ().toOSString ());
+                        if (delta.getResource () instanceof IFile) {
+                            FileChangeEvent event = new FileChangeEvent (FileChangeEventType.MOVED, (IFile) getMovedFromResource (delta), (IFile) delta.getResource ());
+                            fileObserverManager.notify (event);
+                        }
+                    }
+                } else {
+                    trace ("...FileChangeManager: Resource " + getAbsolutePath (delta.getResource ()) + " was added");
+                }
+                break;
+            case IResourceDelta.REMOVED :
+                if ((delta.getFlags () & IResourceDelta.MOVED_TO) == 0) {
+                    trace ("...FileChangeManager: Resource " + getAbsolutePath (delta.getResource ()) + " was deleted");
+                    if (delta.getResource () instanceof IFile) {
+                        FileChangeEvent event = new FileChangeEvent (FileChangeEventType.DELETED, (IFile) delta.getResource ());
+                        fileObserverManager.notify (event);
+                    }
+                }
+                break;
+            case IResourceDelta.CHANGED :
+                trace ("...FileChangeManager: Resource " + getAbsolutePath (delta.getResource ()) + " was changed");
+                if ((delta.getFlags () & IResourceDelta.MARKERS) != 0) {
+                    List markers = Arrays.asList (delta.getMarkerDeltas ());
+                    for (Iterator i = markers.iterator ();
+                    i.hasNext ();) {
+                        trace ("...FileChangeManager: Resource marker of " + getAbsolutePath (delta.getResource ()) + " was changed");
+                        MarkerChangeEvent event = null;
+                        IMarkerDelta markerDelta = (IMarkerDelta) i.next ();
+                        switch (markerDelta.getKind ()) {
+                            case IResourceDelta.ADDED :
+                                event = new MarkerChangeEvent (MarkerChangeEventType.ADDED, markerDelta.getMarker ());
+                                fileObserverManager.notify (event);
+                                break;
+                            case IResourceDelta.REMOVED :
+                                event = new MarkerChangeEvent (MarkerChangeEventType.REMOVED, markerDelta.getMarker (), markerDelta.getAttributes ());
+                                fileObserverManager.notify (event);
+                                break;
+                            case IResourceDelta.CHANGED :
+                                event = new MarkerChangeEvent (MarkerChangeEventType.CHANGED, markerDelta.getMarker ());
+                                fileObserverManager.notify (event);
+                                break;
+                            default :
+                                break;
+                        }
+                    }
+                } else if (delta.getResource () instanceof IFile) {
+                    FileChangeEvent event = new FileChangeEvent (FileChangeEventType.CHANGED, (IFile) delta.getResource ());
+                    fileObserverManager.notify (event);
+                }
+
+                break;
+            default :
+                break;
+        }
+        return true;
+    }
+
+    private void trace (String message) {
+        if (Trace.shouldTrace (CommonUIPlugin.getDefault (), CommonUIDebugOptions.RESOURCE)) {
+            Trace.trace (CommonUIPlugin.getDefault (), message);
+        }
+    }
+
+    public boolean okToEdit (IFile [] files, String modificationReason) {
+        return FileModificationValidator.getInstance ().okToEdit (files, modificationReason);
+    }
+
+    public boolean okToSave (IFile file) {
+        return FileModificationValidator.getInstance ().okToSave (file);
+    }
+
+    public void removeFileObserver (IFileObserver fileObserver) {
+        fileObserverManager.remove (fileObserver);
+    }
+
+    public void addFileObserver (IFileObserver fileObserver, IFile fileFilter) {
+        fileObserverManager.add (fileObserver, fileFilter);
+    }
+
+    public void addFileObserver (IFileObserver fileObserver, IContentType [] contentTypeFilter) {
+        fileObserverManager.add (fileObserver, contentTypeFilter);
+    }
+
+    public void addFileObserver (IFileObserver fileObserver, IFolder folderFilter) {
+        fileObserverManager.add (fileObserver, folderFilter);
+    }
+
+    public void addFileObserver (IFileObserver fileObserver, String [] extensionFilter) {
+        fileObserverManager.add (fileObserver, extensionFilter);
+    }
+
+    public void addFileObserver (IFileObserver fileObserver) {
+        fileObserverManager.add (fileObserver);
+    }
+
+    public void refreshLocal (final IFile file) {
+        try {
+            file.getWorkspace ().run (new IWorkspaceRunnable () {
+
+                public void run (IProgressMonitor monitor) throws CoreException {
+                    trace ("...FileChangeManager: Resource " + getAbsolutePath (file) + " was refreshed");
+                    file.refreshLocal (IResource.DEPTH_ZERO, null);
+                }
+
+            }
+
+            , new NullProgressMonitor ());
+        } catch (CoreException e) {
+            Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "refreshResource", e);
+            Log.error (CommonUIPlugin.getDefault (), CommonUIStatusCodes.SERVICE_FAILURE, e.getMessage (), e);
+        }
+    }
+
+    public static IResource getMovedFromResource (IResourceDelta delta) {
+        IPath movedFromPath = delta.getMovedFromPath ();
+        IResource resource = delta.getResource ();
+        IResource movedResource = null;
+        switch (resource.getType ()) {
+            case IResource.PROJECT :
+                movedResource = ResourcesPlugin.getWorkspace ().getRoot ().getProject (movedFromPath.lastSegment ());
+                break;
+            case IResource.FOLDER :
+                movedResource = ResourcesPlugin.getWorkspace ().getRoot ().getFolder (movedFromPath);
+                break;
+            case IResource.FILE :
+                movedResource = ResourcesPlugin.getWorkspace ().getRoot ().getFile (movedFromPath);
+                break;
+            default :
+                break;
+        }
+        return movedResource;
+    }
+
+    private String getAbsolutePath (IResource resource) {
+        if (resource.getLocation () == null) {
+            IPath root = ResourcesPlugin.getWorkspace ().getRoot ().getLocation ();
+            IPath path = root.append (resource.getFullPath ());
+            return path.toOSString ();
+        } else {
+            return resource.getLocation ().toOSString ();
+        }
+    }
+
+}
+

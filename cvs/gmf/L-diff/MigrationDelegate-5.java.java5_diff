@@ -1,0 +1,146 @@
+3c3
+< import java.util.ArrayList;
+---
+> import java.util.HashMap;
+5,7c5
+< import java.util.Arrays;
+< 
+< import java.util.Collection;
+---
+> import java.util.Map;
+10a9,10
+> import org.eclipse.emf.ecore.EAttribute;
+> 
+13c13,19
+< import org.eclipse.gmf.internal.common.migrate.MigrationHelperDelegateImpl;
+---
+> import org.eclipse.emf.ecore.EReference;
+> 
+> import org.eclipse.emf.ecore.EStructuralFeature;
+> 
+> import org.eclipse.emf.ecore.util.EcoreUtil;
+> 
+> import org.eclipse.gmf.internal.common.migrate.MigrationDelegateImpl;
+16a23,24
+> import org.eclipse.gmf.mappings.GMFMapFactory;
+> 
+23,25c31,35
+< class MigrationDelegate extends MigrationHelperDelegateImpl {
+<     private Collection < FeatureLabelMapping > myFeatureLabelMappings;
+<     private Collection < String > myBackwardSupportedURIs;
+---
+> class MigrationDelegate extends MigrationDelegateImpl {
+>     private Map < LabelMapping, FeatureLabelMapping > myLabelMappingMigrations;
+>     private EAttribute myLabelMapping_ViewPattern;
+>     private EAttribute myLabelMapping_EditPattern;
+>     private EReference myLabelMapping_Features;
+31,33c41,51
+<         registerNarrowReferenceType (GMFMapPackage.eINSTANCE.getFeatureSeqInitializer_Initializers (), GMFMapPackage.eINSTANCE.getFeatureValueSpec ());
+<         registerNarrowReferenceType (GMFMapPackage.eINSTANCE.getMappingEntry_LabelMappings (), GMFMapPackage.eINSTANCE.getFeatureLabelMapping ());
+<         myFeatureLabelMappings = null;
+---
+>         registerNarrowedAbstractType ("FeatureInitializer", GMFMapPackage.eINSTANCE.getFeatureValueSpec ());
+>         myLabelMapping_Features = (EReference) EcoreUtil.copy (GMFMapPackage.eINSTANCE.getFeatureLabelMapping_Features ());
+>         myLabelMapping_ViewPattern = (EAttribute) EcoreUtil.copy (GMFMapPackage.eINSTANCE.getFeatureLabelMapping_ViewPattern ());
+>         myLabelMapping_EditPattern = (EAttribute) EcoreUtil.copy (GMFMapPackage.eINSTANCE.getFeatureLabelMapping_EditPattern ());
+>         {
+>             Map < String, EStructuralFeature > renamings = new HashMap < String, EStructuralFeature > ();
+>             renamings.put (myLabelMapping_ViewPattern.getName (), myLabelMapping_ViewPattern);
+>             renamings.put (myLabelMapping_EditPattern.getName (), myLabelMapping_EditPattern);
+>             renamings.put (myLabelMapping_Features.getName (), myLabelMapping_Features);
+>             registerRenamedAttributes (GMFMapPackage.eINSTANCE.getLabelMapping (), renamings);
+>         } myLabelMappingMigrations = null;
+37,38c55,94
+<     public boolean isOldVersionDetected (String uriString) {
+<         return ! getMetamodelNsURI ().equals (uriString) && getBackwardSupportedURIs ().contains (uriString);
+---
+>     public boolean setValue (EObject object, EStructuralFeature feature, Object value, int position) {
+>         if (myLabelMapping_ViewPattern.equals (feature)) {
+>             LabelMapping mapping = (LabelMapping) object;
+>             String viewPattern = (String) value;
+>             FeatureLabelMapping migratedMapping = saveFeatureLabelMappingFor (mapping);
+>             migratedMapping.setViewPattern (viewPattern);
+>             fireMigrationApplied (true);
+>         } else if (myLabelMapping_EditPattern.equals (feature)) {
+>             LabelMapping mapping = (LabelMapping) object;
+>             String editPattern = (String) value;
+>             FeatureLabelMapping migratedMapping = saveFeatureLabelMappingFor (mapping);
+>             migratedMapping.setViewPattern (editPattern);
+>             fireMigrationApplied (true);
+>         } else if (myLabelMapping_Features.equals (feature)) {
+>             LabelMapping mapping = (LabelMapping) object;
+>             EAttribute attribute = (EAttribute) value;
+>             FeatureLabelMapping migratedMapping = saveFeatureLabelMappingFor (mapping);
+>             migratedMapping.getFeatures ().add (attribute);
+>             fireMigrationApplied (true);
+>         } else {
+>             return super.setValue (object, feature, value, position);
+>         }
+> 
+>         return true;
+>     }
+> 
+>     private FeatureLabelMapping saveFeatureLabelMappingFor (LabelMapping labelMapping) {
+>         if (myLabelMappingMigrations == null) {
+>             myLabelMappingMigrations = new HashMap < LabelMapping, FeatureLabelMapping > ();
+>         }
+>         FeatureLabelMapping migrated = myLabelMappingMigrations.get (labelMapping);
+>         if (migrated == null) {
+>             migrated = GMFMapFactory.eINSTANCE.createFeatureLabelMapping ();
+>             myLabelMappingMigrations.put (labelMapping, migrated);
+>         }
+>         return migrated;
+>     }
+> 
+>     private Map < LabelMapping, FeatureLabelMapping > getSavedLabelMappingMigrations () {
+>         return myLabelMappingMigrations;
+43c99
+<         if (myFeatureLabelMappings == null) {
+---
+>         if (getSavedLabelMappingMigrations () == null) {
+46,47c102,104
+<         for (FeatureLabelMapping mapping : getSavedFeatureLabelMappings ()) {
+<             if (mapping.getFeatures ().isEmpty ()) {
+---
+>         for (LabelMapping mapping : getSavedLabelMappingMigrations ().keySet ()) {
+>             FeatureLabelMapping migrated = getSavedLabelMappingMigrations ().get (mapping);
+>             if (! migrated.getFeatures ().isEmpty ()) {
+52,53c109
+<                     LabelMapping newMapping = GMFMapPackage.eINSTANCE.getGMFMapFactory ().createLabelMapping ();
+<                     newMapping.setDiagramLabel (mapping.getDiagramLabel ());
+---
+>                     migrated.setDiagramLabel (mapping.getDiagramLabel ());
+55c111
+<                         newMapping.setReadOnly (true);
+---
+>                         migrated.setReadOnly (true);
+57c113
+<                     labelMappings.set (originalIndex, newMapping);
+---
+>                     labelMappings.set (originalIndex, migrated);
+63,87d118
+<     @Override
+<     public void processObject (EObject result) {
+<         if (result instanceof FeatureLabelMapping) {
+<             getSavedFeatureLabelMappings ().add ((FeatureLabelMapping) result);
+<         }
+<     }
+< 
+<     private Collection < FeatureLabelMapping > getSavedFeatureLabelMappings () {
+<         if (myFeatureLabelMappings == null) {
+<             myFeatureLabelMappings = new ArrayList < FeatureLabelMapping > ();
+<         }
+<         return myFeatureLabelMappings;
+<     }
+< 
+<     protected Collection < String > getBackwardSupportedURIs () {
+<         if (myBackwardSupportedURIs == null) {
+<             myBackwardSupportedURIs = Arrays.asList (new String [] {"http://www.eclipse.org/gmf/2005/mappings", "http://www.eclipse.org/gmf/2005/mappings/2.0"});
+<         }
+<         return myBackwardSupportedURIs;
+<     }
+< 
+<     protected String getMetamodelNsURI () {
+<         return GMFMapPackage.eNS_URI;
+<     }
+< 

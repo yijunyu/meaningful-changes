@@ -1,0 +1,122 @@
+10a11,12
+> import org.eclipse.core.commands.ExecutionException;
+> 
+30a15,15
+> import org.eclipse.core.runtime.IProgressMonitor;
+31,31d14
+< import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+32,32c16,16
+< 
+---
+> 
+32a17,26
+> import org.eclipse.core.runtime.IStatus;
+> 
+> import org.eclipse.core.runtime.Status;
+> 
+> import org.eclipse.emf.edit.domain.EditingDomain;
+> 
+> import org.eclipse.emf.edit.domain.IEditingDomainProvider;
+> 
+> import org.eclipse.emf.transaction.TransactionalEditingDomain;
+> 
+55,55c69,69
+< import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+56,56c70,70
+< 
+---
+> 
+81,81c93,93
+< import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeModelCommand;
+---
+> import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeTransactionalCommand;
+117,117c129,129
+<             CompoundCommand deleteCC = getDeleteCommand (cntxt);
+---
+>             CompoundCommand deleteCC = getDeleteCommand (diagramPart, cntxt);
+149a162,165
+>         TransactionalEditingDomain editingDomain = getEditingDomain (diagramPart);
+>         if (editingDomain == null) {
+>             return null;
+>         }
+150,150c166,166
+<         return new CopyCommand (cntxt.getLabel (), diagramPart.getDiagram (), getSelectedViews (cntxt.getSelection ())) {
+---
+>         return new CopyCommand (editingDomain, cntxt.getLabel (), diagramPart.getDiagram (), getSelectedViews (cntxt.getSelection ())) {
+152,152c168,168
+<             public boolean isUndoable () {
+---
+>             public boolean canUndo () {
+156,156c172,172
+<             public boolean isRedoable () {
+---
+>             public boolean canRedo () {
+159a176,179
+>             protected IStatus doUndo (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+>                 if (isUndoable) {
+>                     return Status.OK_STATUS;
+>                 }
+160,160d175
+<             protected CommandResult doUndo () {
+161,161c180,180
+<                 return isUndoable ? newOKCommandResult () : super.doUndo ();
+---
+>                 return super.doUndo (monitor, info);
+163a183,186
+>             protected IStatus doRedo (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+>                 if (isUndoable) {
+>                     return Status.OK_STATUS;
+>                 }
+164,164d182
+<             protected CommandResult doRedo () {
+165,165c187,187
+<                 return isUndoable ? newOKCommandResult () : super.doRedo ();
+---
+>                 return super.doRedo (monitor, info);
+173a196,200
+>         TransactionalEditingDomain editingDomain = getEditingDomain (diagramPart);
+>         if (editingDomain == null) {
+>             return null;
+>         }
+>         CompositeTransactionalCommand cut = new CompositeTransactionalCommand (editingDomain, cntxt.getLabel ());
+174,174d195
+<         CompositeModelCommand cut = new CompositeModelCommand (cntxt.getLabel ());
+186,186c212,212
+<         if (! cut.isEmpty () && cut.isExecutable ()) return cut;
+---
+>         if (! cut.isEmpty () && cut.canExecute ()) return cut;
+201,201c227,227
+<     private CompoundCommand getDeleteCommand (IGlobalActionContext cntxt) {
+---
+>     private CompoundCommand getDeleteCommand (IDiagramWorkbenchPart part, IGlobalActionContext cntxt) {
+203a230,234
+>         TransactionalEditingDomain editingDomain = getEditingDomain (part);
+>         if (editingDomain == null) {
+>             return deleteCC;
+>         }
+>         CompositeTransactionalCommand compositeCommand = new CompositeTransactionalCommand (editingDomain, cntxt.getLabel ());
+204,204d229
+<         CompositeModelCommand compositeCommand = new CompositeModelCommand (cntxt.getLabel ());
+213,213c243,243
+<         if (compositeCommand.getCommands ().size () > 0) {
+---
+>         if (! compositeCommand.isEmpty ()) {
+328,328c358,358
+<             if (command != null && command.isExecutable ()) {
+---
+>             if (command != null && command.canExecute ()) {
+416a447,458
+>     private TransactionalEditingDomain getEditingDomain (IDiagramWorkbenchPart part) {
+>         TransactionalEditingDomain result = null;
+>         IEditingDomainProvider provider = (IEditingDomainProvider) part.getAdapter (IEditingDomainProvider.class);
+>         if (provider != null) {
+>             EditingDomain domain = provider.getEditingDomain ();
+>             if (domain != null && domain instanceof TransactionalEditingDomain) {
+>                 result = (TransactionalEditingDomain) domain;
+>             }
+>         }
+>         return result;
+>     }
+> 

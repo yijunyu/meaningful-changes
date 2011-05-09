@@ -1,0 +1,181 @@
+0a1,1
+> /*******************************************************************************
+1,1d0
+< /**
+2,2c2,2
+<  * Copyright (c) 2006 Borland Software Corporation
+---
+>  * Copyright (c) 2006 Eclipse.org
+7a8,14
+>  *******************************************************************************/
+> package org.eclipse.gmf.internal.xpand;
+> 
+> import java.util.HashMap;
+> import java.util.LinkedHashSet;
+> import java.util.Map;
+> import java.util.Set;
+8,12d7
+<  *
+<  * Contributors:
+<  *    bblajer - initial API and implementation
+<  */
+< package org.eclipse.gmf.internal.runtime.lite;
+14a19,19
+> import org.eclipse.core.runtime.Plugin;
+15a21,23
+> import org.eclipse.emf.ecore.EPackage;
+> import org.eclipse.gmf.internal.xpand.build.MetaModelSource;
+> import org.eclipse.gmf.internal.xpand.build.WorkspaceResourceManager;
+16,16d15
+< import org.eclipse.jface.resource.ImageDescriptor;
+17,17c16,16
+< import org.eclipse.jface.resource.ImageRegistry;
+---
+> import org.eclipse.core.resources.IProject;
+18,18c17,17
+< import org.eclipse.ui.plugin.AbstractUIPlugin;
+---
+> import org.eclipse.core.runtime.CoreException;
+20a26,28
+> public class Activator extends Plugin {
+> 	private static Activator anInstance;
+> 
+21,34d25
+< /**
+<  * The activator class controls the plug-in life cycle
+<  */
+< public class Activator extends AbstractUIPlugin {
+< 
+< 	// The plug-in ID
+< 	public static final String PLUGIN_ID = "org.eclipse.gmf.runtime.lite";
+< 
+< 	// The shared instance
+< 	private static Activator plugin;
+< 	
+< 	/**
+< 	 * The constructor
+< 	 */
+36,36c35,35
+< 		plugin = this;
+---
+> 		anInstance = this;
+38a32,32
+> 	@Override
+39,42d31
+< 	/*
+< 	 * (non-Javadoc)
+< 	 * @see org.eclipse.ui.plugin.AbstractUIPlugin#start(org.osgi.framework.BundleContext)
+< 	 */
+46a38,38
+> 	@Override
+47,50d37
+< 	/*
+< 	 * (non-Javadoc)
+< 	 * @see org.eclipse.ui.plugin.AbstractUIPlugin#stop(org.osgi.framework.BundleContext)
+< 	 */
+52,52c40,40
+< 		plugin = null;
+---
+> 		anInstance = null;
+56,62d43
+< 	/**
+< 	 * Returns the shared instance
+< 	 *
+< 	 * @return the shared instance
+< 	 */
+< 	public static Activator getDefault() {
+< 		return plugin;
+63a47,48
+> 	public static void logWarn(String message) {
+> 		log(new Status(IStatus.WARNING, getId(), 0, message, null));
+64,66d46
+< 
+< 	public void logError(String error) {
+< 		logError(error, null);
+67a50,54
+> 	public static void logError(Exception e) {
+> 		if (e instanceof CoreException) {
+> 			log(((CoreException) e).getStatus());
+> 		} else {
+> 			log(new Status(IStatus.ERROR, getId(), 0, e.getMessage(), e));
+68,78d49
+< 
+< 	@Override
+< 	protected void initializeImageRegistry(ImageRegistry reg) {
+< 		PluginImages.initialize();
+< 		super.initializeImageRegistry(reg);
+< 	}
+< 	/**
+< 	 * @param throwable actual error or null could be passed
+< 	 */
+< 	public void logError(String error, Throwable throwable) {
+< 		log(error, throwable, IStatus.ERROR);
+80,83d55
+< 
+< 	private void debug(String message, Throwable throwable) {
+< 		if (!isDebugging()) {
+< 			return;
+84a57,58
+> 	public static void log(IStatus status) {
+> 		anInstance.getLog().log(status);
+85,86d56
+< 		if (message != null) {
+< 			System.err.println(message);
+87a60,65
+> 
+> 	private final Map<IProject, ResourceManager> resourceManagers = new HashMap<IProject, ResourceManager>();
+> 
+> 	public static ResourceManager getResourceManager(IProject context) {
+> 		if (anInstance.resourceManagers.containsKey(context)) {
+> 			return anInstance.resourceManagers.get(context);
+88,89d59
+< 		if (throwable != null) {
+< 			throwable.printStackTrace();
+90a67,69
+> 		ResourceManager resourceManager = new WorkspaceResourceManager(context);
+> 		registerResourceManager(context, resourceManager);
+> 		return resourceManager;
+92a72,74
+> 	public static void registerResourceManager(IProject project, ResourceManager resourceManager) {
+> 		assert !anInstance.resourceManagers.containsKey(project);
+> 		anInstance.resourceManagers.put(project, resourceManager);
+93,94d71
+< 	public void logWarning(String error) {
+< 		logWarning(error, null);
+96a77,80
+> 	private final Set<MetaModelSource> modelSources = new LinkedHashSet<MetaModelSource>();
+> 	public static void registerModelSource(MetaModelSource modelSource) {
+> 		assert modelSource != null;
+> 		anInstance.modelSources.add(modelSource);
+97,98d76
+< 	public void logWarning(String error, Throwable throwable) {
+< 		log(error, throwable, IStatus.WARNING);
+100a83,86
+> 	public static EPackage findMetaModel(String nsURI) {
+> 		if (anInstance == null) {
+> 			// this is for tests execution (which doesn't take place in plugin env)
+> 			return null;
+101,103d82
+< 	private void log(String error, Throwable throwable, int severity) {
+< 		if (error == null && throwable != null) {
+< 			error = throwable.getMessage();
+104a88,91
+> 		for (MetaModelSource s : anInstance.modelSources) {
+> 			EPackage p = s.find(nsURI);
+> 			if (p != null) {
+> 				return p;
+105,106d87
+< 		getLog().log(new Status(severity, getBundle().getSymbolicName(), IStatus.OK, error, throwable));
+< 		debug(error, throwable);
+107a93,94
+> 		}
+> 		return EPackage.Registry.INSTANCE.getEPackage(nsURI);
+107a44,44
+> 	public static String getId() {
+108,109d43
+< 
+< 	public static ImageDescriptor getImageDescriptor(String imageFilePath) {
+110,110c45,45
+< 		return imageDescriptorFromPlugin(getDefault().getBundle().getSymbolicName(), imageFilePath);
+---
+> 		return anInstance.getBundle().getSymbolicName();

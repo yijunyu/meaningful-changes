@@ -1,0 +1,617 @@
+package org.eclipse.gmf.graphdef.editor.sheet;
+
+import java.util.Collections;
+
+import java.util.List;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.commands.operations.OperationHistoryFactory;
+
+import org.eclipse.core.resources.IFile;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.emf.common.notify.Notification;
+
+import org.eclipse.emf.transaction.util.TransactionUtil;
+
+import org.eclipse.emf.workspace.util.WorkspaceSynchronizer;
+
+import org.eclipse.gef.EditPart;
+
+import org.eclipse.gmf.gmfgraph.Alignment;
+
+import org.eclipse.gmf.gmfgraph.BorderLayout;
+
+import org.eclipse.gmf.gmfgraph.CustomClass;
+
+import org.eclipse.gmf.gmfgraph.CustomLayout;
+
+import org.eclipse.gmf.gmfgraph.FlowLayout;
+
+import org.eclipse.gmf.gmfgraph.GMFGraphFactory;
+
+import org.eclipse.gmf.gmfgraph.GMFGraphPackage;
+
+import org.eclipse.gmf.gmfgraph.GridLayout;
+
+import org.eclipse.gmf.gmfgraph.Layoutable;
+
+import org.eclipse.gmf.gmfgraph.StackLayout;
+
+import org.eclipse.gmf.gmfgraph.XYLayout;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand;
+
+import org.eclipse.gmf.runtime.notation.View;
+
+import org.eclipse.jface.layout.GridDataFactory;
+
+import org.eclipse.jface.viewers.ISelection;
+
+import org.eclipse.jface.viewers.IStructuredSelection;
+
+import org.eclipse.swt.SWT;
+
+import org.eclipse.swt.layout.FormAttachment;
+
+import org.eclipse.swt.layout.FormData;
+
+import org.eclipse.swt.layout.FormLayout;
+
+import org.eclipse.swt.widgets.Button;
+
+import org.eclipse.swt.widgets.Combo;
+
+import org.eclipse.swt.widgets.Composite;
+
+import org.eclipse.swt.widgets.Display;
+
+import org.eclipse.swt.widgets.Event;
+
+import org.eclipse.swt.widgets.Group;
+
+import org.eclipse.swt.widgets.Listener;
+
+import org.eclipse.swt.widgets.Spinner;
+
+import org.eclipse.swt.widgets.Text;
+
+import org.eclipse.swt.widgets.Widget;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.ui.forms.widgets.FormToolkit;
+
+import org.eclipse.ui.views.properties.tabbed.AbstractPropertySection;
+
+import org.eclipse.ui.views.properties.tabbed.TabbedPropertySheetPage;
+
+public class LayoutSection extends AbstractPropertySection implements ChangeTracker, Listener {
+    private org.eclipse.emf.common.notify.Adapter [] myModelListeners;
+    private boolean myIsCommit;
+    private boolean myIsRefresh;
+    private Object myInput;
+    private Group myLayoutKindRadios;
+    private Group myFlowLayoutDetails;
+    private Group myBorderLayoutDetails;
+    private Group myGridLayoutDetails;
+    private Composite myCustomLayoutDetails;
+    private Button myR1;
+    private Button myR2;
+    private Button myR3;
+    private Button myR4;
+    private Button myR5;
+    private Button myR6;
+    private Button myR7;
+    private Button myFlowLayoutIsVertical;
+    private Button myFlowLayoutMatchMinor;
+    private Button myFlowLayoutForceSingle;
+    private Spinner myFlowLayoutMajSpacing;
+    private Spinner myFlowLayoutMinSpacing;
+    private Group myFlowLayoutAlign;
+    private Spinner myBorderLayoutSpacingX;
+    private Spinner myBorderLayoutSpacingY;
+    private Spinner myGridLayoutColumns;
+    private Button myGridLayoutSameWidth;
+    private Group myGridLayoutMargins;
+    private Group myGridLayoutSpacing;
+    private Text myCustomLayoutClass;
+    private Combo myFlowLayoutMajAlign;
+    private Combo myFlowLayoutMinAlign;
+    private Spinner myGridLayoutMarginX;
+    private Spinner myGridLayoutMarginY;
+    private Spinner myGridLayoutSpacingX;
+    private Spinner myGridLayoutSpacingY;
+
+    @Override
+    public void createControls (Composite parent, TabbedPropertySheetPage page) {
+        super.createControls (parent, page);
+        getWidgetFactory ().paintBordersFor (parent);
+        myLayoutKindRadios = createGroup (parent, "Layout");
+        myR1 = getWidgetFactory ().createButton (myLayoutKindRadios, "Flow Layout", SWT.RADIO);
+        myR2 = getWidgetFactory ().createButton (myLayoutKindRadios, "Border Layout", SWT.RADIO);
+        myR3 = getWidgetFactory ().createButton (myLayoutKindRadios, "Grid Layout", SWT.RADIO);
+        myR4 = getWidgetFactory ().createButton (myLayoutKindRadios, "Stack Layout", SWT.RADIO);
+        myR5 = getWidgetFactory ().createButton (myLayoutKindRadios, "XY Layout", SWT.RADIO);
+        myR6 = getWidgetFactory ().createButton (myLayoutKindRadios, "Custom Layout", SWT.RADIO);
+        myR7 = getWidgetFactory ().createButton (myLayoutKindRadios, "None", SWT.RADIO);
+        myLayoutKindRadios.setLayout (new org.eclipse.swt.layout.FillLayout (SWT.VERTICAL));
+        myFlowLayoutDetails = createGroup (parent, "Details");
+        myFlowLayoutIsVertical = getWidgetFactory ().createButton (myFlowLayoutDetails, "Is Vertical", SWT.CHECK);
+        GridDataFactory.swtDefaults ().align (SWT.BEGINNING, SWT.BEGINNING).span (2, 1).applyTo (myFlowLayoutIsVertical);
+        myFlowLayoutMatchMinor = getWidgetFactory ().createButton (myFlowLayoutDetails, "Match minor size", SWT.CHECK);
+        GridDataFactory.swtDefaults ().align (SWT.BEGINNING, SWT.BEGINNING).span (2, 1).applyTo (myFlowLayoutMatchMinor);
+        myFlowLayoutForceSingle = getWidgetFactory ().createButton (myFlowLayoutDetails, "Force single line", SWT.CHECK);
+        GridDataFactory.swtDefaults ().align (SWT.BEGINNING, SWT.BEGINNING).span (2, 1).applyTo (myFlowLayoutForceSingle);
+        createLabel (myFlowLayoutDetails, "Major Spacing");
+        myFlowLayoutMajSpacing = new Spinner (myFlowLayoutDetails, SWT.FLAT);
+        myFlowLayoutMajSpacing.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        createLabel (myFlowLayoutDetails, "Minor Spacing");
+        myFlowLayoutMinSpacing = new Spinner (myFlowLayoutDetails, SWT.FLAT);
+        myFlowLayoutMinSpacing.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        myFlowLayoutAlign = createGroup (myFlowLayoutDetails, "Alignment");
+        createLabel (myFlowLayoutAlign, "Major");
+        myFlowLayoutMajAlign = new Combo (myFlowLayoutAlign, SWT.FLAT | SWT.READ_ONLY);
+        myFlowLayoutMajAlign.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        getWidgetFactory ().adapt (myFlowLayoutMajAlign, false, false);
+        createLabel (myFlowLayoutAlign, "Minor");
+        myFlowLayoutMinAlign = new Combo (myFlowLayoutAlign, SWT.FLAT | SWT.READ_ONLY);
+        myFlowLayoutMinAlign.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        getWidgetFactory ().adapt (myFlowLayoutMinAlign, false, false);
+        myFlowLayoutAlign.setLayout (new org.eclipse.swt.layout.FillLayout (SWT.VERTICAL));
+        myFlowLayoutDetails.setLayout (new org.eclipse.swt.layout.GridLayout (2, false));
+        myBorderLayoutDetails = createGroup (parent, "Spacing");
+        createLabel (myBorderLayoutDetails, "Horizontal");
+        myBorderLayoutSpacingX = new Spinner (myBorderLayoutDetails, SWT.FLAT);
+        myBorderLayoutSpacingX.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        createLabel (myBorderLayoutDetails, "Vertical");
+        myBorderLayoutSpacingY = new Spinner (myBorderLayoutDetails, SWT.FLAT);
+        myBorderLayoutSpacingY.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        myBorderLayoutDetails.setLayout (new org.eclipse.swt.layout.GridLayout (2, false));
+        myGridLayoutDetails = createGroup (parent, "Details");
+        createLabel (myGridLayoutDetails, "Columns #");
+        myGridLayoutColumns = new Spinner (myGridLayoutDetails, SWT.FLAT);
+        myGridLayoutColumns.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        myGridLayoutSameWidth = getWidgetFactory ().createButton (myGridLayoutDetails, "Equal", SWT.CHECK);
+        GridDataFactory.swtDefaults ().align (SWT.BEGINNING, SWT.BEGINNING).span (2, 1).applyTo (myGridLayoutSameWidth);
+        myGridLayoutMargins = createGroup (myGridLayoutDetails, "Margins");
+        createLabel (myGridLayoutMargins, "dx");
+        myGridLayoutMarginX = new Spinner (myGridLayoutMargins, SWT.FLAT);
+        myGridLayoutMarginX.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        createLabel (myGridLayoutMargins, "dy");
+        myGridLayoutMarginY = new Spinner (myGridLayoutMargins, SWT.FLAT);
+        myGridLayoutMarginY.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        myGridLayoutMargins.setLayout (new org.eclipse.swt.layout.GridLayout (2, false));
+        myGridLayoutSpacing = createGroup (myGridLayoutDetails, "Spacing");
+        createLabel (myGridLayoutSpacing, "dx");
+        myGridLayoutSpacingX = new Spinner (myGridLayoutSpacing, SWT.FLAT);
+        myGridLayoutSpacingX.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        createLabel (myGridLayoutSpacing, "dy");
+        myGridLayoutSpacingY = new Spinner (myGridLayoutSpacing, SWT.FLAT);
+        myGridLayoutSpacingY.setData (FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+        myGridLayoutSpacing.setLayout (new org.eclipse.swt.layout.GridLayout (2, false));
+        myGridLayoutDetails.setLayout (new org.eclipse.swt.layout.GridLayout (2, false));
+        myCustomLayoutDetails = getWidgetFactory ().createComposite (parent);
+        getWidgetFactory ().paintBordersFor (myCustomLayoutDetails);
+        createLabel (myCustomLayoutDetails, "Qualified class name:");
+        myCustomLayoutClass = getWidgetFactory ().createText (myCustomLayoutDetails, null);
+        parent.setLayout (new FormLayout ());
+        FormData fd;
+        fd = new FormData ();
+        fd.left = new FormAttachment (0, 20);
+        myLayoutKindRadios.setLayoutData (fd);
+        fd = new FormData ();
+        fd.left = new FormAttachment (myLayoutKindRadios, 20, SWT.RIGHT);
+        myFlowLayoutDetails.setLayoutData (fd);
+        fd = new FormData ();
+        fd.left = new FormAttachment (myLayoutKindRadios, 20, SWT.RIGHT);
+        myBorderLayoutDetails.setLayoutData (fd);
+        fd = new FormData ();
+        fd.left = new FormAttachment (myLayoutKindRadios, 20, SWT.RIGHT);
+        myGridLayoutDetails.setLayoutData (fd);
+        for (org.eclipse.emf.common.util.Enumerator e : Alignment.VALUES) {
+            myFlowLayoutMajAlign.add (e.getName ());
+        }
+        for (org.eclipse.emf.common.util.Enumerator e : Alignment.VALUES) {
+            myFlowLayoutMinAlign.add (e.getName ());
+        }
+        for (Text t : new Text [] {myCustomLayoutClass}) {
+            t.addListener (SWT.Modify, this);
+            t.addListener (SWT.FocusOut, this);
+            t.addListener (SWT.KeyDown, this);
+        }
+        for (Spinner s : new Spinner [] {myFlowLayoutMajSpacing, myFlowLayoutMinSpacing, myBorderLayoutSpacingX, myBorderLayoutSpacingY, myGridLayoutColumns, myGridLayoutMarginX, myGridLayoutMarginY, myGridLayoutSpacingX, myGridLayoutSpacingY}) {
+            s.addListener (SWT.Modify, this);
+            s.addListener (SWT.FocusOut, this);
+        }
+        for (Widget w : new Widget [] {myR1, myR2, myR3, myR4, myR5, myR6, myR7, myFlowLayoutIsVertical, myFlowLayoutMatchMinor, myFlowLayoutForceSingle, myGridLayoutSameWidth, myFlowLayoutMajAlign, myFlowLayoutMinAlign}) {
+            w.addListener (SWT.Selection, this);
+        }
+    }
+
+    @Override
+    public void setInput (IWorkbenchPart part, ISelection selection) {
+        super.setInput (part, selection);
+        Object newInput = null;
+        if (selection instanceof IStructuredSelection && ((IStructuredSelection) selection).size () == 1) {
+            newInput = unwrap (((IStructuredSelection) selection).getFirstElement ());
+        }
+        if (newInput != myInput) {
+            if (myInput != null) {
+                detach ();
+            }
+            myInput = newInput;
+            if (newInput != null) {
+                attach ();
+            }
+        }
+    }
+
+    protected void commit () {
+        if (myFlowLayoutDetails.isVisible ()) {
+            getInput ().setLayout (GMFGraphFactory.eINSTANCE.createFlowLayout ());
+            ((FlowLayout) getInput ().getLayout ()).setVertical (myFlowLayoutIsVertical.getSelection ());
+            ((FlowLayout) getInput ().getLayout ()).setMatchMinorSize (myFlowLayoutMatchMinor.getSelection ());
+            ((FlowLayout) getInput ().getLayout ()).setForceSingleLine (myFlowLayoutForceSingle.getSelection ());
+            ((FlowLayout) getInput ().getLayout ()).setMajorSpacing (myFlowLayoutMajSpacing.getSelection ());
+            ((FlowLayout) getInput ().getLayout ()).setMinorSpacing (myFlowLayoutMinSpacing.getSelection ());
+            ((FlowLayout) getInput ().getLayout ()).setMinorAlignment (Alignment.get (myFlowLayoutMajAlign.getSelectionIndex ()));
+            ((FlowLayout) getInput ().getLayout ()).setMajorAlignment (Alignment.get (myFlowLayoutMinAlign.getSelectionIndex ()));
+        }
+        if (myBorderLayoutDetails.isVisible ()) {
+            getInput ().setLayout (GMFGraphFactory.eINSTANCE.createBorderLayout ());
+            if (((BorderLayout) getInput ().getLayout ()).getSpacing () == null) {
+                ((BorderLayout) getInput ().getLayout ()).setSpacing (GMFGraphFactory.eINSTANCE.createDimension ());
+            }
+            ((BorderLayout) getInput ().getLayout ()).getSpacing ().setDx (myBorderLayoutSpacingX.getSelection ());
+            ((BorderLayout) getInput ().getLayout ()).getSpacing ().setDy (myBorderLayoutSpacingY.getSelection ());
+        }
+        if (myGridLayoutDetails.isVisible ()) {
+            getInput ().setLayout (GMFGraphFactory.eINSTANCE.createGridLayout ());
+            ((GridLayout) getInput ().getLayout ()).setNumColumns (myGridLayoutColumns.getSelection ());
+            ((GridLayout) getInput ().getLayout ()).setEqualWidth (myGridLayoutSameWidth.getSelection ());
+            if (((GridLayout) getInput ().getLayout ()).getMargins () == null) {
+                ((GridLayout) getInput ().getLayout ()).setMargins (GMFGraphFactory.eINSTANCE.createDimension ());
+            }
+            if (((GridLayout) getInput ().getLayout ()).getSpacing () == null) {
+                ((GridLayout) getInput ().getLayout ()).setSpacing (GMFGraphFactory.eINSTANCE.createDimension ());
+            }
+            ((GridLayout) getInput ().getLayout ()).getMargins ().setDx (myGridLayoutMarginX.getSelection ());
+            ((GridLayout) getInput ().getLayout ()).getMargins ().setDy (myGridLayoutMarginY.getSelection ());
+            ((GridLayout) getInput ().getLayout ()).getSpacing ().setDx (myGridLayoutSpacingX.getSelection ());
+            ((GridLayout) getInput ().getLayout ()).getSpacing ().setDy (myGridLayoutSpacingY.getSelection ());
+        }
+        if (myR4.getSelection ()) {
+            getInput ().setLayout (GMFGraphFactory.eINSTANCE.createStackLayout ());
+        }
+        if (myR5.getSelection ()) {
+            getInput ().setLayout (GMFGraphFactory.eINSTANCE.createXYLayout ());
+        }
+        if (myCustomLayoutDetails.isVisible ()) {
+            getInput ().setLayout (GMFGraphFactory.eINSTANCE.createCustomLayout ());
+            ((CustomClass) getInput ().getLayout ()).setQualifiedClassName (myCustomLayoutClass.getText ());
+        }
+        if (myR7.getSelection ()) {
+            getInput ().setLayout (null);
+        }
+    }
+
+    @Override
+    public void refresh () {
+        myIsRefresh = true;
+        if (getInput ().getLayout () instanceof FlowLayout) {
+            if (getInput ().getLayout () != null) {
+                myFlowLayoutIsVertical.setSelection (((FlowLayout) getInput ().getLayout ()).isVertical ());
+                myFlowLayoutMatchMinor.setSelection (((FlowLayout) getInput ().getLayout ()).isMatchMinorSize ());
+                myFlowLayoutForceSingle.setSelection (((FlowLayout) getInput ().getLayout ()).isForceSingleLine ());
+                myFlowLayoutMajSpacing.setSelection (((FlowLayout) getInput ().getLayout ()).getMajorSpacing ());
+                myFlowLayoutMinSpacing.setSelection (((FlowLayout) getInput ().getLayout ()).getMinorSpacing ());
+                myFlowLayoutMajAlign.select (((FlowLayout) getInput ().getLayout ()).getMinorAlignment ().getValue ());
+                myFlowLayoutMinAlign.select (((FlowLayout) getInput ().getLayout ()).getMajorAlignment ().getValue ());
+            }
+            myR1.setSelection (true);
+            myFlowLayoutDetails.setVisible (true);
+        } else {
+            myR1.setSelection (false);
+            myFlowLayoutDetails.setVisible (false);
+        }
+        if (getInput ().getLayout () instanceof BorderLayout) {
+            if (getInput ().getLayout () != null && ((BorderLayout) getInput ().getLayout ()).getSpacing () != null) {
+                myBorderLayoutSpacingX.setSelection (((BorderLayout) getInput ().getLayout ()).getSpacing ().getDx ());
+                myBorderLayoutSpacingY.setSelection (((BorderLayout) getInput ().getLayout ()).getSpacing ().getDy ());
+            }
+            myR2.setSelection (true);
+            myBorderLayoutDetails.setVisible (true);
+        } else {
+            myR2.setSelection (false);
+            myBorderLayoutDetails.setVisible (false);
+        }
+        if (getInput ().getLayout () instanceof GridLayout) {
+            if (getInput ().getLayout () != null) {
+                myGridLayoutColumns.setSelection (((GridLayout) getInput ().getLayout ()).getNumColumns ());
+                myGridLayoutSameWidth.setSelection (((GridLayout) getInput ().getLayout ()).isEqualWidth ());
+            }
+            if (getInput ().getLayout () != null && ((GridLayout) getInput ().getLayout ()).getMargins () != null) {
+                myGridLayoutMarginX.setSelection (((GridLayout) getInput ().getLayout ()).getMargins ().getDx ());
+                myGridLayoutMarginY.setSelection (((GridLayout) getInput ().getLayout ()).getMargins ().getDy ());
+            }
+            if (getInput ().getLayout () != null && ((GridLayout) getInput ().getLayout ()).getSpacing () != null) {
+                myGridLayoutSpacingX.setSelection (((GridLayout) getInput ().getLayout ()).getSpacing ().getDx ());
+                myGridLayoutSpacingY.setSelection (((GridLayout) getInput ().getLayout ()).getSpacing ().getDy ());
+            }
+            myR3.setSelection (true);
+            myGridLayoutDetails.setVisible (true);
+        } else {
+            myR3.setSelection (false);
+            myGridLayoutDetails.setVisible (false);
+        }
+        if (getInput ().getLayout () instanceof StackLayout) {
+            myR4.setSelection (true);
+        } else {
+            myR4.setSelection (false);
+        }
+        if (getInput ().getLayout () instanceof XYLayout) {
+            myR5.setSelection (true);
+        } else {
+            myR5.setSelection (false);
+        }
+        if (getInput ().getLayout () instanceof CustomLayout) {
+            if (getInput ().getLayout () != null) {
+                myCustomLayoutClass.setText (((CustomClass) getInput ().getLayout ()).getQualifiedClassName ());
+            }
+            myR6.setSelection (true);
+            myCustomLayoutDetails.setVisible (true);
+        } else {
+            myR6.setSelection (false);
+            myCustomLayoutDetails.setVisible (false);
+        }
+        if (getInput ().getLayout () == null) {
+            myR7.setSelection (true);
+        } else {
+            myR7.setSelection (false);
+        }
+        myIsRefresh = false;
+    }
+
+    @Override
+    public void aboutToBeHidden () {
+        if (myInput != null) {
+            detach ();
+        }
+    }
+
+    public void handleEvent (Event event) {
+        if (myIsRefresh) {
+            return;
+        }
+        if (event.type == SWT.Modify) {
+            markDirty ();
+        } else if (event.type == SWT.FocusOut) {
+            applyChanges ();
+        } else if (event.type == SWT.KeyDown) {
+            if (event.keyCode == SWT.ESC) {
+                discardChanges ();
+            } else if (event.keyCode == SWT.CR) {
+                applyChanges ();
+            }
+
+        }
+
+        if (event.type == SWT.Selection) {
+            if (myFlowLayoutIsVertical == event.widget) {
+                applyChanges ();
+            } else if (myFlowLayoutMatchMinor == event.widget) {
+                applyChanges ();
+            } else if (myFlowLayoutForceSingle == event.widget) {
+                applyChanges ();
+            } else if (myGridLayoutSameWidth == event.widget) {
+                applyChanges ();
+            }
+
+            if (myR1 == event.widget) {
+                if (myR1.getSelection ()) {
+                    myFlowLayoutDetails.setVisible (true);
+                    myBorderLayoutDetails.setVisible (false);
+                    myGridLayoutDetails.setVisible (false);
+                    myCustomLayoutDetails.setVisible (false);
+                    applyChanges ();
+                    if (getInput ().getLayout () != null) {
+                        myFlowLayoutIsVertical.setSelection (((FlowLayout) getInput ().getLayout ()).isVertical ());
+                        myFlowLayoutMatchMinor.setSelection (((FlowLayout) getInput ().getLayout ()).isMatchMinorSize ());
+                        myFlowLayoutForceSingle.setSelection (((FlowLayout) getInput ().getLayout ()).isForceSingleLine ());
+                        myFlowLayoutMajSpacing.setSelection (((FlowLayout) getInput ().getLayout ()).getMajorSpacing ());
+                        myFlowLayoutMinSpacing.setSelection (((FlowLayout) getInput ().getLayout ()).getMinorSpacing ());
+                        myFlowLayoutMajAlign.select (((FlowLayout) getInput ().getLayout ()).getMinorAlignment ().getValue ());
+                        myFlowLayoutMinAlign.select (((FlowLayout) getInput ().getLayout ()).getMajorAlignment ().getValue ());
+                    }
+                } else {
+                    myFlowLayoutDetails.setVisible (false);
+                }
+            } else if (myR2 == event.widget) {
+                if (myR2.getSelection ()) {
+                    myBorderLayoutDetails.setVisible (true);
+                    myFlowLayoutDetails.setVisible (false);
+                    myGridLayoutDetails.setVisible (false);
+                    myCustomLayoutDetails.setVisible (false);
+                    applyChanges ();
+                    if (getInput ().getLayout () != null && ((BorderLayout) getInput ().getLayout ()).getSpacing () != null) {
+                        myBorderLayoutSpacingX.setSelection (((BorderLayout) getInput ().getLayout ()).getSpacing ().getDx ());
+                        myBorderLayoutSpacingY.setSelection (((BorderLayout) getInput ().getLayout ()).getSpacing ().getDy ());
+                    }
+                } else {
+                    myBorderLayoutDetails.setVisible (false);
+                }
+            } else if (myR3 == event.widget) {
+                if (myR3.getSelection ()) {
+                    myGridLayoutDetails.setVisible (true);
+                    myFlowLayoutDetails.setVisible (false);
+                    myBorderLayoutDetails.setVisible (false);
+                    myCustomLayoutDetails.setVisible (false);
+                    applyChanges ();
+                    if (getInput ().getLayout () != null) {
+                        myGridLayoutColumns.setSelection (((GridLayout) getInput ().getLayout ()).getNumColumns ());
+                        myGridLayoutSameWidth.setSelection (((GridLayout) getInput ().getLayout ()).isEqualWidth ());
+                    }
+                    if (getInput ().getLayout () != null && ((GridLayout) getInput ().getLayout ()).getMargins () != null) {
+                        myGridLayoutMarginX.setSelection (((GridLayout) getInput ().getLayout ()).getMargins ().getDx ());
+                        myGridLayoutMarginY.setSelection (((GridLayout) getInput ().getLayout ()).getMargins ().getDy ());
+                    }
+                    if (getInput ().getLayout () != null && ((GridLayout) getInput ().getLayout ()).getSpacing () != null) {
+                        myGridLayoutSpacingX.setSelection (((GridLayout) getInput ().getLayout ()).getSpacing ().getDx ());
+                        myGridLayoutSpacingY.setSelection (((GridLayout) getInput ().getLayout ()).getSpacing ().getDy ());
+                    }
+                } else {
+                    myGridLayoutDetails.setVisible (false);
+                }
+            } else if (myR4 == event.widget) {
+                if (myR4.getSelection ()) {
+                    myFlowLayoutDetails.setVisible (false);
+                    myBorderLayoutDetails.setVisible (false);
+                    myGridLayoutDetails.setVisible (false);
+                    myCustomLayoutDetails.setVisible (false);
+                    applyChanges ();
+                }
+            } else if (myR5 == event.widget) {
+                if (myR5.getSelection ()) {
+                    myFlowLayoutDetails.setVisible (false);
+                    myBorderLayoutDetails.setVisible (false);
+                    myGridLayoutDetails.setVisible (false);
+                    myCustomLayoutDetails.setVisible (false);
+                    applyChanges ();
+                }
+            } else if (myR6 == event.widget) {
+                if (myR6.getSelection ()) {
+                    myCustomLayoutDetails.setVisible (true);
+                    myFlowLayoutDetails.setVisible (false);
+                    myBorderLayoutDetails.setVisible (false);
+                    myGridLayoutDetails.setVisible (false);
+                    applyChanges ();
+                    if (getInput ().getLayout () != null) {
+                        myCustomLayoutClass.setText (((CustomClass) getInput ().getLayout ()).getQualifiedClassName ());
+                    }
+                } else {
+                    myCustomLayoutDetails.setVisible (false);
+                }
+            } else if (myR7 == event.widget) {
+                if (myR7.getSelection ()) {
+                    myFlowLayoutDetails.setVisible (false);
+                    myBorderLayoutDetails.setVisible (false);
+                    myGridLayoutDetails.setVisible (false);
+                    myCustomLayoutDetails.setVisible (false);
+                    applyChanges ();
+                }
+            }
+
+            if (myFlowLayoutMajAlign == event.widget || myFlowLayoutMinAlign == event.widget) {
+                applyChanges ();
+            }
+        }
+    }
+
+    public void modelChanged (Notification msg) {
+        if (! myIsCommit && Display.getCurrent () != null) {
+            refresh ();
+        }
+    }
+
+    private void markDirty () {
+    }
+
+    protected void applyChanges () {
+        final List < IFile > files = Collections.singletonList (WorkspaceSynchronizer.getFile (getInput ().eResource ()));
+        AbstractTransactionalCommand cmd = new AbstractTransactionalCommand (TransactionUtil.getEditingDomain (getInput ()), "", files) {
+
+            @Override
+            protected CommandResult doExecuteWithResult (IProgressMonitor monitor, IAdaptable info) throws ExecutionException {
+                commit ();
+                return CommandResult.newOKCommandResult ();
+            }
+
+        }
+
+        ;
+        try {
+            myIsCommit = true;
+            OperationHistoryFactory.getOperationHistory ().execute (cmd, new NullProgressMonitor (), null);
+        } catch (ExecutionException ex) {
+            ex.printStackTrace ();
+        } finally {
+            myIsCommit = false;
+        }
+    }
+
+    protected void discardChanges () {
+        refresh ();
+    }
+
+    private Object unwrap (Object element) {
+        Object rv = null;
+        if (element instanceof EditPart) {
+            Object model = ((EditPart) element).getModel ();
+            rv = model instanceof View ? ((View) model).getElement () : null;
+        } else if (element instanceof View) {
+            rv = ((View) element).getElement ();
+        } else if (element instanceof IAdaptable) {
+            View view = (View) ((IAdaptable) element).getAdapter (View.class);
+            if (view != null) {
+                rv = view.getElement ();
+            }
+        }
+
+        if (rv instanceof Layoutable) {
+            return rv;
+        }
+        return null;
+    }
+
+    private void attach () {
+        final GMFGraphPackage ePack = GMFGraphPackage.eINSTANCE;
+        myModelListeners = new org.eclipse.emf.common.notify.Adapter [] {new AttachAdapter (ePack.getLayoutable_Layout (), new ChangeTracker () {
+
+            public void modelChanged (org.eclipse.emf.common.notify.Notification n) {
+            }
+
+        }
+
+        , new FeatureTracker (this, ePack.getFlowLayout_Vertical (), ePack.getFlowLayout_MatchMinorSize (), ePack.getFlowLayout_ForceSingleLine (), ePack.getFlowLayout_MajorSpacing (), ePack.getFlowLayout_MinorSpacing (), ePack.getGridLayout_NumColumns (), ePack.getGridLayout_EqualWidth (), ePack.getCustomClass_QualifiedClassName (), ePack.getFlowLayout_MinorAlignment (), ePack.getFlowLayout_MajorAlignment ()), new AttachAdapter (ePack.getBorderLayout_Spacing (), new FeatureTracker (this, ePack.getDimension_Dx (), ePack.getDimension_Dy ())), new AttachAdapter (ePack.getGridLayout_Margins (), new FeatureTracker (this, ePack.getDimension_Dx (), ePack.getDimension_Dy ())), new AttachAdapter (ePack.getGridLayout_Spacing (), new FeatureTracker (this, ePack.getDimension_Dx (), ePack.getDimension_Dy ())))};
+        getInput ().eAdapters ().addAll (java.util.Arrays.asList (myModelListeners));
+    }
+
+    private void detach () {
+        if (myModelListeners != null) {
+            getInput ().eAdapters ().removeAll (java.util.Arrays.asList (myModelListeners));
+            myModelListeners = null;
+        }
+    }
+
+    private Layoutable getInput () {
+        return (Layoutable) myInput;
+    }
+
+    private org.eclipse.swt.widgets.Label createLabel (Composite parent, String label) {
+        org.eclipse.swt.widgets.Label l = new org.eclipse.swt.widgets.Label (parent, SWT.NONE);
+        if (label != null) l.setText (label);
+
+        getWidgetFactory ().adapt (l, false, false);
+        return l;
+    }
+
+    private Group createGroup (Composite parent, String label) {
+        Group g = new Group (parent, SWT.SHADOW_NONE);
+        if (label != null) g.setText (label);
+
+        getWidgetFactory ().adapt (g, false, false);
+        getWidgetFactory ().paintBordersFor (g);
+        return g;
+    }
+
+}
+

@@ -1,0 +1,199 @@
+10a11,12
+> import org.eclipse.core.runtime.Assert;
+> 
+12a15,16
+> import org.eclipse.draw2d.AutomaticRouter;
+> 
+18a23,26
+> import org.eclipse.draw2d.ConnectionAnchor;
+> 
+> import org.eclipse.draw2d.geometry.Dimension;
+> 
+23c31,33
+< import org.eclipse.draw2d.geometry.Rectangle;
+---
+> import org.eclipse.draw2d.geometry.PrecisionPoint;
+> 
+> import org.eclipse.draw2d.geometry.PrecisionRectangle;
+36a47,48
+> import org.eclipse.gef.handles.BendpointCreationHandle;
+> 
+40a53,54
+> import org.eclipse.gmf.runtime.draw2d.ui.figures.FigureUtilities;
+> 
+47,48d60
+< import org.eclipse.gmf.runtime.draw2d.ui.internal.routers.OrthogonalRouterUtilities;
+< 
+57,58d68
+< import org.eclipse.jface.util.Assert;
+< 
+216d225
+<             OrthogonalRouterUtilities.resetEndPointsToCenter (getConnection (), pts);
+356c365
+<             if (REQ_CREATE_BENDPOINT.equals (request.getType ()) || REQ_MOVE_BENDPOINT.equals (request.getType ())) {
+---
+>             if (REQ_CREATE_BENDPOINT.equals (request.getType ())) {
+357a367,368
+>             } else if (REQ_MOVE_BENDPOINT.equals (request.getType ())) {
+>                 showMoveOrthogonalBenspointFeedback ((BendpointRequest) request);
+358a370
+> 
+399c411
+<         Rectangle startRect = new Rectangle (getConnection ().getSourceAnchor ().getOwner ().getBounds ());
+---
+>         PrecisionRectangle startRect = new PrecisionRectangle (FigureUtilities.getAnchorableFigureBounds (getConnection ().getSourceAnchor ().getOwner ()));
+400a413,419
+>         if (getLineSegMode ().equals (LineMode.ORTHOGONAL_CONSTRAINED)) {
+>             if (line.isHorizontal ()) {
+>                 startRect.shrink (0, 2);
+>             } else {
+>                 startRect.shrink (2, 0);
+>             }
+>         }
+402,404c421
+<         if (getLineSegMode ().equals (LineMode.ORTHOGONAL_CONSTRAINED)) startRect.expand (MapModeUtil.getMapMode (getConnection ()).DPtoLP (- 2), MapModeUtil.getMapMode (getConnection ()).DPtoLP (- 2));
+< 
+<         if (! startRect.contains (line.getOrigin ())) {
+---
+>         if (! startRect.expand (0.000001, 0.000001).contains (new PrecisionPoint (line.getOrigin ()))) {
+411c428
+<         Rectangle endRect = new Rectangle (getConnection ().getTargetAnchor ().getOwner ().getBounds ());
+---
+>         PrecisionRectangle endRect = new PrecisionRectangle (FigureUtilities.getAnchorableFigureBounds (getConnection ().getTargetAnchor ().getOwner ()));
+412a430,436
+>         if (getLineSegMode ().equals (LineMode.ORTHOGONAL_CONSTRAINED)) {
+>             if (line.isHorizontal ()) {
+>                 endRect.shrink (0, 2);
+>             } else {
+>                 endRect.shrink (2, 0);
+>             }
+>         }
+414,416c438
+<         if (getLineSegMode ().equals (LineMode.ORTHOGONAL_CONSTRAINED)) endRect.expand (MapModeUtil.getMapMode (getConnection ()).DPtoLP (- 2), MapModeUtil.getMapMode (getConnection ()).DPtoLP (- 2));
+< 
+<         if (! endRect.contains (line.getTerminus ())) {
+---
+>         if (! endRect.expand (0.00001, 0.00001).contains (new PrecisionPoint (line.getTerminus ()))) {
+430,433c452,454
+<     protected void showOutsideSourceFeedback (List constraint) {
+<         Point ptAdd = ((Bendpoint) constraint.get (0)).getLocation ();
+<         Bendpoint bp = new AbsoluteBendpoint (ptAdd);
+<         constraint.add (0, bp);
+---
+>     private void showMoveOrthogonalBenspointFeedback (BendpointRequest request) {
+>         if (getFeedbackState ().originalConstraint == null) {
+>             saveOriginalConstraint ();
+435,439c456,480
+< 
+<     protected void showOutsideTargetFeedback (List constraint) {
+<         Point ptAdd = ((Bendpoint) constraint.get (constraint.size () - 1)).getLocation ();
+<         Bendpoint bp = new AbsoluteBendpoint (ptAdd);
+<         constraint.add (constraint.size () - 1, bp);
+---
+>         Point ptLoc = new Point (request.getLocation ());
+>         List constraint = (List) getConnection ().getRoutingConstraint ();
+>         getConnection ().translateToRelative (ptLoc);
+>         int index = getFeedbackState ().isOutsideSource ? request.getIndex () + 1 : request.getIndex ();
+>         Point previous = ((Bendpoint) constraint.get (index - 1)).getLocation ();
+>         Point moving = ((Bendpoint) constraint.get (index)).getLocation ();
+>         Point next = ((Bendpoint) constraint.get (index + 1)).getLocation ();
+>         LineSeg originalFirst = new LineSeg (previous.getCopy (), moving.getCopy ());
+>         LineSeg originalSecond = new LineSeg (moving.getCopy (), next.getCopy ());
+>         Dimension diff = ptLoc.getDifference (moving);
+>         if (originalFirst.isHorizontal ()) {
+>             previous.y += diff.height;
+>             next.x += diff.width;
+>         } else {
+>             previous.x += diff.width;
+>             next.y += diff.height;
+>         }
+>         LineSeg movedFirst = new LineSeg (previous, ptLoc.getCopy ());
+>         LineSeg movedSecond = new LineSeg (ptLoc.getCopy (), next);
+>         index = adjustOutsideBoundsLineFeedback (movedFirst, index - 1, constraint, originalFirst);
+>         constraint.set (index, new AbsoluteBendpoint (movedFirst.getOrigin ()));
+>         constraint.set (index + 1, new AbsoluteBendpoint (movedFirst.getTerminus ()));
+>         index = adjustOutsideBoundsLineFeedback (movedSecond, index + 1, constraint, originalSecond);
+>         constraint.set (index + 1, new AbsoluteBendpoint (movedSecond.getTerminus ()));
+>         getConnection ().setRoutingConstraint (constraint);
+452,459c493
+<         if (! newLine.isHorizontal () && ! newLine.isVertical ()) {
+<             if (Math.abs (newLine.getOrigin ().x - newLine.getTerminus ().x) < Math.abs (newLine.getOrigin ().y - newLine.getTerminus ().y)) {
+<                 newLine.setTerminus (new Point (newLine.getOrigin ().x, newLine.getTerminus ().y));
+<             } else {
+<                 newLine.setTerminus (new Point (newLine.getTerminus ().x, newLine.getOrigin ().y));
+<             }
+<         }
+<         index = adjustOutsideBoundsLineFeedback (request, constraint, index, newLine);
+---
+>         index = adjustOutsideBoundsLineFeedback (newLine, index, constraint, moveLine);
+464c498
+<     protected int adjustOutsideBoundsLineFeedback (BendpointRequest request, List constraint, int index, LineSeg newLine) {
+---
+>     private int adjustOutsideBoundsLineFeedback (LineSeg newLine, int index, List constraint, LineSeg moveLine) {
+467d500
+<                 LineSeg moveLine = getLineSeg (constraint, index + 1);
+477c510
+<         if (request.getIndex () == 0 && lineOutsideSource (newLine)) {
+---
+>         if (index == 0 && lineOutsideSource (newLine)) {
+482c515
+<         } else if (getFeedbackState ().isOutsideSource) {
+---
+>         } else if (index == 1 && getFeedbackState ().isOutsideSource && ! lineOutsideSource (newLine)) {
+493c526
+<         } else if (getFeedbackState ().isOutsideTarget) {
+---
+>         } else if (checkTargetIndex == constraint.size () - 2 && getFeedbackState ().isOutsideTarget && ! lineOutsideTarget (newLine)) {
+500c533
+<             index = request.getIndex ();
+---
+>             index --;
+506,507c539,540
+<             showOutsideSourceFeedback (constraint);
+<             index = request.getIndex () + 1;
+---
+>             showOutsideSourceFeedback (newLine, moveLine, constraint);
+>             index ++;
+510c543
+<             showOutsideTargetFeedback (constraint);
+---
+>             showOutsideTargetFeedback (newLine, moveLine, constraint);
+514a548,585
+>     private void showOutsideSourceFeedback (LineSeg newLine, LineSeg moveLine, List constraint) {
+>         Connection conn = (Connection) getHostFigure ();
+>         ConnectionAnchor anchor = conn.getSourceAnchor ();
+>         PrecisionPoint startPoint = new PrecisionPoint (anchor.getOwner ().getBounds ().getCenter ());
+>         anchor.getOwner ().translateToAbsolute (startPoint);
+>         conn.translateToRelative (startPoint);
+>         PrecisionRectangle bounds = new PrecisionRectangle (anchor.getOwner ().getBounds ());
+>         anchor.getOwner ().translateToAbsolute (bounds);
+>         conn.translateToRelative (bounds);
+>         Point origin = new Point (newLine.getOrigin ());
+>         if (moveLine.isHorizontal ()) {
+>             origin.x = startPoint.x;
+>         } else {
+>             origin.y = startPoint.y;
+>         }
+>         newLine.setOrigin (origin);
+>         constraint.add (0, new AbsoluteBendpoint (startPoint));
+>     }
+> 
+>     private void showOutsideTargetFeedback (LineSeg newLine, LineSeg moveLine, List constraint) {
+>         Connection conn = (Connection) getHostFigure ();
+>         ConnectionAnchor anchor = conn.getTargetAnchor ();
+>         PrecisionPoint endPoint = new PrecisionPoint (anchor.getOwner ().getBounds ().getCenter ());
+>         anchor.getOwner ().translateToAbsolute (endPoint);
+>         conn.translateToRelative (endPoint);
+>         PrecisionRectangle bounds = new PrecisionRectangle (anchor.getOwner ().getBounds ());
+>         anchor.getOwner ().translateToAbsolute (bounds);
+>         conn.translateToRelative (bounds);
+>         Point terminus = new Point (newLine.getTerminus ());
+>         if (moveLine.isHorizontal ()) {
+>             terminus.x = endPoint.x;
+>         } else {
+>             terminus.y = endPoint.y;
+>         }
+>         newLine.setTerminus (terminus);
+>         constraint.add (new AbsoluteBendpoint (endPoint));
+>     }
+> 

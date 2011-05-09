@@ -1,0 +1,362 @@
+package org.eclipse.gmf.runtime.diagram.ui.parts;
+
+import java.util.ArrayList;
+
+import java.util.Collection;
+
+import java.util.Collections;
+
+import java.util.EventObject;
+
+import java.util.HashMap;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import java.util.Map;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.commands.operations.IOperationHistory;
+
+import org.eclipse.core.commands.operations.IOperationHistoryListener;
+
+import org.eclipse.core.commands.operations.IUndoContext;
+
+import org.eclipse.core.commands.operations.IUndoableOperation;
+
+import org.eclipse.core.commands.operations.ObjectUndoContext;
+
+import org.eclipse.core.commands.operations.OperationHistoryEvent;
+
+import org.eclipse.core.commands.operations.OperationHistoryFactory;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.gef.commands.Command;
+
+import org.eclipse.gef.commands.CommandStack;
+
+import org.eclipse.gef.commands.CommandStackListener;
+
+import org.eclipse.gef.commands.CompoundCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandResult;
+
+import org.eclipse.gmf.runtime.common.core.command.CompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICommand;
+
+import org.eclipse.gmf.runtime.common.core.command.ICompositeCommand;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.CommandProxy;
+
+import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+
+import org.eclipse.gmf.runtime.diagram.ui.internal.tools.ConnectionHandleTool;
+
+import org.eclipse.swt.widgets.Display;
+
+public class DiagramCommandStack extends CommandStack {
+    private Map stackToManager = new HashMap ();
+    private IDiagramEditDomain editDomain;
+    private Command cmdRecent = null;
+    private IOperationHistory delegate;
+    private IUndoContext undoContext;
+    private final class HistoryEventObject extends EventObject {
+        private final OperationHistoryEvent event;
+
+        private HistoryEventObject (OperationHistoryEvent event) {
+            super (event.getHistory ());
+            this.event = event;
+        }
+
+        public OperationHistoryEvent getOperationHistoryEvent () {
+            return event;
+        }
+
+    }
+
+    public DiagramCommandStack (IDiagramEditDomain editDomain) {
+        this.editDomain = editDomain;
+    }
+
+    public void addCommandStackListener (CommandStackListener listener) {
+        final CommandStackListener csl = listener;
+        removeCommandStackListener (csl);
+        IOperationHistoryListener cmcl = new IOperationHistoryListener () {
+
+            public void historyNotification (OperationHistoryEvent event) {
+                if (csl != null) {
+                    csl.commandStackChanged (new HistoryEventObject (event));
+                }
+            }
+
+        }
+
+        ;
+        stackToManager.put (csl, cmcl);
+        getOperationHistory ().addOperationHistoryListener (cmcl);
+    }
+
+    public boolean canRedo () {
+        return getOperationHistory ().canRedo (getUndoContext ());
+    }
+
+    public boolean canUndo () {
+        return getOperationHistory ().canUndo (getUndoContext ());
+    }
+
+    public void execute (Command command) {
+        execute (command, null);
+    }
+
+    public void execute (Command command, IProgressMonitor progressMonitor) {
+        if (command == null || ! command.canExecute ()) return;
+
+        execute (getICommand (command), progressMonitor);
+    }
+
+    protected void execute (ICommand command) {
+        execute (command, null);
+    }
+
+    protected void execute (ICommand command, IProgressMonitor progressMonitor) {
+        if (progressMonitor != null) {
+            DiagramGraphicalViewer viewer = getDiagramGraphicalViewer ();
+            if (viewer != null && Display.getCurrent () == null) viewer.enableUpdates (false);
+
+            try {
+                command.addContext (getUndoContext ());
+                getOperationHistory ().execute (command, progressMonitor, null);
+            } catch (ExecutionException e) {
+                Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "execute", e);
+                Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.COMMAND_FAILURE, "execute", e);
+            } finally {
+                if (viewer != null) viewer.enableUpdates (true);
+
+            }
+        } else {
+            try {
+                command.addContext (getUndoContext ());
+                getOperationHistory ().execute (command, new NullProgressMonitor (), null);
+            } catch (ExecutionException e) {
+                Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "execute", e);
+                Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.COMMAND_FAILURE, "execute", e);
+            }
+        }
+    }
+
+    private DiagramGraphicalViewer getDiagramGraphicalViewer () {
+        IDiagramEditDomain ded = getDiagramEditDomain ();
+        DiagramGraphicalViewer viewer = null;
+        if (ded instanceof DiagramEditDomain) {
+            IDiagramWorkbenchPart dgrmWP = ((DiagramEditDomain) ded).getDiagramEditorPart ();
+            if (dgrmWP != null) {
+                IDiagramGraphicalViewer dgv = ((DiagramEditDomain) ded).getDiagramEditorPart ().getDiagramGraphicalViewer ();
+                if (dgv instanceof DiagramGraphicalViewer) viewer = (DiagramGraphicalViewer) dgv;
+
+            }
+        }
+        return viewer;
+    }
+
+    public static ICommand getICommand (Command command) {
+        if (command instanceof CompoundCommand) {
+            CompositeCommand composite = new CompositeCommand (command.getLabel ());
+            Object [] subCommands = ((CompoundCommand) command).getChildren ();
+            for (int i = 0;
+            i < subCommands.length; i ++) {
+                composite.compose (getICommand ((Command) subCommands [i]));
+            }
+            return composite.reduce ();
+        }
+        if (command instanceof EtoolsProxyCommand) {
+            return getICommand (((EtoolsProxyCommand) command).getICommand ());
+        }
+        return new CommandProxy (command);
+    }
+
+    public static ICommand getICommand (ICommand command) {
+        ICommand result = command;
+        if (command instanceof ICompositeCommand) {
+            List processedCommands = new ArrayList ();
+            ICompositeCommand composite = (ICompositeCommand) command;
+            if (! composite.isEmpty ()) {
+                for (Iterator i = composite.iterator ();
+                i.hasNext ();) {
+                    IUndoableOperation nextOperation = (IUndoableOperation) i.next ();
+                    i.remove ();
+                    if (nextOperation instanceof ICommand) {
+                        ICommand nextCommand = (ICommand) nextOperation;
+                        processedCommands.add (getICommand (nextCommand));
+                    } else {
+                        processedCommands.add (nextOperation);
+                    }
+                }
+                for (Iterator i = processedCommands.iterator ();
+                i.hasNext ();) {
+                    composite.add ((IUndoableOperation) i.next ());
+                }
+                result = composite.reduce ();
+            }
+        } else if (command instanceof CommandProxy) {
+            return getICommand (((CommandProxy) command).getCommand ());
+        }
+
+        return result;
+    }
+
+    public Command getMostRecentCommand () {
+        return cmdRecent;
+    }
+
+    public Command getRedoCommand () {
+        if (getOperationHistory ().canRedo (getUndoContext ())) {
+            Command emptyCmd = new Command () {
+            }
+
+            ;
+            IUndoableOperation redo = getOperationHistory ().getRedoOperation (getUndoContext ());
+            emptyCmd.setLabel (redo.getLabel ());
+            return emptyCmd;
+        }
+        return null;
+    }
+
+    public Command getUndoCommand () {
+        if (getOperationHistory ().canUndo (getUndoContext ())) {
+            Command emptyCmd = new Command () {
+            }
+
+            ;
+            IUndoableOperation undo = getOperationHistory ().getUndoOperation (getUndoContext ());
+            emptyCmd.setLabel (undo.getLabel ());
+            return emptyCmd;
+        }
+        return null;
+    }
+
+    public void redo () {
+        cmdRecent = getRedoCommand ();
+        try {
+            getOperationHistory ().redo (getUndoContext (), new NullProgressMonitor (), null);
+        } catch (ExecutionException e) {
+            Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, ConnectionHandleTool.class, "redo", e);
+            Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.COMMAND_FAILURE, "redo", e);
+        }
+    }
+
+    public void removeCommandStackListener (CommandStackListener listener) {
+        final CommandStackListener csl = listener;
+        if (csl != null) {
+            IOperationHistoryListener historyListener = (IOperationHistoryListener) stackToManager.get (csl);
+            if (historyListener != null) {
+                getOperationHistory ().removeOperationHistoryListener (historyListener);
+            }
+            stackToManager.remove (csl);
+        }
+    }
+
+    public void undo () {
+        cmdRecent = getUndoCommand ();
+        try {
+            getOperationHistory ().undo (getUndoContext (), new NullProgressMonitor (), null);
+        } catch (ExecutionException e) {
+            Trace.catching (DiagramUIPlugin.getInstance (), DiagramUIDebugOptions.EXCEPTIONS_CATCHING, ConnectionHandleTool.class, "undo", e);
+            Log.error (DiagramUIPlugin.getInstance (), DiagramUIStatusCodes.COMMAND_FAILURE, "undo", e);
+        }
+    }
+
+    protected IDiagramEditDomain getDiagramEditDomain () {
+        return editDomain;
+    }
+
+    protected IOperationHistory getOperationHistory () {
+        if (delegate == null) {
+            delegate = OperationHistoryFactory.getOperationHistory ();
+        }
+        return delegate;
+    }
+
+    public void setOperationHistory (IOperationHistory operationHistory) {
+        this.delegate = operationHistory;
+    }
+
+    public static Collection getReturnValues (Command c) {
+        if (c instanceof CompoundCommand) {
+            CompoundCommand cc = (CompoundCommand) c;
+            List l = new ArrayList (cc.size ());
+            for (Iterator i = cc.getCommands ().iterator ();
+            i.hasNext ();) l.addAll (getReturnValues ((Command) i.next ()));
+
+            return l;
+        } else if (c instanceof EtoolsProxyCommand) {
+            return getReturnValues ((EtoolsProxyCommand) c);
+        }
+
+        return Collections.EMPTY_LIST;
+    }
+
+    public static Collection getReturnValues (EtoolsProxyCommand cmd) {
+        return getReturnValues (cmd.getICommand ());
+    }
+
+    public static Collection getReturnValues (CommandProxy cmd) {
+        return getReturnValues (cmd.getCommand ());
+    }
+
+    public static Collection getReturnValues (ICommand cmd) {
+        if (cmd instanceof ICompositeCommand) {
+            ICompositeCommand cc = (ICompositeCommand) cmd;
+            List l = new ArrayList ();
+            for (Iterator i = cc.iterator ();
+            i.hasNext ();) {
+                IUndoableOperation child = (IUndoableOperation) i.next ();
+                if (child instanceof ICommand) {
+                    l.addAll (getReturnValues ((ICommand) child));
+                }
+            }
+            return l;
+        } else if (cmd instanceof CommandProxy) {
+            return getReturnValues ((CommandProxy) cmd);
+        } else {
+            CommandResult r = cmd.getCommandResult ();
+            Object o = r != null ? r.getReturnValue () : null;
+            if (o instanceof Collection) {
+                return (Collection) o;
+            } else if (o != null) {
+                return Collections.singletonList (o);
+            }
+
+        }
+
+        return Collections.EMPTY_LIST;
+    }
+
+    public IUndoContext getUndoContext () {
+        if (undoContext == null) {
+            undoContext = new ObjectUndoContext (this);
+        }
+        return undoContext;
+    }
+
+    public void setUndoContext (IUndoContext undoContext) {
+        this.undoContext = undoContext;
+    }
+
+}
+

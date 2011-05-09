@@ -1,0 +1,107 @@
+package org.eclipse.gmf.runtime.emf.ui.action;
+
+import org.eclipse.core.commands.ExecutionException;
+
+import org.eclipse.core.commands.operations.IUndoableOperation;
+
+import org.eclipse.core.runtime.IAdaptable;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.action.AbstractActionDelegate;
+
+import org.eclipse.gmf.runtime.common.ui.action.IActionWithProgress;
+
+import org.eclipse.gmf.runtime.emf.ui.internal.MslUIDebugOptions;
+
+import org.eclipse.gmf.runtime.emf.ui.internal.MslUIPlugin;
+
+import org.eclipse.gmf.runtime.emf.ui.internal.MslUIStatusCodes;
+
+public abstract class AbstractModelActionDelegate extends AbstractActionDelegate {
+    private IStatus status;
+
+    protected AbstractModelActionDelegate () {
+        super ();
+    }
+
+    public final void run (final IProgressMonitor progressMonitor) {
+        if (isReadOnly ()) {
+            try {
+                getEditingDomain ().runExclusive (new Runnable () {
+
+                    public void run () {
+                        AbstractModelActionDelegate.super.run (progressMonitor);
+                    }
+
+                }
+
+                );
+            } catch (InterruptedException e) {
+                Trace.catching (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", e);
+            }
+        } else {
+            Runnable runnable = new Runnable () {
+
+                public void run () {
+                    AbstractModelActionDelegate.super.run (progressMonitor);
+                }
+
+            }
+
+            ;
+            WriteCommand write = new WriteCommand (getEditingDomain (), getLabel (), getActionManager ().getOperationHistory (), runnable) {
+
+                public IStatus getStatus () {
+                    return AbstractModelActionDelegate.this.getStatus ();
+                }
+
+            }
+
+            ;
+            execute (write, new NullProgressMonitor (), null);
+        }
+    }
+
+    protected abstract TransactionalEditingDomain getEditingDomain ();
+
+    protected boolean isReadOnly () {
+        return false;
+    }
+
+    protected IStatus getStatus () {
+        if (status == null) {
+            return Status.OK_STATUS;
+        }
+        return status;
+    }
+
+    protected void setStatus (IStatus status) {
+        this.status = status;
+    }
+
+    protected IStatus execute (IUndoableOperation operation, IProgressMonitor progressMonitor, IAdaptable info) {
+        try {
+            setStatus (getActionManager ().getOperationHistory ().execute (operation, progressMonitor, info));
+        } catch (ExecutionException e) {
+            setStatus (new Status (Status.ERROR, MslUIPlugin.getPluginId (), MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getLocalizedMessage (), e));
+            Trace.catching (MslUIPlugin.getDefault (), MslUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "run", e);
+            Log.error (MslUIPlugin.getDefault (), MslUIStatusCodes.IGNORED_EXCEPTION_WARNING, e.getLocalizedMessage (), e);
+        }
+        return getStatus ();
+    }
+
+}
+

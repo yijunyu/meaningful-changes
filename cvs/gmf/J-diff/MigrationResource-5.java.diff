@@ -1,0 +1,66 @@
+102,103c102
+< 	protected void handlePostLoad(Exception exception) {
+< 		assert exception == exception; // get rid of unused param warn 
+---
+> 	protected void handlePostLoad(@SuppressWarnings("unused")Exception exception) { 
+142a142
+> 	 * and reports migration diagnostic.
+164,165c164
+< 		final MigrationConfig config;
+< 		boolean oldVersionDetected = false;
+---
+> 		MigrationConfig config;
+169,170d167
+< 			String ext = xmiResource.getURI().fileExtension();
+< 			config = (ext != null) ? MigrationConfig.Registry.INSTANCE.getConfig(ext) : null;
+175d171
+< 		 * @see org.eclipse.emf.ecore.xmi.impl.XMLHandler#getPackageForURI(java.lang.String)
+176a173
+> 		@Override		
+177a175,185
+> 			if(config == null) {
+> 				// Remark: ensure that GMF meta-models generated packages are initialized before accessing 
+> 				// 	MigrationConfig.Registry, as a migrated package initialization code performs the migration config 
+> 				// 	registration.
+> 				//	TODO - better to use extension point for migration config registry     
+> 				EPackage.Registry.INSTANCE.getEPackage(uriString);
+> 				
+> 				String ext = xmlResource.getURI().fileExtension();
+> 				config = (ext != null) ? MigrationConfig.Registry.INSTANCE.getConfig(ext) : null;
+> 			}
+> 			
+181d188
+< 					this.oldVersionDetected = true;
+200a208
+> 		private FeatureKey processedFeatureKey;
+203a212
+> 			this.processedFeatureKey = new FeatureKey();
+208a218
+> 				notifyMigrationApplied(); // notify we had to migrate
+216a227,228
+> 				processedFeatureKey.setFeature(feature);
+> 				
+220,221c232
+< 					EReference referenceFeature = ((EReference)feature);
+< 					EClass oldDefaultRefType = (config != null) ? config.getAddedTypeInfo(referenceFeature) : null;
+---
+> 					EClass oldDefaultRefType = (config != null) ? config.getAddedTypeInfo(processedFeatureKey) : null;
+227c238
+< 						resource().handleMigrationPatchApplied();
+---
+> 						notifyMigrationApplied();
+237c248,259
+< 			return config != null && oldVersionDetected;
+---
+> 			return config != null && resource().oldVersionDetected;
+> 		}
+> 		
+> 		/**
+> 		 * To be called if a migration patch had to be applied to load model successfully.
+> 		 * <p>
+> 		 * Note: It's important in order to detect whether an old model version which 
+> 		 * was loaded contained incompatible constructs. No diagnostics are produced
+> 		 * for old version models with compatible contents.
+> 		 */
+> 		private void notifyMigrationApplied() {
+> 			resource().handleMigrationPatchApplied();

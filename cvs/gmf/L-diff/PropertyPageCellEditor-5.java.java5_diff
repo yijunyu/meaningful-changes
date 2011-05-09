@@ -1,0 +1,292 @@
+3,4d2
+< import java.text.MessageFormat;
+< 
+13,27c11
+< import org.eclipse.jface.preference.PreferenceManager;
+< 
+< import org.eclipse.jface.preference.PreferenceNode;
+< 
+< import org.eclipse.jface.viewers.DialogCellEditor;
+< 
+< import org.eclipse.jface.viewers.ISelectionProvider;
+< 
+< import org.eclipse.swt.SWT;
+< 
+< import org.eclipse.swt.events.KeyAdapter;
+< 
+< import org.eclipse.swt.events.KeyEvent;
+< 
+< import org.eclipse.swt.events.ModifyEvent;
+---
+> import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+29c13
+< import org.eclipse.swt.events.ModifyListener;
+---
+> import org.eclipse.gmf.runtime.common.ui.dialogs.PropertiesDialog;
+31c15
+< import org.eclipse.swt.events.MouseAdapter;
+---
+> import org.eclipse.gmf.runtime.common.ui.services.properties.PropertiesService;
+33c17
+< import org.eclipse.swt.events.MouseEvent;
+---
+> import org.eclipse.jface.preference.PreferenceManager;
+35c19
+< import org.eclipse.swt.events.TraverseEvent;
+---
+> import org.eclipse.jface.preference.PreferenceNode;
+37c21
+< import org.eclipse.swt.events.TraverseListener;
+---
+> import org.eclipse.swt.SWT;
+45,46d28
+< import org.eclipse.ui.dialogs.PropertyDialogAction;
+< 
+53,65c35
+< import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+< 
+< import org.eclipse.gmf.runtime.common.ui.dialogs.PropertiesDialog;
+< 
+< import org.eclipse.gmf.runtime.common.ui.services.properties.PropertiesService;
+< 
+< public class PropertyPageCellEditor extends DialogCellEditor {
+<     private Text text;
+<     private ModifyListener modifyListener;
+<     private boolean isSelection = false;
+<     private boolean isDeleteable = false;
+<     private boolean isSelectable = false;
+<     ISelectionProvider selectionProvider;
+---
+> public class PropertyPageCellEditor extends MultiButtonCellEditor {
+67d36
+<     private Object value = null;
+82,137d50
+<     protected Control createContents (Composite cell) {
+<         setText (new Text (cell, getStyle ()));
+<         text.addKeyListener (new KeyAdapter () {
+< 
+<             public void keyPressed (KeyEvent e) {
+<                 keyReleaseOccured (e);
+<                 if ((getControl () == null) || getControl ().isDisposed ()) return;
+< 
+<                 checkSelection ();
+<                 checkDeleteable ();
+<                 checkSelectable ();
+<             }
+< 
+<         }
+< 
+<         );
+<         text.addTraverseListener (new TraverseListener () {
+< 
+<             public void keyTraversed (TraverseEvent e) {
+<                 if (e.detail == SWT.TRAVERSE_ESCAPE || e.detail == SWT.TRAVERSE_RETURN) {
+<                     e.doit = false;
+<                 }
+<             }
+< 
+<         }
+< 
+<         );
+<         text.addMouseListener (new MouseAdapter () {
+< 
+<             public void mouseUp (MouseEvent e) {
+<                 checkSelection ();
+<                 checkDeleteable ();
+<                 checkSelectable ();
+<             }
+< 
+<         }
+< 
+<         );
+<         text.setFont (cell.getFont ());
+<         text.setBackground (cell.getBackground ());
+<         text.setText (StringStatics.BLANK);
+<         text.addModifyListener (getModifyListener ());
+<         return getText ();
+<     }
+< 
+<     protected void updateContents (Object aValue) {
+<         if (getText () == null) {
+<             return;
+<         }
+<         String aText = StringStatics.BLANK;
+<         if (aValue != null) {
+<             aText = aValue.toString ();
+<         }
+<         getText ().setText (aText);
+<     }
+< 
+201,289c114
+<         return text;
+<     }
+< 
+<     private void setText (Text text) {
+<         this.text = text;
+<     }
+< 
+<     protected void doSetFocus () {
+<         if (getText () != null) {
+<             getText ().selectAll ();
+<             getText ().setFocus ();
+<             checkSelection ();
+<             checkDeleteable ();
+<             checkSelectable ();
+<         }
+<     }
+< 
+<     protected Object doGetValue () {
+<         String aText = getText ().getText ();
+<         if (value instanceof ElementValue) {
+<             ((ElementValue) value).setValue (aText);
+<             return value;
+<         }
+<         return aText;
+<     }
+< 
+<     protected void doSetValue (Object aValue) {
+<         this.value = aValue;
+<         assert null != getText ();
+<         getText ().removeModifyListener (getModifyListener ());
+<         getText ().setText (aValue.toString ());
+<         getText ().addModifyListener (getModifyListener ());
+<     }
+< 
+<     private ModifyListener getModifyListener () {
+<         if (modifyListener == null) {
+<             modifyListener = new ModifyListener () {
+< 
+<                 public void modifyText (ModifyEvent e) {
+<                     editOccured (e);
+<                 }
+< 
+<             }
+< 
+<             ;
+<         }
+<         return modifyListener;
+<     }
+< 
+<     protected void editOccured (ModifyEvent e) {
+<         String aValue = text.getText ();
+<         if (aValue == null) {
+<             aValue = StringStatics.BLANK;
+<         }
+<         Object typedValue = aValue;
+<         boolean oldValidState = isValueValid ();
+<         boolean newValidState = isCorrect (typedValue);
+<         if (typedValue == null && newValidState) {
+<             assert (false) : "Validator isn't limiting the cell editor's type range";
+<         }
+<         if (! newValidState) {
+<             setErrorMessage (MessageFormat.format (getErrorMessage (), new Object [] {aValue}));
+<         }
+<         valueChanged (oldValidState, newValidState);
+<     }
+< 
+<     private void checkDeleteable () {
+<         boolean oldIsDeleteable = isDeleteable;
+<         isDeleteable = isDeleteEnabled ();
+<         if (oldIsDeleteable != isDeleteable) {
+<             fireEnablementChanged (DELETE);
+<         }
+<     }
+< 
+<     private void checkSelectable () {
+<         boolean oldIsSelectable = isSelectable;
+<         isSelectable = isSelectAllEnabled ();
+<         if (oldIsSelectable != isSelectable) {
+<             fireEnablementChanged (SELECT_ALL);
+<         }
+<     }
+< 
+<     private void checkSelection () {
+<         boolean oldIsSelection = isSelection;
+<         isSelection = text.getSelectionCount () > 0;
+<         if (oldIsSelection != isSelection) {
+<             fireEnablementChanged (COPY);
+<             fireEnablementChanged (CUT);
+<         }
+---
+>         return null;
+293,295c118
+<         if (text == null || text.isDisposed ()) return false;
+< 
+<         return text.getSelectionCount () > 0;
+---
+>         return false;
+299,301c122
+<         if (text == null || text.isDisposed ()) return false;
+< 
+<         return text.getSelectionCount () > 0;
+---
+>         return false;
+305,307c126
+<         if (text == null || text.isDisposed ()) return false;
+< 
+<         return text.getSelectionCount () > 0 || text.getCaretPosition () < text.getCharCount ();
+---
+>         return false;
+311,313c130
+<         if (text == null || text.isDisposed ()) return false;
+< 
+<         return true;
+---
+>         return false;
+317,319c134
+<         if (text == null || text.isDisposed ()) return false;
+< 
+<         return true;
+---
+>         return false;
+323,325c138
+<         if (text == null || text.isDisposed ()) return false;
+< 
+<         return text.getCharCount () > 0;
+---
+>         return false;
+329d141
+<         text.copy ();
+333,336d144
+<         text.cut ();
+<         checkSelection ();
+<         checkDeleteable ();
+<         checkSelectable ();
+340,350d147
+<         if (text.getSelectionCount () > 0) text.insert (StringStatics.BLANK);
+<         else {
+<             int pos = text.getCaretPosition ();
+<             if (pos < text.getCharCount ()) {
+<                 text.setSelection (pos, pos + 1);
+<                 text.insert (StringStatics.BLANK);
+<             }
+<         }
+<         checkSelection ();
+<         checkDeleteable ();
+<         checkSelectable ();
+354,357d150
+<         text.paste ();
+<         checkSelection ();
+<         checkDeleteable ();
+<         checkSelectable ();
+361,363d153
+<         text.selectAll ();
+<         checkSelection ();
+<         checkDeleteable ();
+367c157,170
+<         return value;
+---
+>         return super.doGetValue ();
+>     }
+> 
+>     protected void initButtons () {
+>         IPropertyAction setAction = new IPropertyAction () {
+> 
+>             public Object execute (Control owner) {
+>                 return openDialogBox (owner);
+>             }
+> 
+>         }
+> 
+>         ;
+>         addButton ("...", setAction);

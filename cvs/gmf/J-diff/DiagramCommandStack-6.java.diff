@@ -1,0 +1,517 @@
+2c2
+<  * Copyright (c) 2002, 2003 IBM Corporation and others.
+---
+>  * Copyright (c) 2002, 2006 IBM Corporation and others.
+16a17
+> import java.util.EventObject;
+21a23,30
+> import org.eclipse.core.commands.ExecutionException;
+> import org.eclipse.core.commands.operations.IOperationHistory;
+> import org.eclipse.core.commands.operations.IOperationHistoryListener;
+> import org.eclipse.core.commands.operations.IUndoContext;
+> import org.eclipse.core.commands.operations.IUndoableOperation;
+> import org.eclipse.core.commands.operations.ObjectUndoContext;
+> import org.eclipse.core.commands.operations.OperationHistoryEvent;
+> import org.eclipse.core.commands.operations.OperationHistoryFactory;
+22a32
+> import org.eclipse.core.runtime.NullProgressMonitor;
+27,28d36
+< import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+< import org.eclipse.gmf.runtime.common.core.command.CommandManagerChangeEvent;
+32,33c40,42
+< import org.eclipse.gmf.runtime.common.core.command.ICommandManagerChangeListener;
+< import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+---
+> import org.eclipse.gmf.runtime.common.core.command.ICompositeCommand;
+> import org.eclipse.gmf.runtime.common.core.util.Log;
+> import org.eclipse.gmf.runtime.common.core.util.Trace;
+35,36c44,48
+< import org.eclipse.gmf.runtime.diagram.ui.commands.XtoolsProxyCommand;
+< import org.eclipse.gmf.runtime.emf.commands.core.command.CompositeModelCommand;
+---
+> import org.eclipse.gmf.runtime.diagram.ui.commands.EtoolsProxyCommand;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIDebugOptions;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIPlugin;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.DiagramUIStatusCodes;
+> import org.eclipse.gmf.runtime.diagram.ui.internal.tools.ConnectionHandleTool;
+40c52
+<  * @author sshaw
+---
+>  * GEF command stack that delegates to an {@link IOperationHistory}.
+42,45c54,56
+<  * <p>
+<  * Editted by Tauseef A, Israr Feb 7, 2003 Included a protected get method for
+<  * the edit domain.
+<  * </p>
+---
+>  * @author sshaw
+>  * @author Tauseef A, Israr
+>  * @author ldamus
+56c67,89
+< 	private CommandManager commandManager;
+---
+>     private IOperationHistory delegate;
+> 
+>     private IUndoContext undoContext;
+> 
+>     private final class HistoryEventObject
+>         extends EventObject {
+> 
+>         private final OperationHistoryEvent event;
+> 
+>         private HistoryEventObject(OperationHistoryEvent event) {
+>             super(event.getHistory());
+>             this.event = event;
+>         }
+> 
+>         /**
+>          * Gets my operation history event.
+>          * 
+>          * @return my operation history event.
+>          */
+>         public OperationHistoryEvent getOperationHistoryEvent() {
+>             return event;
+>         }
+>     }
+59,60c92,97
+< 	 * constructor
+< 	 * @param editDomain the editing domain assoicated with this stack
+---
+>      * Initializes me with my diagram edit domain and undo context.
+>      * 
+>      * @param editDomain
+>      *            the editing domain assoicated with this stack
+>      * @param undoContext
+>      *            my undo context
+72a110
+> 
+78,81c116,122
+< 		ICommandManagerChangeListener cmcl = new ICommandManagerChangeListener() {
+< 			public void commandManagerChanged(CommandManagerChangeEvent event) {
+< 				if (csl != null)
+< 					csl.commandStackChanged(event);
+---
+> 
+>         IOperationHistoryListener cmcl = new IOperationHistoryListener() {
+> 
+>             public void historyNotification(OperationHistoryEvent event) {
+>                 if (csl != null) {
+>                     csl.commandStackChanged(new HistoryEventObject(event));
+>                 }
+86c127
+< 		getCommandManager().addCommandManagerChangeListener(cmcl);
+---
+>         getOperationHistory().addOperationHistoryListener(cmcl);
+95c136
+< 		return getCommandManager().canRedo();
+---
+>         return getOperationHistory().canRedo(getUndoContext());
+104c145
+< 		return getCommandManager().canUndo();
+---
+>         return getOperationHistory().canUndo(getUndoContext());
+120c161,162
+< 	 * @param command The Command to execute.
+---
+>      * @param command
+>      *            The Command to execute.
+129d170
+< 
+132c173,175
+< 	 * @param command the command to execute
+---
+>      * 
+>      * @param command
+>      *            the command to execute
+140c183,185
+< 	 * @param command the command to exectue
+---
+>      * 
+>      * @param command
+>      *            the command to exectue
+143a189
+> 
+151c197,205
+< 				getCommandManager().execute(command, progressMonitor);
+---
+>                 command.addContext(getUndoContext());
+>                 getOperationHistory().execute(command, progressMonitor, null);
+> 
+>             } catch (ExecutionException e) {
+>                 Trace.catching(DiagramUIPlugin.getInstance(),
+>                     DiagramUIDebugOptions.EXCEPTIONS_CATCHING,
+>                     getClass(), "execute", e); //$NON-NLS-1$
+>                 Log.error(DiagramUIPlugin.getInstance(),
+>                     DiagramUIStatusCodes.COMMAND_FAILURE, "execute", e); //$NON-NLS-1$
+155a210,221
+>         } else {
+>             try {
+>                 command.addContext(getUndoContext());
+>                 getOperationHistory().execute(command,
+>                     new NullProgressMonitor(), null);
+> 
+>             } catch (ExecutionException e) {
+>                 Trace.catching(DiagramUIPlugin.getInstance(),
+>                     DiagramUIDebugOptions.EXCEPTIONS_CATCHING,
+>                     getClass(), "execute", e); //$NON-NLS-1$
+>                 Log.error(DiagramUIPlugin.getInstance(),
+>                     DiagramUIStatusCodes.COMMAND_FAILURE, "execute", e); //$NON-NLS-1$
+157,158c223,224
+< 		else
+< 			getCommandManager().execute(command);
+---
+>         }
+> 
+166c232,233
+< 			IDiagramWorkbenchPart dgrmWP = ((DiagramEditDomain)ded).getDiagramEditorPart();
+---
+>             IDiagramWorkbenchPart dgrmWP = ((DiagramEditDomain) ded)
+>                 .getDiagramEditorPart();
+168c235,236
+< 				IDiagramGraphicalViewer dgv = ((DiagramEditDomain)ded).getDiagramEditorPart().getDiagramGraphicalViewer();
+---
+>                 IDiagramGraphicalViewer dgv = ((DiagramEditDomain) ded)
+>                     .getDiagramEditorPart().getDiagramGraphicalViewer();
+177c245
+< 	 * A method to convert a GEF Command into Xtools ICommand
+---
+>      * Converts a GEF {@link Command} into a GMF {@link ICommand}
+180c248,249
+< 	 * @return <code>ICommand</code>
+---
+>      *            the GEF command
+>      * @return the GMF command
+182a252
+> 
+184c254,256
+< 			CompositeCommand cc = new CompositeCommand(command.getLabel());
+---
+> 
+>             CompositeCommand composite = new CompositeCommand(
+>                 command.getLabel());
+185a258
+> 
+187c260
+< 				cc.compose(getICommand((Command) subCommands[i]));
+---
+>                 composite.compose(getICommand((Command) subCommands[i]));
+189c262
+< 			return cc.unwrap();
+---
+>             return composite.reduce();
+190a264
+> 
+193a268
+> 
+198c273,277
+< 	 * A method to remove redundancies from an Xtools ICommand
+---
+>      * Removes redundancies from <code>command</code> by stripping out layers
+>      * of command wrappers used to accomodate the use of GEF commands on an
+>      * {@link IOperationHistory} and {@link ICommand}s on the GEF
+>      * {@link CommandStack}.
+>      * 
+200c279,281
+< 	 * @return <code>ICommand</code>
+---
+>      *            the command to be processed
+>      * @return a command representing the simplified form of the input command.
+>      *         May be a new command.
+204,228c285,308
+< //		if (command instanceof CompositeModelActionCommand) {
+< //			CompositeModelActionCommand cc = new CompositeModelActionCommand(
+< //				command.getLabel());
+< //			List subCommands = ((CompositeCommand) command).getCommands();
+< //			for (int i = 0; i < subCommands.size(); i++) {
+< //				cc.compose(getICommand((ICommand) subCommands.get(i)));
+< //			}
+< //			return cc;
+< //		}
+< 
+< 		if (command instanceof CompositeModelCommand) {
+< 			CompositeModelCommand cc = new CompositeModelCommand(command
+< 				.getLabel());
+< 			List subCommands = ((CompositeCommand) command).getCommands();
+< 			for (int i = 0; i < subCommands.size(); i++) {
+< 				cc.compose(getICommand((ICommand) subCommands.get(i)));
+< 			}
+< 			return cc.unwrap();
+< 		}
+< 
+< 		if (command instanceof CompositeCommand) {
+< 			CompositeCommand cc = new CompositeCommand(command.getLabel());
+< 			List subCommands = ((CompositeCommand) command).getCommands();
+< 			for (int i = 0; i < subCommands.size(); i++) {
+< 				cc.compose(getICommand((ICommand) subCommands.get(i)));
+---
+>         ICommand result = command;
+> 
+>         if (command instanceof ICompositeCommand) {
+>             // process composite command
+>             List processedCommands = new ArrayList();
+> 
+>             ICompositeCommand composite = (ICompositeCommand) command;
+> 
+>             if (!composite.isEmpty()) {
+> 
+>                 for (Iterator i = composite.iterator(); i.hasNext();) {
+>                     IUndoableOperation nextOperation = (IUndoableOperation) i
+>                         .next();
+> 
+>                     // remove the next child from the composite
+>                     i.remove();
+> 
+>                     // convert any GEF commands to GMF commands
+>                     if (nextOperation instanceof ICommand) {
+>                         ICommand nextCommand = (ICommand) nextOperation;
+>                         processedCommands.add(getICommand(nextCommand));
+> 
+>                     } else {
+>                         processedCommands.add(nextOperation);
+230d309
+< 			return cc.unwrap();
+232,233c311,320
+< 		if (command instanceof XtoolsProxyCommand) {
+< 			return getICommand(((XtoolsProxyCommand) command).getCommand());
+---
+> 
+>                 // add all the children back
+>                 for (Iterator i = processedCommands.iterator(); i.hasNext();) {
+>                     composite.add((IUndoableOperation) i.next());
+>                 }
+> 
+>                 // reduce to the simplest equivalent form
+>                 result = composite.reduce();
+>             }
+> 
+234a322
+>         	// process GEF command proxy
+238c326
+< 		return command;
+---
+>         return result;
+242,243c330
+< 	 * Clears both the undo and redo stacks, then sends a notification to any
+< 	 * object listening to the CommandStack.
+---
+>      * Flushes my undo context from my delegate operation history.
+246c333,342
+< 		getCommandManager().clear();
+---
+>         getOperationHistory().dispose(getUndoContext(), true, true, false);
+>         super.flush();
+>     }
+>     
+>     /**
+>      * Flushes my operation history delegate.
+>      */
+>     public void dispose() {
+>         super.dispose();
+>         flush();
+264c360
+< 		if (getCommandManager().canRedo()) {
+---
+>         if (getOperationHistory().canRedo(getUndoContext())) {
+269c365,367
+< 			emptyCmd.setLabel(getCommandManager().getRedoLabel());
+---
+>             IUndoableOperation redo = getOperationHistory().getRedoOperation(
+>                 getUndoContext());
+>             emptyCmd.setLabel(redo.getLabel());
+282c380
+< 		if (getCommandManager().canUndo()) {
+---
+>         if (getOperationHistory().canUndo(getUndoContext())) {
+287c385,387
+< 			emptyCmd.setLabel(getCommandManager().getUndoLabel());
+---
+>             IUndoableOperation undo = getOperationHistory().getUndoOperation(
+>                 getUndoContext());
+>             emptyCmd.setLabel(undo.getLabel());
+299c399,410
+< 		getCommandManager().redo();
+---
+> 
+>         try {
+>             getOperationHistory().redo(getUndoContext(),
+>                 new NullProgressMonitor(), null);
+> 
+>         } catch (ExecutionException e) {
+>             Trace.catching(DiagramUIPlugin.getInstance(),
+>                 DiagramUIDebugOptions.EXCEPTIONS_CATCHING,
+>                 ConnectionHandleTool.class, "redo", e); //$NON-NLS-1$
+>             Log.error(DiagramUIPlugin.getInstance(),
+>                 DiagramUIStatusCodes.COMMAND_FAILURE, "redo", e); //$NON-NLS-1$
+>         }
+309a421
+> 
+311c423
+< 			ICommandManagerChangeListener cmcl = (ICommandManagerChangeListener) stackToManager
+---
+>             IOperationHistoryListener historyListener = (IOperationHistoryListener) stackToManager
+313,314c425,429
+< 			if (cmcl != null)
+< 				getCommandManager().removeCommandManagerChangeListener(cmcl);
+---
+> 
+>             if (historyListener != null) {
+>                 getOperationHistory().removeOperationHistoryListener(
+>                     historyListener);
+>             }
+325c440,451
+< 		getCommandManager().undo();
+---
+> 
+>         try {
+>             getOperationHistory().undo(getUndoContext(),
+>                 new NullProgressMonitor(), null);
+> 
+>         } catch (ExecutionException e) {
+>             Trace.catching(DiagramUIPlugin.getInstance(),
+>                 DiagramUIDebugOptions.EXCEPTIONS_CATCHING,
+>                 ConnectionHandleTool.class, "undo", e); //$NON-NLS-1$
+>             Log.error(DiagramUIPlugin.getInstance(),
+>                 DiagramUIStatusCodes.COMMAND_FAILURE, "undo", e); //$NON-NLS-1$
+>         }
+338c464
+< 	 * Returns the commandManager.
+---
+>      * Gets my operation history delegate.
+340c466
+< 	 * @return CommandManager
+---
+>      * @return my operation history delegate
+342,345c468,473
+< 	protected CommandManager getCommandManager() {
+< 		if (commandManager == null)
+< 			return CommandManager.getDefault();
+< 		return commandManager;
+---
+>     protected IOperationHistory getOperationHistory() {
+> 
+>         if (delegate == null) {
+>             delegate = OperationHistoryFactory.getOperationHistory();
+>         }
+>         return delegate;
+349c477
+< 	 * Sets the commandManager.
+---
+>      * Sets my operation history delegate.
+351,352c479,480
+< 	 * @param commandManager
+< 	 *            The commandManager to set
+---
+>      * @param operationHistory
+>      *            my operation history delegate
+354,355c482,483
+< 	protected void setCommandManager(CommandManager commandManager) {
+< 		this.commandManager = commandManager;
+---
+>     public void setOperationHistory(IOperationHistory operationHistory) {
+>         this.delegate = operationHistory;
+361c489,490
+< 	 * @param c The command
+---
+>      * @param c
+>      *            The command
+372,373c501
+< 		} 
+< 		else if ( c instanceof EtoolsProxyCommand ) {
+---
+>         } else if (c instanceof EtoolsProxyCommand) {
+381c509,511
+< 	 * @param cmd command to use
+---
+>      * 
+>      * @param cmd
+>      *            command to use
+388,395c518,519
+< 	/**
+< 	 * gets the return the values for the supplied command.
+< 	 * @param cmd command to use
+< 	 * @return a collection of return values
+< 	 */
+< 	public static Collection getReturnValues( XtoolsProxyCommand cmd ) {
+< 		return getReturnValues( cmd.getCommand() );
+< 	}
+---
+> 
+>     
+406,407d529
+<     
+< 
+410c532,534
+< 	 * @param cmd command to use
+---
+>      * 
+>      * @param cmd
+>      *            command to use
+414,415c538,540
+< 		if ( cmd instanceof CompositeCommand ) {
+< 			CompositeCommand cc = (CompositeCommand)cmd;
+---
+>         
+>         if (cmd instanceof ICompositeCommand) {
+>             ICompositeCommand cc = (ICompositeCommand) cmd;
+417c542
+< 			for (Iterator i = cc.getCommands().iterator(); i.hasNext();)
+---
+>             for (Iterator i = cc.iterator(); i.hasNext();)
+420,428c545,546
+< 		}
+< 		else if ( cmd instanceof XtoolsProxyCommand ) {	//
+< 			// Need to recurse into the proxy command(s) since they
+< 			// will not have set the CommandProxy result
+< 			// This Could be moved into CommandProxy but
+< 			// #getCommandResult() can no longer be final.
+< 			return getReturnValues((XtoolsProxyCommand)cmd);
+< 		}
+<         else if ( cmd instanceof CommandProxy ) { //
+---
+>             
+>         } else if ( cmd instanceof CommandProxy ) { //
+434,435c552,553
+<         }
+< 		else {
+---
+>         
+>         } else {
+437c555,557
+< 			Object o = r != null ? r.getReturnValue() : null;
+---
+>             Object o = r != null ? r.getReturnValue()
+>                 : null;
+>             
+440,441c560,561
+< 			}
+< 			else if (o != null) {
+---
+>                 
+>             } else if (o != null) {
+444a565
+>         
+445a567,575
+>     }
+> 
+>     /**
+>      * Gets my undo context. I add my context to all commands executed through
+>      * me.
+>      * 
+>      * @return my undo context
+>      */
+>     public IUndoContext getUndoContext() {
+446a577,590
+>         if (undoContext == null) {
+>             undoContext = new ObjectUndoContext(this);
+>         }
+>         return undoContext;
+>     }
+>     
+>     /**
+>      * Sets my undo context.
+>      * 
+>      * @param undoContext
+>      *            my undo context
+>      */
+>     public void setUndoContext(IUndoContext undoContext) {
+>         this.undoContext = undoContext;

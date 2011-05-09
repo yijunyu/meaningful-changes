@@ -1,0 +1,112 @@
+package org.eclipse.gmf.runtime.emf.type.core.internal.descriptors;
+
+import java.net.URL;
+
+import java.util.HashMap;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.CoreException;
+
+import org.eclipse.core.runtime.IConfigurationElement;
+
+import org.eclipse.core.runtime.Platform;
+
+import org.osgi.framework.Bundle;
+
+import org.eclipse.gmf.runtime.common.core.util.StringStatics;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementType;
+
+import org.eclipse.gmf.runtime.emf.type.core.IElementTypeDescriptor;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.EMFTypePluginStatusCodes;
+
+import org.eclipse.gmf.runtime.emf.type.core.internal.l10n.EMFTypeCoreMessages;
+
+public abstract class ElementTypeDescriptor implements IElementTypeDescriptor {
+    private IConfigurationElement configElement;
+    private final String id;
+    private String name;
+    private URL iconURL;
+    private String kindName;
+    private final Map params = new HashMap ();
+
+    protected ElementTypeDescriptor (IElementType elementType) {
+        this.id = elementType.getId ();
+        this.iconURL = elementType.getIconURL ();
+        this.name = elementType.getDisplayName ();
+    }
+
+    protected ElementTypeDescriptor (IConfigurationElement configElement) throws CoreException {
+        assert configElement != null;
+        this.configElement = configElement;
+        this.id = configElement.getAttribute (ElementTypeXmlConfig.A_ID);
+        if (id == null) {
+            throw EMFTypePluginStatusCodes.getTypeInitException (StringStatics.BLANK, EMFTypeCoreMessages.type_reason_no_id_WARN_, null);
+        }
+        this.name = configElement.getAttribute (ElementTypeXmlConfig.A_NAME);
+        String imageFilePath = configElement.getAttribute (ElementTypeXmlConfig.A_ICON);
+        if (imageFilePath != null) {
+            String pluginId = configElement.getDeclaringExtension ().getNamespace ();
+            if (pluginId != null) {
+                this.iconURL = getUrlFromPlugin (pluginId, imageFilePath);
+            }
+        }
+        kindName = configElement.getAttribute (ElementTypeXmlConfig.A_KIND);
+        if (kindName == null || kindName.length () < 1) {
+            kindName = IElementType.class.getName ();
+        }
+        IConfigurationElement [] paramConfigElements = configElement.getChildren (ElementTypeXmlConfig.E_PARAM);
+        for (int i = 0;
+        i < paramConfigElements.length; i ++) {
+            IConfigurationElement nextParamConfig = paramConfigElements [i];
+            String paramName = nextParamConfig.getAttribute (ElementTypeXmlConfig.A_NAME);
+            if (paramName == null) {
+                throw EMFTypePluginStatusCodes.getTypeInitException (getId (), EMFTypeCoreMessages.type_reason_no_param_name_WARN_, null);
+            }
+            String paramValue = nextParamConfig.getAttribute (ElementTypeXmlConfig.A_VALUE);
+            if (paramValue == null) {
+                throw EMFTypePluginStatusCodes.getTypeInitException (getId (), EMFTypeCoreMessages.type_reason_no_param_value_WARN_, null);
+            }
+            params.put (paramName, paramValue);
+        }
+    }
+
+    private URL getUrlFromPlugin (String pluginId, String imageFilePath) {
+        Bundle bundle = Platform.getBundle (pluginId);
+        return bundle.getEntry (imageFilePath);
+    }
+
+    public String getId () {
+        return id;
+    }
+
+    public URL getIconURL () {
+        return iconURL;
+    }
+
+    public String getName () {
+        return name;
+    }
+
+    protected void setName (String name) {
+        this.name = name;
+    }
+
+    public String getKindName () {
+        return kindName;
+    }
+
+    public IConfigurationElement getConfigElement () {
+        return configElement;
+    }
+
+    public abstract IElementType getElementType ();
+
+    public String getParamValue (String paramName) {
+        return (String) params.get (paramName);
+    }
+
+}
+

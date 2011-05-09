@@ -1,0 +1,261 @@
+package org.eclipse.gmf.runtime.common.ui.action;
+
+import org.eclipse.core.commands.operations.IOperationHistory;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.core.runtime.IStatus;
+
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.gmf.runtime.common.core.command.CommandManager;
+
+import org.eclipse.gmf.runtime.common.core.util.Log;
+
+import org.eclipse.gmf.runtime.common.core.util.Trace;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIDebugOptions;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIPlugin;
+
+import org.eclipse.gmf.runtime.common.ui.internal.CommonUIStatusCodes;
+
+import org.eclipse.jface.action.Action;
+
+import org.eclipse.jface.action.IAction;
+
+import org.eclipse.jface.dialogs.ErrorDialog;
+
+import org.eclipse.jface.viewers.ISelection;
+
+import org.eclipse.jface.viewers.ISelectionProvider;
+
+import org.eclipse.jface.viewers.IStructuredSelection;
+
+import org.eclipse.jface.viewers.StructuredSelection;
+
+import org.eclipse.swt.widgets.Event;
+
+import org.eclipse.ui.IEditorPart;
+
+import org.eclipse.ui.IPartListener;
+
+import org.eclipse.ui.IViewPart;
+
+import org.eclipse.ui.IWorkbenchPart;
+
+import org.eclipse.ui.IWorkbenchPartSite;
+
+import org.eclipse.ui.IWorkbenchWindow;
+
+public abstract class AbstractActionDelegate implements IPartListener, IActionWithProgress {
+    private boolean setup;
+    private IAction action = null;
+    private IWorkbenchPart workbenchPart = null;
+    private IWorkbenchWindow workbenchWindow = null;
+
+    protected AbstractActionDelegate () {
+        super ();
+        setSetup (false);
+    }
+
+    protected final IAction getAction () {
+        return action;
+    }
+
+    protected final void setAction (IAction action) {
+        this.action = action;
+    }
+
+    protected final IWorkbenchPart getWorkbenchPart () {
+        return workbenchPart;
+    }
+
+    protected final void setWorkbenchPart (IWorkbenchPart workbenchPart) {
+        this.workbenchPart = workbenchPart;
+    }
+
+    protected final IWorkbenchWindow getWorkbenchWindow () {
+        return workbenchWindow;
+    }
+
+    protected final void setWorkbenchWindow (IWorkbenchWindow workbenchWindow) {
+        this.workbenchWindow = workbenchWindow;
+    }
+
+    protected ActionManager getActionManager () {
+        IWorkbenchPart wbp = getWorkbenchPart ();
+        if (wbp != null) {
+            ActionManager manager = (ActionManager) wbp.getAdapter (ActionManager.class);
+            if (manager != null) {
+                return manager;
+            }
+        }
+        return ActionManager.getDefault ();
+    }
+
+    protected CommandManager getCommandManager () {
+        return CommandManager.getDefault ();
+    }
+
+    protected IOperationHistory getOperationHistory () {
+        return getActionManager ().getOperationHistory ();
+    }
+
+    protected ISelection getSelection () {
+        ISelection selection = null;
+        IWorkbenchPart wbp = getWorkbenchPart ();
+        if (wbp != null) {
+            IWorkbenchPartSite wbps = wbp.getSite ();
+            if (wbps != null) {
+                ISelectionProvider selectionProvider = wbps.getSelectionProvider ();
+                if (selectionProvider != null) {
+                    selection = selectionProvider.getSelection ();
+                    if (selection != null) return selection;
+
+                }
+            }
+        }
+        return StructuredSelection.EMPTY;
+    }
+
+    protected IStructuredSelection getStructuredSelection () {
+        IStructuredSelection selection = null;
+        IWorkbenchPart wbp = getWorkbenchPart ();
+        if (wbp != null) {
+            ISelectionProvider selectionProvider = wbp.getSite ().getSelectionProvider ();
+            if (selectionProvider != null && selectionProvider.getSelection () instanceof IStructuredSelection) {
+                selection = (IStructuredSelection) selectionProvider.getSelection ();
+                if (selection != null) return selection;
+
+            }
+        }
+        return StructuredSelection.EMPTY;
+    }
+
+    public void run (IAction act) {
+        getActionManager ().run (this);
+    }
+
+    public void selectionChanged (IAction act, ISelection selection) {
+        setAction (act);
+    }
+
+    public void setActiveEditor (IAction action, IEditorPart targetEditor) {
+        setAction (action);
+        setWorkbenchPart (targetEditor);
+    }
+
+    public void setActivePart (IAction action, IWorkbenchPart targetPart) {
+        setAction (action);
+        setWorkbenchPart (targetPart);
+    }
+
+    public void partActivated (IWorkbenchPart part) {
+        setWorkbenchPart (part);
+    }
+
+    public void partBroughtToTop (IWorkbenchPart part) {
+    }
+
+    public void partClosed (IWorkbenchPart part) {
+        if (getWorkbenchPart () == part) {
+            setWorkbenchPart (null);
+        }
+    }
+
+    public void partDeactivated (IWorkbenchPart part) {
+    }
+
+    public void partOpened (IWorkbenchPart part) {
+    }
+
+    public void init (IViewPart view) {
+        setWorkbenchPart (view);
+    }
+
+    public void dispose () {
+        if (null != getWorkbenchWindow ()) {
+            getWorkbenchWindow ().getPartService ().removePartListener (this);
+        }
+        setWorkbenchPart (null);
+        setWorkbenchWindow (null);
+        setAction (null);
+    }
+
+    public void init (IWorkbenchWindow window) {
+        setWorkbenchWindow (window);
+        if (null != window.getActivePage ()) {
+            setWorkbenchPart (window.getActivePage ().getActivePart ());
+        }
+        window.getPartService ().addPartListener (this);
+    }
+
+    public String getLabel () {
+        return getAction ().getText ();
+    }
+
+    public boolean isRunnable () {
+        return getAction ().isEnabled ();
+    }
+
+    public void refresh () {
+    }
+
+    public void run (IProgressMonitor progressMonitor) {
+        if (isSetup () || ! needsSetup ()) {
+            try {
+                doRun (progressMonitor);
+            } catch (Exception e) {
+                handle (e);
+            }
+            setSetup (false);
+        } else {
+            throw new IllegalStateException ("action must be setup before it is run");
+        }
+    }
+
+    protected boolean needsSetup () {
+        return false;
+    }
+
+    protected void handle (Exception exception) {
+        Trace.catching (CommonUIPlugin.getDefault (), CommonUIDebugOptions.EXCEPTIONS_CATCHING, getClass (), "handle", exception);
+        IStatus status = new Status (IStatus.ERROR, CommonUIPlugin.getPluginId (), CommonUIStatusCodes.ACTION_FAILURE, String.valueOf (exception.getMessage ()), exception);
+        Log.log (CommonUIPlugin.getDefault (), status);
+        openErrorDialog (status);
+    }
+
+    protected void openErrorDialog (IStatus status) {
+        ErrorDialog.openError (getWorkbenchPart ().getSite ().getShell (), Action.removeMnemonics (getLabel ()), null, status);
+    }
+
+    protected abstract void doRun (IProgressMonitor progressMonitor);
+
+    public WorkIndicatorType getWorkIndicatorType () {
+        return WorkIndicatorType.BUSY;
+    }
+
+    public boolean setup () {
+        setSetup (true);
+        return true;
+    }
+
+    public boolean isSetup () {
+        return setup;
+    }
+
+    protected void setSetup (boolean setup) {
+        this.setup = setup;
+    }
+
+    public void init (IAction anAction) {
+        setAction (anAction);
+    }
+
+    public void runWithEvent (IAction anAction, Event event) {
+        run (anAction);
+    }
+
+}
+

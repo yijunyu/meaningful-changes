@@ -1,0 +1,84 @@
+6a7,8
+> import java.awt.image.WritableRaster;
+> 
+33,34d34
+< import org.eclipse.core.runtime.IStatus;
+< 
+47,48d46
+< import org.eclipse.gmf.internal.runtime.lite.svg.SVGGraphics2D;
+< 
+50a49,50
+> import org.eclipse.swt.graphics.Device;
+> 
+52a53,56
+> import org.eclipse.swt.graphics.ImageData;
+> 
+> import org.eclipse.swt.graphics.PaletteData;
+> 
+66,67d69
+<     private boolean safeRendering;
+<     private boolean directRenderingSucceeded;
+174,197d175
+<         directRenderingSucceeded = false;
+<         if (safeRendering) {
+<             paintUsingAWT (graphics, document);
+<         } else {
+<             try {
+<                 graphics.pushState ();
+<                 paintDirectly (graphics, document);
+<                 directRenderingSucceeded = true;
+<             } catch (RuntimeException e) {
+<                 Activator.log (IStatus.INFO, "Failed to paint SVG image directly", e);
+<                 graphics.restoreState ();
+<                 paintUsingAWT (graphics, document);
+<             } finally {
+<                 graphics.popState ();
+<             }
+<         }
+<     }
+< 
+<     private void paintDirectly (final Graphics graphics, Document document) {
+<         transcoder.setDraw2DGraphics (graphics);
+<         renderDocument (transcoder, document);
+<     }
+< 
+<     private void paintUsingAWT (Graphics graphics, Document document) {
+200d177
+<             transcoder.setDraw2DGraphics (null);
+204c181
+<                 image = SVGGraphics2D.toSWT (Display.getCurrent (), awtImage);
+---
+>                 image = toSWT (Display.getCurrent (), awtImage);
+215,216c192,206
+<     public final boolean isDirectRenderingSucceeded () {
+<         return directRenderingSucceeded;
+---
+>     private static org.eclipse.swt.graphics.Image toSWT (Device device, BufferedImage awtImage) {
+>         PaletteData palette = new PaletteData (0xFF0000, 0xFF00, 0xFF);
+>         ImageData swtImageData = new ImageData (awtImage.getWidth (), awtImage.getHeight (), 24, palette);
+>         int scansize = (((awtImage.getWidth () * 3) + 3) * 4) / 4;
+>         WritableRaster alphaRaster = awtImage.getAlphaRaster ();
+>         byte [] alphaBytes = new byte [awtImage.getWidth ()];
+>         for (int y = 0;
+>         y < awtImage.getHeight (); y ++) {
+>             int [] buff = awtImage.getRGB (0, y, awtImage.getWidth (), 1, null, 0, scansize);
+>             swtImageData.setPixels (0, y, awtImage.getWidth (), buff, 0);
+>             if (alphaRaster != null) {
+>                 int [] alpha = alphaRaster.getPixels (0, y, awtImage.getWidth (), 1, (int []) null);
+>                 for (int i = 0;
+>                 i < awtImage.getWidth (); i ++) {
+>                     alphaBytes [i] = (byte) alpha [i];
+218,220c208
+< 
+<     public final boolean isSafeRendering () {
+<         return safeRendering;
+---
+>                 swtImageData.setAlphas (0, y, awtImage.getWidth (), alphaBytes, 0);
+222,225c210,211
+< 
+<     public void setSafeRendering (boolean safeRendering) {
+<         this.safeRendering = safeRendering;
+<         repaint ();
+---
+>         }
+>         return new org.eclipse.swt.graphics.Image (device, swtImageData);

@@ -1,0 +1,103 @@
+package org.eclipse.gmf.internal.common.migrate;
+
+import java.io.IOException;
+
+import java.io.InputStream;
+
+import java.util.Map;
+
+import org.eclipse.emf.common.util.URI;
+
+import org.eclipse.emf.ecore.resource.Resource;
+
+import org.eclipse.emf.ecore.xmi.XMLHelper;
+
+import org.eclipse.gmf.internal.common.ToolingResourceFactory.ToolResource;
+
+public abstract class MigrationResource extends ToolResource {
+    private MigrationHelper myMigrationHelper;
+
+    protected MigrationResource (URI uri) {
+        super (uri);
+    }
+
+    @Override
+    public final void doLoad (InputStream inputStream, Map < ?, ? > options) throws IOException {
+        try {
+            super.doLoad (inputStream, options);
+            handlePostLoadSuccess ();
+        } catch (IOException e) {
+            handlePostLoadException (e);
+            throw e;
+        } catch (RuntimeException e) {
+            handlePostLoadException (e);
+            throw e;
+        }
+    }
+
+    protected void handlePostLoadSuccess () {
+        if (myMigrationHelper == null) {
+            return;
+        }
+        myMigrationHelper.postLoad ();
+        if (myMigrationHelper.isMigrationApplied ()) {
+            Diagnostic diagnostic = MigrationResource.createMessageDiagnostic (this, Messages.oldModelVersionLoadedMigrationRequired);
+            getWarnings ().add (0, diagnostic);
+        }
+    }
+
+    protected void handlePostLoadException (Exception e) {
+        if (myMigrationHelper == null) {
+            return;
+        }
+        myMigrationHelper.postLoad ();
+        if (myMigrationHelper.isMigrationApplied ()) {
+            Diagnostic diagnostic = MigrationResource.createMessageDiagnostic (this, Messages.oldModelVersionLoadErrorMigrationMayBeRequired);
+            getErrors ().add (0, diagnostic);
+        }
+    }
+
+    @Override
+    protected XMLHelper createXMLHelper () {
+        MigrationDelegate delegate = createDelegate ();
+        assert delegate != null;
+        myMigrationHelper = new MigrationHelper (this, delegate);
+        return myMigrationHelper;
+    }
+
+    protected abstract MigrationDelegate createDelegate ();
+
+    private static Diagnostic createMessageDiagnostic (Resource resource, final String message) {
+        final String location = resource.getURI () == null ? null : resource.getURI ().toString ();
+        return new Diagnostic (message, location);
+    }
+
+    public static class Diagnostic implements Resource.Diagnostic {
+        private final String myMessage;
+        private final String myLocation;
+
+        Diagnostic (String message, String location) {
+            myMessage = message;
+            myLocation = location;
+        }
+
+        public String getMessage () {
+            return myMessage;
+        }
+
+        public String getLocation () {
+            return myLocation;
+        }
+
+        public int getColumn () {
+            return 0;
+        }
+
+        public int getLine () {
+            return 0;
+        }
+
+    }
+
+}
+

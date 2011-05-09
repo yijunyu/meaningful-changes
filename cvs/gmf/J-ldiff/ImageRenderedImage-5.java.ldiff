@@ -1,0 +1,101 @@
+17a18,18
+> import org.eclipse.draw2d.SWTGraphics;
+25a28,29
+> import org.eclipse.swt.graphics.Rectangle;
+> import org.eclipse.ui.PlatformUI;
+26,26c24,24
+< import org.eclipse.swt.widgets.Display;
+---
+> import org.eclipse.swt.graphics.GC;
+50,76d52
+< 	 * Accessor for retrieving the default image for the rendered SVG data.
+< 	 * This method will render the image if it doesn't exist yet. This allows
+< 	 * for "on-demand" loading. If no-one accesses the image, then it will not
+< 	 * be rendered.
+< 	 * 
+< 	 * @see com.ibm.xtools.gef.figure.svg.ResizableImage#getDefaultImage()
+< 	 */
+< 	public Image getSWTImage() {
+< 		if (img != null)
+< 			return img;
+< 
+< 		try {
+< 			img = loadImageFromBuffer();
+< 		}
+< 		catch (Exception e) {
+< 			Trace.throwing(Draw2dRenderPlugin.getInstance(), Draw2dRenderDebugOptions.EXCEPTIONS_THROWING, ImageRenderedImage.class, 
+< 				"ImageRenderedImage.getSWTImage() : couldn't load image from buffer", //$NON-NLS-1$
+< 				e);
+< 			
+< 			// handle failure gracefully - we can't predict all the failures
+< 			// that may occur in the 3rd party library.
+< 			//img = new Image(Display.getDefault(), 8, 8);
+< 		}
+< 		return img;
+< 	}
+< 
+< 	/**
+83a60,61
+> 	protected Image renderImage() {
+> 		try {
+84,84d59
+< 	private Image loadImageFromBuffer() throws Exception {
+94a72,72
+> 			int bufferWidth = getKey().getWidth() == 0 ? origWidth : getKey().getWidth();
+95,95d71
+< 		int newWidth = getKey().getWidth() == 0 ? origWidth : getKey().getWidth();
+96a74,76
+> 			
+> 			int newWidth = bufferWidth;
+> 			int newHeight = bufferWidth;
+96,96c73,73
+< 		int newHeight = getKey().getHeight() == 0 ? origHeight : getKey().getHeight();
+---
+> 			int bufferHeight = getKey().getHeight() == 0 ? origHeight : getKey().getHeight();
+98a79,79
+> 				if (newWidth > newHeight) {
+98a82,82
+> 				else {
+99,99d81
+< 			if (origWidth < origHeight)
+100,100c83,83
+< 				newWidth = (int)Math.round(newHeight * origWidth / (double)origHeight);
+---
+> 					newWidth = (int)Math.round(newHeight * origWidth / (double)origHeight);
+101a85,101
+> 				
+> 				double scale = 1.0;
+> 				if (newWidth > bufferWidth)
+> 					scale = bufferWidth / newWidth;
+> 				if (newHeight > bufferHeight)
+> 					scale = Math.min(scale, bufferHeight / (double)newHeight);
+> 				
+> 				newWidth *= scale;
+> 				newHeight *= scale;
+> 				
+> 				Image origImage = new Image(PlatformUI.getWorkbench().getDisplay(), imgData[0]);
+> 				Image image = new Image(PlatformUI.getWorkbench().getDisplay(), new Rectangle(0, 0, bufferWidth, bufferHeight));
+> 				GC gc = new GC(image);
+> 				SWTGraphics swtG = new SWTGraphics(gc);
+> 				swtG.drawImage(origImage, 0, 0, origWidth, origHeight, (bufferWidth - newWidth) / 2, (bufferHeight - newHeight) / 2, newWidth, newHeight);
+> 				gc.dispose();
+> 				origImage.dispose();
+101,101c84,84
+< 			else
+---
+> 				}
+104a103,105
+> 				return image;
+> 			}
+> 			else {
+105a107,114
+> 				return new Image(PlatformUI.getWorkbench().getDisplay(), scaledImgData);
+> 			}
+> 		} catch (Exception e) {
+> 			Trace.throwing(Draw2dRenderPlugin.getInstance(), Draw2dRenderDebugOptions.EXCEPTIONS_THROWING, ImageRenderedImage.class, 
+> 				"ImageRenderedImage.renderImage() : couldn't load image from buffer", //$NON-NLS-1$
+> 				e);
+> 			return null;
+> 		}
+106,106d106
+< 		return new Image(Display.getDefault(), scaledImgData);

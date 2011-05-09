@@ -1,0 +1,62 @@
+package org.eclipse.gmf.runtime.emf.clipboard.core.internal;
+
+import java.util.Collections;
+
+import java.util.HashMap;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.BasePasteOperation;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.IClipboardSupport;
+
+import org.eclipse.gmf.runtime.emf.clipboard.core.PasteTarget;
+
+public class PasteOperation extends BasePasteOperation {
+    private Map parentPasteRecordMap;
+    private PasteTarget parent;
+    private Map hintsMap;
+
+    public PasteOperation (IProgressMonitor monitor, IClipboardSupport clipboardSupport, String string, PasteTarget parent, Map loadOptionsMap, Map hintsMap) throws Exception {
+        super (monitor, loadOptionsMap, ResourceInfoProcessor.getResourceInfo (string), clipboardSupport);
+        this.hintsMap = (hintsMap == null) ? Collections.EMPTY_MAP : hintsMap;
+        parentPasteRecordMap = new HashMap ();
+        this.parent = parent;
+    }
+
+    private final PasteIntoParentOperation getParentPasteProcess (PasteTarget parentElement) throws Exception {
+        PasteIntoParentOperation parentPasteProcess = (PasteIntoParentOperation) parentPasteRecordMap.get (parentElement);
+        if (parentPasteProcess == null) {
+            parentPasteProcess = new PasteIntoParentOperation (this, parentElement, getHintsMap ());
+            parentPasteRecordMap.put (parentElement, parentPasteProcess);
+        }
+        return parentPasteProcess;
+    }
+
+    public void paste () throws Exception {
+        getProgressMonitor ().worked (WORK_UNIT);
+        if (isCancelled ()) {
+            throwCancelException ();
+        }
+        PasteIntoParentOperation parentPasteProcess = getParentPasteProcess (parent);
+        if (isCancelled ()) {
+            throwCancelException ();
+        }
+        parentPasteProcess.paste ();
+        if (getCriticalResolveFailuresSet ().isEmpty () == false) {
+            throwException (PASTE, new IllegalStateException ("Critical Resolve Failure While Pasting"));
+        }
+    }
+
+    public BasePasteOperation getSpawningPasteOperation () {
+        return null;
+    }
+
+    public Map getHintsMap () {
+        return hintsMap;
+    }
+
+}
+
