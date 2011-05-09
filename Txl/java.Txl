@@ -108,16 +108,16 @@ function Private A  [class_body_declaration]
         M  [contains  each  PublicModifiers] end function
 
 keys
-    ... <<<  >>> 
+    ... <<<<<<  >>>>>> 
 end keys
 
 compounds
-    ... <<<  >>> 
+    ... <<<<<<  >>>>>> 
 end compounds
 
 define Change
-        <<<  [NL]
-        |  >>>  [NL]
+        <<<<<<  [NL]
+        |  >>>>>>  [NL]
  
 end define
 
@@ -171,9 +171,9 @@ function mark_clones_class_declaration S  [class_declaration]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [class_declaration]
-        <<< 
+        <<<<<< 
     construct S2  [class_declaration]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]
@@ -232,9 +232,9 @@ function mark_clones_interface_declaration S  [interface_declaration]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [interface_declaration]
-        <<< 
+        <<<<<< 
     construct S2  [interface_declaration]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]
@@ -293,9 +293,9 @@ function mark_clones_enum_declaration S  [enum_declaration]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [enum_declaration]
-        <<< 
+        <<<<<< 
     construct S2  [enum_declaration]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]
@@ -354,9 +354,9 @@ function mark_clones_class_body_declaration S  [class_body_declaration]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [class_body_declaration]
-        <<< 
+        <<<<<< 
     construct S2  [class_body_declaration]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]
@@ -415,9 +415,9 @@ function mark_clones_package_header S  [package_header]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [package_header]
-        <<< 
+        <<<<<< 
     construct S2  [package_header]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]
@@ -476,9 +476,9 @@ function mark_clones_import_declaration S  [import_declaration]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [import_declaration]
-        <<< 
+        <<<<<< 
     construct S2  [import_declaration]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]

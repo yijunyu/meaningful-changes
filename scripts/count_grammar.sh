@@ -27,6 +27,7 @@ extend Txl/norm.Txl >> result/grammar.txt
 extend Txl/java.grm >> result/grammar.txt
 extend Txl/java5.Txl >> result/grammar.txt
 extend source/norm/api_clone_java.norm >> result/grammar.txt
+extend Txl/api_clone_java.Txl >> result/grammar.txt
 extend Txl/v.grm >> result/grammar.txt
 extend source/norm/verilog2.norm >> result/grammar.txt
 extend Txl/verilog2.Txl >> result/grammar.txt

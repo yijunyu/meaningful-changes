@@ -116,8 +116,8 @@ function update_id I [typeid]
 	    'import 'CloneNumber '['number']
 	    'import 'Program_Diff '['program']
 	    'export 'CloneNumber 'CloneNumber '['+ '1']
-	    'construct 'S1 '[ TypeID '] '<<< % 'S1
-	    'construct 'S2 '[ TypeID '] '>>> % 'S1
+	    'construct 'S1 '[ TypeID '] '<<<<<< % 'S1
+	    'construct 'S2 '[ TypeID '] '>>>>>> % 'S1
 	    'export 'Program_Diff 'Program_Diff  '[ '$ 'S 'S2 ']
 	    'replace '[ 'program '] 'P '[ 'program '] 'by 'P '[ '$ 'S 'S1 ']
      'end 'function
@@ -577,14 +577,14 @@ function main
  import Rules
  construct Statements_ChangeRule [statement*]
 	'keys
-	% '<<< is removed from left, '>>> is added to right
-		'... '<<< '>>>
+	% '<<<<<< is removed from left, '>>>>>> is added to right
+		'... '<<<<<< '>>>>>>
 	'end 'keys
 	'compounds
-		'... '<<< '>>>
+		'... '<<<<<< '>>>>>>
 	'end 'compounds
 	'define Change
-		'<<< '[ 'NL '] '| '>>> '[ 'NL ']
+		'<<<<<< '[ 'NL '] '| '>>>>>> '[ 'NL ']
 	'end 'define
  export Rules _ [. Statements_ChangeRule] [. Rules]
  import KeepRuleIDs

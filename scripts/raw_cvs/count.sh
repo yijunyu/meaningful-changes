@@ -1,6 +1,6 @@
 function count_bytes(){
 rm -f *-2.java.*
-for fmt in java java.java5 java.normal java.diff java.java5_diff java.norm_diff java.ldiff java.java5_ldiff java.norm_ldiff; do
+for fmt in java java.java5 java.normal java.diff java.java5_diff java.norm_diff java.clone java.ldiff java.java5_ldiff java.norm_ldiff; do
   count0=$(cat *.$fmt | wc) 
   count1=$(cat *.$fmt | grep "^[0-9]" | wc) 
   count2=$(cat *.$fmt | grep -v "^[0-9]" | wc) 

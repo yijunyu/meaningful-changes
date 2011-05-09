@@ -60,9 +60,9 @@ END {
         gsub(/.java/, "-" (r+1) ".java", next_file)
         java_file = file 
 	gsub(/.java/, "-" r ".java", java_file)
-	system("../../../scripts/raw_cvs/co.sh ldiff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
+#	system("../../../scripts/raw_cvs/co.sh ldiff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
 	system("../../../scripts/raw_cvs/co.sh java5_ldiff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
-	system("../../../scripts/raw_cvs/co.sh norm_ldiff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
+#	system("../../../scripts/raw_cvs/co.sh norm_ldiff " r " \"" rcs_file "\" \"" file "\" \"" java_file "\" \"" next_file "\"");
    }
    system("rm -f " next_file);
 }

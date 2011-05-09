@@ -48,16 +48,16 @@ redefine program
 end define
 
 keys
-    ... <<<  >>> 
+    ... <<<<<<  >>>>>> 
 end keys
 
 compounds
-    ... <<<  >>> 
+    ... <<<<<<  >>>>>> 
 end compounds
 
 define Change
-        <<<  [NL]
-        |  >>>  [NL]
+        <<<<<<  [NL]
+        |  >>>>>>  [NL]
  
 end define
 
@@ -111,9 +111,9 @@ function mark_clones_statement S  [statement]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [statement]
-        <<< 
+        <<<<<< 
     construct S2  [statement]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]
@@ -172,9 +172,9 @@ function mark_clones_case_statement_alternative S  [case_statement_alternative]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [case_statement_alternative]
-        <<< 
+        <<<<<< 
     construct S2  [case_statement_alternative]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]
@@ -233,9 +233,9 @@ function mark_clones_module S  [module]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [module]
-        <<< 
+        <<<<<< 
     construct S2  [module]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]

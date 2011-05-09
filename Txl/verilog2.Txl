@@ -20,16 +20,16 @@ redefine program
 end define
 
 keys
-    ... <<<  >>> 
+    ... <<<<<<  >>>>>> 
 end keys
 
 compounds
-    ... <<<  >>> 
+    ... <<<<<<  >>>>>> 
 end compounds
 
 define Change
-        <<<  [NL]
-        |  >>>  [NL]
+        <<<<<<  [NL]
+        |  >>>>>>  [NL]
  
 end define
 
@@ -83,9 +83,9 @@ function mark_clones_module S  [module]
     export CloneNumber
         CloneNumber  [ +  1 ] 
     construct S1  [module]
-        <<< 
+        <<<<<< 
     construct S2  [module]
-        >>> 
+        >>>>>> 
     export Program_Diff
         Program_Diff  [ $  S  S2 ] 
     replace  [program]
