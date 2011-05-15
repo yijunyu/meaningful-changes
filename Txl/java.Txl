@@ -824,7 +824,7 @@ function print_diff_1
     replace  [program]
         Prg  [ program ] 
     construct P2  [program]
-        Prg  [ write  "t.t" ]  [ read  "t.t" ] 
+        Prg  [ write  "t.t" ]  [ read  "t.t" ]  [ system  "/bin/rm -f t.t" ] 
     construct S_Diff  [stringlit]
         _  [ quote  P2 ] 
     where not
@@ -837,7 +837,7 @@ function print_diff_2
     replace  [program]
         Prg  [ program ] 
     construct P2  [program]
-        Prg  [ write  "t.t" ]  [ read  "t.t" ] 
+        Prg  [ write  "t.t" ]  [ read  "t.t" ]  [ system  "/bin/rm -f t.t" ] 
     construct S_Diff  [stringlit]
         _  [ quote  P2 ] 
     where

@@ -620,14 +620,14 @@ function main
 	'redefine 'program '... '| '[ 'empty '] '| '[ 'attr 'number '] 'end 'define
 	'function 'print_diff_1
 		'replace '[ 'program '] 'Prg '[ 'program ']
-		'construct 'P2 '['program'] 'Prg '[ 'write "t.t" '] '[ 'read "t.t" '] [system "/bin/rm -f t.t"] 
+		'construct 'P2 '['program'] 'Prg '[ 'write "t.t" '] '[ 'read "t.t" '] '[ 'system "/bin/rm -f t.t" '] 
 		'construct 'S_Diff '['stringlit'] '_ '['quote 'P2 ']
 		'where 'not 'S_Diff '['= "" ']
 		'by 'Prg
 	'end 'function
 	'function 'print_diff_2
 		'replace '[ 'program '] 'Prg '[ 'program ']
-		'construct 'P2 '['program'] 'Prg '[ 'write "t.t" '] '[ 'read "t.t" '] [system "/bin/rm -f t.t"] 
+		'construct 'P2 '['program'] 'Prg '[ 'write "t.t" '] '[ 'read "t.t" ']  '[ 'system "/bin/rm -f t.t" ']
 		'construct 'S_Diff '['stringlit'] '_ '['quote 'P2 ']
 		'where 'S_Diff '['= "" ']
 		'by '_
