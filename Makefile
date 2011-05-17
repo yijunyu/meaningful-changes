@@ -15,8 +15,8 @@ results+=$(source:source/%=result/%)
 results+=$(source:source/v/%=result/verilog2/%)
 example+=$(results)
 target+=$(bin)/normc $(bin)/api_clone_javac $(program) $(results)
-package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
+package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
 .PHONEY: all clean install
 all: $(target)
@@ -58,7 +58,7 @@ Txl/%.Txl: $(bin)/normc source/norm/%.norm
 	rm -f t.t
 
 install: $(package) 
-$(package): README.html $(program) $(norm) $(source) $(target) cvs
+$(package): README.html $(program) $(norm) $(source) $(target) # cvs
 	rm -rf $(dir $(package))
 	mkdir -p  $(dir $(package))
 	tar cfz $@ $^ result/*.txt
@@ -69,4 +69,4 @@ source/norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm
 
 clean:
 	rm -rf ${target} $(generated_language)
-	git clean -X -f
+#	git clean -X -f
