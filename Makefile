@@ -12,7 +12,6 @@ program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:source/%=result/%)
-results+=$(source:source/v/%=result/verilog2/%)
 example+=$(results)
 target+=$(bin)/normc $(bin)/api_clone_javac $(program) $(results)
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
@@ -53,9 +52,11 @@ $(bin)/%cc: Txl/%.Txl
 
 # normalise 
 Txl/%.Txl: $(bin)/normc source/norm/%.norm
-	/usr/bin/time $^ -o t.t
-	sed -e 's/\/\*//' t.t | sed -e 's/*\//\/* *\//g' > $@
-	rm -f t.t
+	/usr/bin/time $^ -o $@
+#	TMPFILE='mktemp /tmp/norm.XXXXXXXXXX' || exit 1
+#	/usr/bin/time $^ -o $TMPFILE
+#	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
+#	rm -f $TMPFILE
 
 install: $(package) 
 $(package): README.html $(program) $(norm) $(source) $(target) # cvs
