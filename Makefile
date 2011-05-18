@@ -43,7 +43,7 @@ result/verilog2/%.v: $(bin)/verilog2c source/v/%.v
 	if [ -e test/verilog2/$*.v ]; then diff $@ test/verilog2/$*.v; fi
 
 $(bin)/%c: Txl/%.Txl
-	$(txlc) Txl/$*.Txl 
+	$(txlc) Txl/$*.Txl -s 4096
 	mv $*.x $@
 
 $(bin)/%cc: Txl/%.Txl
