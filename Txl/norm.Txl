@@ -91,7 +91,7 @@ function update_id I [typeid]
  construct add_if_clones_2 [id] add_if_clones [_ TypeID] [!]
  construct S1 [statement*]
      'redefine TypeID 
-         '... ' | '[ 'attr 'Change ']
+	'... '| '[ 'attr 'Change '] 
      'end 'define
      'function find_replace_I 
 	    'replace '[ 'program '] 'P '[ 'program ']
@@ -109,15 +109,19 @@ function update_id I [typeid]
 	    'construct 'S2 '[ TypeID '* '] '_ '[ '^ 'P2 ']
 	    'deconstruct '* 'S2 'Stmt 'Rest '[ TypeID '* ']
 	    'replace '[ TypeID '* '] 'StructuredClones '[ TypeID '* ']
-	    'deconstruct 'not '* 'StructuredClones 'C '['attr 'Change '] % 'Stmt
+	    'deconstruct 'not '* 'StructuredClones 'C '['attr 'Change '] 
 	    'by 'StructuredClones '[ '. 'Stmt '] 
      'end 'function
      'function mark_clones_I 'S '[ TypeID ']
 	    'import 'CloneNumber '['number']
 	    'import 'Program_Diff '['program']
 	    'export 'CloneNumber 'CloneNumber '['+ '1']
-	    'construct 'S1 '[ TypeID '] '<<<<<< % 'S1
-	    'construct 'S2 '[ TypeID '] '>>>>>> % 'S1
+	    'construct 'C '[ stringlit '] '_ '['quote 'S ']
+	    'where 'not 'C '['= ""']
+	    'construct 'S1 '[ TypeID '] '<<<<<< 'C
+	    'construct 'S2 '[ TypeID '] '>>>>>> 'C
+%	    'construct 'S1 '[ TypeID '] '<<<<<< 
+%	    'construct 'S2 '[ TypeID '] '>>>>>>
 	    'export 'Program_Diff 'Program_Diff  '[ '$ 'S 'S2 ']
 	    'replace '[ 'program '] 'P '[ 'program '] 'by 'P '[ '$ 'S 'S1 ']
      'end 'function
@@ -584,7 +588,7 @@ function main
 		'... '<<<<<< '>>>>>>
 	'end 'compounds
 	'define Change
-		'<<<<<< '[ 'NL '] '| '>>>>>> '[ 'NL ']
+		'<<<<<< '['opt 'stringlit'] '[ 'NL '] '| '>>>>>> '['opt 'stringlit'] '[ 'NL '] 
 	'end 'define
  export Rules _ [. Statements_ChangeRule] [. Rules]
  import KeepRuleIDs
