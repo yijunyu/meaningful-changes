@@ -8,6 +8,12 @@ function replace_redefine R [redefineStatement] NewD [defineStatement]
   by S [. S1] 
 end function
 
+function remove_dotdotdot 
+  replace * [literalOrType*] '... Rest [literalOrType*] 
+  by Rest
+end function
+
+
 function redefine2define_replace R [redefineStatement] D [defineStatement]
   deconstruct R 
 	'redefine 
@@ -46,19 +52,20 @@ end function
 function redefine2define_suffix R [redefineStatement] D [defineStatement]
   deconstruct R 
 	'redefine 
-	        T1 [typeid]	
-		T3 [repeat literalOrType] 
-		T4 [repeat barLiteralsAndTypes]	 
+	        T1 [typeid] T3 [repeat literalOrType]
 	'end 'define
-  deconstruct * [literalOrType] T3 '...
+  deconstruct * [literal] T3 '...
+  % construct d_R [redefineStatement] R [print]
   deconstruct D
 	'define T1 T7 [repeat literalOrType] T8	[repeat barLiteralsAndTypes] 'end 'define
-  construct TT3 [repeat literalOrType] T3 [. T7]
-  construct TT4 [repeat barLiteralsAndTypes] T4 [. T8]
+  % construct d_D [defineStatement] D [print]
+  construct TT3 [repeat literalOrType] T3 [remove_dotdotdot] [. T7]
   construct NewD [defineStatement]
-	'define T1 TT3 TT4
+	'define T1 TT3
 	'end 'define
+  % construct d_D [defineStatement] NewD [print]
   replace * [statement*] D S1 [statement*] 
+  % construct d_D [defineStatement] NewD [print]
   by S1 [replace_redefine R NewD] 
 end function
 
@@ -72,6 +79,8 @@ end function
 
 function redefine2define 
   replace [program] P [program]
+  % construct d_P [program] P [print]
   construct R [redefineStatement*] _ [^ P]
+  %  construct d_R [redefineStatement*] R [print]
   by P [redefine2define_one each R]
 end function

@@ -40,6 +40,9 @@ function update_id I [typeid]
  construct add_if_clones_1 [id] add_if_clones [_ TypeID] [!]
  construct add_if_clones_2 [id] add_if_clones [_ TypeID] [!]
  construct Stmt_1 [statement*]
+     'redefine TypeID
+	'['opt 'srclinenumber 'ignored '] '...
+     'end 'define
      'redefine TypeID 
 	'... '| '[ 'attr 'Change '] 
      'end 'define
@@ -68,10 +71,12 @@ function update_id I [typeid]
 	    'export 'CloneNumber 'CloneNumber '['+ '1']
 	    'construct 'C '[ 'stringlit '] '_ '['quote 'S ']
 	    'where 'not 'C '['= ""']
-	    'construct 'S2 '[ TypeID '] '>>>>>> 'C
+	    'construct 'Ln_S '['srclinenumber'*'] '_ '['^ S']
+	    'deconstruct 'Ln_S 'Ln_1 '['srclinenumber'] 'Rest '['srclinenumber'*'] 
+	    'construct 'S2 '[ TypeID '] '>>>>>> 'Ln_1 'C
 	    'export 'Program_Diff 'Program_Diff  '[ '$ 'S 'S2 ']
 	    'replace '[ 'program '] 'P '[ 'program '] 
-	    'construct 'S1 '[ TypeID '] '<<<<<< 'C
+	    'construct 'S1 '[ TypeID '] '<<<<<< 'Ln_1 'C
 	    'by 'P '[ '$ 'S 'S1 ']
      'end 'function
  export Rules Rules [. Stmt_1] 
@@ -379,7 +384,9 @@ end function
 %
 function DS_replace DS [redefineStatement]
  replace [statement*] S0 [statement*]
- construct T1 [typeSpec*] _ [^ DS]
+ % T0 is a default pattern to remove all the srclinenumber
+ construct T0 [typeSpec] 'opt 'srclinenumber 'ignored
+ construct T1 [typeSpec*] _ [. T0] [^ DS]
  construct S1 [statement*] _ [typeSpec_repeat DS each T1]
  construct S2 [statement*] _ [typeSpec_repeat_byField DS each T1]
  construct S3 [statement*] _ [typeSpec_list_byField DS each T1]

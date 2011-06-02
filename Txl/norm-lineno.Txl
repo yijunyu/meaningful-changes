@@ -1,6 +1,8 @@
 include "mct.grm"
+include "include_all.txl"
+include "redefine2define.txl"
 include "mct-eliminate.txl"
-include "mct-normalise.txl"
+include "mct-normalise-lineno-as-comment.txl"
 
 % Normalise all definitions where [list X] or [repeat X] have to be ordered by
 % a function.
@@ -47,7 +49,9 @@ function main
  export KeepRuleIDs [id*] _
  export TypeIDs [id*] _
  construct P0 [program] 
-      P [typeSpec_removeClones] 
+      P [include_all]
+        [typeSpec_removeClones] 
+	[redefine2define] 
  import Rules
  construct Statements_ChangeRule [statement*]
 	'keys
@@ -58,8 +62,8 @@ function main
 		'... '<<<<<< '>>>>>>
 	'end 'compounds
 	'define Change
-		'[ 'NL '] '<<<<<< '['opt 'stringlit'] '[ 'NL '] 
-	     '| '[ 'NL '] '>>>>>> '['opt 'stringlit'] '[ 'NL '] 
+		'[ 'NL '] '<<<<<< '['srclinenumber'] '['opt 'stringlit'] '[ 'NL '] 
+	     '| '[ 'NL '] '>>>>>> '['srclinenumber'] '['opt 'stringlit'] '[ 'NL '] 
 	'end 'define
  export Rules _ [. Statements_ChangeRule] [. Rules]
  import KeepRuleIDs
@@ -68,7 +72,9 @@ function main
  deconstruct P0 S_P0 [statement*] 
  construct P0_1 [statement*] _ [. S_P0] [. Rules] 
  construct P0_2 [program] P0_1 
- construct DSS [redefineStatement*] _ [^ P0_2] 
+ construct P0_3 [program] P0_2 [redefine2define]
+ % construct DSS [redefineStatement*] _ [^ P0_3] 
+ construct DSS [defineStatement*] _ [^ P0_3] 
  construct S [statement*] _ [DS_replace each DSS]
  construct PL [literalOrExpression*] 'Prg
  import OrderRuleIDs
@@ -137,7 +143,8 @@ function main
  deconstruct P0 S0 [statement*]
  import Rules
  construct P1 [program] S0 [. Rules] [. statements_Rule ] 
- by  P1 [typeSpec_eliminateKeptAnnotations] 
+ by  P1 [redefine2define]
+        [typeSpec_eliminateKeptAnnotations] 
 	[typeSpec_eliminateOrderedAnnotations]
 	[typeSpec_eliminateIgnoredAnnotations]
 	[typeSpec_eliminatePreferredAnnotations]

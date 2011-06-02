@@ -40,6 +40,9 @@ function update_id I [typeid]
  construct add_if_clones_1 [id] add_if_clones [_ TypeID] [!]
  construct add_if_clones_2 [id] add_if_clones [_ TypeID] [!]
  construct Stmt_1 [statement*]
+     'redefine TypeID
+	'['opt 'srclinenumber 'ignored '] '...
+     'end 'define
      'redefine TypeID 
 	'... '| '[ 'attr 'Change '] 
      'end 'define
@@ -68,10 +71,12 @@ function update_id I [typeid]
 	    'export 'CloneNumber 'CloneNumber '['+ '1']
 	    'construct 'C '[ 'stringlit '] '_ '['quote 'S ']
 	    'where 'not 'C '['= ""']
-	    'construct 'S2 '[ TypeID '] '>>>>>> 'C
+	    'construct 'Ln_S '['srclinenumber'*'] '_ '['^ S']
+	    'deconstruct 'Ln_S 'Ln_1 '['srclinenumber'] 'Rest '['srclinenumber'*'] 
+	    'construct 'S2 '[ TypeID '] '>>>>>> 'Ln_1 'C
 	    'export 'Program_Diff 'Program_Diff  '[ '$ 'S 'S2 ']
 	    'replace '[ 'program '] 'P '[ 'program '] 
-	    'construct 'S1 '[ TypeID '] '<<<<<< 'C
+	    'construct 'S1 '[ TypeID '] '<<<<<< 'Ln_1 'C
 	    'by 'P '[ '$ 'S 'S1 ']
      'end 'function
  export Rules Rules [. Stmt_1] 
@@ -86,11 +91,11 @@ end function
 %   Rules [statement*]  %% The rules for normalising the id's
 %   OrderRuleIDs [id*]	%% The name of the normalisation rules
 %
-function typeSpec_repeat DS [redefineStatement] T [typeSpec]
+function typeSpec_repeat DS [defineStatement] T [typeSpec]
  import Rules [statement*]
  import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'define TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered 
  construct StrID [id] _ [quote TID]
@@ -111,11 +116,11 @@ function typeSpec_repeat DS [redefineStatement] T [typeSpec]
  export OrderRuleIDs OrderRuleIDs [. ruleID]
  by S
 end function
-function typeSpec_repeat_byField DS [redefineStatement] T [typeSpec]
+function typeSpec_repeat_byField DS [defineStatement] T [typeSpec]
  import Rules [statement*]
  import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'define TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered B [opt byField]
  deconstruct B 'by F [id]
@@ -143,11 +148,11 @@ end function
 %   Rules [statement*]  %% The rules for normalising the id's
 %   OrderRuleIDs [id*]	%% The name of the normalisation rules
 %
-function typeSpec_list DS [redefineStatement] T [typeSpec]
+function typeSpec_list DS [defineStatement] T [typeSpec]
  import Rules [statement*]
  import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'define TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered
  construct StrID [id] _ [quote TID]
@@ -168,11 +173,11 @@ function typeSpec_list DS [redefineStatement] T [typeSpec]
  export OrderRuleIDs OrderRuleIDs [. ruleID]
  by S
 end function
-function typeSpec_list_byField DS [redefineStatement] T [typeSpec]
+function typeSpec_list_byField DS [defineStatement] T [typeSpec]
  import Rules [statement*]
  import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'define TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered B [byField]
  deconstruct B 'by F [id]
@@ -196,13 +201,13 @@ end function
 %
 % Ignore the node unconditionally
 %
-function typeSpec_ignore DS [redefineStatement] T [typeSpec]
+function typeSpec_ignore DS [defineStatement] T [typeSpec]
  replace [statement*] S [statement*] 
  deconstruct DS 
-      'redefine TID [typeid] 
-        PrevRule [opt dotDotDotBar]
+      'define TID [typeid] 
+%        PrevRule [opt dotDotDotBar]
 	LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 
-	PostRule [opt barDotDotDot] 
+%	PostRule [opt barDotDotDot] 
 	'end 'define
  by S [typeSpec_ignore_LoT TID T LoT] 
       [typeSpec_ignore_BLoT TID T each BLoT] 
@@ -260,11 +265,11 @@ end function
 % ignored non-terminal and E2 is the ignored non-terminal
 %
 
-function typeSpec_ignore_when DS [redefineStatement] T [typeSpec]
+function typeSpec_ignore_when DS [defineStatement] T [typeSpec]
  import Rules [statement*]
  import IgnoreRuleIDs [id*]
  replace [statement*] S [statement*] 
- deconstruct DS 'redefine TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'define TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  deconstruct Ig 'ignored W [whenField]
  deconstruct W 'when F [id]
@@ -338,11 +343,11 @@ end function
 %
 % Use annotation 'preferred 'with L where L is a list of user-defined literals. 
 %
-function typeSpec_preferred_withField DS [redefineStatement] T [typeSpec]
+function typeSpec_preferred_withField DS [defineStatement] T [typeSpec]
  import Rules [statement*]
  import PreferRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 'define TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] 
 	K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [preferredWith]
  deconstruct P 'preferred 'with L [literal+]
@@ -377,9 +382,11 @@ end function
 %
 % Process all the [list Foo] or [repeat Foo] in the redefine statements
 %
-function DS_replace DS [redefineStatement]
+function DS_replace DS [defineStatement]
  replace [statement*] S0 [statement*]
- construct T1 [typeSpec*] _ [^ DS]
+ % T0 is a default pattern to remove all the srclinenumber
+ construct T0 [typeSpec] 'opt 'srclinenumber 'ignored
+ construct T1 [typeSpec*] _ [. T0] [^ DS]
  construct S1 [statement*] _ [typeSpec_repeat DS each T1]
  construct S2 [statement*] _ [typeSpec_repeat_byField DS each T1]
  construct S3 [statement*] _ [typeSpec_list_byField DS each T1]
