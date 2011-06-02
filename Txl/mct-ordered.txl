@@ -1,0 +1,121 @@
+rule typeSpec_eliminateOrderedAnnotations
+ replace * [typeSpec] T [typeSpec] 
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept]
+	O [orderedBy] 
+ by M I R
+end rule
+
+%
+% Process [repeat Foo ordered by Bar]
+%
+% Global variables: 
+%   Rules [statement*]  %% The rules for normalising the id's
+%   OrderRuleIDs [id*]	%% The name of the normalisation rules
+%
+function typeSpec_repeat DS [redefineStatement] T [typeSpec]
+ import Rules [statement*]
+ import OrderRuleIDs [id*]
+ replace [statement*] _ [statement*] 
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct O 'ordered 
+ construct StrID [id] _ [quote TID]
+ deconstruct I TypeID [id] 
+ construct ID [id] 'normalise_list
+ construct ruleID [id] ID [_ StrID] [_ TypeID]
+ construct S [statement*]
+    'rule ruleID
+	'replace '[ 'repeat I '] 
+	   'N1 '[ I '] 'N2 '[ I '] 'Rest '[ 'repeat I '] 
+           'construct 'T1 '[ 'stringlit '] '_ '[ 'quote 'N1 ']
+           'construct 'T2 '[ 'stringlit '] '_ '[ 'quote 'N2 ']
+	'where 'T1 '[ '> 'T2 ']
+	'by 
+	   'N2 'N1 'Rest 
+    'end 'rule
+ export Rules Rules [. S]
+ export OrderRuleIDs OrderRuleIDs [. ruleID]
+ by S
+end function
+function typeSpec_repeat_byField DS [redefineStatement] T [typeSpec]
+ import Rules [statement*]
+ import OrderRuleIDs [id*]
+ replace [statement*] _ [statement*] 
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct O 'ordered B [opt byField]
+ deconstruct B 'by F [id]
+ construct StrID [id] _ [quote TID]
+ deconstruct I TypeID [id] 
+ construct ID [id] 'normalise_list
+ construct ruleID [id] ID [_ StrID] [_ TypeID]
+ construct S [statement*]
+    'rule ruleID
+	'replace '[ 'repeat I '] 
+	   'N1 '[ I '] 'N2 '[ I '] 'Rest '[ 'repeat I '] 
+	'where 'N1 '[ F 'N2 ']
+	'by 
+	   'N2 'N1 'Rest 
+    'end 'rule
+ export Rules Rules [. S]
+ export OrderRuleIDs OrderRuleIDs [. ruleID]
+ by S
+end function
+
+%
+% Process [list Foo ordered by Bar]
+%
+% Global variables: 
+%   Rules [statement*]  %% The rules for normalising the id's
+%   OrderRuleIDs [id*]	%% The name of the normalisation rules
+%
+function typeSpec_list DS [redefineStatement] T [typeSpec]
+ import Rules [statement*]
+ import OrderRuleIDs [id*]
+ replace [statement*] _ [statement*] 
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct O 'ordered
+ construct StrID [id] _ [quote TID]
+ deconstruct I TypeID [id] 
+ construct ID [id] 'normalise_list
+ construct ruleID [id] ID [_ StrID] [_ TypeID]
+ construct S [statement*]
+    'rule ruleID
+	'replace '[ 'list I '] 
+	   'N1 '[ I '] ', 'N2 '[ I '] ', 'Rest '[ 'list I '] 
+           'construct 'T1 '[ 'stringlit '] '_ '[ 'quote 'N1 ']
+           'construct 'T2 '[ 'stringlit '] '_ '[ 'quote 'N2 ']
+	'where 'T1 '[ '> 'T2 ']
+	'by 
+	   'N2 ', 'N1 ', 'Rest 
+    'end 'rule
+ export Rules Rules [. S]
+ export OrderRuleIDs OrderRuleIDs [. ruleID]
+ by S
+end function
+function typeSpec_list_byField DS [redefineStatement] T [typeSpec]
+ import Rules [statement*]
+ import OrderRuleIDs [id*]
+ replace [statement*] _ [statement*] 
+ deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct O 'ordered B [byField]
+ deconstruct B 'by F [id]
+ construct StrID [id] _ [quote TID]
+ deconstruct I TypeID [id] 
+ construct ID [id] 'normalise_list
+ construct ruleID [id] ID [_ StrID] [_ TypeID]
+ construct S [statement*]
+    'rule ruleID
+	'replace '[ 'list I '] 
+	   'N1 '[ I '] ', 'N2 '[ I '] ', 'Rest '[ 'list I '] 
+	'where 'N1 '[ F 'N2 ']
+	'by 
+	   'N2 ', 'N1 ', 'Rest 
+    'end 'rule
+ export Rules Rules [. S]
+ export OrderRuleIDs OrderRuleIDs [. ruleID]
+ by S
+end function
+

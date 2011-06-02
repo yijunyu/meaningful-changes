@@ -1,6 +1,25 @@
 include "mct.grm"
-include "mct-eliminate.txl"
-include "mct-normalise.txl"
+include "mct-util.txl"
+include "mct-ordered.txl"
+include "mct-ignored.txl"
+include "mct-preferred.txl"
+include "mct-kept.txl"
+%
+% Process all the [list Foo] or [repeat Foo] in the redefine statements
+%
+function DS_replace DS [redefineStatement]
+ replace [statement*] S0 [statement*]
+ construct T1 [typeSpec*] _ [^ DS]
+ construct S1 [statement*] _ [typeSpec_repeat DS each T1]
+ construct S2 [statement*] _ [typeSpec_repeat_byField DS each T1]
+ construct S3 [statement*] _ [typeSpec_list_byField DS each T1]
+ construct S4 [statement*] _ [typeSpec_list DS each T1]
+ construct S5 [statement*] _ [typeSpec_ignore_when DS each T1]
+ construct S6 [statement*] _ [typeSpec_ignore DS each T1]
+ construct S7 [statement*] _ [typeSpec_preferred_withField DS each T1]
+ construct S [statement*] S0 [. S1] [. S2] [. S3] [. S4] [. S5] [. S6] [. S7]
+ by S
+end function
 
 % Normalise all definitions where [list X] or [repeat X] have to be ordered by
 % a function.
