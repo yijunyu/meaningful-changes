@@ -53,10 +53,10 @@ $(bin)/%cc: Txl/%.Txl
 # normalise 
 Txl/%.Txl: $(bin)/normc source/norm/%.norm
 	/usr/bin/time $^ -o $@
-#	TMPFILE='mktemp /tmp/norm.XXXXXXXXXX' || exit 1
-#	/usr/bin/time $^ -o $TMPFILE
-#	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
-#	rm -f $TMPFILE
+	TMPFILE='mktemp /tmp/norm.XXXXXXXXXX' || exit 1
+	/usr/bin/time $^ -o $TMPFILE
+	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
+	rm -f $TMPFILE
 
 install: $(package) 
 $(package): README.html $(program) $(norm) $(source) $(target) # cvs
