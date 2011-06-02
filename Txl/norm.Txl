@@ -260,6 +260,7 @@ function typeSpec_ignore_LoT TID [typeid] T [typeSpec] LoT [literalOrType*]
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  where LoT [contains T]
  deconstruct Ig 'ignored 
+ 		% construct debug_I [typeid] I [print]
  construct StrID [id] _ [quote TID]
  export Expression [literalOrExpression*] _
  construct TT [type] '[ T ']
@@ -645,8 +646,8 @@ function main
 	'function 'print_diff
 		'replace '[ 'program '] 'P_diff '[ 'program ']
 		'import 'CloneNumber '[ 'number ']
-		'where 'CloneNumber '[ '> '0 ']
 		'import 'Program_Diff '[ 'program ']
+		'where 'CloneNumber '[ '> '0 ']
 		'% output the differences
 		'construct 'P_Clone '[ 'program '] 'CloneNumber
 		'construct 'P_Left '['program'] 'P_diff '[print_diff_1'] '[print_diff_2'] '['printattr']
@@ -654,6 +655,7 @@ function main
 		'by 'P_Clone
 	'end 'function
 	'function 'main 'replace '[ 'program '] 'Prg '[ 'program '] 
+	  'export 'Program_Diff '['program'] '_
 	  'by 'Prg '[ 'program_normalise ']
 		   '[ 'program_remove_clone ']
 		   '[ 'print_diff ']
