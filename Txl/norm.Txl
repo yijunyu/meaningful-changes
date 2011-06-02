@@ -89,7 +89,7 @@ function update_id I [typeid]
  construct find_clones_I [id] find_clones [_ TypeID]
  construct add_if_clones_1 [id] add_if_clones [_ TypeID] [!]
  construct add_if_clones_2 [id] add_if_clones [_ TypeID] [!]
- construct S1 [statement*]
+ construct Stmt_1 [statement*]
      'redefine TypeID 
 	'... '| '[ 'attr 'Change '] 
      'end 'define
@@ -116,16 +116,14 @@ function update_id I [typeid]
 	    'import 'CloneNumber '['number']
 	    'import 'Program_Diff '['program']
 	    'export 'CloneNumber 'CloneNumber '['+ '1']
-	    'construct 'C '[ stringlit '] '_ '['quote 'S ']
+	    'construct 'C '[ 'stringlit '] '_ '['quote 'S ']
 	    'where 'not 'C '['= ""']
 	    'construct 'S1 '[ TypeID '] '<<<<<< 'C
 	    'construct 'S2 '[ TypeID '] '>>>>>> 'C
-%	    'construct 'S1 '[ TypeID '] '<<<<<< 
-%	    'construct 'S2 '[ TypeID '] '>>>>>>
 	    'export 'Program_Diff 'Program_Diff  '[ '$ 'S 'S2 ']
 	    'replace '[ 'program '] 'P '[ 'program '] 'by 'P '[ '$ 'S 'S1 ']
      'end 'function
- export Rules Rules [. S1] 
+ export Rules Rules [. Stmt_1] 
  export KeepRuleIDs KeepRuleIDs [. find_replace_I] 
  export TypeIDs TypeIDs [. TypeID] 
 end function
@@ -405,6 +403,10 @@ function typeSpec_preferred_withField DS [redefineStatement] T [typeSpec]
  construct LL2 [literalOrExpression*] _ [literal_to_expr each L] 
  construct Replacement [replacement] LL2
  construct S1 [statement*] 
+    'redefine TID 
+	'['srcfilename'] '['srclinenumber'] 
+	'... 
+    'end 'define
     'function ruleID1 'B '[ TID ']
     	'replace '[ TID '* '] 'A '[ TID '* '] 
         'deconstruct 'not 'B Pattern
@@ -589,7 +591,7 @@ function main
 		'... '<<<<<< '>>>>>>
 	'end 'compounds
 	'define Change
-		'<<<<<< '['opt 'stringlit'] '[ 'NL '] '| '>>>>>> '['opt 'stringlit'] '[ 'NL '] 
+		'[ 'NL '] '<<<<<< '['opt 'stringlit'] '[ 'NL '] '| '[ 'NL '] '>>>>>> '['opt 'stringlit'] '[ 'NL '] 
 	'end 'define
  export Rules _ [. Statements_ChangeRule] [. Rules]
  import KeepRuleIDs
