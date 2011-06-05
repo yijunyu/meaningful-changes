@@ -13,7 +13,7 @@ source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:source/%=result/%)
 example+=$(results)
-target+=$(bin)/normc $(bin)/api_clone_javac $(program) $(results)
+target+=$(bin)/normc $(bin)/api_clone_javac $(bin)/api_clone_javacc $(bin)/problemcc $(program) $(results)
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
@@ -24,17 +24,16 @@ all: $(target)
 define example
 result/$(1)/%.$(1): $(bin)/$(1)c source/$(1)/%.$(1)
 	@mkdir -p result/$(1)
-	$$^ -o $$@
+	$$^ -comment -o $$@
 	if [ -e test/$(1)/$$*.$(1) ]; then diff $$@ test/$(1)/$$*.$(1); fi
 endef
 
 $(foreach ext,$(extensions),$(eval $(call example,$(ext))))
 
-Txl/%.Txl: Txl/%.grm
-	@touch $@
-
+Txl/api_clone_java.Txl: Txl/java.grm Txl/javaCommentOverrides.grm
 Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl
-	@touch $@
+Txl/problem.Txl: Txl/problem.grm
+Txl/xtext.Txl: Txl/xtext.grm
 
 result/v/%.v: $(bin)/vc source/v/%.v
 	@mkdir -p result/v
@@ -48,18 +47,37 @@ result/verilog2/%.v: $(bin)/verilog2c source/v/%.v
 	$(bin)/verilog2c result/v/$*.v -o $@
 	if [ -e test/verilog2/$*.v ]; then diff $@ test/verilog2/$*.v; fi
 
-$(bin)/%c: Txl/%.Txl
-	$(txlc) -d DEFINE -d LINENO Txl/$*.Txl
+$(bin)/%c: Txl/%.Txl Makefile
+	$(txlc) -d DEFINE Txl/$*.Txl
 	mv $*.x $@
 
-$(bin)/%cc: Txl/%.Txl
-	$(txlc) -d COMMENTS Txl/$*.Txl 
+$(bin)/%cc: Txl/%.Txl Makefile
+	$(txlc) -comment -d COMMENTS Txl/$*.Txl
 	mv $*.x $@
+
+$(bin)/problemc: Txl/problem.Txl Makefile
+	$(txlc) Txl/problem.Txl
+	mv problem.x $@
+
+$(bin)/problemcc: Txl/problem.Txl Makefile
+	$(txlc) -comment -d COMMENTS Txl/problem.Txl
+	mv problem.x $@
+
+
+# if the grammar does not handle comments, don't use -comment -d COMMENTS options yet
+$(bin)/vc: Txl/v.Txl Makefile
+	$(txlc) Txl/v.Txl
+	mv v.x $@
+
+$(bin)/xtextc: Txl/xtext.Txl Makefile
+	$(txlc) Txl/xtext.Txl
+	mv xtext.x $@
 
 # normalise 
 Txl/%.Txl: $(bin)/normc source/norm/%.norm
 	/usr/bin/time $^ -o $@
-	TMPFILE='mktemp /tmp/norm.XXXXXXXXXX' || exit 1
+	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
+	echo $$TMPFILE
 	/usr/bin/time $^ -o $TMPFILE
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE

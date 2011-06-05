@@ -30,6 +30,9 @@ keys
       'throw  'throws  'transient  'true  'try  'void  'volatile  'while 
 end keys
 
+define package_header
+    [repeat annotation]  'package  [package_name]  ';  [NL] [NL] 
+end define
 define package_name
     [qualified_name] 
 end define
@@ -73,6 +76,13 @@ end define
 define interface_name
     [declared_name] 
 end define
+define class_body_declaration
+    [empty_declaration] 
+    |    [member_declaration] 
+    |    [instance_initializer] 
+    |    [static_initializer] 
+    |    [field_declaration] 
+end define
 define empty_declaration
     ';  [NL] 
 end define
@@ -92,9 +102,6 @@ define static_initializer
             [NL]
     'static  [block]  [NL] [NL] 
 end define
-define constructor_declarator
-    [class_name]  '( [list formal_parameter]  ') 
-end define
 define field_declaration
     [variable_declaration] 
 end define
@@ -113,9 +120,6 @@ define variable_initializer
 end define
 define array_initializer
     '{ [list variable_initializer]  [opt  ',]  '} 
-end define
-define method_declarator
-    [method_name]  '( [list formal_parameter]  ')  [repeat dimension] 
 end define
 define method_name
     [declared_name] 
@@ -183,25 +187,6 @@ define declaration_or_statement
 end define
 define local_variable_declaration
     [variable_declaration] 
-end define
-define statement
-    [label_statement] 
-    |    [empty_statement] 
-    |    [expression_statement] 
-    |    [if_statement] 
-    |    [switch_statement] 
-    |    [while_statement] 
-    |    [do_statement] 
-    |    [for_statement] 
-    |    [for_in_statement] 
-    |    [break_statement] 
-    |    [continue_statement] 
-    |    [return_statement] 
-    |    [throw_statement] 
-    |    [synchronized_statement] 
-    |    [try_statement] 
-    |    [assert_statement] 
-    |    [block] 
 end define
 define empty_statement
     ';  [NL] 
@@ -505,9 +490,6 @@ define class_instance_declaration
     [class_instance_creation_expression] 
     |    'class 
 end define
-define method_argument
-    '( [list argument]  ') 
-end define
 define dot_id
     '. [id] 
     |    '. 'class 
@@ -571,10 +553,6 @@ define enum_body
         [list enum_element]  [opt  ',]  [repeat class_body_declaration]  [EX]
     '}  [opt  ';]  [NL] [NL] 
 end define
-define import_declaration
-    'import  [opt  'static]  [imported_name]  ';  [NL] 
-    |    ';  [NL] 
-end define
 define class_header
     [repeat modifier]  'class  [class_name]  [opt extends_clause]  [opt implements_clause] 
 end define
@@ -590,13 +568,13 @@ end define
 define implements_clause
     'implements  [list qualified_name +] 
 end define
+define package_declaration
+    [opt package_header]  [repeat import_declaration]  [repeat type_declaration] 
+end define
 define class_or_interface_body
     '{ [NL] [IN]
         [repeat class_body_declaration]  [EX] [NL]
     '}  [opt  ';]  [NL] [NL] 
-end define
-define package_declaration
-    [opt package_header]  [repeat import_declaration]  [repeat type_declaration] 
 end define
 define constructor_declaration
             [NL]
@@ -624,6 +602,95 @@ define single_annotation_value
     |    [nested_annotation] 
     |    { [list expression_or_nested_annotation] } 
 end define
+define statement
+    [label_statement]  [comment_NL] 
+    |    [empty_statement] 
+    |    [expression_statement] 
+    |    [if_statement] 
+    |    [switch_statement] 
+    |    [while_statement] 
+    |    [do_statement] 
+    |    [for_statement] 
+    |    [for_in_statement] 
+    |    [break_statement] 
+    |    [continue_statement] 
+    |    [return_statement] 
+    |    [throw_statement] 
+    |    [synchronized_statement] 
+    |    [try_statement] 
+    |    [assert_statement] 
+    |    [block] 
+end define
+redefine package_declaration
+
+    [opt comment_NL] ... 
+
+end redefine
+redefine class_body_declaration
+
+    [comment_NL] ... 
+
+end redefine
+define import_declaration
+    'import  [opt  'static]  [imported_name]  ';  [NL]  [comment_NL] 
+    |    ';  [NL] 
+end define
+define type_declaration
+    [class_declaration]  [NL] [NL]  [comment_NL] 
+    |    [interface_declaration]  [NL] [NL] 
+    |    [enum_declaration]  [NL] 
+end define
+redefine variable_initializer
+
+    [opt comment_NL] ... 
+
+end redefine
+redefine equals_variable_initializer
+
+    [opt comment_NL] ... 
+
+end redefine
+redefine formal_parameter
+
+    [opt comment_NL] ... 
+
+end redefine
+define constructor_declarator
+    [class_name]  '( [list formal_parameter]  ')  [opt comment_NL] 
+end define
+define method_declarator
+    [method_name]  '( [list formal_parameter]  ')  [repeat dimension]  [opt comment_NL] 
+end define
+redefine argument
+
+    [opt comment_NL] ... 
+
+end redefine
+define method_argument
+    '( [list argument]  ')  [opt comment_NL] 
+end define
+redefine if_statement
+
+    'if  '( [expression]  ')  [opt comment_NL]  [statement]  [opt else_clause]  [NL] 
+
+end redefine
+redefine block
+
+    [opt comment_NL] ... 
+
+end redefine
+redefine expression
+
+    [opt comment_NL] ... 
+
+end redefine
+define my_comment
+    [comment] 
+end define
+define comment_NL
+    [repeat my_comment]  [NL]
+    [repeat my_comment]  [NL] 
+end define
 function contains Object  [any]
     match  *  [any]
         Object 
@@ -640,7 +707,7 @@ function Private A  [class_body_declaration]
         M  [contains  each  PublicModifiers] end function
 
 keys
-    ... <<<<<<  >>>>>>   ' 
+    ... <<<<<<  >>>>>> 
 end keys
 
 compounds
@@ -653,88 +720,6 @@ define Change
     |  [NL]
     >>>>>>  [opt stringlit]  [NL]
  
-end define
-define class_body_declaration
-    [opt srcfilename]  [opt srclinenumber]  [NL]
-    [empty_declaration] 
-    |    [opt srcfilename]  [opt srclinenumber]  [NL]
-    [member_declaration] 
-    |    [opt srcfilename]  [opt srclinenumber]  [NL]
-    [instance_initializer] 
-    |    [opt srcfilename]  [opt srclinenumber]  [NL]
-    [static_initializer] 
-    |    [opt srcfilename]  [opt srclinenumber]  [NL]
-    [field_declaration] 
-end define
-redefine class_body_declaration
-    ...
-|       
-    [attr Change] 
-
-end define
-function find_replace_class_body_declaration
-    replace  [program]
-        P  [ program ] 
-    import Program_Diff [program]
-
-    construct S  [class_body_declaration *]
-        _  [ find_clones_class_body_declaration  P  Program_Diff ] 
-    construct P3  [program]
-        P  [mark_clones_class_body_declaration  each  S]
- 
-    by
-        P3 
-end function
-
-function find_clones_class_body_declaration P  [program] P2  [program]
-    replace  [class_body_declaration *]
-        _  [ class_body_declaration  * ] 
-    construct S  [class_body_declaration *]
-        _  [ ^  P ] 
-    by
-        _  [add_if_clones_class_body_declaration1  P2  each  S]
- 
-end function
-
-function add_if_clones_class_body_declaration1 P2  [program] Stmt  [class_body_declaration]
-    construct S2  [class_body_declaration *]
-        _  [ ^  P2 ] 
-    deconstruct * S2
-        Stmt  Rest  [ class_body_declaration  * ] 
-    replace  [class_body_declaration *]
-        StructuredClones  [ class_body_declaration  * ] 
-    deconstruct not * StructuredClones
-        C  [attr Change] 
-    by
-        StructuredClones  [ . Stmt ] 
-end function
-
-function mark_clones_class_body_declaration S  [class_body_declaration]
-    import CloneNumber [number]
-
-    import Program_Diff [program]
-
-    export CloneNumber
-        CloneNumber  [ +  1 ] 
-    construct C  [stringlit]
-        _  [ quote  S ] 
-    where not
-        C  [=  ""]
-    construct S2  [class_body_declaration]
-        >>>>>>  C 
-    export Program_Diff
-        Program_Diff  [ $  S  S2 ] 
-    replace  [program]
-        P  [ program ] 
-    construct S1  [class_body_declaration]
-        <<<<<<  C 
-    by
-        P  [ $  S  S1 ] 
-end function
-
-define package_header
-    [opt srcfilename]  [opt srclinenumber]  [NL]
-    [repeat annotation]  'package  [package_name]  ';  [NL] [NL] 
 end define
 redefine package_header
     ...
@@ -802,14 +787,6 @@ function mark_clones_package_header S  [package_header]
         P  [ $  S  S1 ] 
 end function
 
-define type_declaration
-    [opt srcfilename]  [opt srclinenumber]  [NL]
-    [class_declaration]  [NL] [NL] 
-    |    [opt srcfilename]  [opt srclinenumber]  [NL]
-    [interface_declaration]  [NL] [NL] 
-    |    [opt srcfilename]  [opt srclinenumber]  [NL]
-    [enum_declaration]  [NL] 
-end define
 redefine type_declaration
     ...
 |       
@@ -871,6 +848,138 @@ function mark_clones_type_declaration S  [type_declaration]
     replace  [program]
         P  [ program ] 
     construct S1  [type_declaration]
+        <<<<<<  C 
+    by
+        P  [ $  S  S1 ] 
+end function
+
+redefine class_body_declaration
+    ...
+|       
+    [attr Change] 
+
+end define
+function find_replace_class_body_declaration
+    replace  [program]
+        P  [ program ] 
+    import Program_Diff [program]
+
+    construct S  [class_body_declaration *]
+        _  [ find_clones_class_body_declaration  P  Program_Diff ] 
+    construct P3  [program]
+        P  [mark_clones_class_body_declaration  each  S]
+ 
+    by
+        P3 
+end function
+
+function find_clones_class_body_declaration P  [program] P2  [program]
+    replace  [class_body_declaration *]
+        _  [ class_body_declaration  * ] 
+    construct S  [class_body_declaration *]
+        _  [ ^  P ] 
+    by
+        _  [add_if_clones_class_body_declaration1  P2  each  S]
+ 
+end function
+
+function add_if_clones_class_body_declaration1 P2  [program] Stmt  [class_body_declaration]
+    construct S2  [class_body_declaration *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
+        Stmt  Rest  [ class_body_declaration  * ] 
+    replace  [class_body_declaration *]
+        StructuredClones  [ class_body_declaration  * ] 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
+    by
+        StructuredClones  [ . Stmt ] 
+end function
+
+function mark_clones_class_body_declaration S  [class_body_declaration]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct C  [stringlit]
+        _  [ quote  S ] 
+    where not
+        C  [=  ""]
+    construct S2  [class_body_declaration]
+        >>>>>>  C 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    construct S1  [class_body_declaration]
+        <<<<<<  C 
+    by
+        P  [ $  S  S1 ] 
+end function
+
+redefine my_comment
+    ...
+|       
+    [attr Change] 
+
+end define
+function find_replace_my_comment
+    replace  [program]
+        P  [ program ] 
+    import Program_Diff [program]
+
+    construct S  [my_comment *]
+        _  [ find_clones_my_comment  P  Program_Diff ] 
+    construct P3  [program]
+        P  [mark_clones_my_comment  each  S]
+ 
+    by
+        P3 
+end function
+
+function find_clones_my_comment P  [program] P2  [program]
+    replace  [my_comment *]
+        _  [ my_comment  * ] 
+    construct S  [my_comment *]
+        _  [ ^  P ] 
+    by
+        _  [add_if_clones_my_comment1  P2  each  S]
+ 
+end function
+
+function add_if_clones_my_comment1 P2  [program] Stmt  [my_comment]
+    construct S2  [my_comment *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
+        Stmt  Rest  [ my_comment  * ] 
+    replace  [my_comment *]
+        StructuredClones  [ my_comment  * ] 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
+    by
+        StructuredClones  [ . Stmt ] 
+end function
+
+function mark_clones_my_comment S  [my_comment]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct C  [stringlit]
+        _  [ quote  S ] 
+    where not
+        C  [=  ""]
+    construct S2  [my_comment]
+        >>>>>>  C 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    construct S1  [my_comment]
         <<<<<<  C 
     by
         P  [ $  S  S1 ] 
@@ -1036,6 +1145,41 @@ rule normalise_list_implements_clause_qualified_name
         N2 ,  N1 ,  Rest 
 end rule
 
+function normalise_ignore_by2_package_declaration_import_declaration1 E1  [package_declaration]
+    replace  [package_declaration *]
+        Seq  [package_declaration *] 
+    deconstruct not E1
+        X2  [opt package_header]  X3  [repeat import_declaration]  X4  [repeat type_declaration] 
+    by
+        Seq  [ . E1 ] 
+end function
+
+function normalise_ignore_by3_package_declaration_import_declaration1 E1  [package_declaration]
+    replace  [package_declaration *]
+        Seq  [package_declaration *] 
+    deconstruct E1
+        X2  [opt package_header]  X3  [repeat import_declaration]  X4  [repeat type_declaration] 
+    construct E2  [package_declaration]
+        X2  X4 
+    by
+        Seq  [ . E2 ] 
+end function
+
+function normalise_ignore_by4_package_declaration_import_declaration1
+    replace  [program]
+        P1  [ program ] 
+    construct List1  [package_declaration *]
+        _  [ ^  P1 ] 
+    construct List2  [package_declaration *]
+        _  [normalise_ignore_by3_package_declaration_import_declaration1  each  List1]  [
+                  normalise_ignore_by2_package_declaration_import_declaration1  each  List1]
+ 
+    construct P2  [program]
+        P1  [ $  List1  List2 ] 
+    by
+        P2 
+end function
+
 function normalise_ignore_by1_Private_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1  [
   class_body_declaration]
     replace  [class_body_declaration *]
@@ -1060,13 +1204,13 @@ function normalise_ignore_by3_Private_class_or_interface_body_class_body_declara
     replace  [class_or_interface_body *]
         Seq  [class_or_interface_body *] 
     deconstruct E1
-        '{ N1  [repeat class_body_declaration]  '}  X2  [opt  ';] 
+        '{ N1  [repeat class_body_declaration]  '}  X5  [opt  ';] 
     construct N2  [class_body_declaration *]
         _  [normalise_ignore_by1_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
                   normalise_ignore_by2_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]
  
     construct E2  [class_or_interface_body]
-        '{ N2  '}  X2 
+        '{ N2  '}  X5 
     by
         Seq  [ . E2 ] 
 end function
@@ -1082,41 +1226,6 @@ function normalise_ignore_by4_Private_class_or_interface_body_class_body_declara
     construct P2  [program]
         P1  [$  each  List1  List2]
  
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_package_declaration_import_declaration1 E1  [package_declaration]
-    replace  [package_declaration *]
-        Seq  [package_declaration *] 
-    deconstruct not E1
-        X3  [opt package_header]  X4  [repeat import_declaration]  X5  [repeat type_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_package_declaration_import_declaration1 E1  [package_declaration]
-    replace  [package_declaration *]
-        Seq  [package_declaration *] 
-    deconstruct E1
-        X3  [opt package_header]  X4  [repeat import_declaration]  X5  [repeat type_declaration] 
-    construct E2  [package_declaration]
-        X3  X5 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_package_declaration_import_declaration1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [package_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [package_declaration *]
-        _  [normalise_ignore_by3_package_declaration_import_declaration1  each  List1]  [
-                  normalise_ignore_by2_package_declaration_import_declaration1  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
     by
         P2 
 end function
@@ -1213,2530 +1322,19 @@ rule normalise_list_single_annotation_value_expression_or_nested_annotation
         N2 ,  N1 ,  Rest 
 end rule
 
-function normalise_ignore_by2_class_body_declaration_srcfilename1 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X6  [opt srcfilename]  X7  [opt srclinenumber]  X8  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename1 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X6  [opt srcfilename]  X7  [opt srclinenumber]  X8  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X7  X8 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename1  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename1  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename2 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X9  [opt srcfilename]  X10  [opt srclinenumber]  X11  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename2 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X9  [opt srcfilename]  X10  [opt srclinenumber]  X11  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X10  X11 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename2
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename2  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename2  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename3 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X12  [opt srcfilename]  X13  [opt srclinenumber]  X14  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename3 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X12  [opt srcfilename]  X13  [opt srclinenumber]  X14  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X13  X14 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename3
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename3  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename3  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename4 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X15  [opt srcfilename]  X16  [opt srclinenumber]  X17  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename4 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X15  [opt srcfilename]  X16  [opt srclinenumber]  X17  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X16  X17 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename4
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename4  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename4  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename5 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X18  [opt srcfilename]  X19  [opt srclinenumber]  X20  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename5 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X18  [opt srcfilename]  X19  [opt srclinenumber]  X20  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X19  X20 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename5
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename5  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename5  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber1 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X21  [opt srcfilename]  X22  [opt srclinenumber]  X23  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber1 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X21  [opt srcfilename]  X22  [opt srclinenumber]  X23  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X21  X23 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber1  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber1  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber2 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X24  [opt srcfilename]  X25  [opt srclinenumber]  X26  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber2 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X24  [opt srcfilename]  X25  [opt srclinenumber]  X26  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X24  X26 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber2
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber2  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber2  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber3 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X27  [opt srcfilename]  X28  [opt srclinenumber]  X29  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber3 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X27  [opt srcfilename]  X28  [opt srclinenumber]  X29  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X27  X29 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber3
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber3  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber3  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber4 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X30  [opt srcfilename]  X31  [opt srclinenumber]  X32  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber4 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X30  [opt srcfilename]  X31  [opt srclinenumber]  X32  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X30  X32 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber4
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber4  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber4  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber5 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X33  [opt srcfilename]  X34  [opt srclinenumber]  X35  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber5 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X33  [opt srcfilename]  X34  [opt srclinenumber]  X35  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X33  X35 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber5
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber5  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber5  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename6 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X36  [opt srcfilename]  X37  [opt srclinenumber]  X38  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename6 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X36  [opt srcfilename]  X37  [opt srclinenumber]  X38  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X37  X38 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename6
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename6  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename6  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename7 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X39  [opt srcfilename]  X40  [opt srclinenumber]  X41  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename7 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X39  [opt srcfilename]  X40  [opt srclinenumber]  X41  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X40  X41 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename7
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename7  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename7  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename8 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X42  [opt srcfilename]  X43  [opt srclinenumber]  X44  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename8 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X42  [opt srcfilename]  X43  [opt srclinenumber]  X44  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X43  X44 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename8
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename8  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename8  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename9 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X45  [opt srcfilename]  X46  [opt srclinenumber]  X47  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename9 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X45  [opt srcfilename]  X46  [opt srclinenumber]  X47  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X46  X47 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename9
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename9  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename9  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename10 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X48  [opt srcfilename]  X49  [opt srclinenumber]  X50  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename10 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X48  [opt srcfilename]  X49  [opt srclinenumber]  X50  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X49  X50 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename10
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename10  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename10  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber6 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X51  [opt srcfilename]  X52  [opt srclinenumber]  X53  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber6 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X51  [opt srcfilename]  X52  [opt srclinenumber]  X53  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X51  X53 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber6
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber6  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber6  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber7 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X54  [opt srcfilename]  X55  [opt srclinenumber]  X56  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber7 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X54  [opt srcfilename]  X55  [opt srclinenumber]  X56  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X54  X56 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber7
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber7  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber7  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber8 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X57  [opt srcfilename]  X58  [opt srclinenumber]  X59  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber8 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X57  [opt srcfilename]  X58  [opt srclinenumber]  X59  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X57  X59 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber8
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber8  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber8  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber9 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X60  [opt srcfilename]  X61  [opt srclinenumber]  X62  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber9 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X60  [opt srcfilename]  X61  [opt srclinenumber]  X62  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X60  X62 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber9
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber9  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber9  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber10 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X63  [opt srcfilename]  X64  [opt srclinenumber]  X65  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber10 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X63  [opt srcfilename]  X64  [opt srclinenumber]  X65  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X63  X65 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber10
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber10  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber10  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename11 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X66  [opt srcfilename]  X67  [opt srclinenumber]  X68  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename11 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X66  [opt srcfilename]  X67  [opt srclinenumber]  X68  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X67  X68 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename11
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename11  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename11  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename12 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X69  [opt srcfilename]  X70  [opt srclinenumber]  X71  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename12 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X69  [opt srcfilename]  X70  [opt srclinenumber]  X71  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X70  X71 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename12
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename12  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename12  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename13 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X72  [opt srcfilename]  X73  [opt srclinenumber]  X74  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename13 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X72  [opt srcfilename]  X73  [opt srclinenumber]  X74  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X73  X74 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename13
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename13  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename13  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename14 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X75  [opt srcfilename]  X76  [opt srclinenumber]  X77  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename14 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X75  [opt srcfilename]  X76  [opt srclinenumber]  X77  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X76  X77 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename14
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename14  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename14  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename15 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X78  [opt srcfilename]  X79  [opt srclinenumber]  X80  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename15 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X78  [opt srcfilename]  X79  [opt srclinenumber]  X80  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X79  X80 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename15
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename15  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename15  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber11 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X81  [opt srcfilename]  X82  [opt srclinenumber]  X83  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber11 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X81  [opt srcfilename]  X82  [opt srclinenumber]  X83  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X81  X83 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber11
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber11  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber11  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber12 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X84  [opt srcfilename]  X85  [opt srclinenumber]  X86  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber12 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X84  [opt srcfilename]  X85  [opt srclinenumber]  X86  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X84  X86 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber12
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber12  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber12  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber13 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X87  [opt srcfilename]  X88  [opt srclinenumber]  X89  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber13 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X87  [opt srcfilename]  X88  [opt srclinenumber]  X89  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X87  X89 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber13
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber13  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber13  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber14 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X90  [opt srcfilename]  X91  [opt srclinenumber]  X92  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber14 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X90  [opt srcfilename]  X91  [opt srclinenumber]  X92  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X90  X92 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber14
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber14  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber14  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber15 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X93  [opt srcfilename]  X94  [opt srclinenumber]  X95  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber15 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X93  [opt srcfilename]  X94  [opt srclinenumber]  X95  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X93  X95 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber15
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber15  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber15  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename16 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X96  [opt srcfilename]  X97  [opt srclinenumber]  X98  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename16 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X96  [opt srcfilename]  X97  [opt srclinenumber]  X98  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X97  X98 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename16
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename16  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename16  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename17 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X99  [opt srcfilename]  X100  [opt srclinenumber]  X101  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename17 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X99  [opt srcfilename]  X100  [opt srclinenumber]  X101  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X100  X101 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename17
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename17  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename17  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename18 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X102  [opt srcfilename]  X103  [opt srclinenumber]  X104  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename18 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X102  [opt srcfilename]  X103  [opt srclinenumber]  X104  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X103  X104 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename18
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename18  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename18  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename19 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X105  [opt srcfilename]  X106  [opt srclinenumber]  X107  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename19 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X105  [opt srcfilename]  X106  [opt srclinenumber]  X107  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X106  X107 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename19
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename19  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename19  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename20 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X108  [opt srcfilename]  X109  [opt srclinenumber]  X110  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename20 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X108  [opt srcfilename]  X109  [opt srclinenumber]  X110  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X109  X110 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename20
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename20  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename20  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber16 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X111  [opt srcfilename]  X112  [opt srclinenumber]  X113  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber16 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X111  [opt srcfilename]  X112  [opt srclinenumber]  X113  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X111  X113 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber16
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber16  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber16  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber17 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X114  [opt srcfilename]  X115  [opt srclinenumber]  X116  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber17 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X114  [opt srcfilename]  X115  [opt srclinenumber]  X116  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X114  X116 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber17
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber17  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber17  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber18 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X117  [opt srcfilename]  X118  [opt srclinenumber]  X119  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber18 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X117  [opt srcfilename]  X118  [opt srclinenumber]  X119  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X117  X119 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber18
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber18  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber18  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber19 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X120  [opt srcfilename]  X121  [opt srclinenumber]  X122  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber19 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X120  [opt srcfilename]  X121  [opt srclinenumber]  X122  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X120  X122 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber19
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber19  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber19  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber20 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X123  [opt srcfilename]  X124  [opt srclinenumber]  X125  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber20 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X123  [opt srcfilename]  X124  [opt srclinenumber]  X125  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X123  X125 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber20
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber20  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber20  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename21 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X126  [opt srcfilename]  X127  [opt srclinenumber]  X128  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename21 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X126  [opt srcfilename]  X127  [opt srclinenumber]  X128  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X127  X128 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename21
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename21  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename21  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename22 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X129  [opt srcfilename]  X130  [opt srclinenumber]  X131  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename22 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X129  [opt srcfilename]  X130  [opt srclinenumber]  X131  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X130  X131 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename22
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename22  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename22  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename23 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X132  [opt srcfilename]  X133  [opt srclinenumber]  X134  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename23 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X132  [opt srcfilename]  X133  [opt srclinenumber]  X134  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X133  X134 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename23
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename23  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename23  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename24 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X135  [opt srcfilename]  X136  [opt srclinenumber]  X137  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename24 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X135  [opt srcfilename]  X136  [opt srclinenumber]  X137  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X136  X137 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename24
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename24  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename24  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srcfilename25 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X138  [opt srcfilename]  X139  [opt srclinenumber]  X140  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srcfilename25 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X138  [opt srcfilename]  X139  [opt srclinenumber]  X140  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X139  X140 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srcfilename25
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srcfilename25  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srcfilename25  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber21 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X141  [opt srcfilename]  X142  [opt srclinenumber]  X143  [empty_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber21 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X141  [opt srcfilename]  X142  [opt srclinenumber]  X143  [empty_declaration] 
-    construct E2  [class_body_declaration]
-        X141  X143 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber21
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber21  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber21  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber22 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X144  [opt srcfilename]  X145  [opt srclinenumber]  X146  [member_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber22 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X144  [opt srcfilename]  X145  [opt srclinenumber]  X146  [member_declaration] 
-    construct E2  [class_body_declaration]
-        X144  X146 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber22
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber22  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber22  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber23 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X147  [opt srcfilename]  X148  [opt srclinenumber]  X149  [instance_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber23 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X147  [opt srcfilename]  X148  [opt srclinenumber]  X149  [instance_initializer] 
-    construct E2  [class_body_declaration]
-        X147  X149 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber23
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber23  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber23  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber24 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X150  [opt srcfilename]  X151  [opt srclinenumber]  X152  [static_initializer] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber24 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X150  [opt srcfilename]  X151  [opt srclinenumber]  X152  [static_initializer] 
-    construct E2  [class_body_declaration]
-        X150  X152 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber24
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber24  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber24  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_class_body_declaration_srclinenumber25 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct not E1
-        X153  [opt srcfilename]  X154  [opt srclinenumber]  X155  [field_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_class_body_declaration_srclinenumber25 E1  [class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    deconstruct E1
-        X153  [opt srcfilename]  X154  [opt srclinenumber]  X155  [field_declaration] 
-    construct E2  [class_body_declaration]
-        X153  X155 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_class_body_declaration_srclinenumber25
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_body_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [class_body_declaration *]
-        _  [normalise_ignore_by3_class_body_declaration_srclinenumber25  each  List1]  [
-                  normalise_ignore_by2_class_body_declaration_srclinenumber25  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_package_header_srcfilename1 E1  [package_header]
-    replace  [package_header *]
-        Seq  [package_header *] 
-    deconstruct not E1
-        X156  [opt srcfilename]  X157  [opt srclinenumber]  X158  [repeat annotation]  'package  X159  [package_name]  '; 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_package_header_srcfilename1 E1  [package_header]
-    replace  [package_header *]
-        Seq  [package_header *] 
-    deconstruct E1
-        X156  [opt srcfilename]  X157  [opt srclinenumber]  X158  [repeat annotation]  'package  X159  [package_name]  '; 
-    construct E2  [package_header]
-        X157  X158  'package  X159  '; 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_package_header_srcfilename1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [package_header *]
-        _  [ ^  P1 ] 
-    construct List2  [package_header *]
-        _  [normalise_ignore_by3_package_header_srcfilename1  each  List1]  [normalise_ignore_by2_package_header_srcfilename1 
-                  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_package_header_srclinenumber1 E1  [package_header]
-    replace  [package_header *]
-        Seq  [package_header *] 
-    deconstruct not E1
-        X160  [opt srcfilename]  X161  [opt srclinenumber]  X162  [repeat annotation]  'package  X163  [package_name]  '; 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_package_header_srclinenumber1 E1  [package_header]
-    replace  [package_header *]
-        Seq  [package_header *] 
-    deconstruct E1
-        X160  [opt srcfilename]  X161  [opt srclinenumber]  X162  [repeat annotation]  'package  X163  [package_name]  '; 
-    construct E2  [package_header]
-        X160  X162  'package  X163  '; 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_package_header_srclinenumber1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [package_header *]
-        _  [ ^  P1 ] 
-    construct List2  [package_header *]
-        _  [normalise_ignore_by3_package_header_srclinenumber1  each  List1]  [
-                  normalise_ignore_by2_package_header_srclinenumber1  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srcfilename1 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X164  [opt srcfilename]  X165  [opt srclinenumber]  X166  [class_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srcfilename1 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X164  [opt srcfilename]  X165  [opt srclinenumber]  X166  [class_declaration] 
-    construct E2  [type_declaration]
-        X165  X166 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srcfilename1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srcfilename1  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srcfilename1  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srcfilename2 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X167  [opt srcfilename]  X168  [opt srclinenumber]  X169  [interface_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srcfilename2 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X167  [opt srcfilename]  X168  [opt srclinenumber]  X169  [interface_declaration] 
-    construct E2  [type_declaration]
-        X168  X169 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srcfilename2
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srcfilename2  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srcfilename2  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srcfilename3 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X170  [opt srcfilename]  X171  [opt srclinenumber]  X172  [enum_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srcfilename3 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X170  [opt srcfilename]  X171  [opt srclinenumber]  X172  [enum_declaration] 
-    construct E2  [type_declaration]
-        X171  X172 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srcfilename3
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srcfilename3  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srcfilename3  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srclinenumber1 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X173  [opt srcfilename]  X174  [opt srclinenumber]  X175  [class_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srclinenumber1 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X173  [opt srcfilename]  X174  [opt srclinenumber]  X175  [class_declaration] 
-    construct E2  [type_declaration]
-        X173  X175 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srclinenumber1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srclinenumber1  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srclinenumber1  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srclinenumber2 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X176  [opt srcfilename]  X177  [opt srclinenumber]  X178  [interface_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srclinenumber2 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X176  [opt srcfilename]  X177  [opt srclinenumber]  X178  [interface_declaration] 
-    construct E2  [type_declaration]
-        X176  X178 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srclinenumber2
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srclinenumber2  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srclinenumber2  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srclinenumber3 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X179  [opt srcfilename]  X180  [opt srclinenumber]  X181  [enum_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srclinenumber3 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X179  [opt srcfilename]  X180  [opt srclinenumber]  X181  [enum_declaration] 
-    construct E2  [type_declaration]
-        X179  X181 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srclinenumber3
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srclinenumber3  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srclinenumber3  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srcfilename4 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X182  [opt srcfilename]  X183  [opt srclinenumber]  X184  [class_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srcfilename4 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X182  [opt srcfilename]  X183  [opt srclinenumber]  X184  [class_declaration] 
-    construct E2  [type_declaration]
-        X183  X184 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srcfilename4
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srcfilename4  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srcfilename4  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srcfilename5 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X185  [opt srcfilename]  X186  [opt srclinenumber]  X187  [interface_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srcfilename5 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X185  [opt srcfilename]  X186  [opt srclinenumber]  X187  [interface_declaration] 
-    construct E2  [type_declaration]
-        X186  X187 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srcfilename5
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srcfilename5  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srcfilename5  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srcfilename6 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X188  [opt srcfilename]  X189  [opt srclinenumber]  X190  [enum_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srcfilename6 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X188  [opt srcfilename]  X189  [opt srclinenumber]  X190  [enum_declaration] 
-    construct E2  [type_declaration]
-        X189  X190 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srcfilename6
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srcfilename6  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srcfilename6  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srclinenumber4 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X191  [opt srcfilename]  X192  [opt srclinenumber]  X193  [class_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srclinenumber4 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X191  [opt srcfilename]  X192  [opt srclinenumber]  X193  [class_declaration] 
-    construct E2  [type_declaration]
-        X191  X193 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srclinenumber4
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srclinenumber4  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srclinenumber4  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srclinenumber5 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X194  [opt srcfilename]  X195  [opt srclinenumber]  X196  [interface_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srclinenumber5 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X194  [opt srcfilename]  X195  [opt srclinenumber]  X196  [interface_declaration] 
-    construct E2  [type_declaration]
-        X194  X196 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srclinenumber5
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srclinenumber5  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srclinenumber5  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srclinenumber6 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X197  [opt srcfilename]  X198  [opt srclinenumber]  X199  [enum_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srclinenumber6 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X197  [opt srcfilename]  X198  [opt srclinenumber]  X199  [enum_declaration] 
-    construct E2  [type_declaration]
-        X197  X199 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srclinenumber6
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srclinenumber6  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srclinenumber6  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srcfilename7 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X200  [opt srcfilename]  X201  [opt srclinenumber]  X202  [class_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srcfilename7 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X200  [opt srcfilename]  X201  [opt srclinenumber]  X202  [class_declaration] 
-    construct E2  [type_declaration]
-        X201  X202 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srcfilename7
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srcfilename7  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srcfilename7  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srcfilename8 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X203  [opt srcfilename]  X204  [opt srclinenumber]  X205  [interface_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srcfilename8 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X203  [opt srcfilename]  X204  [opt srclinenumber]  X205  [interface_declaration] 
-    construct E2  [type_declaration]
-        X204  X205 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srcfilename8
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srcfilename8  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srcfilename8  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srcfilename9 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X206  [opt srcfilename]  X207  [opt srclinenumber]  X208  [enum_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srcfilename9 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X206  [opt srcfilename]  X207  [opt srclinenumber]  X208  [enum_declaration] 
-    construct E2  [type_declaration]
-        X207  X208 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srcfilename9
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srcfilename9  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srcfilename9  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srclinenumber7 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X209  [opt srcfilename]  X210  [opt srclinenumber]  X211  [class_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srclinenumber7 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X209  [opt srcfilename]  X210  [opt srclinenumber]  X211  [class_declaration] 
-    construct E2  [type_declaration]
-        X209  X211 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srclinenumber7
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srclinenumber7  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srclinenumber7  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srclinenumber8 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X212  [opt srcfilename]  X213  [opt srclinenumber]  X214  [interface_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srclinenumber8 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X212  [opt srcfilename]  X213  [opt srclinenumber]  X214  [interface_declaration] 
-    construct E2  [type_declaration]
-        X212  X214 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srclinenumber8
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srclinenumber8  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srclinenumber8  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
-function normalise_ignore_by2_type_declaration_srclinenumber9 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct not E1
-        X215  [opt srcfilename]  X216  [opt srclinenumber]  X217  [enum_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_type_declaration_srclinenumber9 E1  [type_declaration]
-    replace  [type_declaration *]
-        Seq  [type_declaration *] 
-    deconstruct E1
-        X215  [opt srcfilename]  X216  [opt srclinenumber]  X217  [enum_declaration] 
-    construct E2  [type_declaration]
-        X215  X217 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_type_declaration_srclinenumber9
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [type_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [type_declaration *]
-        _  [normalise_ignore_by3_type_declaration_srclinenumber9  each  List1]  [
-                  normalise_ignore_by2_type_declaration_srclinenumber9  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
 function program_normalise
     replace  [program]
         Prg  [ program ] 
     by
-        Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ 
+        Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ normalise_ignore_by4_package_declaration_import_declaration1 ]  [ 
           normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 
-          normalise_ignore_by4_package_declaration_import_declaration1 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename1 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename2 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename3 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename4 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename5 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber1 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber2 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber3 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber4 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber5 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename6 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename7 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename8 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename9 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename10 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber6 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber7 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber8 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber9 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber10 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename11 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename12 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename13 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename14 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename15 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber11 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber12 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber13 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber14 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber15 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename16 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename17 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename18 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename19 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename20 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber16 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber17 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber18 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber19 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber20 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename21 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename22 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename23 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename24 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srcfilename25 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber21 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber22 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber23 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber24 ]  [ 
-          normalise_ignore_by4_class_body_declaration_srclinenumber25 ]  [ normalise_ignore_by4_package_header_srcfilename1 ]  [
-          normalise_ignore_by4_package_header_srclinenumber1 ]  [ normalise_ignore_by4_type_declaration_srcfilename1 ]  [ 
-          normalise_ignore_by4_type_declaration_srcfilename2 ]  [ normalise_ignore_by4_type_declaration_srcfilename3 ]  [ 
-          normalise_ignore_by4_type_declaration_srclinenumber1 ]  [ normalise_ignore_by4_type_declaration_srclinenumber2 ]  [ 
-          normalise_ignore_by4_type_declaration_srclinenumber3 ]  [ normalise_ignore_by4_type_declaration_srcfilename4 ]  [ 
-          normalise_ignore_by4_type_declaration_srcfilename5 ]  [ normalise_ignore_by4_type_declaration_srcfilename6 ]  [ 
-          normalise_ignore_by4_type_declaration_srclinenumber4 ]  [ normalise_ignore_by4_type_declaration_srclinenumber5 ]  [ 
-          normalise_ignore_by4_type_declaration_srclinenumber6 ]  [ normalise_ignore_by4_type_declaration_srcfilename7 ]  [ 
-          normalise_ignore_by4_type_declaration_srcfilename8 ]  [ normalise_ignore_by4_type_declaration_srcfilename9 ]  [ 
-          normalise_ignore_by4_type_declaration_srclinenumber7 ]  [ normalise_ignore_by4_type_declaration_srclinenumber8 ]  [ 
-          normalise_ignore_by4_type_declaration_srclinenumber9 ]  [ normalise_preferred_replace_method_body_block1 ]  [ 
-          normalise_preferred_replace_constructor_body_block1 ]  [ normalise_list_enum_body_class_body_declaration ]  [ 
-          normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
-          normalise_list_enum_header_modifier ]  [ normalise_list_extends_clause_type_name ]  [ 
-          normalise_list_implements_clause_qualified_name ]  [ normalise_list_constructor_declaration_modifier ]  [ 
-          normalise_list_variable_declaration_modifier ]  [ normalise_list_variable_declarators_variable_declarator ]  [ 
-          normalise_list_method_declaration_modifier ]  [ normalise_list_throws_qualified_name ]  [ 
-          normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
+          normalise_preferred_replace_method_body_block1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
+          normalise_list_enum_body_class_body_declaration ]  [ normalise_list_class_header_modifier ]  [ 
+          normalise_list_interface_header_modifier ]  [ normalise_list_enum_header_modifier ]  [ 
+          normalise_list_extends_clause_type_name ]  [ normalise_list_implements_clause_qualified_name ]  [ 
+          normalise_list_constructor_declaration_modifier ]  [ normalise_list_variable_declaration_modifier ]  [ 
+          normalise_list_variable_declarators_variable_declarator ]  [ normalise_list_method_declaration_modifier ]  [ 
+          normalise_list_throws_qualified_name ]  [ normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
           normalise_list_single_annotation_value_expression_or_nested_annotation ] 
 end function
 
@@ -3754,7 +1352,8 @@ function program_remove_clone
     export Program_Diff [program]
         P2 
     by
-        Prg  [ find_replace_class_body_declaration ]  [ find_replace_package_header ]  [ find_replace_type_declaration ] 
+        Prg  [ find_replace_package_header ]  [ find_replace_type_declaration ]  [ find_replace_class_body_declaration ]  [ 
+          find_replace_my_comment ] 
 end function
 
 redefine program
