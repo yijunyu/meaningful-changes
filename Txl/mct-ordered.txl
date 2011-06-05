@@ -12,11 +12,23 @@ end rule
 %   Rules [statement*]  %% The rules for normalising the id's
 %   OrderRuleIDs [id*]	%% The name of the normalisation rules
 %
-function typeSpec_repeat DS [redefineStatement] T [typeSpec]
+function typeSpec_repeat DS 
+#ifdef DEFINE
+[defineStatement] 
+#else
+[redefineStatement] 
+#endif
+T [typeSpec]
  import Rules [statement*]
  import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 
+#ifdef DEFINE
+'define 
+#else
+'redefine 
+#endif
+TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered 
  construct StrID [id] _ [quote TID]
@@ -37,11 +49,23 @@ function typeSpec_repeat DS [redefineStatement] T [typeSpec]
  export OrderRuleIDs OrderRuleIDs [. ruleID]
  by S
 end function
-function typeSpec_repeat_byField DS [redefineStatement] T [typeSpec]
+function typeSpec_repeat_byField DS 
+#ifdef DEFINE
+[defineStatement] 
+#else
+[redefineStatement] 
+#endif
+T [typeSpec]
  import Rules [statement*]
  import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 
+#ifdef DEFINE
+'define 
+#else
+'redefine 
+#endif
+TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered B [opt byField]
  deconstruct B 'by F [id]
@@ -69,11 +93,23 @@ end function
 %   Rules [statement*]  %% The rules for normalising the id's
 %   OrderRuleIDs [id*]	%% The name of the normalisation rules
 %
-function typeSpec_list DS [redefineStatement] T [typeSpec]
+function typeSpec_list DS 
+#ifdef DEFINE
+[defineStatement] 
+#else
+[redefineStatement] 
+#endif
+T [typeSpec]
  import Rules [statement*]
  import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 
+#ifdef DEFINE
+'define 
+#else
+'redefine 
+#endif
+TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered
  construct StrID [id] _ [quote TID]
@@ -94,11 +130,23 @@ function typeSpec_list DS [redefineStatement] T [typeSpec]
  export OrderRuleIDs OrderRuleIDs [. ruleID]
  by S
 end function
-function typeSpec_list_byField DS [redefineStatement] T [typeSpec]
+function typeSpec_list_byField DS 
+#ifdef DEFINE
+[defineStatement] 
+#else
+[redefineStatement] 
+#endif
+T [typeSpec]
  import Rules [statement*]
  import OrderRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 
+#ifdef DEFINE
+'define 
+#else
+'redefine 
+#endif
+TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered B [byField]
  deconstruct B 'by F [id]

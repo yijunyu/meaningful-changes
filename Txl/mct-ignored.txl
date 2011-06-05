@@ -8,13 +8,28 @@ end rule
 %
 % Ignore the node unconditionally
 %
-function typeSpec_ignore DS [redefineStatement] T [typeSpec]
+function typeSpec_ignore DS 
+#ifdef DEFINE
+[defineStatement] 
+#else
+[redefineStatement] 
+#endif
+T [typeSpec]
  replace [statement*] S [statement*] 
  deconstruct DS 
-      'redefine TID [typeid] 
+#ifdef DEFINE
+'define 
+#else
+'redefine 
+#endif
+      TID [typeid] 
+#ifndef DEFINE
         PrevRule [opt dotDotDotBar]
+#endif
 	LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 
+#ifndef DEFINE
 	PostRule [opt barDotDotDot] 
+#endif
 	'end 'define
  by S [typeSpec_ignore_LoT TID T LoT] 
       [typeSpec_ignore_BLoT TID T each BLoT] 
@@ -32,12 +47,19 @@ function typeSpec_ignore_LoT TID [typeid] T [typeSpec] LoT [literalOrType*]
  construct Pattern [pattern] Pat
  construct Replacement [replacement] Expression
  deconstruct I TypeID [id] 
+ construct ID2 [id] 'normalise_ignore_by2
+ construct ruleID2 [id] ID2 [_ StrID] [_ TypeID] [!]
  construct ID3 [id] 'normalise_ignore_by3
  construct ruleID3 [id] ID3 [_ StrID] [_ TypeID] [!]
  construct ID4 [id] 'normalise_ignore_by4
  construct ruleID4 [id] ID4 [_ StrID] [_ TypeID] [!]
  construct pID [id] TypeID [_ StrID]
  construct S1 [statement*]
+    'function ruleID2 'E1 '[ TID ']
+    	'replace '[ TID '* '] 'Seq '[ TID '* ']
+        'deconstruct 'not 'E1 Pattern
+     	'by 'Seq '[ '. 'E1 '] 
+    'end 'function
     'function ruleID3 'E1 '[ TID ']
     	'replace '[ TID '* '] 'Seq '[ TID '* ']
         'deconstruct 'E1 Pattern
@@ -48,7 +70,7 @@ function typeSpec_ignore_LoT TID [typeid] T [typeSpec] LoT [literalOrType*]
         'replace '[ 'program '] 'P1 '[ 'program '] 
         'construct 'List1 '[ TID '* '] '_ '[ '^ 'P1 '] 
         'construct 'List2 '[ TID '* ']
-            '_ '[ ruleID3 'each 'List1 ']
+            '_ '[ ruleID3 'each 'List1 '] '[ ruleID2 'each 'List1 ']
         'construct 'P2 '[ 'program '] 'P1 '[ '$ 'List1 'List2 ']
        'by 'P2
     'end 'function
@@ -72,11 +94,23 @@ end function
 % ignored non-terminal and E2 is the ignored non-terminal
 %
 
-function typeSpec_ignore_when DS [redefineStatement] T [typeSpec]
+function typeSpec_ignore_when DS 
+#ifdef DEFINE
+[defineStatement] 
+#else
+[redefineStatement] 
+#endif
+T [typeSpec]
  import Rules [statement*]
  import IgnoreRuleIDs [id*]
  replace [statement*] S [statement*] 
- deconstruct DS 'redefine TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 
+#ifdef DEFINE
+'define 
+#else
+'redefine 
+#endif
+TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  deconstruct Ig 'ignored W [whenField]
  deconstruct W 'when F [id]

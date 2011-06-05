@@ -1,4 +1,8 @@
 include "mct.grm"
+#ifdef DEFINE
+include "include_all.txl"
+include "redefine2define.txl"
+#endif
 include "mct-util.txl"
 include "mct-ordered.txl"
 include "mct-ignored.txl"
@@ -7,7 +11,11 @@ include "mct-kept.txl"
 %
 % Process all the [list Foo] or [repeat Foo] in the redefine statements
 %
+#ifdef DEFINE
+function DS_replace DS [defineStatement]
+#else
 function DS_replace DS [redefineStatement]
+#endif
  replace [statement*] S0 [statement*]
  construct T1 [typeSpec*] _ [^ DS]
  construct S1 [statement*] _ [typeSpec_repeat DS each T1]
@@ -66,12 +74,22 @@ function main
  export KeepRuleIDs [id*] _
  export TypeIDs [id*] _
  construct P0 [program] 
-      P [typeSpec_removeClones] 
+      P 
+#ifdef DEFINE
+	[include_all] 
+#endif
+	[typeSpec_removeClones] 
+#ifdef DEFINE
+	[redefine2define]
+#endif
  import Rules
  construct Statements_ChangeRule [statement*]
 	'keys
 	% '<<<<<< is removed from left, '>>>>>> is added to right
-		'... '<<<<<< '>>>>>>
+		'... '<<<<<< '>>>>>> 
+#ifdef LINENO
+		'# 'line
+#endif
 	'end 'keys
 	'compounds
 		'... '<<<<<< '>>>>>>
@@ -80,6 +98,11 @@ function main
 		'[ 'NL '] '<<<<<< '['opt 'stringlit'] '[ 'NL '] 
 	     '| '[ 'NL '] '>>>>>> '['opt 'stringlit'] '[ 'NL '] 
 	'end 'define
+#ifdef LINENO_XYZ
+	'define 'coordinates
+		'line '[ 'srcfilename '] '[ 'srclinenumber '] '[ 'NL ']
+	'end 'define
+#endif
  export Rules _ [. Statements_ChangeRule] [. Rules]
  import KeepRuleIDs
  import TypeIDs
@@ -87,7 +110,12 @@ function main
  deconstruct P0 S_P0 [statement*] 
  construct P0_1 [statement*] _ [. S_P0] [. Rules] 
  construct P0_2 [program] P0_1 
+#ifdef DEFINE
+ construct P0_3 [program] P0_2 [redefine2define]
+ construct DSS [defineStatement*] _ [^ P0_3] 
+#else
  construct DSS [redefineStatement*] _ [^ P0_2] 
+#endif
  construct S [statement*] _ [DS_replace each DSS]
  construct PL [literalOrExpression*] 'Prg
  import OrderRuleIDs
@@ -155,8 +183,13 @@ function main
 	'end 'function
  deconstruct P0 S0 [statement*]
  import Rules
- construct P1 [program] S0 [. Rules] [. statements_Rule ] 
- by  P1 [typeSpec_eliminateKeptAnnotations] 
+ construct P1 [program] S0 [. Rules] 
+[. statements_Rule ] 
+ by  P1 
+#ifdef DEFINE
+	[redefine2define]
+#endif
+	[typeSpec_eliminateKeptAnnotations] 
 	[typeSpec_eliminateOrderedAnnotations]
 	[typeSpec_eliminateIgnoredAnnotations]
 	[typeSpec_eliminatePreferredAnnotations]

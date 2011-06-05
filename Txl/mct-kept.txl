@@ -39,6 +39,17 @@ function update_id I [typeid]
  construct add_if_clones_1 [id] add_if_clones [_ TypeID] [!]
  construct add_if_clones_2 [id] add_if_clones [_ TypeID] [!]
  construct Stmt_1 [statement*]
+     % Make sure the line number is output when -attr is on
+#ifdef LINENO
+     'redefine TypeID 
+#ifdef LINENO_XYZ
+	'['opt 'coordinates 'ignored'] 
+#else
+	'['opt 'srcfilename 'ignored'] '['opt 'srclinenumber 'ignored'] 
+#enddif
+	'['NL'] '... 
+     'end 'define
+#endif
      'redefine TypeID 
 	'... '| '[ 'attr 'Change '] 
      'end 'define
@@ -55,7 +66,7 @@ function update_id I [typeid]
 	    'by '_ '[ add_if_clones_1 'P2 'each 'S ']
      'end 'function
      'function add_if_clones_1 'P2 '[ 'program '] 'Stmt '[ TypeID ']
-	    'construct 'S2 '[ TypeID '* '] '_ '[ '^ 'P2 ']
+	    'construct 'S2 '[ TypeID '* '] '_ '[ '^ 'P2 '] 
 	    'deconstruct '* 'S2 'Stmt 'Rest '[ TypeID '* ']
 	    'replace '[ TypeID '* '] 'StructuredClones '[ TypeID '* ']
 	    'deconstruct 'not '* 'StructuredClones 'C '['attr 'Change '] 

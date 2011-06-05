@@ -8,11 +8,23 @@ end rule
 %
 % Use annotation 'preferred 'with L where L is a list of user-defined literals. 
 %
-function typeSpec_preferred_withField DS [redefineStatement] T [typeSpec]
+function typeSpec_preferred_withField DS 
+#ifdef DEFINE
+[defineStatement] 
+#else
+[redefineStatement] 
+#endif
+T [typeSpec]
  import Rules [statement*]
  import PreferRuleIDs [id*]
  replace [statement*] _ [statement*] 
- deconstruct DS 'redefine TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
+ deconstruct DS 
+#ifdef DEFINE
+'define 
+#else
+'redefine 
+#endif
+TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] 
 	K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [preferredWith]
  deconstruct P 'preferred 'with L [literal+]

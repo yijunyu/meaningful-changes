@@ -13,7 +13,6 @@ function remove_dotdotdot
   by Rest
 end function
 
-
 function redefine2define_replace R [redefineStatement] D [defineStatement]
   deconstruct R 
 	'redefine 
@@ -59,14 +58,24 @@ function redefine2define_suffix R [redefineStatement] D [defineStatement]
   deconstruct D
 	'define T1 T7 [repeat literalOrType] T8	[repeat barLiteralsAndTypes] 'end 'define
   % construct d_D [defineStatement] D [print]
-  construct TT3 [repeat literalOrType] T3 [remove_dotdotdot] [. T7]
+  construct TT31 [repeat literalOrType] T3 [remove_dotdotdot] 
+  construct TT3 [repeat literalOrType] TT31 [. T7]
+  construct TT4 [repeat barLiteralsAndTypes] T8 [prepend TT31]
   construct NewD [defineStatement]
-	'define T1 TT3
+	'define T1 TT3 TT4
 	'end 'define
   % construct d_D [defineStatement] NewD [print]
   replace * [statement*] D S1 [statement*] 
   % construct d_D [defineStatement] NewD [print]
   by S1 [replace_redefine R NewD] 
+end function
+function prepend T3 [repeat literalOrType]
+  replace [repeat barLiteralsAndTypes] T81 [barLiteralsAndTypes] T82 [repeat barLiteralsAndTypes] 
+  deconstruct T81 '| LoT [literalOrType*]
+  construct LoT2 [literalOrType*] T3 [. LoT]
+  construct TT41 [barLiteralsAndTypes] '| LoT2
+  construct TT42 [repeat barLiteralsAndTypes] T82 [prepend T3]
+  by _ [. TT41] [. TT42]
 end function
 
 function redefine2define_one R [redefineStatement]

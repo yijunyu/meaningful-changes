@@ -30,6 +30,12 @@ endef
 
 $(foreach ext,$(extensions),$(eval $(call example,$(ext))))
 
+Txl/%.Txl: Txl/%.grm
+	@touch $@
+
+Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl
+	@touch $@
+
 result/v/%.v: $(bin)/vc source/v/%.v
 	@mkdir -p result/v
 	sed "s/'/?/g" source/v/$*.v > result/v/$*.v.tmp
@@ -43,7 +49,7 @@ result/verilog2/%.v: $(bin)/verilog2c source/v/%.v
 	if [ -e test/verilog2/$*.v ]; then diff $@ test/verilog2/$*.v; fi
 
 $(bin)/%c: Txl/%.Txl
-	$(txlc) Txl/$*.Txl
+	$(txlc) -d DEFINE -d LINENO Txl/$*.Txl
 	mv $*.x $@
 
 $(bin)/%cc: Txl/%.Txl
