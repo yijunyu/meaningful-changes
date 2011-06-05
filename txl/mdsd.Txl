@@ -639,11 +639,11 @@ end define
 define expression
     [comment_NL]  [assignment_expression] 
 end define
-define comment_NL
-    [my_comment] 
-end define
 define my_comment
     [repeat comment] 
+end define
+define comment_NL
+    [opt my_comment] 
 end define
 function contains Object  [any]
     match  *  [any]
@@ -665,8 +665,18 @@ function JavaDoc A  [my_comment]
         B  [comment_NL] 
     construct S_Comment  [stringlit]
         _  [quote  A] 
+    where not all
+        S_Comment  [grep  "@generated NOT"]  [=  ""] end function
+
+function GeneratedNot A  [class_body_declaration]
+    match  [class_or_interface_body]
+        B  [class_or_interface_body] 
+    deconstruct * [comment_NL] A
+        C  [comment_NL] 
+    construct S_Cs  [stringlit]
+        _  [quote  C] 
     where not
-        S_Comment  [grep  "*"] end function
+        S_Cs  [grep  "@generated NOT"] end function
 
 keys
     ... <<<<<<  >>>>>> 
@@ -881,72 +891,6 @@ function mark_clones_class_body_declaration S  [class_body_declaration]
         P  [ $  S  S1 ] 
 end function
 
-redefine my_comment
-    ...
-|       
-    [attr Change] 
-
-end define
-function find_replace_my_comment
-    replace  [program]
-        P  [ program ] 
-    import Program_Diff [program]
-
-    construct S  [my_comment *]
-        _  [ find_clones_my_comment  P  Program_Diff ] 
-    construct P3  [program]
-        P  [mark_clones_my_comment  each  S]
- 
-    by
-        P3 
-end function
-
-function find_clones_my_comment P  [program] P2  [program]
-    replace  [my_comment *]
-        _  [ my_comment  * ] 
-    construct S  [my_comment *]
-        _  [ ^  P ] 
-    by
-        _  [add_if_clones_my_comment1  P2  each  S]
- 
-end function
-
-function add_if_clones_my_comment1 P2  [program] Stmt  [my_comment]
-    construct S2  [my_comment *]
-        _  [ ^  P2 ] 
-    deconstruct * S2
-        Stmt  Rest  [ my_comment  * ] 
-    replace  [my_comment *]
-        StructuredClones  [ my_comment  * ] 
-    deconstruct not * StructuredClones
-        C  [attr Change] 
-    by
-        StructuredClones  [ . Stmt ] 
-end function
-
-function mark_clones_my_comment S  [my_comment]
-    import CloneNumber [number]
-
-    import Program_Diff [program]
-
-    export CloneNumber
-        CloneNumber  [ +  1 ] 
-    construct C  [stringlit]
-        _  [ quote  S ] 
-    where not
-        C  [=  ""]
-    construct S2  [my_comment]
-        >>>>>>  C 
-    export Program_Diff
-        Program_Diff  [ $  S  S2 ] 
-    replace  [program]
-        P  [ program ] 
-    construct S1  [my_comment]
-        <<<<<<  C 
-    by
-        P  [ $  S  S1 ] 
-end function
-
 function normalise_preferred_tokens_method_body_block1 B  [method_body]
     replace  [method_body *]
         A  [method_body *] 
@@ -1105,34 +1049,34 @@ rule normalise_list_implements_clause_qualified_name
         N2 ,  N1 ,  Rest 
 end rule
 
-function normalise_ignore_by1_Private_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1  [
+function normalise_ignore_by1_GeneratedNot_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1  [
   class_body_declaration]
     replace  [class_body_declaration *]
         Seq  [class_body_declaration *] 
     where not
-        E1  [Private  N1]
+        E1  [GeneratedNot  N1]
     by
         Seq  [ . N1 ] 
 end function
 
-function normalise_ignore_by2_Private_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1  [
+function normalise_ignore_by2_GeneratedNot_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1  [
   class_body_declaration]
     replace  [class_body_declaration *]
         Seq  [class_body_declaration *] 
     where
-        E1  [Private  N1]
+        E1  [GeneratedNot  N1]
     by
         Seq 
 end function
 
-function normalise_ignore_by3_Private_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body]
+function normalise_ignore_by3_GeneratedNot_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body]
     replace  [class_or_interface_body *]
         Seq  [class_or_interface_body *] 
     deconstruct E1
         '{ N1  [repeat class_body_declaration]  '}  X3  [opt  ';] 
     construct N2  [class_body_declaration *]
-        _  [normalise_ignore_by1_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
-                  normalise_ignore_by2_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]
+        _  [normalise_ignore_by1_GeneratedNot_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
+                  normalise_ignore_by2_GeneratedNot_class_or_interface_body_class_body_declaration1  E1  each  N1]
  
     construct E2  [class_or_interface_body]
         '{ N2  '}  X3 
@@ -1140,13 +1084,13 @@ function normalise_ignore_by3_Private_class_or_interface_body_class_body_declara
         Seq  [ . E2 ] 
 end function
 
-function normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1
+function normalise_ignore_by4_GeneratedNot_class_or_interface_body_class_body_declaration1
     replace  [program]
         P1  [ program ] 
     construct List1  [class_or_interface_body *]
         _  [ ^  P1 ] 
     construct List2  [class_or_interface_body *]
-        _  [normalise_ignore_by3_Private_class_or_interface_body_class_body_declaration1  each  List1]
+        _  [normalise_ignore_by3_GeneratedNot_class_or_interface_body_class_body_declaration1  each  List1]
  
     construct P2  [program]
         P1  [$  each  List1  List2]
@@ -1282,20 +1226,53 @@ function normalise_ignore_by4_package_declaration_import_declaration2
         P2 
 end function
 
+function normalise_ignore_by2_comment_NL_my_comment1 E1  [comment_NL]
+    replace  [comment_NL *]
+        Seq  [comment_NL *] 
+    deconstruct not E1
+        X10  [opt my_comment] 
+    by
+        Seq  [ . E1 ] 
+end function
+
+function normalise_ignore_by3_comment_NL_my_comment1 E1  [comment_NL]
+    replace  [comment_NL *]
+        Seq  [comment_NL *] 
+    deconstruct E1
+        X10  [opt my_comment] 
+    by
+        Seq 
+end function
+
+function normalise_ignore_by4_comment_NL_my_comment1
+    replace  [program]
+        P1  [ program ] 
+    construct List1  [comment_NL *]
+        _  [ ^  P1 ] 
+    construct List2  [comment_NL *]
+        _  [normalise_ignore_by3_comment_NL_my_comment1  each  List1]  [normalise_ignore_by2_comment_NL_my_comment1  each  List1
+                  ]
+ 
+    construct P2  [program]
+        P1  [ $  List1  List2 ] 
+    by
+        P2 
+end function
+
 function program_normalise
     replace  [program]
         Prg  [ program ] 
     by
         Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ 
-          normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 
-          normalise_ignore_by4_package_declaration_import_declaration2 ]  [ normalise_preferred_replace_method_body_block1 ]  [ 
-          normalise_preferred_replace_constructor_body_block1 ]  [ normalise_list_enum_body_class_body_declaration ]  [ 
-          normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
-          normalise_list_enum_header_modifier ]  [ normalise_list_extends_clause_type_name ]  [ 
-          normalise_list_implements_clause_qualified_name ]  [ normalise_list_constructor_declaration_modifier ]  [ 
-          normalise_list_variable_declaration_modifier ]  [ normalise_list_variable_declarators_variable_declarator ]  [ 
-          normalise_list_method_declaration_modifier ]  [ normalise_list_throws_qualified_name ]  [ 
-          normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
+          normalise_ignore_by4_GeneratedNot_class_or_interface_body_class_body_declaration1 ]  [ 
+          normalise_ignore_by4_package_declaration_import_declaration2 ]  [ normalise_ignore_by4_comment_NL_my_comment1 ]  [ 
+          normalise_preferred_replace_method_body_block1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
+          normalise_list_enum_body_class_body_declaration ]  [ normalise_list_class_header_modifier ]  [ 
+          normalise_list_interface_header_modifier ]  [ normalise_list_enum_header_modifier ]  [ 
+          normalise_list_extends_clause_type_name ]  [ normalise_list_implements_clause_qualified_name ]  [ 
+          normalise_list_constructor_declaration_modifier ]  [ normalise_list_variable_declaration_modifier ]  [ 
+          normalise_list_variable_declarators_variable_declarator ]  [ normalise_list_method_declaration_modifier ]  [ 
+          normalise_list_throws_qualified_name ]  [ normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
           normalise_list_single_annotation_value_expression_or_nested_annotation ] 
 end function
 
@@ -1313,8 +1290,7 @@ function program_remove_clone
     export Program_Diff [program]
         P2 
     by
-        Prg  [ find_replace_package_header ]  [ find_replace_type_declaration ]  [ find_replace_class_body_declaration ]  [ 
-          find_replace_my_comment ] 
+        Prg  [ find_replace_package_header ]  [ find_replace_type_declaration ]  [ find_replace_class_body_declaration ] 
 end function
 
 redefine program

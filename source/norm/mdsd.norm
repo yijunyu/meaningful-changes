@@ -37,7 +37,7 @@ end define
 redefine enum_body
     '{                                    [IN]
        [list enum_element] [opt ',]
-       [repeat class_body_declaration ordered]    [EX]
+       [repeat class_body_declaration ordered ]    [EX]
     '} [opt ';]                           [NL][NL]
 end define
 
@@ -76,7 +76,7 @@ end define
 
 redefine class_or_interface_body
     '{                                    [NL][IN]
-       [repeat class_body_declaration kept ordered ignored when Private]    [EX] [NL]
+       [repeat class_body_declaration kept ordered ignored when GeneratedNot]    [EX] [NL]
     '} [opt ';]                           [NL][NL]
 end define
 
@@ -123,12 +123,12 @@ end define
     include "javaCommentOverrides.grm"
 #endif
 
-redefine comment_NL
-    [my_comment kept ignored when JavaDoc]
+define my_comment
+    [repeat comment]
 end define
 
-define my_comment
-    [repeat comment] 
+redefine comment_NL
+    [opt my_comment ignored]
 end define
 
 function contains Object [any] 
@@ -147,7 +147,13 @@ function JavaDoc A  [my_comment]
     match  [comment_NL]
         B  [comment_NL] 
     construct S_Comment [stringlit] _ [quote A] 
-    where not S_Comment [grep "/**"] 
-%    where not S_Comment [grep "@generated NOT"] 
+    where not all S_Comment [grep "@generated NOT"] [= ""]
 end function
 
+function GeneratedNot A  [class_body_declaration]
+    match  [class_or_interface_body]
+        B  [class_or_interface_body] 
+    deconstruct * [comment_NL] A C [comment_NL] 
+    construct S_Cs [stringlit] _ [quote C]
+    where not S_Cs [grep "@generated NOT"]
+end function

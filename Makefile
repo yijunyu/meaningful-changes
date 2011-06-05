@@ -13,7 +13,7 @@ source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:source/%=result/%)
 example+=$(results)
-target+=$(bin)/normc $(bin)/api_clone_javac $(bin)/api_clone_javacc $(bin)/problemcc $(program) $(results)
+target+=$(bin)/normc $(bin)/api_clone_javac $(bin)/api_clone_javacc $(bin)/problemcc $(bin)/mdsdcc $(program) $(results)
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
@@ -31,6 +31,7 @@ endef
 $(foreach ext,$(extensions),$(eval $(call example,$(ext))))
 
 Txl/api_clone_java.Txl: Txl/java.grm Txl/javaCommentOverrides.grm
+Txl/mdsd.Txl: Txl/java.grm Txl/javaCommentOverrides.grm
 Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl
 Txl/problem.Txl: Txl/problem.grm
 Txl/xtext.Txl: Txl/xtext.grm
