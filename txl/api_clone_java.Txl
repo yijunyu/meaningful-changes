@@ -117,10 +117,6 @@ define annotation_default
     'default  [expression] 
     |    'default  [array_initializer] 
 end define
-define type_specifier
-    [type_name] 
-    |    [array_type_specifier] 
-end define
 define array_type_specifier
     [type_name]  [repeat dimension +] 
 end define
@@ -155,11 +151,6 @@ end define
 define keyed_annotation_value
     [id]  '=  [single_annotation_value] 
 end define
-define declaration_or_statement
-    [local_variable_declaration] 
-    |    [class_declaration] 
-    |    [statement] 
-end define
 define local_variable_declaration
     [variable_declaration] 
 end define
@@ -171,9 +162,6 @@ define label_statement
 end define
 define label_name
     [reference] 
-end define
-define expression_statement
-    [expression]  ';  [NL] 
 end define
 define else_clause
     'else  [statement] 
@@ -343,9 +331,6 @@ end define
 define additive_expression
     [multiplicative_expression]  [repeat add_op_multiplicative_expression] 
 end define
-define add_op_multiplicative_expression
-    [add_op]  [multiplicative_expression] 
-end define
 define add_op
     '+ 
     |    '- 
@@ -489,6 +474,16 @@ end define
 define and_type_spec
     '&  [type_specifier] 
 end define
+define type_specifier
+    [type_name]  [comment_NL] 
+    |    [array_type_specifier]  [comment_NL] 
+end define
+define add_op_multiplicative_expression
+    [add_op]  [multiplicative_expression]  [comment_NL] 
+end define
+define expression_statement
+    [expression]  ';  [comment_NL] 
+end define
 define statement
     [comment_NL]  [label_statement]  [comment_NL] 
     |    [comment_NL]  [empty_statement]  [comment_NL] 
@@ -524,7 +519,7 @@ define variable_declarator
     [variable_name]  [opt equals_variable_initializer]  [comment_NL] 
 end define
 define equals_variable_initializer
-    [comment_NL]  '=  [variable_initializer] 
+    [comment_NL]  '=  [variable_initializer]  [comment_NL] 
 end define
 define formal_parameter
     [comment_NL]  [opt  'final]  [type_specifier]  [opt var_arg_specifier]  [formal_parameter_name]  [comment_NL] 
@@ -546,11 +541,23 @@ define if_statement
     'if  '( [expression]  ')  [comment_NL]  [statement]  [opt else_clause]  [NL] 
 end define
 define block
-    '{ [comment_NL]  [repeat declaration_or_statement]  [EX]
-[comment_NL]  '} 
+    '{ [IN]
+        [comment_NL]  [EX]
+    '} 
+    |    '{ [IN]
+        [comment_NL]  [repeat declaration_or_statement +]  [EX]
+    [comment_NL]  '} 
+end define
+define declaration_or_statement
+    [comment_NL]  [local_variable_declaration]  [comment_NL] 
+    |    [comment_NL]  [class_declaration]  [comment_NL] 
+    |    [comment_NL]  [statement]  [comment_NL] 
 end define
 define expression
-    [comment_NL]  [comment_NL]  [assignment_expression] 
+    [comment_NL]  [assignment_expression] 
+end define
+define mycomment
+    [comment]  [NL] 
 end define
 define method_body
     [repeat block] 
