@@ -536,11 +536,6 @@ end define
 define implements_clause
     'implements  [list qualified_name +] 
 end define
-define class_or_interface_body
-    '{ [NL] [IN]
-        [repeat class_body_declaration]  [EX] [NL]
-    '}  [opt  ';]  [NL] [NL] 
-end define
 define constructor_declaration
             [NL]
     [repeat modifier]  [opt generic_parameter]  [constructor_declarator]  [opt throws]  [constructor_body]  [NL] [NL] 
@@ -568,42 +563,47 @@ define single_annotation_value
     |    { [list expression_or_nested_annotation] } 
 end define
 define statement
-    [label_statement]  [comment_NL] 
-    |    [empty_statement]  [comment_NL] 
-    |    [expression_statement]  [comment_NL] 
-    |    [if_statement]  [comment_NL] 
-    |    [switch_statement]  [comment_NL] 
-    |    [while_statement]  [comment_NL] 
-    |    [do_statement]  [comment_NL] 
-    |    [for_statement]  [comment_NL] 
-    |    [for_in_statement]  [comment_NL] 
-    |    [break_statement]  [comment_NL] 
-    |    [continue_statement]  [comment_NL] 
-    |    [return_statement]  [comment_NL] 
-    |    [throw_statement]  [comment_NL] 
-    |    [synchronized_statement]  [comment_NL] 
-    |    [try_statement]  [comment_NL] 
-    |    [assert_statement]  [comment_NL] 
-    |    [block]  [comment_NL] 
+    [comment_NL]  [label_statement]  [comment_NL] 
+    |    [comment_NL]  [empty_statement]  [comment_NL] 
+    |    [comment_NL]  [expression_statement]  [comment_NL] 
+    |    [comment_NL]  [if_statement]  [comment_NL] 
+    |    [comment_NL]  [switch_statement]  [comment_NL] 
+    |    [comment_NL]  [while_statement]  [comment_NL] 
+    |    [comment_NL]  [do_statement]  [comment_NL] 
+    |    [comment_NL]  [for_statement]  [comment_NL] 
+    |    [comment_NL]  [for_in_statement]  [comment_NL] 
+    |    [comment_NL]  [break_statement]  [comment_NL] 
+    |    [comment_NL]  [continue_statement]  [comment_NL] 
+    |    [comment_NL]  [return_statement]  [comment_NL] 
+    |    [comment_NL]  [throw_statement]  [comment_NL] 
+    |    [comment_NL]  [synchronized_statement]  [comment_NL] 
+    |    [comment_NL]  [try_statement]  [comment_NL] 
+    |    [comment_NL]  [assert_statement]  [comment_NL] 
+    |    [comment_NL]  [block]  [comment_NL] 
 end define
 define package_declaration
     [comment_NL]  [opt package_header]  [repeat import_declaration]  [repeat type_declaration] 
 end define
 define class_body_declaration
-    [comment_NL]  [empty_declaration] 
-    |    [comment_NL]  [member_declaration] 
-    |    [comment_NL]  [instance_initializer] 
-    |    [comment_NL]  [static_initializer] 
-    |    [comment_NL]  [field_declaration] 
+    [comment_NL]  [empty_declaration]  [comment_NL] 
+    |    [comment_NL]  [member_declaration]  [comment_NL] 
+    |    [comment_NL]  [instance_initializer]  [comment_NL] 
+    |    [comment_NL]  [static_initializer]  [comment_NL] 
+    |    [comment_NL]  [field_declaration]  [comment_NL] 
 end define
 define import_declaration
-    'import  [opt  'static]  [imported_name]  ';  [NL]  [comment_NL] 
-    |    ';  [NL]  [comment_NL] 
+    [comment_NL]  'import  [opt  'static]  [imported_name]  ';  [NL]  [comment_NL] 
+    |    [comment_NL]  ';  [NL]  [comment_NL] 
 end define
 define type_declaration
     [class_declaration]  [NL] [NL]  [comment_NL] 
     |    [interface_declaration]  [NL] [NL]  [comment_NL] 
     |    [enum_declaration]  [NL]  [comment_NL] 
+end define
+define class_or_interface_body
+    '{ [NL] [IN]
+        [repeat class_body_declaration]  [EX]
+    [comment_NL]  '}  [opt  ';]  [comment_NL]  [NL] [NL] 
 end define
 define variable_initializer
     [comment_NL]  [expression]  [comment_NL] 
@@ -1105,56 +1105,6 @@ rule normalise_list_implements_clause_qualified_name
         N2 ,  N1 ,  Rest 
 end rule
 
-function normalise_ignore_by1_Private_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1  [
-  class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    where not
-        E1  [Private  N1]
-    by
-        Seq  [ . N1 ] 
-end function
-
-function normalise_ignore_by2_Private_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1  [
-  class_body_declaration]
-    replace  [class_body_declaration *]
-        Seq  [class_body_declaration *] 
-    where
-        E1  [Private  N1]
-    by
-        Seq 
-end function
-
-function normalise_ignore_by3_Private_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body]
-    replace  [class_or_interface_body *]
-        Seq  [class_or_interface_body *] 
-    deconstruct E1
-        '{ N1  [repeat class_body_declaration]  '}  X3  [opt  ';] 
-    construct N2  [class_body_declaration *]
-        _  [normalise_ignore_by1_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
-                  normalise_ignore_by2_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]
- 
-    construct E2  [class_or_interface_body]
-        '{ N2  '}  X3 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [class_or_interface_body *]
-        _  [ ^  P1 ] 
-    construct List2  [class_or_interface_body *]
-        _  [normalise_ignore_by3_Private_class_or_interface_body_class_body_declaration1  each  List1]
- 
-    construct P2  [program]
-        P1  [$  each  List1  List2]
- 
-    by
-        P2 
-end function
-
 rule normalise_list_constructor_declaration_modifier
     replace  [repeat modifier]
         N1  [modifier]  N2  [modifier]  Rest  [repeat modifier] 
@@ -1251,7 +1201,7 @@ function normalise_ignore_by2_package_declaration_import_declaration2 E1  [packa
     replace  [package_declaration *]
         Seq  [package_declaration *] 
     deconstruct not E1
-        X7  [opt package_header]  X8  [repeat import_declaration]  X9  [repeat type_declaration] 
+        X6  [opt package_header]  X7  [repeat import_declaration]  X8  [repeat type_declaration] 
     by
         Seq  [ . E1 ] 
 end function
@@ -1260,9 +1210,9 @@ function normalise_ignore_by3_package_declaration_import_declaration2 E1  [packa
     replace  [package_declaration *]
         Seq  [package_declaration *] 
     deconstruct E1
-        X7  [opt package_header]  X8  [repeat import_declaration]  X9  [repeat type_declaration] 
+        X6  [opt package_header]  X7  [repeat import_declaration]  X8  [repeat type_declaration] 
     construct E2  [package_declaration]
-        X7  X9 
+        X6  X8 
     by
         Seq  [ . E2 ] 
 end function
@@ -1286,16 +1236,14 @@ function program_normalise
     replace  [program]
         Prg  [ program ] 
     by
-        Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ 
-          normalise_ignore_by4_Private_class_or_interface_body_class_body_declaration1 ]  [ 
-          normalise_ignore_by4_package_declaration_import_declaration2 ]  [ normalise_preferred_replace_method_body_block1 ]  [ 
-          normalise_preferred_replace_constructor_body_block1 ]  [ normalise_list_enum_body_class_body_declaration ]  [ 
-          normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
-          normalise_list_enum_header_modifier ]  [ normalise_list_extends_clause_type_name ]  [ 
-          normalise_list_implements_clause_qualified_name ]  [ normalise_list_constructor_declaration_modifier ]  [ 
-          normalise_list_variable_declaration_modifier ]  [ normalise_list_variable_declarators_variable_declarator ]  [ 
-          normalise_list_method_declaration_modifier ]  [ normalise_list_throws_qualified_name ]  [ 
-          normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
+        Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ normalise_ignore_by4_package_declaration_import_declaration2 ]  [ 
+          normalise_preferred_replace_method_body_block1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
+          normalise_list_enum_body_class_body_declaration ]  [ normalise_list_class_header_modifier ]  [ 
+          normalise_list_interface_header_modifier ]  [ normalise_list_enum_header_modifier ]  [ 
+          normalise_list_extends_clause_type_name ]  [ normalise_list_implements_clause_qualified_name ]  [ 
+          normalise_list_constructor_declaration_modifier ]  [ normalise_list_variable_declaration_modifier ]  [ 
+          normalise_list_variable_declarators_variable_declarator ]  [ normalise_list_method_declaration_modifier ]  [ 
+          normalise_list_throws_qualified_name ]  [ normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
           normalise_list_single_annotation_value_expression_or_nested_annotation ] 
 end function
 
