@@ -13,7 +13,7 @@ source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:source/%=result/%)
 example+=$(results)
-target+=$(bin)/normc $(bin)/api_clone_javac $(bin)/api_clone_javacc $(bin)/problemcc $(bin)/mdsdcc $(program) $(results)
+target+=$(bin)/normc $(bin)/norm-include-c $(bin)/api_clone_javac $(bin)/api_clone_javacc $(bin)/problemcc $(bin)/mdsdcc $(bin)/verilog2cc $(program) $(results)
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
@@ -56,6 +56,14 @@ $(bin)/%cc: Txl/%.Txl Makefile
 	$(txlc) -comment -d COMMENTS Txl/$*.Txl
 	mv $*.x $@
 
+$(bin)/norm-include-c: Txl/norm.Txl Makefile
+	$(txlc) Txl/norm.Txl
+	mv norm.x $@
+
+$(bin)/verilog2c: Txl/verilog2.Txl Makefile
+	$(txlc) Txl/verilog2.Txl
+	mv verilog2.x $@
+
 $(bin)/problemc: Txl/problem.Txl Makefile
 	$(txlc) Txl/problem.Txl
 	mv problem.x $@
@@ -63,7 +71,6 @@ $(bin)/problemc: Txl/problem.Txl Makefile
 $(bin)/problemcc: Txl/problem.Txl Makefile
 	$(txlc) -comment -d COMMENTS Txl/problem.Txl
 	mv problem.x $@
-
 
 # if the grammar does not handle comments, don't use -comment -d COMMENTS options yet
 $(bin)/vc: Txl/v.Txl Makefile
@@ -76,6 +83,14 @@ $(bin)/xtextc: Txl/xtext.Txl Makefile
 
 # normalise 
 Txl/%.Txl: $(bin)/normc source/norm/%.norm
+	/usr/bin/time $^ -o $@
+	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
+	echo $$TMPFILE
+	/usr/bin/time $^ -o $TMPFILE
+	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
+	rm -f $TMPFILE
+
+Txl/verilog2.Txl: $(bin)/norm-include-c source/norm/verilog2.norm
 	/usr/bin/time $^ -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
