@@ -11,7 +11,9 @@ extensions+=$(languages:Txl/%.Txl=%)
 program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
 example+=$(source)
-results+=$(source:source/%=result/%)
+results+=$(source:source/%=result/%) 
+results+=result/mct/java/HelloWorld--2.java result/mct/java/HelloWorld-2-3.java
+results+=result/mct-comment/java/HelloWorld--2.java result/mct-comment/java/HelloWorld-2-3.java
 example+=$(results)
 target+=$(bin)/normc $(bin)/norm-include-c $(bin)/api_clone_javac $(bin)/api_clone_javacc $(bin)/problemcc $(bin)/mdsdcc $(bin)/verilog2cc $(program) $(results)
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
@@ -42,6 +44,26 @@ result/v/%.v: $(bin)/vc source/v/%.v
 	$(bin)/vc result/v/$*.v.tmp -o $@
 	rm -f result/v/$*.v.tmp
 	if [ -e test/v/$*.v ]; then diff $@ test/v/$*.v; fi
+
+result/mct-comment/java/%--2.java: source/java/%.java source/java/%-2.java
+	@mkdir -p result/mct-comment/java
+	scripts/mct -comment $^ > $@
+	if [ -e test/mct-comment/java/$*--2.java ]; then diff $@ test/mct-comment/java/$*--2.java; fi
+
+result/mct-comment/java/%-2-3.java: source/java/%-2.java source/java/%-3.java
+	@mkdir -p result/mct-comment/java
+	scripts/mct -comment $^ > $@
+	if [ -e test/mct-comment/java/$*-2-3.java ]; then diff $@ test/mct-comment/java/$*-2-3.java; fi
+
+result/mct/java/%--2.java: scripts/mct source/java/%.java source/java/%-2.java
+	@mkdir -p result/mct/java
+	$^ > $@
+	if [ -e test/mct/java/$*--2.java ]; then diff $@ test/mct/java/$*--2.java; fi
+
+result/mct/java/%-2-3.java: scripts/mct source/java/%-2.java source/java/%-3.java
+	@mkdir -p result/mct/java
+	$^ > $@
+	if [ -e test/mct/java/$*-2-3.java ]; then diff $@ test/mct/java/$*-2-3.java; fi
 
 result/verilog2/%.v: $(bin)/verilog2c source/v/%.v
 	@mkdir -p result/verilog2

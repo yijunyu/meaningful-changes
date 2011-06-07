@@ -98,9 +98,6 @@ end define
 define field_declaration
     [variable_declaration] 
 end define
-define variable_declarator
-    [variable_name]  [opt equals_variable_initializer] 
-end define
 define variable_name
     [declared_name]  [repeat dimension] 
 end define
@@ -602,12 +599,16 @@ define type_declaration
 end define
 define class_or_interface_body
     '{ [NL] [IN]
-        [repeat class_body_declaration]  [EX]
+        [comment_NL]  [repeat class_body_declaration]  [EX]
     [comment_NL]  '}  [opt  ';]  [comment_NL]  [NL] [NL] 
 end define
 define variable_initializer
     [comment_NL]  [expression]  [comment_NL] 
     |    [comment_NL]  [array_initializer]  [comment_NL] 
+    |    [comment_NL]  [id]  '( ')  [block]  [comment_NL] 
+end define
+define variable_declarator
+    [variable_name]  [opt equals_variable_initializer]  [comment_NL] 
 end define
 define equals_variable_initializer
     [comment_NL]  '=  [variable_initializer] 
@@ -632,12 +633,11 @@ define if_statement
     'if  '( [expression]  ')  [comment_NL]  [statement]  [opt else_clause]  [NL] 
 end define
 define block
-    [comment_NL]  '{ [NL] [IN]
-        [repeat declaration_or_statement]  [EX]
-    '} 
+    '{ [comment_NL]  [repeat declaration_or_statement]  [EX]
+[comment_NL]  '} 
 end define
 define expression
-    [comment_NL]  [assignment_expression] 
+    [comment_NL]  [comment_NL]  [assignment_expression] 
 end define
 define my_comment
     [repeat comment] 
