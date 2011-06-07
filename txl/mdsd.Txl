@@ -660,15 +660,15 @@ function Private A  [class_body_declaration]
     where not
         M  [contains  each  PublicModifiers] end function
 
-function JavaDoc A  [my_comment]
-    match  [comment_NL]
-        B  [comment_NL] 
+function NotJavaDoc A  [comment]
+    match  [my_comment]
+        B  [my_comment] 
     construct S_Comment  [stringlit]
         _  [quote  A] 
     where not all
         S_Comment  [grep  "@generated NOT"]  [=  ""] end function
 
-function GeneratedNot A  [class_body_declaration]
+function NotGeneratedNot A  [class_body_declaration]
     match  [class_or_interface_body]
         B  [class_or_interface_body] 
     deconstruct * [comment_NL] A
@@ -1176,51 +1176,18 @@ function normalise_ignore_by4_package_declaration_import_declaration2
         P2 
 end function
 
-function normalise_ignore_by2_my_comment_comment1 E1  [my_comment]
-    replace  [my_comment *]
-        Seq  [my_comment *] 
-    deconstruct not E1
-        X9  [repeat comment] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_my_comment_comment1 E1  [my_comment]
-    replace  [my_comment *]
-        Seq  [my_comment *] 
-    deconstruct E1
-        X9  [repeat comment] 
-    by
-        Seq 
-end function
-
-function normalise_ignore_by4_my_comment_comment1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [my_comment *]
-        _  [ ^  P1 ] 
-    construct List2  [my_comment *]
-        _  [normalise_ignore_by3_my_comment_comment1  each  List1]  [normalise_ignore_by2_my_comment_comment1  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
 function program_normalise
     replace  [program]
         Prg  [ program ] 
     by
         Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ normalise_ignore_by4_package_declaration_import_declaration2 ]  [ 
-          normalise_ignore_by4_my_comment_comment1 ]  [ normalise_preferred_replace_method_body_block1 ]  [ 
-          normalise_preferred_replace_constructor_body_block1 ]  [ normalise_list_enum_body_class_body_declaration ]  [ 
-          normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
-          normalise_list_enum_header_modifier ]  [ normalise_list_extends_clause_type_name ]  [ 
-          normalise_list_implements_clause_qualified_name ]  [ normalise_list_constructor_declaration_modifier ]  [ 
-          normalise_list_variable_declaration_modifier ]  [ normalise_list_variable_declarators_variable_declarator ]  [ 
-          normalise_list_method_declaration_modifier ]  [ normalise_list_throws_qualified_name ]  [ 
-          normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
+          normalise_preferred_replace_method_body_block1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
+          normalise_list_enum_body_class_body_declaration ]  [ normalise_list_class_header_modifier ]  [ 
+          normalise_list_interface_header_modifier ]  [ normalise_list_enum_header_modifier ]  [ 
+          normalise_list_extends_clause_type_name ]  [ normalise_list_implements_clause_qualified_name ]  [ 
+          normalise_list_constructor_declaration_modifier ]  [ normalise_list_variable_declaration_modifier ]  [ 
+          normalise_list_variable_declarators_variable_declarator ]  [ normalise_list_method_declaration_modifier ]  [ 
+          normalise_list_throws_qualified_name ]  [ normalise_list_annotation_value_list_keyed_annotation_value ]  [ 
           normalise_list_single_annotation_value_expression_or_nested_annotation ] 
 end function
 

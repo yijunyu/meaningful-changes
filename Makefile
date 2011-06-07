@@ -84,7 +84,7 @@ Txl/%.Txl: $(bin)/normc source/norm/%.norm
 	rm -f $TMPFILE
 
 install: $(package) 
-$(package): README.html $(program) $(norm) $(source) $(target) # cvs
+$(package): README.html $(program) $(norm) $(source) $(target) scripts # cvs
 	rm -rf $(dir $(package))
 	mkdir -p  $(dir $(package))
 	tar cfz $@ $^ result/*.txt
