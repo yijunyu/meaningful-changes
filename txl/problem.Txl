@@ -77,12 +77,12 @@ define tok
     |    '- 
 end define
 define header
-    [comment_NL]  'problem  [SPOFF]  ':  [SPON]  [name] 
+    [comment_nl]  'problem  [SPOFF]  ':  [SPON]  [name] 
 end define
 define my_comment
     [comment] 
 end define
-define comment_NL
+define comment_nl
     [repeat my_comment]  [NL] 
 end define
 define program
@@ -92,10 +92,10 @@ define problem_description
     [indent]  [repeat E +]  [dedent] 
 end define
 define E
-    [comment_NL]  [NL]
-    [name]  [opt type]  [opt details]  [comment_NL]  [opt  ':]  [comment_NL]  [opt stringlit] 
-    |    [comment_NL]  [NL]
-    [name]  [SP]  [SPOFF]  [rel]  [SPON]  [name]  [comment_NL]  [opt details]  [comment_NL]  [opt desc] 
+    [comment_nl]  [NL]
+    [name]  [opt type]  [opt details]  [comment_nl]  [opt  ':]  [comment_nl]  [opt stringlit] 
+    |    [comment_nl]  [NL]
+    [name]  [SP]  [SPOFF]  [rel]  [SPON]  [name]  [comment_nl]  [opt details]  [comment_nl]  [opt desc] 
 end define
 define details
     '{ [indent]  [list phenomena]  [NL]

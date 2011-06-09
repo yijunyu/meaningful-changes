@@ -112,7 +112,7 @@ function main
  construct P0_2 [program] P0_1 
 #ifdef DEFINE
  construct P0_3 [program] P0_2 [redefine2define]
- construct DSS [defineStatement*] _ [^ P0_3] 
+ construct DSS [defineStatement*] _ [^ P0_3]
 #else
  construct DSS [redefineStatement*] _ [^ P0_2] 
 #endif

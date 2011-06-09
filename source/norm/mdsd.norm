@@ -1,9 +1,13 @@
 include "java.grm"
+#ifdef COMMENTS
+include "javaCommentOverrides.grm"
+#endif
+
 % Yijun Yu: May 2011
-redefine method_body
-        [repeat block preferred with '; ] 
-    |  [opt annotation_default] ';             % T.D. Oct 2007
-end define
+% redefine method_body
+%         [repeat block preferred with '; ]
+%     |  [opt annotation_default] ';             % T.D. Oct 2007
+% end define
 
 redefine modifier
         'abstract
@@ -30,8 +34,17 @@ end define
 
 redefine type_declaration
         [class_declaration]      [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
     |   [interface_declaration]  [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
     |   [enum_declaration]	    [NL] % T.D. Oct 2007
+#ifdef COMMENTS
+    [comment_nl]
+#endif
 end define
 
 %redefine enum_body
@@ -43,8 +56,21 @@ end define
 
 % remove some extra spaces
 redefine import_declaration
+#ifdef COMMENTS
+    [comment_nl]
+#endif
 	'import [opt 'static] [imported_name] '; [NL]
-    | 	'; [NL] 	% JRC Apr 08
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    | 	
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+'; [NL] 	% JRC Apr 08
+#ifdef COMMENTS
+    [comment_nl]
+#endif
 end define
 
 redefine class_header
@@ -69,6 +95,9 @@ redefine implements_clause
 end define
 
 redefine package_declaration
+#ifdef COMMENTS
+    [comment_nl]
+#endif
     [opt package_header kept]
     [repeat import_declaration ignored] 
     [repeat type_declaration kept]
@@ -77,9 +106,15 @@ end define
 redefine class_or_interface_body
     '{                                    [NL][IN]
        [repeat class_body_declaration kept ordered ignored when NotGeneratedNot]    [EX] [NL]
-    '} [opt ';]                           [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    '} [opt ';]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+[NL][NL]
 end define
-
 
 % to match Java Code like:
 % public <T> void someMethod(T t) {
@@ -119,17 +154,8 @@ redefine single_annotation_value
     | { [list expression_or_nested_annotation ordered] }	% array of annotation values
 end define
 
-#ifdef COMMENTS
-    include "javaCommentOverrides.grm"
-#endif
-
-define my_comment
-%    [repeat comment ignored when NotJavaDoc]
-    [repeat comment]
-end define
-
-redefine comment_NL
-    [my_comment]
+redefine comment_nl
+    [empty] | [repeat mycomment kept ignored when NotJavaDoc]
 end define
 
 function contains Object [any] 
@@ -144,17 +170,16 @@ function Private A  [class_body_declaration]
     where not M [contains each PublicModifiers]
 end function
 
-function NotJavaDoc A  [comment]
-    match  [my_comment]
-        B  [my_comment] 
+function NotJavaDoc A  [mycomment]
+    match  [comment_nl]
+        B  [comment_nl] 
     construct S_Comment [stringlit] _ [quote A] 
-    where not all S_Comment [grep "@generated NOT"] [= ""]
+    where not S_Comment [grep "\/\*\*"]
 end function
 
 function NotGeneratedNot A  [class_body_declaration]
     match  [class_or_interface_body]
         B  [class_or_interface_body] 
-    deconstruct * [comment_NL] A C [comment_NL] 
-    construct S_Cs [stringlit] _ [quote C]
+    construct S_Cs [stringlit] _ [quote A]
     where not S_Cs [grep "@generated NOT"]
 end function

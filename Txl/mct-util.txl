@@ -59,7 +59,7 @@ function pattern_replacement_ignore_per_literal2 T [type] LoT [literalOrType]
  deconstruct not LoT T
  deconstruct LoT T1 [type]
  construct S [stringlit] _ [quote T1]
- where not S [grep 'NL]
+ where not S [grep "NL"]
  construct X [id] 'X 
  construct V [varid] X [!]
  construct Var [literalOrVariable] V T1 

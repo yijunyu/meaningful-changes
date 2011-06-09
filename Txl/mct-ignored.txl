@@ -173,7 +173,7 @@ function typeSpec_ignore_when_LoT F [id] TID [typeid] T [typeSpec] LoT [literalO
  export Expression [literalOrExpression*] _
  construct TT [type] '[ T ']
  construct Pat [literalOrVariable*] _ [pattern_replacement_N12 TT each LoT]
- construct Pattern [pattern] Pat
+ construct Pattern [pattern] Pat 
  construct Replacement [replacement] Expression
  deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
  deconstruct I TypeID [id] 

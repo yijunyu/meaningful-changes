@@ -118,6 +118,10 @@ end define
 define formal_parameter_name
     [variable_name] 
 end define
+define method_body
+    [block]  [NL] [NL] 
+    |    [opt annotation_default]  ';  [NL] [NL] 
+end define
 define annotation_default
     'default  [expression] 
     |    'default  [array_initializer] 
@@ -479,9 +483,90 @@ end define
 define and_type_spec
     '&  [type_specifier] 
 end define
-define method_body
-    [repeat block] 
-    |    [opt annotation_default]  '; 
+define type_specifier
+    [type_name]  [comment_nl] 
+    |    [array_type_specifier]  [comment_nl] 
+end define
+define add_op_multiplicative_expression
+    [add_op]  [multiplicative_expression]  [comment_nl] 
+end define
+define expression_statement
+    [expression]  ';  [comment_nl] 
+end define
+define statement
+    [comment_nl]  [label_statement]  [comment_nl] 
+    |    [comment_nl]  [empty_statement]  [comment_nl] 
+    |    [comment_nl]  [expression_statement]  [comment_nl] 
+    |    [comment_nl]  [if_statement]  [comment_nl] 
+    |    [comment_nl]  [switch_statement]  [comment_nl] 
+    |    [comment_nl]  [while_statement]  [comment_nl] 
+    |    [comment_nl]  [do_statement]  [comment_nl] 
+    |    [comment_nl]  [for_statement]  [comment_nl] 
+    |    [comment_nl]  [for_in_statement]  [comment_nl] 
+    |    [comment_nl]  [break_statement]  [comment_nl] 
+    |    [comment_nl]  [continue_statement]  [comment_nl] 
+    |    [comment_nl]  [return_statement]  [comment_nl] 
+    |    [comment_nl]  [throw_statement]  [comment_nl] 
+    |    [comment_nl]  [synchronized_statement]  [comment_nl] 
+    |    [comment_nl]  [try_statement]  [comment_nl] 
+    |    [comment_nl]  [assert_statement]  [comment_nl] 
+    |    [comment_nl]  [block]  [comment_nl] 
+end define
+define class_body_declaration
+    [comment_nl]  [empty_declaration] 
+    |    [comment_nl]  [member_declaration] 
+    |    [comment_nl]  [instance_initializer] 
+    |    [comment_nl]  [static_initializer] 
+    |    [comment_nl]  [field_declaration] 
+end define
+define variable_initializer
+    [comment_nl]  [expression]  [comment_nl] 
+    |    [comment_nl]  [array_initializer]  [comment_nl] 
+    |    [comment_nl]  [id]  '( ')  [block]  [comment_nl] 
+end define
+define variable_declarator
+    [variable_name]  [opt equals_variable_initializer]  [comment_nl] 
+end define
+define equals_variable_initializer
+    [comment_nl]  '=  [variable_initializer]  [comment_nl] 
+end define
+define formal_parameter
+    [comment_nl]  [opt  'final]  [type_specifier]  [opt var_arg_specifier]  [formal_parameter_name]  [comment_nl] 
+end define
+define constructor_declarator
+    [class_name]  '( [list formal_parameter]  ')  [comment_nl] 
+end define
+define method_declarator
+    [method_name]  '( [list formal_parameter]  ')  [repeat dimension]  [comment_nl] 
+end define
+define argument
+    [comment_nl]  [expression]  [comment_nl] 
+    |    [comment_nl]  [type_specifier]  [comment_nl] 
+end define
+define method_argument
+    '( [list argument]  ')  [comment_nl] 
+end define
+define if_statement
+    'if  '( [expression]  ')  [comment_nl]  [statement]  [opt else_clause]  [NL] 
+end define
+define block
+    '{ [IN]
+        [comment_nl]  [EX]
+    '} 
+    |    '{ [IN]
+        [comment_nl]  [repeat declaration_or_statement +]  [EX]
+    [comment_nl]  '} 
+end define
+define declaration_or_statement
+    [comment_nl]  [local_variable_declaration]  [comment_nl] 
+    |    [comment_nl]  [class_declaration]  [comment_nl] 
+    |    [comment_nl]  [statement]  [comment_nl] 
+end define
+define expression
+    [comment_nl]  [assignment_expression] 
+end define
+define mycomment
+    [comment]  [NL] 
 end define
 define modifier
     'abstract 
@@ -503,6 +588,20 @@ end define
 define program
     [package_declaration *] 
 end define
+define type_declaration
+    [class_declaration]  [NL] [NL]
+    [comment_nl] 
+    |    [interface_declaration]  [NL] [NL]
+    [comment_nl] 
+    |    [enum_declaration]  [NL]
+    [comment_nl] 
+end define
+define import_declaration
+    [comment_nl]  'import  [opt  'static]  [imported_name]  ';  [NL]
+    [comment_nl] 
+    |    [comment_nl]  ';  [NL]
+    [comment_nl] 
+end define
 define class_header
     [repeat modifier]  'class  [class_name]  [opt extends_clause]  [opt implements_clause] 
 end define
@@ -517,6 +616,14 @@ define extends_clause
 end define
 define implements_clause
     'implements  [list qualified_name +] 
+end define
+define package_declaration
+    [comment_nl]  [opt package_header]  [repeat import_declaration]  [repeat type_declaration] 
+end define
+define class_or_interface_body
+    '{ [NL] [IN]
+        [repeat class_body_declaration]  [EX] [NL]
+    [comment_nl]  '}  [opt  ';]  [comment_nl]  [NL] [NL] 
 end define
 define constructor_declaration
             [NL]
@@ -544,113 +651,9 @@ define single_annotation_value
     |    [nested_annotation] 
     |    { [list expression_or_nested_annotation] } 
 end define
-define type_specifier
-    [type_name]  [comment_NL] 
-    |    [array_type_specifier]  [comment_NL] 
-end define
-define add_op_multiplicative_expression
-    [add_op]  [multiplicative_expression]  [comment_NL] 
-end define
-define expression_statement
-    [expression]  ';  [comment_NL] 
-end define
-define statement
-    [comment_NL]  [label_statement]  [comment_NL] 
-    |    [comment_NL]  [empty_statement]  [comment_NL] 
-    |    [comment_NL]  [expression_statement]  [comment_NL] 
-    |    [comment_NL]  [if_statement]  [comment_NL] 
-    |    [comment_NL]  [switch_statement]  [comment_NL] 
-    |    [comment_NL]  [while_statement]  [comment_NL] 
-    |    [comment_NL]  [do_statement]  [comment_NL] 
-    |    [comment_NL]  [for_statement]  [comment_NL] 
-    |    [comment_NL]  [for_in_statement]  [comment_NL] 
-    |    [comment_NL]  [break_statement]  [comment_NL] 
-    |    [comment_NL]  [continue_statement]  [comment_NL] 
-    |    [comment_NL]  [return_statement]  [comment_NL] 
-    |    [comment_NL]  [throw_statement]  [comment_NL] 
-    |    [comment_NL]  [synchronized_statement]  [comment_NL] 
-    |    [comment_NL]  [try_statement]  [comment_NL] 
-    |    [comment_NL]  [assert_statement]  [comment_NL] 
-    |    [comment_NL]  [block]  [comment_NL] 
-end define
-define package_declaration
-    [comment_NL]  [opt package_header]  [repeat import_declaration]  [repeat type_declaration] 
-end define
-define class_body_declaration
-    [comment_NL]  [empty_declaration]  [comment_NL] 
-    |    [comment_NL]  [member_declaration]  [comment_NL] 
-    |    [comment_NL]  [instance_initializer]  [comment_NL] 
-    |    [comment_NL]  [static_initializer]  [comment_NL] 
-    |    [comment_NL]  [field_declaration]  [comment_NL] 
-end define
-define import_declaration
-    [comment_NL]  'import  [opt  'static]  [imported_name]  ';  [NL]  [comment_NL] 
-    |    [comment_NL]  ';  [NL]  [comment_NL] 
-end define
-define type_declaration
-    [class_declaration]  [NL] [NL]  [comment_NL] 
-    |    [interface_declaration]  [NL] [NL]  [comment_NL] 
-    |    [enum_declaration]  [NL]  [comment_NL] 
-end define
-define class_or_interface_body
-    '{ [NL] [IN]
-        [comment_NL]  [class_body_declaration]  [repeat class_body_declaration]  [EX]
-    [comment_NL]  '}  [opt  ';]  [comment_NL]  [NL] [NL] 
-end define
-define variable_initializer
-    [comment_NL]  [expression]  [comment_NL] 
-    |    [comment_NL]  [array_initializer]  [comment_NL] 
-    |    [comment_NL]  [id]  '( ')  [block]  [comment_NL] 
-end define
-define variable_declarator
-    [variable_name]  [opt equals_variable_initializer]  [comment_NL] 
-end define
-define equals_variable_initializer
-    [comment_NL]  '=  [variable_initializer]  [comment_NL] 
-end define
-define formal_parameter
-    [comment_NL]  [opt  'final]  [type_specifier]  [opt var_arg_specifier]  [formal_parameter_name]  [comment_NL] 
-end define
-define constructor_declarator
-    [class_name]  '( [list formal_parameter]  ')  [comment_NL] 
-end define
-define method_declarator
-    [method_name]  '( [list formal_parameter]  ')  [repeat dimension]  [comment_NL] 
-end define
-define argument
-    [comment_NL]  [expression]  [comment_NL] 
-    |    [comment_NL]  [type_specifier]  [comment_NL] 
-end define
-define method_argument
-    '( [list argument]  ')  [comment_NL] 
-end define
-define if_statement
-    'if  '( [expression]  ')  [comment_NL]  [statement]  [opt else_clause]  [NL] 
-end define
-define block
-    '{ [IN]
-        [comment_NL]  [EX]
-    '} 
-    |    '{ [IN]
-        [comment_NL]  [repeat declaration_or_statement +]  [EX]
-    [comment_NL]  '} 
-end define
-define declaration_or_statement
-    [comment_NL]  [local_variable_declaration]  [comment_NL] 
-    |    [comment_NL]  [class_declaration]  [comment_NL] 
-    |    [comment_NL]  [statement]  [comment_NL] 
-end define
-define expression
-    [comment_NL]  [assignment_expression] 
-end define
-define mycomment
-    [comment]  [NL] 
-end define
-define my_comment
-    [repeat comment] 
-end define
-define comment_NL
-    [my_comment] 
+define comment_nl
+    [empty] 
+    |    [repeat mycomment] 
 end define
 function contains Object  [any]
     match  *  [any]
@@ -667,21 +670,19 @@ function Private A  [class_body_declaration]
     where not
         M  [contains  each  PublicModifiers] end function
 
-function NotJavaDoc A  [comment]
-    match  [my_comment]
-        B  [my_comment] 
+function NotJavaDoc A  [mycomment]
+    match  [comment_nl]
+        B  [comment_nl] 
     construct S_Comment  [stringlit]
         _  [quote  A] 
-    where not all
-        S_Comment  [grep  "@generated NOT"]  [=  ""] end function
+    where not
+        S_Comment  [grep  "\/\*\*"] end function
 
 function NotGeneratedNot A  [class_body_declaration]
     match  [class_or_interface_body]
         B  [class_or_interface_body] 
-    deconstruct * [comment_NL] A
-        C  [comment_NL] 
     construct S_Cs  [stringlit]
-        _  [quote  C] 
+        _  [quote  A] 
     where not
         S_Cs  [grep  "@generated NOT"] end function
 
@@ -898,28 +899,70 @@ function mark_clones_class_body_declaration S  [class_body_declaration]
         P  [ $  S  S1 ] 
 end function
 
-function normalise_preferred_tokens_method_body_block1 B  [method_body]
-    replace  [method_body *]
-        A  [method_body *] 
-    deconstruct not B
-        '; 
-    construct B1  [method_body]
-        '; 
+redefine mycomment
+    ...
+|       
+    [attr Change] 
+
+end define
+function find_replace_mycomment
+    replace  [program]
+        P  [ program ] 
+    import Program_Diff [program]
+
+    construct S  [mycomment *]
+        _  [ find_clones_mycomment  P  Program_Diff ] 
+    construct P3  [program]
+        P  [mark_clones_mycomment  each  S]
+ 
     by
-        _  [ . A ]  [ . B1 ] 
+        P3 
 end function
 
-function normalise_preferred_replace_method_body_block1
-    replace  [program]
-        Prg  [ program ] 
-    construct A  [method_body *]
-        _  [ ^  Prg ] 
-    construct A1  [method_body *]
-        _  [normalise_preferred_tokens_method_body_block1  each  A]
- 
+function find_clones_mycomment P  [program] P2  [program]
+    replace  [mycomment *]
+        _  [ mycomment  * ] 
+    construct S  [mycomment *]
+        _  [ ^  P ] 
     by
-        Prg  [$  each  A  A1]
+        _  [add_if_clones_mycomment1  P2  each  S]
  
+end function
+
+function add_if_clones_mycomment1 P2  [program] Stmt  [mycomment]
+    construct S2  [mycomment *]
+        _  [ ^  P2 ] 
+    deconstruct * S2
+        Stmt  Rest  [ mycomment  * ] 
+    replace  [mycomment *]
+        StructuredClones  [ mycomment  * ] 
+    deconstruct not * StructuredClones
+        C  [attr Change] 
+    by
+        StructuredClones  [ . Stmt ] 
+end function
+
+function mark_clones_mycomment S  [mycomment]
+    import CloneNumber [number]
+
+    import Program_Diff [program]
+
+    export CloneNumber
+        CloneNumber  [ +  1 ] 
+    construct C  [stringlit]
+        _  [ quote  S ] 
+    where not
+        C  [=  ""]
+    construct S2  [mycomment]
+        >>>>>>  C 
+    export Program_Diff
+        Program_Diff  [ $  S  S2 ] 
+    replace  [program]
+        P  [ program ] 
+    construct S1  [mycomment]
+        <<<<<<  C 
+    by
+        P  [ $  S  S1 ] 
 end function
 
 function normalise_ignore_by2_modifier_annotation1 E1  [modifier]
@@ -1043,6 +1086,91 @@ rule normalise_list_implements_clause_qualified_name
         N2 ,  N1 ,  Rest 
 end rule
 
+function normalise_ignore_by2_package_declaration_import_declaration2 E1  [package_declaration]
+    replace  [package_declaration *]
+        Seq  [package_declaration *] 
+    deconstruct not E1
+        X7  [comment_nl]  X8  [opt package_header]  X9  [repeat import_declaration]  X10  [repeat type_declaration] 
+    by
+        Seq  [ . E1 ] 
+end function
+
+function normalise_ignore_by3_package_declaration_import_declaration2 E1  [package_declaration]
+    replace  [package_declaration *]
+        Seq  [package_declaration *] 
+    deconstruct E1
+        X7  [comment_nl]  X8  [opt package_header]  X9  [repeat import_declaration]  X10  [repeat type_declaration] 
+    construct E2  [package_declaration]
+        X7  X8  X10 
+    by
+        Seq  [ . E2 ] 
+end function
+
+function normalise_ignore_by4_package_declaration_import_declaration2
+    replace  [program]
+        P1  [ program ] 
+    construct List1  [package_declaration *]
+        _  [ ^  P1 ] 
+    construct List2  [package_declaration *]
+        _  [normalise_ignore_by3_package_declaration_import_declaration2  each  List1]  [
+                  normalise_ignore_by2_package_declaration_import_declaration2  each  List1]
+ 
+    construct P2  [program]
+        P1  [ $  List1  List2 ] 
+    by
+        P2 
+end function
+
+function normalise_ignore_by1_NotGeneratedNot_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1 
+  [class_body_declaration]
+    replace  [class_body_declaration *]
+        Seq  [class_body_declaration *] 
+    where not
+        E1  [NotGeneratedNot  N1]
+    by
+        Seq  [ . N1 ] 
+end function
+
+function normalise_ignore_by2_NotGeneratedNot_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1 
+  [class_body_declaration]
+    replace  [class_body_declaration *]
+        Seq  [class_body_declaration *] 
+    where
+        E1  [NotGeneratedNot  N1]
+    by
+        Seq 
+end function
+
+function normalise_ignore_by3_NotGeneratedNot_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body]
+    replace  [class_or_interface_body *]
+        Seq  [class_or_interface_body *] 
+    deconstruct E1
+        '{ N1  [repeat class_body_declaration]  X11  [comment_nl]  '}  X12  [opt  ';]  X13  [comment_nl] 
+    construct N2  [class_body_declaration *]
+        _  [normalise_ignore_by1_NotGeneratedNot_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
+                  normalise_ignore_by2_NotGeneratedNot_class_or_interface_body_class_body_declaration1  E1  each  N1]
+ 
+    construct E2  [class_or_interface_body]
+        '{ N2  X11  '}  X12  X13 
+    by
+        Seq  [ . E2 ] 
+end function
+
+function normalise_ignore_by4_NotGeneratedNot_class_or_interface_body_class_body_declaration1
+    replace  [program]
+        P1  [ program ] 
+    construct List1  [class_or_interface_body *]
+        _  [ ^  P1 ] 
+    construct List2  [class_or_interface_body *]
+        _  [normalise_ignore_by3_NotGeneratedNot_class_or_interface_body_class_body_declaration1  each  List1]
+ 
+    construct P2  [program]
+        P1  [$  each  List1  List2]
+ 
+    by
+        P2 
+end function
+
 rule normalise_list_constructor_declaration_modifier
     replace  [repeat modifier]
         N1  [modifier]  N2  [modifier]  Rest  [repeat modifier] 
@@ -1135,37 +1263,50 @@ rule normalise_list_single_annotation_value_expression_or_nested_annotation
         N2 ,  N1 ,  Rest 
 end rule
 
-function normalise_ignore_by2_package_declaration_import_declaration2 E1  [package_declaration]
-    replace  [package_declaration *]
-        Seq  [package_declaration *] 
-    deconstruct not E1
-        X6  [opt package_header]  X7  [repeat import_declaration]  X8  [repeat type_declaration] 
+function normalise_ignore_by1_NotJavaDoc_comment_nl_mycomment1 E1  [comment_nl] N1  [mycomment]
+    replace  [mycomment *]
+        Seq  [mycomment *] 
+    where not
+        E1  [NotJavaDoc  N1]
     by
-        Seq  [ . E1 ] 
+        Seq  [ . N1 ] 
 end function
 
-function normalise_ignore_by3_package_declaration_import_declaration2 E1  [package_declaration]
-    replace  [package_declaration *]
-        Seq  [package_declaration *] 
+function normalise_ignore_by2_NotJavaDoc_comment_nl_mycomment1 E1  [comment_nl] N1  [mycomment]
+    replace  [mycomment *]
+        Seq  [mycomment *] 
+    where
+        E1  [NotJavaDoc  N1]
+    by
+        Seq 
+end function
+
+function normalise_ignore_by3_NotJavaDoc_comment_nl_mycomment1 E1  [comment_nl]
+    replace  [comment_nl *]
+        Seq  [comment_nl *] 
     deconstruct E1
-        X6  [opt package_header]  X7  [repeat import_declaration]  X8  [repeat type_declaration] 
-    construct E2  [package_declaration]
-        X6  X8 
+        N1  [repeat mycomment] 
+    construct N2  [mycomment *]
+        _  [normalise_ignore_by1_NotJavaDoc_comment_nl_mycomment1  E1  each  N1]  [
+                  normalise_ignore_by2_NotJavaDoc_comment_nl_mycomment1  E1  each  N1]
+ 
+    construct E2  [comment_nl]
+        N2 
     by
         Seq  [ . E2 ] 
 end function
 
-function normalise_ignore_by4_package_declaration_import_declaration2
+function normalise_ignore_by4_NotJavaDoc_comment_nl_mycomment1
     replace  [program]
         P1  [ program ] 
-    construct List1  [package_declaration *]
+    construct List1  [comment_nl *]
         _  [ ^  P1 ] 
-    construct List2  [package_declaration *]
-        _  [normalise_ignore_by3_package_declaration_import_declaration2  each  List1]  [
-                  normalise_ignore_by2_package_declaration_import_declaration2  each  List1]
+    construct List2  [comment_nl *]
+        _  [normalise_ignore_by3_NotJavaDoc_comment_nl_mycomment1  each  List1]
  
     construct P2  [program]
-        P1  [ $  List1  List2 ] 
+        P1  [$  each  List1  List2]
+ 
     by
         P2 
 end function
@@ -1175,7 +1316,8 @@ function program_normalise
         Prg  [ program ] 
     by
         Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ normalise_ignore_by4_package_declaration_import_declaration2 ]  [ 
-          normalise_preferred_replace_method_body_block1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
+          normalise_ignore_by4_NotGeneratedNot_class_or_interface_body_class_body_declaration1 ]  [ 
+          normalise_ignore_by4_NotJavaDoc_comment_nl_mycomment1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
           normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
           normalise_list_enum_header_modifier ]  [ normalise_list_extends_clause_type_name ]  [ 
           normalise_list_implements_clause_qualified_name ]  [ normalise_list_constructor_declaration_modifier ]  [ 
@@ -1199,7 +1341,8 @@ function program_remove_clone
     export Program_Diff [program]
         P2 
     by
-        Prg  [ find_replace_package_header ]  [ find_replace_type_declaration ]  [ find_replace_class_body_declaration ] 
+        Prg  [ find_replace_package_header ]  [ find_replace_type_declaration ]  [ find_replace_class_body_declaration ]  [ 
+          find_replace_mycomment ] 
 end function
 
 redefine program

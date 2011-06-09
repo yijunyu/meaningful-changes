@@ -14,6 +14,8 @@ example+=$(source)
 results+=$(source:source/%=result/%) 
 results+=result/mct/java/HelloWorld--2.java result/mct/java/HelloWorld-2-3.java
 results+=result/mct-comment/java/HelloWorld--2.java result/mct-comment/java/HelloWorld-2-3.java
+results+=result/mct-mdsd/java/HelloWorld--2.java result/mct-mdsd/java/HelloWorld-2-3.java
+results+=result/mct-mdsd-comment/java/HelloWorld--2.java result/mct-mdsd-comment/java/HelloWorld-2-3.java
 example+=$(results)
 target+=$(bin)/normc $(bin)/norm-include-c $(bin)/api_clone_javac $(bin)/api_clone_javacc $(bin)/problemcc $(bin)/mdsdcc $(bin)/verilog2cc $(program) $(results)
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
@@ -45,6 +47,26 @@ result/v/%.v: $(bin)/vc source/v/%.v
 	rm -f result/v/$*.v.tmp
 	if [ -e test/v/$*.v ]; then diff $@ test/v/$*.v; fi
 
+result/mct-mdsd-comment/java/%--2.java: source/java/%.java source/java/%-2.java
+	@mkdir -p result/mct-mdsd-comment/java
+	scripts/mct-mdsd -comment $^ > $@
+	if [ -e test/mct-mdsd-comment/java/$*--2.java ]; then diff $@ test/mct-mdsd-comment/java/$*--2.java; fi
+
+result/mct-mdsd-comment/java/%-2-3.java: source/java/%-2.java source/java/%-3.java
+	@mkdir -p result/mct-mdsd-comment/java
+	scripts/mct-mdsd -comment $^ > $@
+	if [ -e test/mct-mdsd-comment/java/$*-2-3.java ]; then diff $@ test/mct-mdsd-comment/java/$*-2-3.java; fi
+
+result/mct-mdsd/java/%--2.java: scripts/mct-mdsd source/java/%.java source/java/%-2.java
+	@mkdir -p result/mct-mdsd/java
+	$^ > $@
+	if [ -e test/mct-mdsd/java/$*--2.java ]; then diff $@ test/mct-mdsd/java/$*--2.java; fi
+
+result/mct-mdsd/java/%-2-3.java: scripts/mct-mdsd source/java/%-2.java source/java/%-3.java
+	@mkdir -p result/mct-mdsd/java
+	$^ > $@
+	if [ -e test/mct-mdsd/java/$*-2-3.java ]; then diff $@ test/mct-mdsd/java/$*-2-3.java; fi
+
 result/mct-comment/java/%--2.java: source/java/%.java source/java/%-2.java
 	@mkdir -p result/mct-comment/java
 	scripts/mct -comment $^ > $@
@@ -75,7 +97,7 @@ $(bin)/%c: Txl/%.Txl Makefile
 	mv $*.x $@
 
 $(bin)/%cc: Txl/%.Txl Makefile
-	$(txlc) -comment -d COMMENTS Txl/$*.Txl
+	$(txlc) -comment -d DEFINE -d COMMENTS Txl/$*.Txl
 	mv $*.x $@
 
 $(bin)/norm-include-c: Txl/norm.Txl Makefile
@@ -105,12 +127,13 @@ $(bin)/xtextc: Txl/xtext.Txl Makefile
 
 # normalise 
 Txl/%.Txl: $(bin)/normc source/norm/%.norm
-	/usr/bin/time $^ -o $@
+	sed 's/^include "/#include "/' source/norm/$*.norm  | cpp -DCOMMENTS -DDEFINE -ITxl | grep -v "^# [0-9]" > t.norm
+	/usr/bin/time $(bin)/normc t.norm -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
 	/usr/bin/time $^ -o $TMPFILE
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
-	rm -f $TMPFILE
+	rm -f $TMPFILE t.norm
 
 Txl/verilog2.Txl: $(bin)/norm-include-c source/norm/verilog2.norm
 	/usr/bin/time $^ -o $@

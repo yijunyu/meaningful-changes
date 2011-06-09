@@ -475,86 +475,86 @@ define and_type_spec
     '&  [type_specifier] 
 end define
 define type_specifier
-    [type_name]  [comment_NL] 
-    |    [array_type_specifier]  [comment_NL] 
+    [type_name]  [comment_nl] 
+    |    [array_type_specifier]  [comment_nl] 
 end define
 define add_op_multiplicative_expression
-    [add_op]  [multiplicative_expression]  [comment_NL] 
+    [add_op]  [multiplicative_expression]  [comment_nl] 
 end define
 define expression_statement
-    [expression]  ';  [comment_NL] 
+    [expression]  ';  [comment_nl] 
 end define
 define statement
-    [comment_NL]  [label_statement]  [comment_NL] 
-    |    [comment_NL]  [empty_statement]  [comment_NL] 
-    |    [comment_NL]  [expression_statement]  [comment_NL] 
-    |    [comment_NL]  [if_statement]  [comment_NL] 
-    |    [comment_NL]  [switch_statement]  [comment_NL] 
-    |    [comment_NL]  [while_statement]  [comment_NL] 
-    |    [comment_NL]  [do_statement]  [comment_NL] 
-    |    [comment_NL]  [for_statement]  [comment_NL] 
-    |    [comment_NL]  [for_in_statement]  [comment_NL] 
-    |    [comment_NL]  [break_statement]  [comment_NL] 
-    |    [comment_NL]  [continue_statement]  [comment_NL] 
-    |    [comment_NL]  [return_statement]  [comment_NL] 
-    |    [comment_NL]  [throw_statement]  [comment_NL] 
-    |    [comment_NL]  [synchronized_statement]  [comment_NL] 
-    |    [comment_NL]  [try_statement]  [comment_NL] 
-    |    [comment_NL]  [assert_statement]  [comment_NL] 
-    |    [comment_NL]  [block]  [comment_NL] 
+    [comment_nl]  [label_statement]  [comment_nl] 
+    |    [comment_nl]  [empty_statement]  [comment_nl] 
+    |    [comment_nl]  [expression_statement]  [comment_nl] 
+    |    [comment_nl]  [if_statement]  [comment_nl] 
+    |    [comment_nl]  [switch_statement]  [comment_nl] 
+    |    [comment_nl]  [while_statement]  [comment_nl] 
+    |    [comment_nl]  [do_statement]  [comment_nl] 
+    |    [comment_nl]  [for_statement]  [comment_nl] 
+    |    [comment_nl]  [for_in_statement]  [comment_nl] 
+    |    [comment_nl]  [break_statement]  [comment_nl] 
+    |    [comment_nl]  [continue_statement]  [comment_nl] 
+    |    [comment_nl]  [return_statement]  [comment_nl] 
+    |    [comment_nl]  [throw_statement]  [comment_nl] 
+    |    [comment_nl]  [synchronized_statement]  [comment_nl] 
+    |    [comment_nl]  [try_statement]  [comment_nl] 
+    |    [comment_nl]  [assert_statement]  [comment_nl] 
+    |    [comment_nl]  [block]  [comment_nl] 
 end define
 define class_body_declaration
-    [comment_NL]  [empty_declaration]  [comment_NL] 
-    |    [comment_NL]  [member_declaration]  [comment_NL] 
-    |    [comment_NL]  [instance_initializer]  [comment_NL] 
-    |    [comment_NL]  [static_initializer]  [comment_NL] 
-    |    [comment_NL]  [field_declaration]  [comment_NL] 
+    [comment_nl]  [empty_declaration] 
+    |    [comment_nl]  [member_declaration] 
+    |    [comment_nl]  [instance_initializer] 
+    |    [comment_nl]  [static_initializer] 
+    |    [comment_nl]  [field_declaration] 
 end define
 define variable_initializer
-    [comment_NL]  [expression]  [comment_NL] 
-    |    [comment_NL]  [array_initializer]  [comment_NL] 
-    |    [comment_NL]  [id]  '( ')  [block]  [comment_NL] 
+    [comment_nl]  [expression]  [comment_nl] 
+    |    [comment_nl]  [array_initializer]  [comment_nl] 
+    |    [comment_nl]  [id]  '( ')  [block]  [comment_nl] 
 end define
 define variable_declarator
-    [variable_name]  [opt equals_variable_initializer]  [comment_NL] 
+    [variable_name]  [opt equals_variable_initializer]  [comment_nl] 
 end define
 define equals_variable_initializer
-    [comment_NL]  '=  [variable_initializer]  [comment_NL] 
+    [comment_nl]  '=  [variable_initializer]  [comment_nl] 
 end define
 define formal_parameter
-    [comment_NL]  [opt  'final]  [type_specifier]  [opt var_arg_specifier]  [formal_parameter_name]  [comment_NL] 
+    [comment_nl]  [opt  'final]  [type_specifier]  [opt var_arg_specifier]  [formal_parameter_name]  [comment_nl] 
 end define
 define constructor_declarator
-    [class_name]  '( [list formal_parameter]  ')  [comment_NL] 
+    [class_name]  '( [list formal_parameter]  ')  [comment_nl] 
 end define
 define method_declarator
-    [method_name]  '( [list formal_parameter]  ')  [repeat dimension]  [comment_NL] 
+    [method_name]  '( [list formal_parameter]  ')  [repeat dimension]  [comment_nl] 
 end define
 define argument
-    [comment_NL]  [expression]  [comment_NL] 
-    |    [comment_NL]  [type_specifier]  [comment_NL] 
+    [comment_nl]  [expression]  [comment_nl] 
+    |    [comment_nl]  [type_specifier]  [comment_nl] 
 end define
 define method_argument
-    '( [list argument]  ')  [comment_NL] 
+    '( [list argument]  ')  [comment_nl] 
 end define
 define if_statement
-    'if  '( [expression]  ')  [comment_NL]  [statement]  [opt else_clause]  [NL] 
+    'if  '( [expression]  ')  [comment_nl]  [statement]  [opt else_clause]  [NL] 
 end define
 define block
     '{ [IN]
-        [comment_NL]  [EX]
+        [comment_nl]  [EX]
     '} 
     |    '{ [IN]
-        [comment_NL]  [repeat declaration_or_statement +]  [EX]
-    [comment_NL]  '} 
+        [comment_nl]  [repeat declaration_or_statement +]  [EX]
+    [comment_nl]  '} 
 end define
 define declaration_or_statement
-    [comment_NL]  [local_variable_declaration]  [comment_NL] 
-    |    [comment_NL]  [class_declaration]  [comment_NL] 
-    |    [comment_NL]  [statement]  [comment_NL] 
+    [comment_nl]  [local_variable_declaration]  [comment_nl] 
+    |    [comment_nl]  [class_declaration]  [comment_nl] 
+    |    [comment_nl]  [statement]  [comment_nl] 
 end define
 define expression
-    [comment_NL]  [assignment_expression] 
+    [comment_nl]  [assignment_expression] 
 end define
 define mycomment
     [comment]  [NL] 
@@ -585,11 +585,11 @@ define program
 end define
 define type_declaration
     [class_declaration]  [NL] [NL]
-    [comment_NL] 
+    [comment_nl] 
     |    [interface_declaration]  [NL] [NL]
-    [comment_NL] 
+    [comment_nl] 
     |    [enum_declaration]  [NL]
-    [comment_NL] 
+    [comment_nl] 
 end define
 define enum_body
     '{ [IN]
@@ -597,10 +597,10 @@ define enum_body
     '}  [opt  ';]  [NL] [NL] 
 end define
 define import_declaration
-    [comment_NL]  'import  [opt  'static]  [imported_name]  ';  [NL]
-    [comment_NL] 
-    |    [comment_NL]  ';  [NL]
-    [comment_NL] 
+    [comment_nl]  'import  [opt  'static]  [imported_name]  ';  [NL]
+    [comment_nl] 
+    |    [comment_nl]  ';  [NL]
+    [comment_nl] 
 end define
 define class_header
     [repeat modifier]  'class  [class_name]  [opt extends_clause]  [opt implements_clause] 
@@ -618,12 +618,12 @@ define implements_clause
     'implements  [list qualified_name +] 
 end define
 define package_declaration
-    [comment_NL]  [opt package_header]  [repeat import_declaration]  [repeat type_declaration] 
+    [comment_nl]  [opt package_header]  [repeat import_declaration]  [repeat type_declaration] 
 end define
 define class_or_interface_body
     '{ [NL] [IN]
-        [comment_NL]  [repeat class_body_declaration]  [EX] [NL]
-    [comment_NL]  '}  [opt  ';]  [comment_NL]  [NL] [NL] 
+        [comment_nl]  [repeat class_body_declaration]  [EX] [NL]
+    [comment_nl]  '}  [opt  ';]  [comment_nl]  [NL] [NL] 
 end define
 define constructor_declaration
             [NL]
@@ -651,7 +651,7 @@ define single_annotation_value
     |    [nested_annotation] 
     |    { [list expression_or_nested_annotation] } 
 end define
-define comment_NL
+define comment_nl
     [my_comment] 
 end define
 define my_comment
@@ -673,8 +673,8 @@ function Private A  [class_body_declaration]
         M  [contains  each  PublicModifiers] end function
 
 function JavaDoc A  [my_comment]
-    match  [comment_NL]
-        B  [comment_NL] 
+    match  [comment_nl]
+        B  [comment_nl] 
     construct S_Comment  [stringlit]
         _  [quote  A] 
     where not
@@ -1121,7 +1121,7 @@ function normalise_ignore_by2_package_declaration_import_declaration2 E1  [packa
     replace  [package_declaration *]
         Seq  [package_declaration *] 
     deconstruct not E1
-        X6  [opt package_header]  X7  [repeat import_declaration]  X8  [repeat type_declaration] 
+        X7  [comment_nl]  X8  [opt package_header]  X9  [repeat import_declaration]  X10  [repeat type_declaration] 
     by
         Seq  [ . E1 ] 
 end function
@@ -1130,9 +1130,9 @@ function normalise_ignore_by3_package_declaration_import_declaration2 E1  [packa
     replace  [package_declaration *]
         Seq  [package_declaration *] 
     deconstruct E1
-        X6  [opt package_header]  X7  [repeat import_declaration]  X8  [repeat type_declaration] 
+        X7  [comment_nl]  X8  [opt package_header]  X9  [repeat import_declaration]  X10  [repeat type_declaration] 
     construct E2  [package_declaration]
-        X6  X8 
+        X7  X8  X10 
     by
         Seq  [ . E2 ] 
 end function
@@ -1176,13 +1176,13 @@ function normalise_ignore_by3_Private_class_or_interface_body_class_body_declara
     replace  [class_or_interface_body *]
         Seq  [class_or_interface_body *] 
     deconstruct E1
-        '{ N1  [repeat class_body_declaration]  '}  X9  [opt  ';] 
+        '{ X11  [comment_nl]  N1  [repeat class_body_declaration]  X12  [comment_nl]  '}  X13  [opt  ';]  X14  [comment_nl] 
     construct N2  [class_body_declaration *]
         _  [normalise_ignore_by1_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
                   normalise_ignore_by2_Private_class_or_interface_body_class_body_declaration1  E1  each  N1]
  
     construct E2  [class_or_interface_body]
-        '{ N2  '}  X9 
+        '{ X11  N2  X12  '}  X13  X14 
     by
         Seq  [ . E2 ] 
 end function
