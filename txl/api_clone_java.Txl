@@ -541,23 +541,23 @@ define if_statement
     'if  '( [expression]  ')  [comment_nl]  [statement]  [opt else_clause]  [NL] 
 end define
 define block
-    '{ [IN]
+    '{ [NL] [IN]
         [comment_nl]  [EX]
-    '} 
-    |    '{ [IN]
+    '}  [NL] 
+    |    '{ [NL] [IN]
         [comment_nl]  [repeat declaration_or_statement +]  [EX]
-    [comment_nl]  '} 
+    [comment_nl]  '}  [NL] 
 end define
 define declaration_or_statement
-    [comment_nl]  [local_variable_declaration]  [comment_nl] 
-    |    [comment_nl]  [class_declaration]  [comment_nl] 
-    |    [comment_nl]  [statement]  [comment_nl] 
+    [comment_nl]  [local_variable_declaration]  [comment_nl]  [NL] 
+    |    [comment_nl]  [class_declaration]  [comment_nl]  [NL] 
+    |    [comment_nl]  [statement]  [comment_nl]  [NL] 
 end define
 define expression
     [comment_nl]  [assignment_expression] 
 end define
 define mycomment
-    [comment]  [NL] 
+    [comment] 
 end define
 define method_body
     [repeat block] 

@@ -100,6 +100,9 @@ define static_initializer
             [NL]
     'static  [block]  [NL] [NL] 
 end define
+define constructor_body
+    [block]  [NL] 
+end define
 define field_declaration
     [variable_declaration] 
 end define
@@ -550,23 +553,23 @@ define if_statement
     'if  '( [expression]  ')  [comment_nl]  [statement]  [opt else_clause]  [NL] 
 end define
 define block
-    '{ [IN]
+    '{ [NL] [IN]
         [comment_nl]  [EX]
-    '} 
-    |    '{ [IN]
+    '}  [NL] 
+    |    '{ [NL] [IN]
         [comment_nl]  [repeat declaration_or_statement +]  [EX]
-    [comment_nl]  '} 
+    [comment_nl]  '}  [NL] 
 end define
 define declaration_or_statement
-    [comment_nl]  [local_variable_declaration]  [comment_nl] 
-    |    [comment_nl]  [class_declaration]  [comment_nl] 
-    |    [comment_nl]  [statement]  [comment_nl] 
+    [comment_nl]  [local_variable_declaration]  [comment_nl]  [NL] 
+    |    [comment_nl]  [class_declaration]  [comment_nl]  [NL] 
+    |    [comment_nl]  [statement]  [comment_nl]  [NL] 
 end define
 define expression
     [comment_nl]  [assignment_expression] 
 end define
 define mycomment
-    [comment]  [NL] 
+    [comment] 
 end define
 define modifier
     'abstract 
@@ -581,9 +584,6 @@ define modifier
     |    'synchronized 
     |    'strictfp 
     |    [repeat annotation] 
-end define
-define constructor_body
-    [repeat block] 
 end define
 define program
     [package_declaration *] 
@@ -997,30 +997,6 @@ function normalise_ignore_by4_modifier_annotation1
         P2 
 end function
 
-function normalise_preferred_tokens_constructor_body_block1 B  [constructor_body]
-    replace  [constructor_body *]
-        A  [constructor_body *] 
-    deconstruct not B
-        '{ '} 
-    construct B1  [constructor_body]
-        '{ '} 
-    by
-        _  [ . A ]  [ . B1 ] 
-end function
-
-function normalise_preferred_replace_constructor_body_block1
-    replace  [program]
-        Prg  [ program ] 
-    construct A  [constructor_body *]
-        _  [ ^  Prg ] 
-    construct A1  [constructor_body *]
-        _  [normalise_preferred_tokens_constructor_body_block1  each  A]
- 
-    by
-        Prg  [$  each  A  A1]
- 
-end function
-
 rule normalise_list_class_header_modifier
     replace  [repeat modifier]
         N1  [modifier]  N2  [modifier]  Rest  [repeat modifier] 
@@ -1263,61 +1239,12 @@ rule normalise_list_single_annotation_value_expression_or_nested_annotation
         N2 ,  N1 ,  Rest 
 end rule
 
-function normalise_ignore_by1_NotJavaDoc_comment_nl_mycomment1 E1  [comment_nl] N1  [mycomment]
-    replace  [mycomment *]
-        Seq  [mycomment *] 
-    where not
-        E1  [NotJavaDoc  N1]
-    by
-        Seq  [ . N1 ] 
-end function
-
-function normalise_ignore_by2_NotJavaDoc_comment_nl_mycomment1 E1  [comment_nl] N1  [mycomment]
-    replace  [mycomment *]
-        Seq  [mycomment *] 
-    where
-        E1  [NotJavaDoc  N1]
-    by
-        Seq 
-end function
-
-function normalise_ignore_by3_NotJavaDoc_comment_nl_mycomment1 E1  [comment_nl]
-    replace  [comment_nl *]
-        Seq  [comment_nl *] 
-    deconstruct E1
-        N1  [repeat mycomment] 
-    construct N2  [mycomment *]
-        _  [normalise_ignore_by1_NotJavaDoc_comment_nl_mycomment1  E1  each  N1]  [
-                  normalise_ignore_by2_NotJavaDoc_comment_nl_mycomment1  E1  each  N1]
- 
-    construct E2  [comment_nl]
-        N2 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_NotJavaDoc_comment_nl_mycomment1
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [comment_nl *]
-        _  [ ^  P1 ] 
-    construct List2  [comment_nl *]
-        _  [normalise_ignore_by3_NotJavaDoc_comment_nl_mycomment1  each  List1]
- 
-    construct P2  [program]
-        P1  [$  each  List1  List2]
- 
-    by
-        P2 
-end function
-
 function program_normalise
     replace  [program]
         Prg  [ program ] 
     by
         Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ normalise_ignore_by4_package_declaration_import_declaration2 ]  [ 
           normalise_ignore_by4_NotGeneratedNot_class_or_interface_body_class_body_declaration1 ]  [ 
-          normalise_ignore_by4_NotJavaDoc_comment_nl_mycomment1 ]  [ normalise_preferred_replace_constructor_body_block1 ]  [ 
           normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
           normalise_list_enum_header_modifier ]  [ normalise_list_extends_clause_type_name ]  [ 
           normalise_list_implements_clause_qualified_name ]  [ normalise_list_constructor_declaration_modifier ]  [ 

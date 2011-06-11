@@ -5,5 +5,5 @@ if [ ! -f test.txt ]; then
 fi
 for f in `cat test.txt`; do
  echo $f
- scripts/mct-mdsd -comment $f
+ scripts/mct-mdsd -comment $f > $f.generated_not
 done
