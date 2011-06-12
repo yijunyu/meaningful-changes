@@ -16,8 +16,17 @@ results+=result/mct/java/HelloWorld--2.java result/mct/java/HelloWorld-2-3.java
 results+=result/mct-comment/java/HelloWorld--2.java result/mct-comment/java/HelloWorld-2-3.java
 results+=result/mct-mdsd/java/HelloWorld--2.java result/mct-mdsd/java/HelloWorld-2-3.java
 results+=result/mct-mdsd-comment/java/HelloWorld--2.java result/mct-mdsd-comment/java/HelloWorld-2-3.java
+results+=result/mct-model/java/HelloWorld--2.java result/mct-model/java/HelloWorld-2-3.java
+results+=result/mct-model-comment/java/HelloWorld--2.java result/mct-model-comment/java/HelloWorld-2-3.java
 example+=$(results)
-target+=$(bin)/normc $(bin)/norm-include-c $(bin)/api_clone_javac $(bin)/api_clone_javacc $(bin)/problemcc $(bin)/mdsdcc $(bin)/verilog2cc $(program) $(results)
+target+=$(bin)/normc 
+target+=$(bin)/norm-include-c 
+target+=$(bin)/problemcc 
+target+=$(bin)/api_clone_javacc 
+target+=$(bin)/mdsdcc 
+target+=$(bin)/modelcc 
+target+=$(bin)/verilog2cc 
+target+=$(program) $(results)
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 #==== R U L E S ====
@@ -36,6 +45,7 @@ $(foreach ext,$(extensions),$(eval $(call example,$(ext))))
 
 Txl/api_clone_java.Txl: Txl/java.grm Txl/javaCommentOverrides.grm
 Txl/mdsd.Txl: Txl/java.grm Txl/javaCommentOverrides.grm
+Txl/model.Txl: Txl/java.grm Txl/javaCommentOverrides.grm
 Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl
 Txl/problem.Txl: Txl/problem.grm
 Txl/xtext.Txl: Txl/xtext.grm
@@ -46,6 +56,26 @@ result/v/%.v: $(bin)/vc source/v/%.v
 	$(bin)/vc result/v/$*.v.tmp -o $@
 	rm -f result/v/$*.v.tmp
 	if [ -e test/v/$*.v ]; then diff $@ test/v/$*.v; fi
+
+result/mct-model-comment/java/%--2.java: source/java/%.java source/java/%-2.java
+	@mkdir -p result/mct-model-comment/java
+	scripts/mct-model -comment $^ > $@
+	if [ -e test/mct-model-comment/java/$*--2.java ]; then diff $@ test/mct-model-comment/java/$*--2.java; fi
+
+result/mct-model-comment/java/%-2-3.java: source/java/%-2.java source/java/%-3.java
+	@mkdir -p result/mct-model-comment/java
+	scripts/mct-model -comment $^ > $@
+	if [ -e test/mct-model-comment/java/$*-2-3.java ]; then diff $@ test/mct-model-comment/java/$*-2-3.java; fi
+
+result/mct-model/java/%--2.java: scripts/mct-model source/java/%.java source/java/%-2.java
+	@mkdir -p result/mct-model/java
+	$^ > $@
+	if [ -e test/mct-model/java/$*--2.java ]; then diff $@ test/mct-model/java/$*--2.java; fi
+
+result/mct-model/java/%-2-3.java: scripts/mct-model source/java/%-2.java source/java/%-3.java
+	@mkdir -p result/mct-model/java
+	$^ > $@
+	if [ -e test/mct-model/java/$*-2-3.java ]; then diff $@ test/mct-model/java/$*-2-3.java; fi
 
 result/mct-mdsd-comment/java/%--2.java: source/java/%.java source/java/%-2.java
 	@mkdir -p result/mct-mdsd-comment/java
