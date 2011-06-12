@@ -177,6 +177,7 @@ function main
 	'end 'function
 	'function 'main 'replace '[ 'program '] 'Prg '[ 'program '] 
 	  'export 'Program_Diff '['program'] '_
+	  'export 'Program '['program'] 'Prg
 	  'by 'Prg '[ 'program_normalise ']
 		   '[ 'program_remove_clone ']
 		   '[ 'print_diff ']

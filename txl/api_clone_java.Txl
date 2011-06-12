@@ -1396,6 +1396,8 @@ function main
         Prg  [ program ] 
     export Program_Diff [program]
         _ 
+    export Program [program]
+        Prg 
     by
         Prg  [ program_normalise ]  [ program_remove_clone ]  [ print_diff ] 
 end function

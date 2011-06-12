@@ -684,7 +684,12 @@ function NotGeneratedNot A  [class_body_declaration]
     construct S_Cs  [stringlit]
         _  [quote  A] 
     where not
-        S_Cs  [grep  "@generated NOT"] end function
+        S_Cs  [grep  "@generated NOT"] import Program [program]
+
+    deconstruct * [class_or_interface_body] Program
+        C  [class_or_interface_body] 
+    where
+        C  [=  B] end function
 
 keys
     ... <<<<<<  >>>>>> 
@@ -1340,6 +1345,8 @@ function main
         Prg  [ program ] 
     export Program_Diff [program]
         _ 
+    export Program [program]
+        Prg 
     by
         Prg  [ program_normalise ]  [ program_remove_clone ]  [ print_diff ] 
 end function
