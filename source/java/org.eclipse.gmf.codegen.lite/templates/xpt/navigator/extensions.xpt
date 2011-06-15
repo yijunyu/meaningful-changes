@@ -1,0 +1,206 @@
+/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    blajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+
+«DEFINE extensions FOR gmfgen::GenNavigator-»
+	«EXPAND editorInputPropertyTester("URIEditorInput", "org.eclipse.emf.common.ui.URIEditorInput", getUriInputTesterQualifiedClassName())-»
+«IF editorGen.diagram.generateShortcutIcon()-»
+
+	«EXPAND editorInputPropertyTester("Shortcut", "org.eclipse.gmf.runtime.notation.View", editorGen.diagram.getShortcutPropertyTesterQualifiedClassName())-»
+«ENDIF-»
+«IF generateDomainModelNavigator && null != editorGen.domainGenModel-»
+	«EXPAND editorInputPropertyTester("DomainModelElement", "org.eclipse.emf.ecore.EObject", getDomainModelElementTesterQualifiedClassName())-»
+«ENDIF-»
+
+	«EXPAND registerBindings-»
+
+	«EXPAND registerNavigatorContent-»
+
+	«EXPAND registerLinkHelper-»
+«ENDDEFINE»
+
+«DEFINE i18n FOR gmfgen::GenNavigator-»
+navigatorContentName=*.«editorGen.diagramFileExtension» diagram contents
+«IF generateDomainModelNavigator-»
+domainNavigatorContentName=*.«editorGen.domainFileExtension» model contents
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE editorInputPropertyTester(String property, String type, String testerClass) FOR gmfgen::GenNavigator-»
+   <extension point="org.eclipse.core.expressions.propertyTesters">
+      «EXPAND xpt::Common::xmlGeneratedTag»
+       <propertyTester
+           id="«editorGen.plugin.iD».«property»PropertyTester"
+           type="«type»"
+           namespace="«editorGen.plugin.iD»"
+           properties="is«property»"
+           class="«testerClass»">
+       </propertyTester>
+   </extension>
+«ENDDEFINE»
+
+«DEFINE registerBindings FOR gmfgen::GenNavigator-»
+   <extension point="org.eclipse.ui.navigator.viewer">
+      «EXPAND xpt::Common::xmlGeneratedTag»
+      <viewerContentBinding viewerId="org.eclipse.ui.navigator.ProjectExplorer">
+         <includes>
+            <contentExtension pattern="«contentExtensionID»"/>
+«IF generateDomainModelNavigator && null != editorGen.domainGenModel-»
+			<contentExtension pattern="«domainContentExtensionID»"/>
+«ENDIF-»
+«IF editorGen.editor.eclipseEditor-»
+            <contentExtension pattern="«linkHelperExtensionID»"/>
+«ENDIF-»
+         </includes>
+      </viewerContentBinding>
+      <viewerActionBinding viewerId="org.eclipse.ui.navigator.ProjectExplorer">
+         <includes>
+            <actionExtension pattern="«actionProviderID»"/>
+         </includes>
+      </viewerActionBinding>
+   </extension>
+«ENDDEFINE»
+
+«DEFINE registerNavigatorContent FOR gmfgen::GenNavigator-»
+   <extension point="org.eclipse.ui.navigator.navigatorContent">
+	«EXPAND diagramNavigatorContent-»
+	«EXPAND domainModelNavigatorContent-»
+	«EXPAND actionProvider-»
+   </extension>
+«ENDDEFINE»
+
+«DEFINE diagramNavigatorContent FOR gmfgen::GenNavigator-»
+      «EXPAND xpt::Common::xmlGeneratedTag»
+      <navigatorContent
+            id="«contentExtensionID»" 
+            name="«contentExtensionName»" 
+            priority="«contentExtensionPriority»" 
+            contentProvider="«getContentProviderQualifiedClassName()»" 
+            labelProvider="«getLabelProviderQualifiedClassName()»"
+            icon="«editorGen.editor.iconPathX»"
+            activeByDefault="true">
+         <triggerPoints>
+            <or>
+	           <and>
+    	          <instanceof value="org.eclipse.core.resources.IFile"/>
+        	      <test property="org.eclipse.core.resources.extension" value="«editorGen.diagramFileExtension»"/>
+               </and>
+               <instanceof value="«getAbstractNavigatorItemQualifiedClassName()»"/>
+«IF editorGen.diagram.generateShortcutIcon()-»
+           	   <adapt type="org.eclipse.gmf.runtime.notation.View">
+           	      <test property="«editorGen.plugin.iD».isShortcut"/>
+           	   </adapt>
+«ENDIF-»
+            </or>
+         </triggerPoints>
+         <possibleChildren>
+            <or>
+         	   <instanceof value="«getAbstractNavigatorItemQualifiedClassName()»"/>
+«IF editorGen.diagram.generateShortcutIcon()-»
+           	   <adapt type="org.eclipse.gmf.runtime.notation.View">
+           	      <test property="«editorGen.plugin.iD».isShortcut"/>
+           	   </adapt>
+«ENDIF-»
+            </or>
+         </possibleChildren>
+         <commonSorter 
+               id="«sorterExtensionID»" 
+               class="«getSorterQualifiedClassName()»">
+            <parentExpression>
+               <or>
+	              <and>
+    	             <instanceof value="org.eclipse.core.resources.IFile"/>
+        	         <test property="org.eclipse.core.resources.extension" value="«editorGen.diagramFileExtension»"/>
+                  </and>
+                  <instanceof value="«getAbstractNavigatorItemQualifiedClassName()»"/>
+               </or>
+            </parentExpression>
+         </commonSorter>
+      </navigatorContent>
+«ENDDEFINE»
+
+«DEFINE domainModelNavigatorContent FOR gmfgen::GenNavigator-»
+«IF generateDomainModelNavigator && null != editorGen.domainGenModel-»
+      <navigatorContent
+            id="«domainContentExtensionID»" 
+            name="«domainContentExtensionName»" 
+            priority="«domainContentExtensionPriority»" 
+            contentProvider="«getDomainContentProviderQualifiedClassName()»" 
+            labelProvider="«getDomainLabelProviderQualifiedClassName()»"
+            icon="«editorGen.editor.iconPathX»"
+            activeByDefault="true">
+         <triggerPoints>
+            <or>
+	           <and>
+    	          <instanceof value="org.eclipse.core.resources.IFile"/>
+        	      <test property="org.eclipse.core.resources.extension" value="«editorGen.domainFileExtension»"/>
+               </and>
+               <and>
+                  <instanceof value="org.eclipse.emf.ecore.EObject"/>
+                  <test property="«editorGen.plugin.iD».isDomainModelElement"/>
+               </and>
+            </or>
+         </triggerPoints>
+         <possibleChildren>
+            <and>
+       	       <instanceof value="org.eclipse.emf.ecore.EObject"/>
+       	       <test property="«editorGen.plugin.iD».isDomainModelElement"/>
+       	    </and>
+         </possibleChildren>
+      </navigatorContent>
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE actionProvider FOR gmfgen::GenNavigator-»
+      <actionProvider
+            id="«actionProviderID»"
+            class="«getActionProviderQualifiedClassName()»">
+         <enablement>
+            <or>
+               <instanceof value="«getAbstractNavigatorItemQualifiedClassName()»"/>
+«IF editorGen.diagram.generateShortcutIcon()-»
+           	   <adapt type="org.eclipse.gmf.runtime.notation.View">
+           	      <test property="«editorGen.plugin.iD».isShortcut"/>
+           	   </adapt>
+«ENDIF-»
+            </or>
+         </enablement>
+      </actionProvider>
+«ENDDEFINE»
+
+«DEFINE registerLinkHelper FOR gmfgen::GenNavigator-»
+«IF editorGen.editor.eclipseEditor-»
+   <extension point="org.eclipse.ui.navigator.linkHelper">
+      «EXPAND xpt::Common::xmlGeneratedTag»
+      <linkHelper
+            id="«linkHelperExtensionID»"
+            class="«getLinkHelperQualifiedClassName()»">
+         <editorInputEnablement>
+         	<or>
+	            <instanceof value="org.eclipse.ui.IFileEditorInput"/>
+	            <and>
+	               <instanceof value="org.eclipse.emf.common.ui.URIEditorInput"/>
+	               <test property="«editorGen.plugin.iD».isURIEditorInput"/>
+	            </and>
+	            <instanceof value="org.eclipse.gmf.runtime.lite.parts.DiagramEditorInput"/>
+	        </or>
+         </editorInputEnablement>
+         <selectionEnablement>
+            <instanceof value="«getAbstractNavigatorItemQualifiedClassName()»"/>
+         </selectionEnablement>
+      </linkHelper>
+   </extension>
+«ENDIF-»
+«ENDDEFINE»
+

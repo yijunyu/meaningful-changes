@@ -1,0 +1,159 @@
+/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+
+«EXTENSION xpt::providers::i18n»
+«EXTENSION xpt::providers::ValidationUtils»
+
+«DEFINE MarkerNavigationProvider FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::copyright FOR editorGen»
+package «providersPackageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «markerNavigationProviderClassName» implements org.eclipse.gmf.runtime.lite.validation.IValidationStateListener {
+«EXPAND markerType-»
+«EXPAND validationStateChanged-»
+«EXPAND adjustMarker-»
+«EXPAND adjustDiagnosticMarker-»
+«EXPAND adjustConstraintMarker-»
+«EXPAND addMarker-»
+
+«EXPAND ReplaceMarkersJob-»
+«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE markerType FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public static final String MARKER_TYPE = «editorGen.plugin.getActivatorQualifiedClassName()».ID + ".diagnostic"; «EXPAND xpt::Common::nonNLS»
+«ENDDEFINE»
+
+«DEFINE validationStateChanged FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public void validationStateChanged(org.eclipse.gmf.runtime.lite.validation.ValidationStateEvent event) {
+		org.eclipse.emf.common.util.URI diagramUri = event.getSourceValidationState().getDiagramUri();
+		org.eclipse.core.resources.IFile file = org.eclipse.emf.workspace.util.WorkspaceSynchronizer.getFile(new org.eclipse.emf.ecore.resource.impl.ResourceImpl(diagramUri));
+		if (file != null && file.exists()) {
+			new ReplaceMarkersJob(file, event).schedule();
+		}
+	}
+«ENDDEFINE»
+
+«DEFINE adjustMarker FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public static void adjustMarker(org.eclipse.core.resources.IMarker marker, Object referent) {
+		if (referent instanceof org.eclipse.emf.common.util.Diagnostic) {
+			adjustMarker(marker, (org.eclipse.emf.common.util.Diagnostic) referent);
+		} else if (referent instanceof org.eclipse.emf.validation.model.IConstraintStatus) {
+			adjustMarker(marker, (org.eclipse.emf.validation.model.IConstraintStatus) referent);
+		} else {
+		}
+	}
+«ENDDEFINE»
+
+«DEFINE adjustDiagnosticMarker FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public static void adjustMarker(org.eclipse.core.resources.IMarker marker, org.eclipse.emf.common.util.Diagnostic sourceDiagnostic) {
+		assert marker != null && sourceDiagnostic != null;
+	}
+«ENDDEFINE»
+
+«DEFINE adjustConstraintMarker FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public static void adjustMarker(org.eclipse.core.resources.IMarker marker, org.eclipse.emf.validation.model.IConstraintStatus sourceStatus) {
+		assert marker != null && sourceStatus != null;
+	}
+«ENDDEFINE»
+
+«DEFINE addMarker FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	private static org.eclipse.core.resources.IMarker addMarker(org.eclipse.core.resources.IFile file, org.eclipse.emf.common.util.URI diagramUri, org.eclipse.emf.common.util.URI viewUri, String message, int statusSeverity) {
+		org.eclipse.core.resources.IMarker marker = null;
+		try {
+			marker = file.createMarker(MARKER_TYPE);
+			marker.setAttribute(org.eclipse.core.resources.IMarker.MESSAGE, message);
+			marker.setAttribute(org.eclipse.core.resources.IMarker.LOCATION, diagramUri.toString());
+			marker.setAttribute(org.eclipse.emf.ecore.EValidator.URI_ATTRIBUTE, viewUri.toString());
+			int markerSeverity = org.eclipse.core.resources.IMarker.SEVERITY_INFO;
+			if (statusSeverity == org.eclipse.core.runtime.IStatus.WARNING) {
+				markerSeverity = org.eclipse.core.resources.IMarker.SEVERITY_WARNING;
+			} else if (statusSeverity == org.eclipse.core.runtime.IStatus.ERROR || statusSeverity == org.eclipse.core.runtime.IStatus.CANCEL) {
+				markerSeverity = org.eclipse.core.resources.IMarker.SEVERITY_ERROR;
+			}
+			marker.setAttribute(org.eclipse.core.resources.IMarker.SEVERITY, markerSeverity);
+		} catch (org.eclipse.core.runtime.CoreException e) {
+			«editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Failed to create validation marker", e);	«EXPAND xpt::Common::nonNLS»
+		}
+		return marker;
+	}
+«ENDDEFINE»
+
+«DEFINE ReplaceMarkersJob FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedClassComment»
+	private static class ReplaceMarkersJob extends org.eclipse.core.resources.WorkspaceJob {
+		«EXPAND xpt::Common::generatedMemberComment»
+		private final java.util.Collection myDescriptorsToAdd;
+		«EXPAND xpt::Common::generatedMemberComment»
+		private final org.eclipse.core.resources.IFile myFile;
+		«EXPAND xpt::Common::generatedMemberComment»
+		private final org.eclipse.emf.common.util.URI myDiagramUri;
+		«EXPAND xpt::Common::generatedMemberComment»
+		public ReplaceMarkersJob(org.eclipse.core.resources.IFile file, org.eclipse.gmf.runtime.lite.validation.ValidationStateEvent event) {
+			super(«EXPAND xpt::Externalizer::accessorCall(i18nKeyForMarkerNavigationProviderReplaceMarkersJobName()) FOR editorGen»);
+			setRule(file.getWorkspace().getRuleFactory().markerRule(file));
+			myFile = file;
+			myDiagramUri = event.getSourceValidationState().getDiagramUri();
+			myDescriptorsToAdd = new java.util.ArrayList();
+			for (java.util.Iterator it = event.getViolationKeys().iterator(); it.hasNext(); ) {
+				org.eclipse.emf.common.util.URI next = (org.eclipse.emf.common.util.URI) it.next();
+				myDescriptorsToAdd.addAll(event.getNewViolations(next));
+			}
+		}
+
+		«EXPAND xpt::Common::generatedMemberComment»
+		public org.eclipse.core.runtime.IStatus runInWorkspace(org.eclipse.core.runtime.IProgressMonitor monitor) throws org.eclipse.core.runtime.CoreException {
+			String expectedLocation = myDiagramUri.toString();
+			org.eclipse.core.resources.IMarker[] markers = myFile.findMarkers(MARKER_TYPE, false, org.eclipse.core.resources.IResource.DEPTH_INFINITE);
+			for (int i = 0; i < markers.length; i++) {
+				org.eclipse.core.resources.IMarker next = markers[i];
+				if (expectedLocation.equals(next.getAttribute(org.eclipse.core.resources.IMarker.LOCATION))) {
+					next.delete();
+				}
+			}
+			for (java.util.Iterator it = myDescriptorsToAdd.iterator(); it.hasNext(); ) {
+				org.eclipse.gmf.runtime.lite.validation.ViolationDescriptor next = (org.eclipse.gmf.runtime.lite.validation.ViolationDescriptor) it.next();
+				org.eclipse.core.resources.IMarker nextMarker = addMarker(myFile, myDiagramUri, next.getUri(), next.getMessage(), next.getSeverity().toStatusSeverity());
+				if (nextMarker != null) {
+					adjustMarker(nextMarker, next.getReferent());
+				}
+			}
+			return org.eclipse.core.runtime.Status.OK_STATUS;
+		}
+	}
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenDiagram»«ENDDEFINE»
+
+«DEFINE i18nAccessors FOR gmfgen::GenDiagram-»
+«IF validationNeeded() && editorGen.application == null-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForMarkerNavigationProviderReplaceMarkersJobName())-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE i18nValues FOR gmfgen::GenDiagram-»
+«IF validationNeeded() && editorGen.application == null-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForMarkerNavigationProviderReplaceMarkersJobName(), "Replace markers")-»
+«ENDIF-»
+«ENDDEFINE»

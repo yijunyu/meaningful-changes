@@ -1,0 +1,97 @@
+/*
+ * Copyright (c) 2007 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+import "http://www.eclipse.org/emf/2002/Ecore";
+import "http://www.eclipse.org/emf/2002/GenModel";
+import "http://www.eclipse.org/gmf/2008/GenModel";
+extension xpt::diagram::LinkFinder;
+
+boolean needsLinkNotationModelRefresher(gmfgen::GenCommonBase gcb) :
+	gcb.primNeedsLinkNotationModelRefresher()
+;
+
+boolean needsLinkNotationModelRefresher(gmfgen::GenDiagram diagram) :
+	true	//due to uncontained links
+;
+
+boolean primNeedsLinkNotationModelRefresher(gmfgen::GenCommonBase gcb) :
+	gcb.containedLinks().size() > 0
+;
+
+cached Collection[genmodel::GenFeature] getAffectingFeatures(gmfgen::GenCommonBase gcb) :
+	{}.union(gcb.containedLinks().modelFacet.collect(e| e.getAffectingFeatures()).flatten())
+;
+
+private Collection[genmodel::GenFeature] getAffectingFeatures(gmfgen::LinkModelFacet facet) :
+	{}
+;
+
+private Collection[genmodel::GenFeature] getAffectingFeatures(gmfgen::TypeLinkModelFacet facet) :
+	{facet.childMetaFeature, facet.sourceMetaFeature, facet.targetMetaFeature}.select(e| e != null)
+;
+
+private Collection[genmodel::GenFeature] getAffectingFeatures(gmfgen::FeatureLinkModelFacet facet) :
+	{facet.metaFeature}
+;
+
+Collection[genmodel::GenFeature] getLinkChildFeatures(gmfgen::GenCommonBase gcb) :
+	getLinkChildFeatures(gcb, containedLinks(gcb))
+;
+
+Collection[genmodel::GenFeature] getLinkChildFeatures(gmfgen::GenCommonBase gcb, Collection[gmfgen::GenLink] someOfContainedLinks) :
+	{}.union(someOfContainedLinks.collect(e| e.modelFacet.getLinkChildFeature())).select(e| e != null)
+;
+
+private genmodel::GenFeature getLinkChildFeature(gmfgen::LinkModelFacet facet) :
+	null
+;
+
+private genmodel::GenFeature getLinkChildFeature(gmfgen::TypeLinkModelFacet facet) :
+	facet.childMetaFeature
+;
+
+private genmodel::GenFeature getLinkChildFeature(gmfgen::FeatureLinkModelFacet facet) :
+	facet.metaFeature
+;
+
+Collection[gmfgen::GenNode] getTypeGenLinksForFeature(gmfgen::GenCommonBase gcb, genmodel::GenFeature genFeature, Collection[gmfgen::GenLink] containedLinks) :
+JAVA org.eclipse.gmf.internal.codegen.lite.utils.SemanticSyncUtils.getTypeGenLinks(org.eclipse.gmf.codegen.gmfgen.GenCommonBase, org.eclipse.emf.codegen.ecore.genmodel.GenFeature, java.util.Collection)
+;
+
+Collection[gmfgen::GenNode] getFeatureGenLinksForFeature(gmfgen::GenCommonBase gcb, genmodel::GenFeature genFeature, Collection[gmfgen::GenLink] containedLinks) :
+JAVA org.eclipse.gmf.internal.codegen.lite.utils.SemanticSyncUtils.getFeatureGenLinks(org.eclipse.gmf.codegen.gmfgen.GenCommonBase, org.eclipse.emf.codegen.ecore.genmodel.GenFeature, java.util.Collection)
+;
+
+cached Collection[gmfgen::GenCommonBase] getLinkContainersWithAncestors(gmfgen::GenDiagram diagram) :
+	buildAncestorClosure((Collection[gmfgen::GenCommonBase]) diagram.links.collect(e| e.getPossibleContainers()).flatten())
+;
+
+private Collection[gmfgen::GenCommonBase] buildAncestorClosure(Collection[gmfgen::GenCommonBase] elements) :
+JAVA org.eclipse.gmf.internal.codegen.lite.utils.SemanticSyncUtils.buildAncestorClosure(java.util.Collection)
+;
+
+Collection[gmfgen::GenCommonBase] getContainedContainers(gmfgen::GenCommonBase gcb) :
+	{}
+;
+
+Collection[gmfgen::GenCommonBase] getContainedContainers(gmfgen::GenContainerBase gcb) :
+	gcb.containedNodes
+;
+
+Collection[gmfgen::GenCommonBase] getContainedContainers(gmfgen::GenNode node) :
+	{}.addAll(node.containedNodes).addAll(node.compartments).addAll(node.containedLinks())
+;
+
+Collection[gmfgen::GenCommonBase] getContainedContainers(gmfgen::GenLink link) :
+	link.containedLinks()
+;
+

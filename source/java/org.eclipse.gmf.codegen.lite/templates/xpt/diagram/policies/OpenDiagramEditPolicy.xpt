@@ -1,0 +1,224 @@
+/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::GenModelUtils»
+
+«DEFINE OpenDiagramEditPolicy FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::copyright FOR subject.getDiagram().editorGen-»
+package «subject.getDiagram().editPoliciesPackageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «editPolicyClassName» «EXPAND supertypes» {
+	«EXPAND commandForRequest-»
+
+	«EXPAND commandForView-»
+
+	«EXPAND OpenDiagramCommandClass-»
+
+	«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE supertypes FOR gmfgen::OpenDiagramBehaviour»extends org.eclipse.gmf.runtime.lite.edit.policies.OpenDiagramEditPolicy«ENDDEFINE»
+
+«DEFINE commandForRequest FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gef.commands.Command getOpenCommand(org.eclipse.gef.Request openRequest) {
+	org.eclipse.gef.EditPart targetEditPart = getTargetEditPart(openRequest);
+	if (false == targetEditPart.getModel() instanceof org.eclipse.gmf.runtime.notation.View) {
+		return null;
+	}
+	org.eclipse.gmf.runtime.notation.View view = (org.eclipse.gmf.runtime.notation.View) targetEditPart.getModel();
+	return getOpenCommand(view);
+}
+«ENDDEFINE»
+
+«DEFINE commandForView FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gef.commands.Command getOpenCommand(org.eclipse.gmf.runtime.notation.View view) {
+	org.eclipse.gmf.runtime.notation.Style linkStyle = view.getStyle(org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getHintedDiagramLinkStyle());
+	if (false == linkStyle instanceof org.eclipse.gmf.runtime.notation.HintedDiagramLinkStyle) {
+		return null;
+	}
+	org.eclipse.emf.transaction.TransactionalEditingDomain domain = org.eclipse.emf.transaction.util.TransactionUtil.getEditingDomain(linkStyle);
+	org.eclipse.emf.common.command.Command result = new «EXPAND commandClassName»((org.eclipse.gmf.runtime.notation.HintedDiagramLinkStyle) linkStyle);
+	return new org.eclipse.gmf.runtime.lite.commands.WrappingCommand(domain, result);
+}
+«ENDDEFINE»
+
+«DEFINE commandClassName FOR gmfgen::OpenDiagramBehaviour»OpenDiagramCommand«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClass FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedClassComment»
+protected static class «EXPAND commandClassName» «EXPAND OpenDiagramCommandSupertypes» {
+	«EXPAND OpenDiagramCommandClassAttributes-»
+
+	«EXPAND OpenDiagramCommandClassCtors-»
+
+	«EXPAND OpenDiagramCommandClassPrepare-»
+
+	«EXPAND OpenDiagramCommandClassExecute-»
+
+	«EXPAND OpenDiagramCommandClassRedo-»
+
+	«EXPAND OpenDiagramCommandClassCanUndo-»
+
+	«EXPAND OpenDiagramCommandClassGetDiagramToOpen-»
+
+	«EXPAND OpenDiagramCommandClassCreateNewDiagram-»
+
+	«EXPAND OpenDiagramCommandClassGetDiagramDomainElement-»
+
+	«EXPAND OpenDiagramCommandClassAddToResource-»
+
+	«EXPAND OpenDiagramCommandClassGetDiagramKind-»
+
+	«EXPAND OpenDiagramCommandClassGetID-»
+
+	«EXPAND OpenDiagramCommandClassAdditions-»
+}
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::OpenDiagramBehaviour»«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandSupertypes FOR gmfgen::OpenDiagramBehaviour»extends org.eclipse.emf.common.command.AbstractCommand«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassAttributes FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+private final org.eclipse.gmf.runtime.notation.HintedDiagramLinkStyle myDiagramLink;
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassCtors FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected «EXPAND commandClassName»(org.eclipse.gmf.runtime.notation.HintedDiagramLinkStyle linkStyle) {
+	myDiagramLink = linkStyle;
+}
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassPrepare FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected boolean prepare() {
+	return true;
+}
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassExecute FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+public void execute() {
+	org.eclipse.gmf.runtime.notation.Diagram diagramToOpen = getDiagramToOpen();
+	if (diagramToOpen == null) {
+		diagramToOpen = createNewDiagram();
+	}
+	org.eclipse.ui.IWorkbenchPage page = org.eclipse.ui.PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+«IF openAsEclipseEditor-»
+	«EXPAND xpt::navigator::getEditorInput::defineURIEditorInput("diagramToOpen", "editorInput") FOR subject.getDiagram()-»
+	try {
+		page.openEditor(editorInput, «EXPAND getIDName»());
+	} catch (org.eclipse.ui.PartInitException e) {
+		«subject.getDiagram().editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Exception while opening diagram", e); «EXPAND xpt::Common::nonNLS»
+	}
+«ELSE-»
+	try {
+		org.eclipse.gmf.runtime.lite.parts.DiagramViewPart diagramView = (org.eclipse.gmf.runtime.lite.parts.DiagramViewPart)page.showView(«EXPAND getIDName»());
+		org.eclipse.emf.common.util.URI diagramURI = org.eclipse.emf.ecore.util.EcoreUtil.getURI(diagramToOpen);
+		diagramView.showDiagram(null, diagramURI);
+	} catch (org.eclipse.ui.PartInitException e) {
+		«subject.getDiagram().editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Exception while opening diagram", e); «EXPAND xpt::Common::nonNLS»
+	}
+«ENDIF-»
+}
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassRedo FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+public void redo() {
+	execute();
+}
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassCanUndo FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+public boolean canUndo() {
+	return false;
+}
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassGetDiagramToOpen FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gmf.runtime.notation.Diagram getDiagramToOpen() {
+	org.eclipse.gmf.runtime.notation.Diagram result = myDiagramLink.getDiagramLink();
+	if (result != null && result.getType().equals(getDiagramKind())) {
+		return result;
+	}
+	return null;
+}
+«ENDDEFINE»
+«DEFINE OpenDiagramCommandClassCreateNewDiagram FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gmf.runtime.notation.Diagram createNewDiagram() {
+	org.eclipse.gmf.runtime.notation.Diagram result = org.eclipse.gmf.runtime.notation.NotationFactory.eINSTANCE.createDiagram();
+	myDiagramLink.setDiagramLink(result);
+	result.setElement(getDiagramDomainElement());
+	addToResource(result);
+	try {
+		for (java.util.Iterator it = myDiagramLink.eResource().getResourceSet().getResources().iterator(); it.hasNext(); ) {
+			org.eclipse.emf.ecore.resource.Resource next = (org.eclipse.emf.ecore.resource.Resource) it.next();
+			if (next.isLoaded() && !«subject.getDiagram().getDiagramEditorUtilQualifiedClassName()».isReadOnly(next)) {
+				next.save(«subject.getDiagram().getDiagramEditorUtilQualifiedClassName()».getSaveOptions());
+			}
+		}
+	} catch (java.io.IOException e) {
+		«subject.getDiagram().editorGen.plugin.getActivatorQualifiedClassName()».getInstance().logError("Exception while creating diagram", e); «EXPAND xpt::Common::nonNLS»
+	}
+	return result;
+}
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassGetDiagramDomainElement FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment("Returns the element that should be the underlying model element for the diagram.\n" + 
+"By default, the element associated with the edit part is returned.")»
+protected org.eclipse.emf.ecore.EObject getDiagramDomainElement() {
+	return ((org.eclipse.gmf.runtime.notation.View) myDiagramLink.eContainer()).getElement();
+}
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassAddToResource FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment("Adds the created diagram to a resource. By default, the diagram is added to the resource which contains the initiating diagram.")»
+protected void addToResource(org.eclipse.gmf.runtime.notation.Diagram diagram) {
+	assert diagram.eResource() == null;
+	assert myDiagramLink.eResource() != null;
+	myDiagramLink.eResource().getContents().add(diagram);
+}
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassGetDiagramKind FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected String getDiagramKind() {
+	return «IF diagramKind == null»«EXPAND xpt::editor::VisualIDRegistry::modelID FOR subject.getDiagram()»;«ELSE»"«diagramKind»";	«EXPAND xpt::Common::nonNLS»«ENDIF»
+}
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassGetID FOR gmfgen::OpenDiagramBehaviour-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected String «EXPAND getIDName»() {
+	return «IF editorID == null»«subject.getDiagram().editorGen.editor.getQualifiedClassName()».ID;«ELSE»"«editorID»";	«EXPAND xpt::Common::nonNLS»«ENDIF»
+}
+«ENDDEFINE»
+
+«DEFINE getIDName FOR gmfgen::OpenDiagramBehaviour-»
+«IF openAsEclipseEditor»getEditorID«ELSE»getViewID«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE OpenDiagramCommandClassAdditions FOR gmfgen::OpenDiagramBehaviour»«ENDDEFINE»

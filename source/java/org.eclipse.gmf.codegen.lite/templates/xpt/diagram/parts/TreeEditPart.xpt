@@ -1,0 +1,280 @@
+/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::GenModelUtils»
+«EXTENSION xpt::diagram::policies::ComponentEditPolicy»
+«EXTENSION xpt::diagram::parts::TreeEditPart»
+«EXTENSION xpt::diagram::parts::Common»
+«EXTENSION xpt::diagram::LinkFinder»
+
+«DEFINE getAdapterClause FOR gmfgen::GenCommonBase-»
+«IF needsTreeEditPartAdapter()-»
+if (org.eclipse.gef.TreeEditPart.class == key) {
+	return getTreeEditPartAdapter();
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE getTreeEditPartAdapter FOR gmfgen::GenCommonBase-»
+«IF needsTreeEditPartAdapter()-»
+«EXPAND xpt::Common::generatedMemberComment»
+private «EXPAND className» myTreeEditPartAdapter;
+
+«EXPAND xpt::Common::generatedMemberComment»
+private «EXPAND className» getTreeEditPartAdapter() {
+	if (myTreeEditPartAdapter == null) {
+		myTreeEditPartAdapter = new «EXPAND className»();
+	}
+	return myTreeEditPartAdapter;
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE TreeEditPart FOR gmfgen::GenCommonBase-»
+«IF needsTreeEditPartAdapter()-»
+	«EXPAND xpt::Common::generatedClassComment»
+private class «EXPAND className» extends org.eclipse.gmf.runtime.lite.edit.parts.tree.BaseTreeEditPart {
+	«EXPAND ctors-»
+	«EXPAND createEditPolicies-»
+	«EXPAND listeners-»
+	«EXPAND setWidget-»
+«LET getPrimaryLabel() AS primaryLabel-»
+	«EXPAND createLabelTextDisplayer(primaryLabel)-»
+	«EXPAND getImage(primaryLabel)-»
+	«EXPAND getPrimaryLabel(primaryLabel)-»
+«ENDLET-»
+	«EXPAND getModelChildren-»
+	«EXPAND additions-»
+}
+«ELSE»«ERROR "Unexpected Type"»«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE setWidget FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+public void setWidget(org.eclipse.swt.widgets.Widget widget) {
+	if (widget == null) {
+		myTreeEditPartAdapter = null;
+	}
+	super.setWidget(widget);
+}
+«ENDDEFINE»
+
+«DEFINE ctors FOR gmfgen::GenCommonBase-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public «EXPAND className»() {
+		super(«EXPAND xpt::diagram::parts::Common::getViewCode», «getDiagram().editorGen.plugin.getActivatorQualifiedClassName()».getInstance().getItemProvidersAdapterFactory());
+	}
+«ENDDEFINE»
+
+«DEFINE createEditPolicies FOR gmfgen::GenCommonBase-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected void createEditPolicies() {
+		«EXPAND installComponentEditPolicy-»
+«IF needsTreeDirectEditPolicy()-»
+		«EXPAND installDirectEditPolicy-»
+«ENDIF-»
+	}
+«ENDDEFINE»
+
+«DEFINE installComponentEditPolicy FOR gmfgen::GenCommonBase-»
+installEditPolicy(org.eclipse.gef.EditPolicy.COMPONENT_ROLE, «EXPAND instantiateComponentEditPolicy»);
+«ENDDEFINE»
+
+«DEFINE instantiateComponentEditPolicyPrim FOR gmfgen::GenCommonBase»new «EXPAND xpt::diagram::policies::ComponentEditPolicy::qualifiedClassName»()«ENDDEFINE»
+
+«DEFINE instantiateComponentEditPolicy FOR gmfgen::GenDiagram»new org.eclipse.gef.editpolicies.RootComponentEditPolicy()«ENDDEFINE»
+
+«DEFINE instantiateComponentEditPolicy FOR gmfgen::GenCommonBase-»
+«IF needsGetGraphicalEditPart()-»
+new «EXPAND xpt::diagram::policies::ComponentEditPolicy::qualifiedClassName»() {
+	protected org.eclipse.gef.GraphicalEditPart getGraphicalEditPart() {
+		return «editPartClassName».this;
+	}
+}«ELSE»«EXPAND instantiateComponentEditPolicyPrim»«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE installDirectEditPolicy FOR gmfgen::GenCommonBase-»
+installEditPolicy(org.eclipse.gef.EditPolicy.DIRECT_EDIT_ROLE, new org.eclipse.gmf.runtime.lite.edit.policies.LabelDirectEditPolicy());
+«ENDDEFINE»
+
+«DEFINE listeners FOR gmfgen::GenCommonBase-»
+«ENDDEFINE»
+
+«DEFINE listeners FOR gmfgen::GenDiagram-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public void activate() {
+		myUpdateManager = new org.eclipse.gmf.runtime.lite.edit.parts.update.TransactionalUpdateManager(getViewer());
+		getViewer().setProperty(org.eclipse.gmf.runtime.lite.edit.parts.update.TransactionalUpdateManager.class.getName(), myUpdateManager);
+		super.activate();
+		getTransactionalUpdateManager().install(org.eclipse.emf.transaction.util.TransactionUtil.getEditingDomain(getNotationView()));
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	public void deactivate() {
+		getTransactionalUpdateManager().uninstall();
+		super.deactivate();
+		org.eclipse.gmf.runtime.lite.edit.parts.update.TransactionalUpdateManager updateManager = (org.eclipse.gmf.runtime.lite.edit.parts.update.TransactionalUpdateManager) getViewer().getProperty(org.eclipse.gmf.runtime.lite.edit.parts.update.TransactionalUpdateManager.class.getName());
+		if (updateManager != null) {
+			updateManager.dispose();
+		}
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected org.eclipse.gmf.runtime.lite.edit.parts.update.TransactionalUpdateManager getTransactionalUpdateManager() {
+		return myUpdateManager;
+	}
+
+	«EXPAND xpt::Common::generatedMemberComment»
+	private org.eclipse.gmf.runtime.lite.edit.parts.update.TransactionalUpdateManager myUpdateManager;
+«ENDDEFINE»
+
+«REM»Nodes and links share the same template«ENDREM»
+«DEFINE createLabelTextDisplayer(gmfgen::GenLabel primaryLabel) FOR gmfgen::GenCommonBase-»
+«IF primaryLabel != null-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gmf.runtime.lite.edit.parts.labels.ILabelTextDisplayer createLabelTextDisplayer() {
+	«primaryLabel.getEditPartQualifiedClassName()» primaryLabelEditPart = getPrimaryLabelEditPart();
+	if (primaryLabelEditPart != null) {
+		return primaryLabelEditPart.getLabelTextDisplayer();
+	}
+	return super.createLabelTextDisplayer();
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«REM»For diagrams, use text displayer from the base class«ENDREM»
+«DEFINE createLabelTextDisplayer(gmfgen::GenLabel primaryLabel) FOR gmfgen::GenDiagram-»
+«ENDDEFINE»
+
+«DEFINE createLabelTextDisplayer(gmfgen::GenLabel primaryLabel) FOR gmfgen::GenChildLabelNode-»
+		«EXPAND xpt::Common::generatedMemberComment»
+		protected org.eclipse.gmf.runtime.lite.edit.parts.labels.ILabelTextDisplayer createLabelTextDisplayer() {
+			return «editPartClassName».this.getLabelTextDisplayer();
+		}
+«ENDDEFINE»
+
+«DEFINE getImage(gmfgen::GenLabel primaryLabel) FOR gmfgen::GenCommonBase-»
+«IF primaryLabel != null-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.swt.graphics.Image getImage() {
+	«primaryLabel.getEditPartQualifiedClassName()» primaryLabelEditPart = getPrimaryLabelEditPart();
+	if (primaryLabelEditPart != null) {
+		return primaryLabelEditPart.getLabelIcon();
+	}
+	return null;
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE getImage(gmfgen::GenLabel primaryLabel) FOR gmfgen::GenDiagram-»
+«ENDDEFINE»
+
+«DEFINE getImage(gmfgen::GenLabel primaryLabel) FOR gmfgen::GenChildLabelNode-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.swt.graphics.Image getImage() {
+	return «editPartClassName».this.getLabelIcon();
+}
+«ENDDEFINE»
+
+«DEFINE getPrimaryLabel(gmfgen::GenLabel primaryLabel) FOR gmfgen::GenCommonBase-»
+«IF primaryLabel != null-»
+«EXPAND xpt::Common::generatedMemberComment»
+private «primaryLabel.getEditPartQualifiedClassName()» getPrimaryLabelEditPart() {
+	if (!isActive() || !«editPartClassName».this.isActive()) {
+		return null;
+	}
+	for(java.util.Iterator it = «EXPAND xpt::diagram::parts::Common::getViewCode».getChildren().iterator(); it.hasNext(); ) {
+		org.eclipse.gmf.runtime.notation.View nextChild = (org.eclipse.gmf.runtime.notation.View)it.next();
+		if («getDiagram().getVisualIDRegistryQualifiedClassName()».getVisualID(nextChild) == «primaryLabel.getEditPartQualifiedClassName()».VISUAL_ID) {
+			return («primaryLabel.getEditPartQualifiedClassName()») «editPartClassName».this.getViewer().getEditPartRegistry().get(nextChild);
+		}
+	}
+	return null;
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE getPrimaryLabel(gmfgen::GenLabel primaryLabel) FOR gmfgen::GenChildLabelNode-»
+«ENDDEFINE»
+
+«DEFINE getPrimaryLabel(gmfgen::GenLabel primaryLabel) FOR gmfgen::GenDiagram-»
+«ENDDEFINE»
+
+«DEFINE getModelChildren FOR gmfgen::GenCommonBase-»
+«ENDDEFINE»
+
+«DEFINE getModelChildren FOR gmfgen::GenChildLabelNode-»
+	«EXPAND xpt::Common::generatedClassComment»
+	protected java.util.List getModelChildren() {
+		return java.util.Collections.EMPTY_LIST;
+	}
+«ENDDEFINE»
+
+«DEFINE getModelChildren FOR gmfgen::GenLink-»
+	«EXPAND xpt::Common::generatedMemberComment("Since labels are not selectable edit parts, they are filtered from the overview as well.")»
+	protected java.util.List getModelChildren() {
+		java.util.List result = new java.util.ArrayList();
+		for (java.util.Iterator it = getNotationView().getSourceEdges().iterator(); it.hasNext(); ) {
+			org.eclipse.gmf.runtime.notation.Edge next = (org.eclipse.gmf.runtime.notation.Edge) it.next();
+			if (next.isVisible()) {
+				result.add(next);
+			}
+		}
+		return result;
+	}
+«ENDDEFINE»
+
+«DEFINE getModelChildren FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment("Since compartments and labels are not selectable edit parts, they are filtered from the overview as well.")»
+	protected java.util.List getModelChildren() {
+		java.util.List result = new java.util.ArrayList();
+		for(java.util.Iterator it = getNotationView().getVisibleChildren().iterator(); it.hasNext(); ) {
+			org.eclipse.gmf.runtime.notation.View next = (org.eclipse.gmf.runtime.notation.View) it.next();
+			switch («getDiagram().getVisualIDRegistryQualifiedClassName()».getVisualID(next)) {
+«EXPAND addChildren FOREACH childNodes-»
+«EXPAND addChildren FOREACH compartments-»
+			}
+		}
+		for (java.util.Iterator it = getNotationView().getSourceEdges().iterator(); it.hasNext(); ) {
+			org.eclipse.gmf.runtime.notation.Edge next = (org.eclipse.gmf.runtime.notation.Edge) it.next();
+			if (next.isVisible()) {
+				result.add(next);
+			}
+		}
+		return result;
+	}
+«ENDDEFINE»
+
+«DEFINE addChildren FOR gmfgen::GenNode-»
+case «getEditPartQualifiedClassName()».VISUAL_ID:
+	result.add(next);
+	break;
+«ENDDEFINE»
+
+«DEFINE addChildren FOR gmfgen::GenCompartment-»
+case «getEditPartQualifiedClassName()».VISUAL_ID: {
+	org.eclipse.gmf.runtime.notation.DrawerStyle style = (org.eclipse.gmf.runtime.notation.DrawerStyle) next.getStyle(org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getDrawerStyle());
+	if (style != null && style.isCollapsed()) {
+		break;
+	}
+	result.addAll(next.getVisibleChildren());
+	break;
+}
+«ENDDEFINE»
+
+«DEFINE className FOR gmfgen::GenCommonBase»TreeEditPartAdapter«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenCommonBase-»
+«ENDDEFINE»

@@ -1,0 +1,63 @@
+/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::GenModelUtils»
+
+«AROUND caseImage FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::caseVisualID»
+	return getImage("«EXPAND xpt::navigator::NavigatorLabelProvider::key»", «EXPAND underlyingElementForIcon»); «EXPAND xpt::Common::nonNLS»
+«ENDAROUND»
+
+«DEFINE underlyingElementForIcon FOR gmfgen::GenCommonBase»«EXPAND underlyingElement»«ENDDEFINE»
+«DEFINE underlyingElementForIcon FOR gmfgen::GenLabel»«IF elementIcon»«EXPAND underlyingElement»«ELSE»null«ENDIF»«ENDDEFINE»
+«DEFINE underlyingElementForIcon FOR gmfgen::GenChildLabelNode»«IF labelElementIcon»«EXPAND underlyingElement»«ELSE»null«ENDIF»«ENDDEFINE»
+
+«DEFINE underlyingElement FOR gmfgen::GenCommonBase»view.getElement()«ENDDEFINE»
+«DEFINE underlyingElement FOR gmfgen::GenLinkLabel»«EXPAND underlyingElement FOR link»«ENDDEFINE»
+«DEFINE underlyingElement FOR gmfgen::GenLink»«EXPAND underlyingElement FOR modelFacet»«ENDDEFINE»
+
+«DEFINE underlyingElement FOR gmfgen::LinkModelFacet»«ERROR "Unexpected model facet: " + this»«ENDDEFINE»
+«DEFINE underlyingElement FOR gmfgen::TypeLinkModelFacet»view.getElement()«ENDDEFINE»
+«DEFINE underlyingElement FOR gmfgen::FeatureLinkModelFacet»(false == view instanceof org.eclipse.gmf.runtime.notation.Edge || ((org.eclipse.gmf.runtime.notation.Edge) view).getTarget() == null) ? null : ((org.eclipse.gmf.runtime.notation.Edge) view).getTarget().getElement()«ENDDEFINE»
+
+«AROUND getImageByKey FOR gmfgen::GenNavigator-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.swt.graphics.Image getImage(String key, org.eclipse.emf.ecore.EObject object) {
+	org.eclipse.jface.resource.ImageRegistry imageRegistry = «editorGen.plugin.getActivatorQualifiedClassName()».getInstance().getImageRegistry();
+	org.eclipse.swt.graphics.Image image = imageRegistry.get(key);
+	if (image == null && object != null) {
+		image = «editorGen.plugin.getActivatorQualifiedClassName()».getInstance().getItemImage(object);
+		imageRegistry.put(key, image);
+	}
+	if (image == null) {
+		image = imageRegistry.get(«EXPAND xpt::navigator::NavigatorLabelProvider::notFoundElementKey»); «EXPAND xpt::Common::nonNLS»
+		imageRegistry.put(key, image);
+	}
+	return image;
+}
+«ENDAROUND»
+
+«AROUND getDiagramLabelText(gmfgen::GenCommonBase elementTypeHolder, gmfgen::LabelModelFacet modelFacet) FOR gmfgen::GenCommonBase-»
+org.eclipse.emf.ecore.EObject domainModelElement = view.getElement();
+if (domainModelElement == null) {
+	return "";«EXPAND xpt::Common::nonNLS»
+}
+String result = «getEditPartQualifiedClassName()».LABEL_DISPLAYER.getDisplayText(domainModelElement);
+	if (result == null) {
+	return "";«EXPAND xpt::Common::nonNLS»
+}
+return result;
+«ENDAROUND»
+

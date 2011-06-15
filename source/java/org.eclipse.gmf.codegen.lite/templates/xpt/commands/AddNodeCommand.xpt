@@ -1,0 +1,158 @@
+/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::GenModelUtils»
+«EXTENSION xpt::commands::CommandUtils»
+
+«DEFINE AddNodeCommand FOR gmfgen::GenNode-»
+«EXPAND xpt::Common::copyright FOR getDiagram().editorGen»
+package «getDiagram().editCommandsPackageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «EXPAND className» «EXPAND supertypes» {
+«REM»caching related nodes: calculating it may be quite expensive«ENDREM-»
+«LET getRelatedGenNodes() AS relatedNodes-»
+«LET relatedNodes.size() > 1 AS multipleRelatedNodes-»
+	«EXPAND attributes(multipleRelatedNodes)-»
+	«EXPAND ctors(multipleRelatedNodes)-»
+	«EXPAND createCommand(relatedNodes)-»
+	«EXPAND additions-»
+«ENDLET-»
+«ENDLET-»
+}
+«ENDDEFINE»
+
+«DEFINE className FOR gmfgen::GenNode»Add«EXPAND xpt::commands::Common::commandNameInfix»Command«ENDDEFINE»
+«DEFINE qualifiedClassName FOR gmfgen::GenNode»«getDiagram().editCommandsPackageName».«EXPAND className»«ENDDEFINE»
+«DEFINE supertypes FOR gmfgen::GenNode»extends org.eclipse.emf.common.command.CommandWrapper«ENDDEFINE»
+
+«DEFINE attributes(boolean multipleRelatedNodes) FOR gmfgen::GenNode-»
+«EXPAND xpt::Common::generatedMemberComment»
+private final org.eclipse.gmf.runtime.notation.View parentView;
+«EXPAND xpt::Common::generatedMemberComment»
+private final org.eclipse.gmf.runtime.notation.Node childNode;
+«IF multipleRelatedNodes-»
+«EXPAND xpt::Common::generatedMemberComment»
+private final int oldVisualID;
+«EXPAND xpt::Common::generatedMemberComment»
+private final int newVisualID;
+«ENDIF-»
+«EXPAND xpt::Common::generatedMemberComment»
+private final org.eclipse.draw2d.geometry.Rectangle constraint;
+«ENDDEFINE»
+
+«DEFINE ctors(boolean multipleRelatedNodes) FOR gmfgen::GenNode-»
+«EXPAND xpt::Common::generatedMemberComment»
+public «EXPAND className»(org.eclipse.gmf.runtime.notation.View parentView, org.eclipse.gmf.runtime.notation.Node childNode, int newVisualID, org.eclipse.draw2d.geometry.Rectangle constraint) {
+	this.parentView = parentView;
+	this.childNode = childNode;
+«IF multipleRelatedNodes-»
+	this.oldVisualID = «getDiagram().getVisualIDRegistryQualifiedClassName()».getVisualID(childNode);
+	this.newVisualID = newVisualID;
+«ENDIF-»
+	this.constraint = constraint;
+}
+«ENDDEFINE»
+
+«DEFINE createCommand(Collection[gmfgen::GenNode] relatedNodes) FOR gmfgen::GenNode-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.emf.common.command.Command createCommand() {
+	«EXPAND checkFeatures FOR modelFacet-»
+	org.eclipse.emf.common.command.CompoundCommand result = new org.eclipse.emf.common.command.CompoundCommand();
+	org.eclipse.emf.ecore.EObject element = childNode.getElement();
+	org.eclipse.emf.transaction.TransactionalEditingDomain editingDomain = org.eclipse.emf.transaction.util.TransactionUtil.getEditingDomain(parentView.getDiagram().getElement());
+«IF relatedNodes.size() > 1-»
+	switch (oldVisualID) {
+«ENDIF-»
+«FOREACH relatedNodes AS next-»
+«IF relatedNodes.size() > 1-»
+	case «next.getEditPartQualifiedClassName()».VISUAL_ID:
+«ENDIF-»
+		«EXPAND unplugFeatures FOR next.modelFacet-»
+«IF relatedNodes.size() > 1-»
+		break;
+«ENDIF-»
+«ENDFOREACH-»
+«IF relatedNodes.size() > 1-»
+	}
+«ENDIF-»
+	«EXPAND plugFeatures FOR modelFacet-»
+	result.append(org.eclipse.emf.edit.command.RemoveCommand.create(editingDomain, childNode.eContainer(), childNode.eContainmentFeature(), childNode));
+«IF relatedNodes.size() > 1-»
+	if (newVisualID == oldVisualID) {
+«ENDIF-»
+		result.append(new org.eclipse.gmf.runtime.lite.commands.ExpandDrawerCommand(parentView));
+		result.append(org.eclipse.emf.edit.command.AddCommand.create(editingDomain, parentView, org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getView_PersistedChildren(), childNode));
+		result.append(new org.eclipse.gmf.runtime.lite.commands.SetBoundsCommand(childNode, constraint));
+«IF relatedNodes.size() > 1-»
+	} else {
+		«EXPAND xpt::commands::Common::adjustConstraint-»
+		result.append(new org.eclipse.gmf.runtime.lite.commands.CreateNotationalNodeCommand(parentView, element, constraint, «getNotationViewFactoryQualifiedClassName()».INSTANCE));
+	}
+«ENDIF-»
+	return result;
+}
+«ENDDEFINE»
+
+«DEFINE checkFeatures FOR gmfgen::TypeModelFacet-»
+«EXPAND checkFeature("parentView.getElement()", null) FOR containmentMetaFeature-»
+«LET childMetaFeature != null && childMetaFeature != containmentMetaFeature && !childMetaFeature.ecoreFeature.derived AS addChild-»
+«IF addChild-»
+	«EXPAND checkFeature("parentView.getElement()", null) FOR childMetaFeature-»
+«ENDIF-»
+«ENDLET-»
+«ENDDEFINE»
+
+«DEFINE plugFeatures FOR gmfgen::TypeModelFacet-»
+«LET childMetaFeature != null && childMetaFeature != containmentMetaFeature && !childMetaFeature.ecoreFeature.derived AS addChild-»
+«IF addChild-»
+result.append(«EXPAND xpt::commands::Common::plugFeatureCommand("editingDomain", "parentView.getElement()", "element") FOR childMetaFeature»);
+«ENDIF-»
+«ENDLET-»
+«IF containmentMetaFeature == null-»
+result.append(new org.eclipse.emf.edit.command.AddCommand(editingDomain, «EXPAND xpt::commands::Common::getPhantomContainmentResource FOR "parentView"».getContents(), element));
+«ELSE-»
+result.append(«EXPAND xpt::commands::Common::plugFeatureCommand("editingDomain", "parentView.getElement()", "element") FOR containmentMetaFeature»);
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE unplugFeatures FOR gmfgen::TypeModelFacet-»
+«LET childMetaFeature != null && childMetaFeature != containmentMetaFeature && !childMetaFeature.ecoreFeature.derived AS removeChild-»
+«IF removeChild-»
+result.append(«EXPAND xpt::commands::Common::unplugFeatureCommand("editingDomain", "element.eContainer()", "element") FOR childMetaFeature»);
+«ENDIF-»
+«ENDLET-»
+«IF containmentMetaFeature == null-»
+if (element.eContainer() != null) {
+	result.append(org.eclipse.emf.edit.command.RemoveCommand.create(editingDomain, element.eContainer(), element.eContainmentFeature(), element));
+} else if (element.eResource() != null) {
+	result.append(new org.eclipse.emf.edit.command.RemoveCommand(editingDomain, element.eResource().getContents(), element));
+} else {
+	result.append(org.eclipse.emf.common.command.UnexecutableCommand.INSTANCE);
+}
+«ELSE-»
+result.append(«EXPAND xpt::commands::Common::unplugFeatureCommand("editingDomain", "element.eContainer()", "element") FOR containmentMetaFeature»);
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE checkFeature(String containerVar, genmodel::GenClass containerClass) FOR genmodel::GenFeature-»
+«IF ecoreFeature.upperBound > 0-»
+if («EXPAND xpt::commands::Common::featureMultiplicityComparator(containerVar, containerClass)») {
+	return org.eclipse.emf.common.command.UnexecutableCommand.INSTANCE;
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenNode»«ENDDEFINE»

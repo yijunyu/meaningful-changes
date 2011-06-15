@@ -1,0 +1,98 @@
+/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Anna Karjakina (Borland) - initial API and implementation
+ *    Alexander Shatalin (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/gmf/2008/GmfGraph/wysiwyg"»
+
+«EXTENSION xpt::GenModelUtils»
+«EXTENSION aspects::impl::diagram::editparts::Utils»
+«EXTENSION xpt::diagram::editparts::Utils»
+«EXTENSION xpt::diagram::ViewmapAttributesUtils»
+
+«AROUND setupNodePlate FOR gmfgen::GenNode-»
+	«targetDef.proceed()-»
+	«IF hasSynchronizers(this)-»
+		result.setMinimumSize(new org.eclipse.draw2d.geometry.Dimension(0, 0));
+	«ENDIF-»
+«ENDAROUND»
+
+«AROUND createLayoutEditPolicyBody FOR gmfgen::GenNode-»
+	«IF hasSynchronizers(this)-»
+		return new org.eclipse.gmf.graphdef.editor.edit.polocies.«EXPAND layoutEditPolicyConstructor»;
+	«ELSE-»
+		«targetDef.proceed()»
+	«ENDIF-»
+«ENDAROUND»
+
+«DEFINE layoutEditPolicyConstructor FOR gmfgen::GenNode-»
+«IF isPolyline(this)»PointContainerXYLayoutEditPolicy«ELSE»FigureContainerXYLayoutEditPolicy«ENDIF»(getMapMode()«IF isPolyline(this)», «hasLayoutDataSynchronizers(this)»«ENDIF»)«-»
+«ENDDEFINE»
+
+«AROUND createNodePlate FOR gmfgen::GenNode-»
+	«IF isPolyline(this)-»
+		«EXPAND xpt::Common::generatedMemberComment»
+		protected org.eclipse.gmf.runtime.gef.ui.figures.NodeFigure createNodePlate() {
+			DefaultSizeNodeFigureExt result = new DefaultSizeNodeFigureExt(getMapMode().DPtoLP(«defaultSizeWidth(viewmap, 40)»), getMapMode().DPtoLP(«defaultSizeHeight(viewmap, 40)»)); 
+			«EXPAND impl::diagram::editparts::NodeEditPart::setupNodePlate-»
+			return result;
+		}
+	«ELSE-»
+		«targetDef.proceed()-»
+	«ENDIF-»
+«ENDAROUND»
+
+«AROUND createFigure FOR gmfgen::GenNode-»
+	«IF isPolyline(this)-»
+		«EXPAND customCreateFigure-»
+	«ELSE-»
+		«targetDef.proceed()-»
+	«ENDIF»
+«ENDAROUND»
+
+«DEFINE customCreateFigure FOR gmfgen::GenNode-»
+	«EXPAND xpt::Common::generatedMemberComment(
+		"Creates figure for this edit part.\n" +
+		"\n" +
+		"Body of this method does not depend on settings in generation model\n" +
+		"so you may safely remove <i>generated</i> tag and modify it.\n"
+	)»
+	protected org.eclipse.gmf.runtime.gef.ui.figures.NodeFigure create«IF hasBorderItems()»Main«ELSE»Node«ENDIF»Figure() {
+		org.eclipse.gmf.runtime.gef.ui.figures.NodeFigure figure = createNodePlate();
+		figure.setLayoutManager(new org.eclipse.draw2d.XYLayout()«IF hasLayoutDataSynchronizers(this)» {
+			public org.eclipse.draw2d.geometry.Point getOrigin(org.eclipse.draw2d.IFigure parent) {
+				return new org.eclipse.draw2d.geometry.Point();
+			}
+		}«ENDIF»);
+		org.eclipse.draw2d.IFigure shape = createNodeShape();
+		figure.add(shape);
+		contentPane = figure;
+		return figure;
+	}
+«ENDDEFINE»
+
+«AROUND getPrimaryDragEditPolicy FOR gmfgen::GenNode-»
+	«IF (isPolyline(this) && hasLayoutDataSynchronizers(this)) || isPolylinePoint(this)-»
+		«EXPAND xpt::Common::generatedMemberComment»
+		public org.eclipse.gef.EditPolicy getPrimaryDragEditPolicy() {
+			org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableEditPolicyEx editPolicy = new org.eclipse.gmf.runtime.diagram.ui.editpolicies.NonResizableEditPolicyEx();
+			«IF isPolyline(this)-»
+				editPolicy.setDragAllowed(false);
+			«ENDIF-»
+			return editPolicy;
+		}	
+	«ELSE-»
+		«targetDef.proceed()-»
+	«ENDIF-»
+«ENDAROUND»

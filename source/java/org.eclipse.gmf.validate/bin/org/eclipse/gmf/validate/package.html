@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<!--
+/**
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    dvorak - initial API and implementation
+ */
+-->
+</head>
+<body>
+
+Definition of constraint ecore annotations schema for model validation purposes.
+
+<h2>Package Specification</h2>
+<p>
+This package defines special ecore annotations for use in GMF models validation.
+These annotation forms the client API GMF Validation framework which can be involved 
+in validation by using {@link org.eclipse.gmf.validate.GMFValidator}. 
+This class follows the standard EMF validator contract and its 
+{@link org.eclipse.gmf.validate.GMFValidator#validate validate} operation 
+can be either called directly on a model element or it can be registered as a standard 
+{@link org.eclipse.emf.ecore.EValidator} in {@link org.eclipse.emf.ecore.EValidator.Registry}
+for a desired ecore package <code>nsURI</code>.
+Both approaches involve constraint annotations defined in validated element's ecore 
+meta-model while only the latter one ensures that these constraints get involved in the standard 
+EMF validation using {@link org.eclipse.emf.ecore.util.Diagnostician} class.
+</p>
+<h3>Constraint annotations</h3>
+<p>
+GMF Validation introduces special constraint annotations enabling the use of boolean type expressions 
+further restricting the model contents, usually complementing or refining standard EMF constraints. 
+The usage on exemplary use-case and semantics of GMF constraint annotations is demonstrated in the 
+example bellow using an ecore model fragment in <code>Emfatic</code> notation.
+</p>
+<p>
+<pre>
+<code>@EmfaticAnnotationMap</code>(constraints="http://www.eclipse.org/gmf/2005/constraints")
+
+<code>@constraints</code>(
+	ocl="birthDate <> null && hireDate <> null implies birthDate <= hireDate", 
+	severity="warning",
+	description="An unborn person ''{0}'' was hired!!!"
+)
+// additional "Person" constraints go here ...	
+class Person {
+	<code>@constraints</code>(
+		ocl="nick <> null imlies nick.size() < 5", 
+		description="The ''{0}'' nick name is too long"
+	)
+	// additional constraints related to "nick" go here ...	
+	attr String[1] nick;
+	attr String[1] name;
+	attr Date[1] birthDate;
+	attr Date hireDate;
+}
+</pre>
+The constraint on <code>Person</code> class complements the EMF cardinality constraint on 
+<code>birthDate</code> which is guarded by the basic EMF validator but is also dependent on 
+<code>hireDate</code> existence. 
+Therefore the OCL expression parsed in the context of <code>Person</code> checks whether both 
+are defined and only then it enforce the restriction based on their comparison.
+Another common example of EMF complementing constraints could a be mutual exclusion
+rules for related structural features.
+</br>
+The <code>Person::nick</code> feature's constraint refines the required constraint on 
+<code>nick</code> by restricting the length of its string value. The corresponding OCL expression 
+is defined again in the context of <code>Person</code> class.
+</br>
+Note: Both constraints mentioned above are parsed in the context of <code>Person</code> as it is 
+the only valid OCL expression context <code>[oclIsKindOf(EClassifier)]</code> in the nearest outer-scope. 
+The structuring used in the example is purely based on the logical scope of the restrictions.
+For instance, the rule for <code>birthDate</code>, <code>hireDate</code>
+involves both attributes, thus is rather consider class-wide. The is mainly because of the
+clarity aspect, but could be also helpful when removing ecore elements involved in 
+GMF constraints. However, the broken annotations are detected and reported 
+by <code>GMFValidator</code>.</br>
+</p>
+<h4>Annotation Semantics</h4>
+GMF constraints are defined as EAnnotation elements with <code>source=http://www.eclipse.org/gmf/2005/constraints</code>.
+and attached either to <code>EClass</code> or its <code>EStructuralFeature</code>, in which
+case the containing EClass is allways the context for OCL expressions evaluation.
+</br>
+Constraint annotations details (key : value) is listed bellow.
+<ul>
+  <li><b>ocl</b> : OCL expression defined in the context of the nearest outer EClass. The 
+  expression must produce result of <code>Boolean</code> type, otherwise is considered invalid.
+  </li>
+  <li><b>description</b> : Optional textual description providing additional info and used as the message
+  when constraint is violated. The text can follow <code>java.text.MessageFormat</code>
+  pattern and use {0} argument, which in runtime corresponds to the validated model element.
+  </li>
+  <li><b>severity</b> : Optional severity level of the constraint. Accepted values: <code>error, warn, info</code>.
+  If not specified, the default <code>error</code> is applied.
+  </li>
+</ul>
+<p>
+The contextual instance that violates some constraints during validation is allways the source 
+object encoded in the data of {@link org.eclipse.emf.common.util.Diagnostic} object resulting from validation.
+</p>
+<p>
+GMF constraints are inheritable. Once a constraint is defined in the context of EClass instance, 
+all sub-classes of this class are restricted as well. So it's possible to add the most common 
+constraints to super-class and spread the specializing constraints to particular sub-classes.
+</p>
+<p>
+In some cases in OCL, the user might need to reference a classifier from a meta-model, which is not
+loaded automatically if the validated model has no references this meta-model's elements.
+By default, OCL implementation performs classifier lookup in the global <code>EPackage.Registry</code>.
+Only initialized packages are involved in the lookup, those whose instances are put to the registry 
+instead of <code>EPackage.Descriptor</code>. For instance, there might be an <code>OCL</code> 
+constraint like <code>self.oclIsKindOf(model::Foo)</code> while there is no reference to <code>model::Foo</code>
+in the validated model. If the model has not been initialized in the registrey yet, the <code>OCL</code> 
+will report an error on uknown classifier.
+To solve this issue, an import annotation can be used, <code>source=http://www.eclipse.org/gmf/2005/constraints</code>
+</br>
+Import annotations details (key : value) is listed bellow.
+<ul>
+  <li><b>import</b> : nsURI of the meta-model to be imported.</li>
+</ul>
+</p>
+The import annotation is to be located in the EPackage element of the annotated ecore model. 
+This enables the imported classifiers in the OCL environments of all constraint annotation 
+attached to the package contained ecore elements.
+</br>
+For instance, the annotation below ensures access to the runtime diagram notation meta-model.
+<pre>
+<code>@constraints</code>("import"="http://www.eclipse.org/gmf/runtime/1.0.0/notation")
+</pre>
+</body>
+
+</html>
+

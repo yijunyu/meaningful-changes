@@ -27,7 +27,7 @@ keys
     'abstract  'assert  'boolean  'break  'byte  'case  'catch  'char  'class  'const  'continue  'default  'do  'double  'else 
       'extends  'false  'final  'finally  'float  'for  'goto  'if  'implements  'import  'instanceof  'int  'interface  'long 
       'native  'new  'null  'package  'private  'protected  'public  'return  'short  'static  'strictfp  'switch  'synchronized
-      'throw  'throws  'transient  'true  'try  'void  'volatile  'while 
+      'throw  'throws  'transient  'true  'try  'void  'volatile  'while  'enum 
 end keys
 
 define package_header
@@ -70,10 +70,6 @@ define enum_body
     '{ [IN]
         [list enum_element]  [opt  ',]  [repeat class_body_declaration]  [EX]
     '}  [opt  ';]  [NL] [NL] 
-end define
-define enum_element
-            [NL]
-    [id]  [opt method_argument] 
 end define
 define class_name
     [declared_name] 
@@ -486,6 +482,10 @@ end define
 define and_type_spec
     '&  [type_specifier] 
 end define
+define enum_element
+    [comment_nl]  [NL]
+    [id]  [opt method_argument] 
+end define
 define type_specifier
     [type_name]  [comment_nl] 
     |    [array_type_specifier]  [comment_nl] 
@@ -609,7 +609,7 @@ define interface_header
     [repeat modifier]  [opt annot_marker]  'interface  [interface_name]  [opt extends_clause]  [opt implements_clause] 
 end define
 define enum_header
-    [repeat modifier]  [opt id]  'enum  [opt declared_name] 
+    [repeat modifier]  [opt id]  'enum  [opt declared_name]  [opt extends_clause]  [opt implements_clause] 
 end define
 define extends_clause
     'extends  [list type_name +] 
@@ -618,7 +618,8 @@ define implements_clause
     'implements  [list qualified_name +] 
 end define
 define package_declaration
-    [comment_nl]  [opt package_header]  [repeat import_declaration]  [repeat type_declaration] 
+    [comment_nl]  [NL]
+    [opt package_header]  [repeat import_declaration]  [repeat type_declaration] 
 end define
 define class_or_interface_body
     '{ [NL] [IN]
@@ -1067,41 +1068,6 @@ rule normalise_list_implements_clause_qualified_name
         N2 ,  N1 ,  Rest 
 end rule
 
-function normalise_ignore_by2_package_declaration_import_declaration2 E1  [package_declaration]
-    replace  [package_declaration *]
-        Seq  [package_declaration *] 
-    deconstruct not E1
-        X7  [comment_nl]  X8  [opt package_header]  X9  [repeat import_declaration]  X10  [repeat type_declaration] 
-    by
-        Seq  [ . E1 ] 
-end function
-
-function normalise_ignore_by3_package_declaration_import_declaration2 E1  [package_declaration]
-    replace  [package_declaration *]
-        Seq  [package_declaration *] 
-    deconstruct E1
-        X7  [comment_nl]  X8  [opt package_header]  X9  [repeat import_declaration]  X10  [repeat type_declaration] 
-    construct E2  [package_declaration]
-        X7  X8  X10 
-    by
-        Seq  [ . E2 ] 
-end function
-
-function normalise_ignore_by4_package_declaration_import_declaration2
-    replace  [program]
-        P1  [ program ] 
-    construct List1  [package_declaration *]
-        _  [ ^  P1 ] 
-    construct List2  [package_declaration *]
-        _  [normalise_ignore_by3_package_declaration_import_declaration2  each  List1]  [
-                  normalise_ignore_by2_package_declaration_import_declaration2  each  List1]
- 
-    construct P2  [program]
-        P1  [ $  List1  List2 ] 
-    by
-        P2 
-end function
-
 function normalise_ignore_by1_NotModel_class_or_interface_body_class_body_declaration1 E1  [class_or_interface_body] N1  [
   class_body_declaration]
     replace  [class_body_declaration *]
@@ -1126,13 +1092,13 @@ function normalise_ignore_by3_NotModel_class_or_interface_body_class_body_declar
     replace  [class_or_interface_body *]
         Seq  [class_or_interface_body *] 
     deconstruct E1
-        '{ N1  [repeat class_body_declaration]  X11  [comment_nl]  '}  X12  [opt  ';]  X13  [comment_nl] 
+        '{ N1  [repeat class_body_declaration]  X3  [comment_nl]  '}  X4  [opt  ';]  X5  [comment_nl] 
     construct N2  [class_body_declaration *]
         _  [normalise_ignore_by1_NotModel_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
                   normalise_ignore_by2_NotModel_class_or_interface_body_class_body_declaration1  E1  each  N1]
  
     construct E2  [class_or_interface_body]
-        '{ N2  X11  '}  X12  X13 
+        '{ N2  X3  '}  X4  X5 
     by
         Seq  [ . E2 ] 
 end function
@@ -1248,7 +1214,7 @@ function program_normalise
     replace  [program]
         Prg  [ program ] 
     by
-        Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ normalise_ignore_by4_package_declaration_import_declaration2 ]  [ 
+        Prg  [ normalise_ignore_by4_modifier_annotation1 ]  [ 
           normalise_ignore_by4_NotModel_class_or_interface_body_class_body_declaration1 ]  [ 
           normalise_list_class_header_modifier ]  [ normalise_list_interface_header_modifier ]  [ 
           normalise_list_enum_header_modifier ]  [ normalise_list_extends_clause_type_name ]  [ 

@@ -1,0 +1,184 @@
+/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ *    Artem Tikhomirov (Borland) - refactoring (https://bugs.eclipse.org/230014)
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::GenModelUtils»
+«EXTENSION xpt::providers::ValidationUtils»
+«EXTENSION xpt::providers::Metrics»
+«EXTENSION xpt::providers::i18n»
+
+«DEFINE MetricProvider FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::copyright FOR editorGen»
+package «providersPackageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «metricProviderClassName» {
+
+«EXPAND calculateMetricsMethods-»
+
+«EXPAND formatNotationElementNameMethod-»
+«EXPAND formatSemanticElementNameMethod-»
+
+«EXPAND metricsClasses»
+
+«EXPAND keysAndToolTipsMethods FOR editorGen.metrics»
+
+«EXPAND metricCalcField FOREACH editorGen.metrics.metrics.select(m | m.rule != null && m.target != null && m.target.getContext() != null)»
+«EXPAND metricCalcMethod FOREACH editorGen.metrics.metrics.select(m | m.rule != null && m.target != null && m.target.getContext() != null)»
+
+«EXPAND xpt::providers::MetricsResultView::Class»
+
+«EXPAND additions-»
+}
+«ENDDEFINE»
+
+// @Override
+«DEFINE getImageAccessor(String imageClassVar) FOR gmfgen::GenDiagram»«editorGen.plugin.getActivatorQualifiedClassName()».getInstance().getItemImage(«imageClassVar»)«ENDDEFINE»
+
+// @Override
+«DEFINE formatSemanticElementNameMethod FOR GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private static String formatElementName(org.eclipse.emf.ecore.EObject object) {
+	if (object == null) {
+		return String.valueOf((Object)null);
+	}
+	org.eclipse.emf.common.notify.AdapterFactory adapterFactory = «editorGen.plugin.getActivatorQualifiedClassName()».getInstance().getItemProvidersAdapterFactory();
+	org.eclipse.emf.edit.provider.IItemLabelProvider labelProvider = (org.eclipse.emf.edit.provider.IItemLabelProvider) adapterFactory.adapt(object, org.eclipse.emf.edit.provider.IItemLabelProvider.class);
+	if (labelProvider != null) {
+		return object.eClass().getName() + " " + labelProvider.getText(object);«EXPAND xpt::Common::nonNLS»
+	}
+	return object.toString();
+}
+«ENDDEFINE»
+
+
+// @Override
+«DEFINE calculateMetricsMethods FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+static java.util.List calculateMetrics(«editorGen.editor.getQualifiedClassName()» diagramPart) {
+	org.eclipse.gef.GraphicalViewer viewer = (org.eclipse.gef.GraphicalViewer) diagramPart.getAdapter(org.eclipse.gef.GraphicalViewer.class);
+	final org.eclipse.gmf.runtime.notation.Diagram diagram = diagramPart.getDiagram();
+	if (viewer == null || diagram == null) {
+		return java.util.Collections.EMPTY_LIST;
+	}
+	final org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService viewService = new org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.EditPartRegistryBasedViewService(viewer);
+	try {
+		return (java.util.List)diagramPart.getEditingDomain().runExclusive(
+			new org.eclipse.emf.transaction.RunnableWithResult.Impl() {
+				public void run() {
+					java.util.ArrayList/*<ElementMetrics>*/ metrics = new java.util.ArrayList/*<ElementMetrics>*/(50);
+«IF !getNotationMetrics(editorGen.metrics).isEmpty()-»
+					calculateNotationElementMetrics(diagram, metrics);
+«ENDIF-»
+«IF !getDiagramMetrics(editorGen.metrics).isEmpty()-»
+					calculateDiagramElementMetrics(diagram, metrics);
+«ENDIF-»
+«IF !getDomainMetrics(editorGen.metrics).isEmpty()-»
+					calculateSemanticElementMetrics(viewService, diagram, metrics);
+«ENDIF-»
+					setResult(metrics);
+				}
+			});
+	} catch(InterruptedException e) {
+		return java.util.Collections.EMPTY_LIST;
+	}
+}
+
+«IF !getNotationMetrics(editorGen.metrics).isEmpty()»«EXPAND calcNotationMetricsMethod FOR editorGen»«ENDIF»
+«IF !getDiagramMetrics(editorGen.metrics).isEmpty()»«EXPAND calcDiagramMetricsMethod FOR editorGen»«ENDIF»
+«IF !getDomainMetrics(editorGen.metrics).isEmpty()»«EXPAND calcDomainMetricsMethod FOR editorGen»«ENDIF»
+«ENDDEFINE»
+
+// @Override
+«DEFINE calcDomainMetricsMethod FOR GenEditorGenerator»
+	«EXPAND xpt::Common::generatedMemberComment»
+	static void calculateSemanticElementMetrics(org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService viewService, org.eclipse.gmf.runtime.notation.Diagram diagram, java.util.List/*<ElementMetrics>*/ metricsList) {
+		org.eclipse.emf.ecore.EObject next = diagram.getElement();
+		java.util.Iterator/*<EObject>*/ it = next != null ? next.eAllContents() : java.util.Collections.EMPTY_LIST.iterator();
+		java.util.HashMap/*<EObject, ElementMetrics>*/ target2row = new java.util.HashMap/*<EObject, ElementMetrics>*/();
+		while (next != null) {
+			java.util.ArrayList/*<Metric>*/ res = new java.util.ArrayList/*<Metric>*/(5);
+«FOREACH metrics.metrics.target.typeSelect(GenDomainElementTarget).element.purgeDups().typeSelect(GenClass) AS e-»
+			if («EXPAND MetaModel::MetaClass FOR e».isInstance(next)) {
+«FOREACH metrics.metrics.select(m | m.target.getContext() == e) AS m-»
+				res.add(«EXPAND metricResult("next", true) FOR m»);
+«ENDFOREACH-»
+			}
+«ENDFOREACH-»
+			if (!res.isEmpty()) {
+				ElementMetrics row = new ElementMetrics(next, formatElementName(next), (Metric[]) res.toArray(new Metric[res.size()]));
+				metricsList.add(row);
+				target2row.put(next, row);
+			}
+			next = it.hasNext() ? (org.eclipse.emf.ecore.EObject) it.next() : null;
+		}
+		if (!target2row.isEmpty()) { // list was modified, need to process only semantic metrics
+			// bind semantic elements to notation
+			for (java.util.Iterator it2 = target2row.entrySet().iterator(); it2.hasNext();) {
+				java.util.Map.Entry entry = (java.util.Map.Entry) it2.next();
+				org.eclipse.emf.ecore.EObject semanticElement = (org.eclipse.emf.ecore.EObject) entry.getKey();
+				org.eclipse.gmf.runtime.notation.View targetView = viewService.findView(semanticElement);
+				if (targetView != null) {
+					ElementMetrics elementMetrics = (ElementMetrics) entry.getValue();
+					elementMetrics.diagramElementID = targetView.eResource().getURIFragment(targetView);
+				}
+			}
+		}
+	}
+«ENDDEFINE»
+
+/*
+					F I X M E ! ! !
+			move i18n accessors into base template
+					F I X M E ! ! !
+ */
+«DEFINE i18nAccessors FOR gmfgen::GenDiagram-»
+«IF editorGen.metrics != null-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForMetricProviderResultViewElementColumnName())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForMetricProviderResultViewElementColumnTooltip())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForMetricProviderMetricDefToolTipLow())-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForMetricProviderMetricDefToolTipHigh())-»
+«EXPAND nameAccessorField FOREACH getMetricRules().select(e| e.name != null)-»
+«EXPAND descriptionAccessorField FOREACH getMetricRules().select(e| e.description != null)-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE i18nValues FOR gmfgen::GenDiagram-»
+«IF editorGen.metrics != null-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForMetricProviderResultViewElementColumnName(), "Element")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForMetricProviderResultViewElementColumnTooltip(), "Measurement element")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForMetricProviderMetricDefToolTipLow(), " Low: ")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForMetricProviderMetricDefToolTipHigh(), " High: ")-»
+«EXPAND nameAccessorValue FOREACH getMetricRules().select(e| e.name != null)-»
+«EXPAND descriptionAccessorValue FOREACH getMetricRules().select(e| e.description != null)-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE nameAccessorField FOR gmfgen::GenMetricRule-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForMetric().nameKey())-»
+«ENDDEFINE»
+
+«DEFINE descriptionAccessorField FOR gmfgen::GenMetricRule-»
+«EXPAND xpt::Externalizer::accessorField(i18nKeyForMetric().descriptionKey())-»
+«ENDDEFINE»
+
+«DEFINE nameAccessorValue FOR gmfgen::GenMetricRule-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForMetric().nameKey(), name)-»
+«ENDDEFINE»
+
+«DEFINE descriptionAccessorValue FOR gmfgen::GenMetricRule-»
+«EXPAND xpt::Externalizer::messageEntry(i18nKeyForMetric().descriptionKey(), description)-»
+«ENDDEFINE»
+

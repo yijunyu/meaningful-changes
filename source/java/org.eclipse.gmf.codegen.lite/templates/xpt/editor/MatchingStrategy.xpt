@@ -1,0 +1,87 @@
+/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+
+«DEFINE MatchingStrategy FOR GenDiagram-»
+«EXPAND xpt::Common::copyright FOR editorGen-»
+package «editorGen.editor.packageName»;
+
+«EXPAND xpt::Common::generatedClassComment»
+public class «matchingStrategyClassName» «EXPAND supertypes» {
+	«EXPAND matches-»
+	«EXPAND getURIFromInput-»
+	«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE supertypes FOR GenDiagram»implements org.eclipse.ui.IEditorMatchingStrategy«ENDDEFINE»
+
+«DEFINE matches FOR GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public boolean matches(org.eclipse.ui.IEditorReference editorRef, org.eclipse.ui.IEditorInput input) {
+	if (editorRef == null || !«editorGen.editor.getQualifiedClassName()».ID.equals(editorRef.getId())) {
+		return false;
+	}
+	org.eclipse.emf.common.util.URI inputURI = getURIFromInput(input);
+	if (inputURI == null) {
+		return false;
+	}
+	try {
+		org.eclipse.ui.IEditorInput editorInput = editorRef.getEditorInput();
+		org.eclipse.emf.common.util.URI editorURI = getURIFromInput(editorInput);
+		if (editorURI == null) {
+			return false;
+		}
+		«EXPAND compareURIs-»
+	} catch (org.eclipse.ui.PartInitException e) {
+		return false;
+	}
+}
+«ENDDEFINE»
+
+«DEFINE getURIFromInput FOR GenDiagram-»
+«EXPAND xpt::editor::Editor::getURIFromInput FOR editorGen.editor-»
+«ENDDEFINE»
+
+«DEFINE compareURIs FOR GenDiagram-»
+if (!editorURI.trimFragment().equals(inputURI.trimFragment())) {
+	return false;
+}
+String editorFragment = editorURI.fragment();
+String inputFragment = inputURI.fragment();
+if (editorFragment != null && inputFragment != null) {
+	return editorFragment.equals(inputFragment);
+}
+String nonNullFragment;
+if (editorFragment != null) {
+	nonNullFragment = editorFragment;
+} else if (inputFragment != null) {
+	nonNullFragment = inputFragment;
+} else {
+	return true;
+}
+org.eclipse.emf.transaction.TransactionalEditingDomain domain = «EXPAND xpt::editor::Common::createEditingDomain FOR editorGen»;
+org.eclipse.emf.ecore.resource.Resource resource = domain.getResourceSet().getResource(editorURI.trimFragment(), true);
+for (java.util.Iterator it = resource.getContents().iterator(); it.hasNext(); ) {
+	org.eclipse.emf.ecore.EObject next = (org.eclipse.emf.ecore.EObject) it.next();
+	if (nonNullFragment.equals(resource.getURIFragment(next))) {
+		return true;
+	}
+	if (next instanceof org.eclipse.gmf.runtime.notation.Diagram) {
+		return false;
+	}
+}
+return false;
+«ENDDEFINE»
+
+«DEFINE additions FOR GenDiagram»«ENDDEFINE»

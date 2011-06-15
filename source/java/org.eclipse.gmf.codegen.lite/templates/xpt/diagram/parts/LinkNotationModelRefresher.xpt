@@ -1,0 +1,309 @@
+/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::GenModelUtils»
+«EXTENSION xpt::diagram::LinkFinder»
+«EXTENSION xpt::diagram::parts::LinkNotationModelRefresher»
+
+«DEFINE installClause FOR gmfgen::GenCommonBase-»
+«IF needsLinkNotationModelRefresher()-»
+installLinkNotationModelRefresher();
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE uninstallClause FOR gmfgen::GenCommonBase-»
+«IF needsLinkNotationModelRefresher()-»
+uninstallLinkNotationModelRefresher();
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE all FOR gmfgen::GenCommonBase-»
+«IF needsLinkNotationModelRefresher()-»
+«EXPAND install-»
+«EXPAND uninstall-»
+«EXPAND getLinkNotationModelRefresher-»
+«EXPAND viewService-»
+«EXPAND refresh-»
+«EXPAND LinkNotationModelRefresher-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE className FOR gmfgen::GenCommonBase»LinkNotationModelRefresher«ENDDEFINE»
+
+«DEFINE install FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+private void installLinkNotationModelRefresher() {
+	«EXPAND className» refresher = getLinkNotationModelRefresher();
+	if (!getTransactionalUpdateManager().isNotationModelRefresherInstalled(refresher)) {
+		getTransactionalUpdateManager().addNotationModelRefresher(refresher);
+		try {
+			refreshLinkNotationModel();
+		} catch (java.lang.IllegalStateException readOnlyContext) {
+			//Most likely, this means that the host element was created in a precommit notification of a transaction.
+			//While it is impossible to execute this command here, it will be executed as a trigger command.
+			//See org.eclipse.gmf.runtime.lite.edit.parts.update.TransactionalUpdateManager for details.
+		}
+	}
+}
+«ENDDEFINE»
+
+«DEFINE uninstall FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+private void uninstallLinkNotationModelRefresher() {
+	«EXPAND className» refresher = getLinkNotationModelRefresher();
+	getTransactionalUpdateManager().removeNotationModelRefresher(refresher);
+}
+«ENDDEFINE»
+
+«DEFINE getLinkNotationModelRefresher FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+private «EXPAND className» linkNotationModelRefresher;
+
+«EXPAND xpt::Common::generatedMemberComment»
+private «EXPAND className» getLinkNotationModelRefresher() {
+	if (linkNotationModelRefresher == null) {
+		linkNotationModelRefresher = new «EXPAND className»(getViewService());
+	}
+	return linkNotationModelRefresher;
+}
+«ENDDEFINE»
+
+«DEFINE viewService FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment("Service to find a notational element that corresponds to the given underlying domain element.")»
+private org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService viewService;
+
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService getViewService() {
+	if (viewService == null) {
+		viewService = new org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.EditPartRegistryBasedViewService(getViewer());
+	}
+	return viewService;
+}
+«ENDDEFINE»
+
+«DEFINE refresh FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected void refreshLinkNotationModel() {
+	«EXPAND className» linkRefresher = getLinkNotationModelRefresher();
+	org.eclipse.emf.common.command.Command command = linkRefresher.buildRefreshNotationModelCommand();
+	if (command == null) {
+		return;
+	}
+	org.eclipse.emf.transaction.TransactionalEditingDomain domainModelEditDomain = org.eclipse.emf.transaction.util.TransactionUtil.getEditingDomain(«EXPAND xpt::diagram::parts::Common::getDiagramElementCode»);
+	getViewer().getEditDomain().getCommandStack().execute(new org.eclipse.gmf.runtime.lite.commands.WrappingCommand(domainModelEditDomain, command));
+}
+«ENDDEFINE»
+
+«DEFINE LinkNotationModelRefresher FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedClassComment»
+private class «EXPAND className» «EXPAND supertypes» {
+	«EXPAND ctors-»
+	«EXPAND getConstrainedChildrenFilter-»
+	«EXPAND createUncontainedLinksFilter-»
+	«EXPAND createFilter-»
+	«EXPAND getSemanticLinks-»
+	«EXPAND getNotationalLinks-»
+	«EXPAND getCreateNotationalElementCommand-»
+	«EXPAND shouldCreateView-»
+	«EXPAND getHost-»
+	«EXPAND additions-»
+	}
+«ENDDEFINE»
+
+«DEFINE supertypes FOR gmfgen::GenCommonBase»extends org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.OwnedLinksNotationModelRefresher«ENDDEFINE»
+
+«DEFINE ctors FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+public «EXPAND className»(org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.IViewService viewService) {
+	super(viewService);
+}
+«ENDDEFINE»
+
+«DEFINE getConstrainedChildrenFilter FOR gmfgen::GenCommonBase-»
+«IF containedLinksWithSelector().size() > 0-»
+«EXPAND xpt::Common::generatedMemberComment("TODO: Child links of this element are selected based on constraint declared in " + getDiagram().getVisualIDRegistryQualifiedClassName() + ". \n" + 
+  "Since no assumptions may be made concerning the runtime behavior of the constraint, <b>any</b> non-touch notification may result in \n" + 
+  "notational model having to be updated.\n" + 
+  "<p/>User is encouraged to change implementation of this method to provide an optimization if it is safe to assume that not all notifications\n" + 
+  "result in such an update.")»
+private org.eclipse.emf.transaction.NotificationFilter getConstrainedChildLinksFilter() {
+	return org.eclipse.emf.transaction.NotificationFilter.NOT_TOUCH;
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE createUncontainedLinksFilter FOR gmfgen::GenCommonBase-»
+«ENDDEFINE»
+
+«DEFINE createUncontainedLinksFilter FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment("Creates a notification filter which filters notifications that may possibly result in uncontained links. ")»
+private org.eclipse.emf.transaction.NotificationFilter createUncontainedLinksFilter() {
+	return org.eclipse.emf.transaction.NotificationFilter.createEventTypeFilter(org.eclipse.emf.common.notify.Notification.SET).or(
+		org.eclipse.emf.transaction.NotificationFilter.createEventTypeFilter(org.eclipse.emf.common.notify.Notification.UNSET).or(
+		org.eclipse.emf.transaction.NotificationFilter.createEventTypeFilter(org.eclipse.emf.common.notify.Notification.REMOVE).or(
+		org.eclipse.emf.transaction.NotificationFilter.createEventTypeFilter(org.eclipse.emf.common.notify.Notification.REMOVE_MANY)
+	)));
+}
+«ENDDEFINE»
+
+«DEFINE createFilter FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment("Creates a notification filter which filters notifications that may possibly affect the notational model")»
+protected org.eclipse.emf.transaction.NotificationFilter createFilter() {
+«LET getAffectingFeatures() AS affectingFeatures-»
+«FOREACH affectingFeatures AS nextFeature ITERATOR it-»
+	«IF it.isFirstIteration()»org.eclipse.emf.transaction.NotificationFilter filter = «EXPAND createFeatureFilter FOR nextFeature»;«ELSE-»
+	filter = filter.or(«EXPAND createFeatureFilter FOR nextFeature»);«ENDIF-»
+«ENDFOREACH-»
+«IF containedLinksWithSelector().size() > 0-»
+	«IF affectingFeatures.size() > 0-»
+	filter = getConstrainedChildLinksFilter().or(filter);
+	«ELSE-»
+	org.eclipse.emf.transaction.NotificationFilter filter = getConstrainedChildLinksFilter();
+	«ENDIF-»
+«ENDIF-»
+«IF {this}.typeSelect(gmfgen::GenDiagram).size() > 0-»
+	«IF affectingFeatures.size() + containedLinksWithSelector().size() > 0-»
+	filter = filter.or(createUncontainedLinksFilter());
+	«ELSE-»
+	org.eclipse.emf.transaction.NotificationFilter filter = createUncontainedLinksFilter();
+	«ENDIF-»
+«ELSE-»
+	«REM»Make sure filter var is declared«ENDREM-»
+	«IF affectingFeatures.size() + containedLinksWithSelector().size() == 0-»
+	org.eclipse.emf.transaction.NotificationFilter filter = org.eclipse.emf.transaction.NotificationFilter.NOT_TOUCH;
+	«ENDIF-»
+«ENDIF-»
+«ENDLET-»
+	return filter;
+}
+«ENDDEFINE»
+
+«DEFINE createFeatureFilter FOR genmodel::GenFeature»org.eclipse.emf.transaction.NotificationFilter.createFeatureFilter(«EXPAND MetaModel::MetaFeature»)«ENDDEFINE»
+
+«DEFINE getSemanticLinks FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected java.util.List getSemanticChildLinks() {
+«EXPAND xpt::diagram::parts::semanticChildLinks::semanticChildLinks("getHost()")-»
+}
+«ENDDEFINE»
+
+«DEFINE getNotationalLinks FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected java.util.List getNotationalChildLinks() {
+	java.util.List result = new java.util.LinkedList();
+	java.util.List allLinks = «EXPAND xpt::diagram::parts::Common::getDiagramCode».getEdges();
+	for(java.util.Iterator it = allLinks.iterator(); it.hasNext(); ) {
+		org.eclipse.gmf.runtime.notation.Edge next = (org.eclipse.gmf.runtime.notation.Edge) it.next();
+		«EXPAND uncontainedLinks-»
+		«EXPAND containedFeatureModelLinks-»
+		«EXPAND containedTypeModelLinks-»
+	}
+	return result;
+}
+«ENDDEFINE»
+
+«DEFINE uncontainedLinks FOR gmfgen::GenCommonBase»«ENDDEFINE»
+
+«DEFINE uncontainedLinks FOR gmfgen::GenDiagram-»
+if (next.isSetElement() && next.getElement() != null && next.getElement().eResource() == null) {
+	result.add(next);
+	continue;
+}
+org.eclipse.gmf.runtime.notation.View source = next.getSource();
+if (source == null || (source.isSetElement() && source.getElement() != null && source.getElement().eResource() == null)) {
+	result.add(next);
+	continue;
+}
+org.eclipse.gmf.runtime.notation.View target = next.getTarget();
+if (target == null || (target.isSetElement() && target.getElement() != null && target.getElement().eResource() == null)) {
+	result.add(next);
+	continue;
+}
+«ENDDEFINE»
+
+«DEFINE containedFeatureModelLinks FOR gmfgen::GenCommonBase-»
+«IF containedFeatureModelFacetLinks().size() > 0-»
+if (next.isSetElement() && next.getElement() == null) {
+	if (next.getSource() == getHost()) {
+		int linkVID = «getDiagram().getVisualIDRegistryQualifiedClassName()».getVisualID(next);
+		switch (linkVID) {
+		«EXPAND caseVisualId FOREACH containedFeatureModelFacetLinks()-»
+			result.add(next);
+			break;
+		}
+	}
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE containedTypeModelLinks FOR gmfgen::GenCommonBase-»
+«IF containedTypeModelFacetLinks().size() > 0-»
+if (next.isSetElement() && next.getElement() != null) {
+	if (next.getElement().eContainer() == «EXPAND xpt::diagram::parts::Common::getViewCode».getElement()) {
+		int linkVID = «getDiagram().getVisualIDRegistryQualifiedClassName()».getVisualID(next);
+		switch (linkVID) {
+		«EXPAND caseVisualId FOREACH containedTypeModelFacetLinks()-»
+			result.add(next);
+			break;
+		}
+	}
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE caseVisualId FOR gmfgen::GenLink-»
+case «getEditPartQualifiedClassName()».VISUAL_ID:
+«ENDDEFINE»
+
+«DEFINE getCreateNotationalElementCommand FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand getCreateNotationalElementCommand(org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.ElementDescriptor descriptor) {
+«IF primNeedsLinkNotationModelRefresher()-»
+	org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.LinkDescriptor linkDescriptor = (org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.LinkDescriptor) descriptor;
+	«EXPAND xpt::commands::createNotationalElementCommand::defineDecorator-»
+	«IF getDiagram().shortcutsProvidedFor.size() > 0-»
+	String diagramModelID = «getDiagram().getVisualIDRegistryQualifiedClassName()».getModelID(getHost().getDiagram());
+	if (!«getDiagram().getEditPartQualifiedClassName()».MODEL_ID.equals(diagramModelID)) {
+		return new «EXPAND xpt::commands::CreateShortcutEdgeCommand::qualifiedClassName FOR getDiagram()»(getHost().getDiagram(), linkDescriptor.getElement(), sourceView, targetView, decorator);
+	}
+	«ENDIF-»
+	«EXPAND xpt::commands::createNotationalElementCommand::instantiateNotationalEdgeCommand("getHost().getDiagram()")-»
+«ELSE-»
+	return null;
+«ENDIF-»
+}
+«ENDDEFINE»
+
+«DEFINE shouldCreateView FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment("Returns whether a notational edge should be created for the given domain element. \n" + 
+  "The generated code respects canonical style. If the canonycal style is not present, " + (getDiagram().synchronized ? "true" : "false") + " is always returned. \n" + 
+  "User can change implementation of this method to handle a more sophisticated logic.")»
+protected boolean shouldCreateView(org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.ElementDescriptor descriptor) {
+	org.eclipse.gmf.runtime.notation.CanonicalStyle style = (org.eclipse.gmf.runtime.notation.CanonicalStyle) «EXPAND xpt::diagram::parts::Common::getViewCode».getStyle(org.eclipse.gmf.runtime.notation.NotationPackage.eINSTANCE.getCanonicalStyle());
+	if (style == null) {
+		return «getDiagram().synchronized»;
+	}
+	return style.isCanonical();
+}
+«ENDDEFINE»
+
+«DEFINE getHost FOR gmfgen::GenCommonBase-»
+«EXPAND xpt::Common::generatedMemberComment»
+protected org.eclipse.gmf.runtime.notation.View getHost() {
+	return «EXPAND xpt::diagram::parts::Common::getViewCode»;
+}
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenCommonBase»«ENDDEFINE»

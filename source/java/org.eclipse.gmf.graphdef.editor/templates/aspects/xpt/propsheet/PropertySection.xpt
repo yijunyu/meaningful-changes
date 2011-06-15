@@ -1,0 +1,95 @@
+/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Anna Karjakina (Borland) - initial API and implementation
+ *    Artem Tikhomirov (Borland) - cleaned and simplified outcome 
+ */
+«IMPORT "http://www.eclipse.org/gmf/2008/GmfGraph/PropSheet"»
+«IMPORT "http://www.eclipse.org/gmf/2006/GraphicalDefinition"»
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+
+«EXTENSION xpt::EMFUtils»
+«EXTENSION xpt::GenModelUtils»
+«EXTENSION aspects::xpt::propsheet::Utils»
+
+«AROUND extendsList FOR gmfgen::GenCustomPropertyTab»«IF isProxyTab()»«getProxyTabSuperClassName()»«ELSE»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+
+«AROUND implementsClause FOR gmfgen::GenCustomPropertyTab»«IF !isProxyTab()»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+
+«AROUND getPropertySourceMethod FOR gmfgen::GenCustomPropertyTab»«IF !isProxyTab()»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+«AROUND createReadonlyControlsMethod FOR gmfgen::GenCustomPropertyTab»«IF !isProxyTab()»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+«AROUND getPropertySourceProviderMethod FOR gmfgen::GenCustomPropertyTab»«IF !isProxyTab()»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+«AROUND transfromSelectionMethod FOR gmfgen::GenCustomPropertyTab»«IF !isProxyTab()»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+«AROUND setInputMethod FOR gmfgen::GenCustomPropertyTab»«IF !isProxyTab()»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+«AROUND getAdapterFactoryMethod FOR gmfgen::GenCustomPropertyTab»«IF !isProxyTab()»«targetDef.proceed()»«ENDIF»«ENDAROUND»
+
+«AROUND additions FOR gmfgen::GenCustomPropertyTab-»
+«IF isProxyTab()-»
+
+	«EXPAND commit-»
+
+	«EXPAND unwrap-»
+	
+	«EXPAND filterClass-»
+«ENDIF-»
+«ENDAROUND»
+
+«DEFINE commit FOR gmfgen::GenCustomPropertyTab-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected void commit() {
+		final java.util.List<org.eclipse.core.resources.IFile> files = java.util.Collections.singletonList(org.eclipse.emf.workspace.util.WorkspaceSynchronizer.getFile(getInput().eResource()));
+		org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand cmd = new org.eclipse.gmf.runtime.emf.commands.core.command.AbstractTransactionalCommand(org.eclipse.emf.transaction.util.TransactionUtil.getEditingDomain(getInput()), "", files) {
+			@Override
+			protected org.eclipse.gmf.runtime.common.core.command.CommandResult doExecuteWithResult(org.eclipse.core.runtime.IProgressMonitor monitor, org.eclipse.core.runtime.IAdaptable info) throws org.eclipse.core.commands.ExecutionException {
+				«className».super.commit();
+				return org.eclipse.gmf.runtime.common.core.command.CommandResult.newOKCommandResult();
+			}
+		};
+		try {
+			org.eclipse.core.commands.operations.OperationHistoryFactory.getOperationHistory().execute(cmd, new org.eclipse.core.runtime.NullProgressMonitor(), null);
+		} catch (org.eclipse.core.commands.ExecutionException ex) {
+			ex.printStackTrace();
+		}
+	}
+«ENDDEFINE»
+
+«DEFINE unwrap FOR gmfgen::GenCustomPropertyTab-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected Object unwrap(Object element) {
+		Object rv = org.eclipse.gmf.graphdef.editor.part.PropertySectionFilters.transformSelection(element);
+		if («EXPAND checkInstanceOfDomainElement("rv")») {
+			return rv;
+		}
+		return null;
+	}
+«ENDDEFINE»
+
+«DEFINE filterClass FOR gmfgen::GenCustomPropertyTab-»
+	«EXPAND xpt::Common::generatedClassComment»
+	public static class «EXPAND filterClassName» implements org.eclipse.jface.viewers.IFilter {
+
+		«EXPAND FC_select-»
+	
+	}
+«ENDDEFINE»
+
+«DEFINE filterClassName FOR gmfgen::GenCustomPropertyTab»Filter«ENDDEFINE»
+
+«DEFINE FC_select FOR gmfgen::GenCustomPropertyTab-»
+	«EXPAND xpt::Common::generatedMemberComment»
+	public boolean select(Object toTest) {
+		Object transformed = org.eclipse.gmf.graphdef.editor.part.PropertySectionFilters.transformSelection(toTest);
+		return «EXPAND checkInstanceOfDomainElement("transformed")»;
+	}
+«ENDDEFINE»
+
+«DEFINE checkInstanceOfDomainElement(String varName) FOR gmfgen::GenCustomPropertyTab-»
+«EXPAND MetaModel::IsInstance(varName) FOREACH getCustomPropertySection(this).nodes.collect(n|n.modelFacet.metaClass).toSet().typeSelect(genmodel::GenClass) SEPARATOR " || "»«ENDDEFINE»

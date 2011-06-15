@@ -1,0 +1,160 @@
+/*
+ * Copyright (c) 2008 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+«IMPORT "http://www.eclipse.org/gmf/2008/Widget"»
+«IMPORT "http://www.eclipse.org/gmf/2008/Context"»
+«IMPORT "http://www.eclipse.org/gmf/2008/Binding"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+
+«EXTENSION Forms»
+«EXTENSION Widgets»
+
+«DEFINE Main FOR Editor-»
+package «packageName»;
+«EXPAND imports FOREACH sections»
+«EXPAND class("public ") FOREACH sections»
+«ENDDEFINE»
+
+«DEFINE imports FOR Section»
+import org.eclipse.gmf.dsl.internal.ui.emf.AttachAdapter;
+import org.eclipse.gmf.dsl.internal.ui.emf.ChangeTracker;
+import org.eclipse.gmf.dsl.internal.ui.emf.FeatureTracker;
+
+import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.eclipse.jface.viewers.*;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.*;
+import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.ui.forms.widgets.*;
+import org.eclipse.ui.views.properties.tabbed.*;
+«ENDDEFINE»
+
+«DEFINE packageStatement FOR Section»package org.eclipse.gmf.graphdef.editor.sheet;«ENDDEFINE»
+
+// Temp solution for hand-moved generated artifacts
+«DEFINE Main FOR Section-»
+«EXPAND packageStatement»
+«EXPAND imports»
+import org.eclipse.gmf.gmfgraph.*;
+
+«EXPAND class("public ")»
+«ENDDEFINE»
+
+«DEFINE class(String classModifiers) FOR Section»
+«classModifiers»class «className» extends AbstractPropertySection implements ChangeTracker, Listener {
+
+	«EXPAND Update::AdaptersField-»
+
+	private boolean myIsCommit;
+	private boolean myIsRefresh;
+	private Object myInput;
+
+«EXPAND Visual::Fields FOR children»
+
+	@Override
+	public void createControls(Composite parent, TabbedPropertySheetPage page) {
+		super.createControls(parent, page);
+		getWidgetFactory().paintBordersFor(parent);
+«EXPAND Visual::Main("parent", "getWidgetFactory()") FOR children»
+«IF layout != null»«EXPAND Layout::Main("parent") FOR layout»«ENDIF-»
+«EXPAND Update::PopulateWidgets-»
+«EXPAND Update::registerListeners-»
+	}
+
+	@Override
+	public void setInput(IWorkbenchPart part, ISelection selection) {
+		super.setInput(part, selection);
+		Object newInput = null;
+		if (selection instanceof IStructuredSelection && ((IStructuredSelection) selection).size() == 1) {
+			newInput = unwrap(((IStructuredSelection) selection).getFirstElement());
+		}
+		if (newInput != myInput) {
+			if (myInput != null) {
+				detach();
+			}
+			myInput = newInput;
+			if (newInput != null) {
+				attach();
+			}
+		}
+	}
+
+	protected void commit() {
+		«EXPAND Update::Commit»
+	}
+
+	@Override
+	public void refresh() {
+		myIsRefresh = true;
+		«EXPAND Update::Refresh»
+		myIsRefresh = false;
+	}
+
+	@Override
+	public void aboutToBeHidden() {
+		if (myInput != null) {
+			detach();
+		}
+	}
+
+	public void handleEvent(Event event) {
+		if (myIsRefresh) {
+			return;
+		}
+		«EXPAND Update::handleEventMethodBody-»
+	}
+
+	public void modelChanged(Notification msg) {
+		if (!myIsCommit && Display.getCurrent() != null) {
+			refresh();
+		}
+	}
+
+	private void markDirty() {
+		// NO-OP, need that to share Update::handleEvent template with IFormPart which has same method
+		// Perhaps, clients may find this method useful for some purpose?
+	}
+
+	protected void applyChanges() {
+		try {
+			myIsCommit = true;
+			commit();
+		} finally {
+			myIsCommit = false;
+		}
+	}
+
+	protected void discardChanges() {
+		refresh();
+	}
+
+	protected Object unwrap(Object element) {
+		// TODO may need to adapt selected element to smth else,
+		// do it here
+		return element;
+	}
+
+	private void attach() {
+	«EXPAND Update::AttachAdapters»
+	}
+
+	private void detach() {
+	«EXPAND Update::DetachAdapters»
+	}
+
+	protected «deduceInputType().name» getInput() {
+		// TODO implement;
+		return («deduceInputType().name») myInput;
+	}
+«EXPAND Visual::ExtraMethods(true, "getWidgetFactory()") FOR children»
+}
+«ENDDEFINE»

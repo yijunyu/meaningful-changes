@@ -27,7 +27,7 @@ keys
     'abstract  'assert  'boolean  'break  'byte  'case  'catch  'char  'class  'const  'continue  'default  'do  'double  'else 
       'extends  'false  'final  'finally  'float  'for  'goto  'if  'implements  'import  'instanceof  'int  'interface  'long 
       'native  'new  'null  'package  'private  'protected  'public  'return  'short  'static  'strictfp  'switch  'synchronized
-      'throw  'throws  'transient  'true  'try  'void  'volatile  'while 
+      'throw  'throws  'transient  'true  'try  'void  'volatile  'while  'enum 
 end keys
 
 define package_header
@@ -70,10 +70,6 @@ define enum_body
     '{ [IN]
         [list enum_element]  [opt  ',]  [repeat class_body_declaration]  [EX]
     '}  [opt  ';]  [NL] [NL] 
-end define
-define enum_element
-            [NL]
-    [id]  [opt method_argument] 
 end define
 define class_name
     [declared_name] 
@@ -486,6 +482,10 @@ end define
 define and_type_spec
     '&  [type_specifier] 
 end define
+define enum_element
+    [comment_nl]  [NL]
+    [id]  [opt method_argument] 
+end define
 define type_specifier
     [type_name]  [comment_nl] 
     |    [array_type_specifier]  [comment_nl] 
@@ -609,7 +609,7 @@ define interface_header
     [repeat modifier]  [opt annot_marker]  'interface  [interface_name]  [opt extends_clause]  [opt implements_clause] 
 end define
 define enum_header
-    [repeat modifier]  [opt id]  'enum  [opt declared_name] 
+    [repeat modifier]  [opt id]  'enum  [opt declared_name]  [opt extends_clause]  [opt implements_clause] 
 end define
 define extends_clause
     'extends  [list type_name +] 

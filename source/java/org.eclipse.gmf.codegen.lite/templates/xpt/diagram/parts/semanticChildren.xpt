@@ -1,0 +1,115 @@
+/*
+ * Copyright (c) 2007, 2008 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::GenModelUtils»
+«EXTENSION xpt::commands::CommandUtils»
+«EXTENSION xpt::diagram::parts::NotationModelRefresher»
+«EXTENSION xpt::diagram::PhantomUtils»
+
+«DEFINE semanticChildren(String viewCode) FOR gmfgen::GenContainerBase-»
+«IF !needsNotationModelRefresher()-»
+return java.util.Collections.EMPTY_LIST;
+«ELSE-»
+java.util.List result = new java.util.LinkedList();
+org.eclipse.gmf.runtime.notation.View viewObject = «viewCode»;
+org.eclipse.emf.ecore.EObject modelObject = viewObject.getElement();
+org.eclipse.emf.ecore.EObject nextValue;
+int nodeVID;
+«EXPAND addPhantoms-»
+«FOREACH getChildFeatures() AS childMetaFeature-»
+	«LET getGenNodes(childMetaFeature) AS genNodesCollection-»
+	«IF genNodesCollection.size() > 0-»
+		«IF childMetaFeature.isListType()-»
+for(java.util.Iterator it = «EXPAND MetaModel::getFeatureValue("modelObject", null, true) FOR childMetaFeature».iterator(); it.hasNext(); ) {
+	nextValue = (org.eclipse.emf.ecore.EObject) it.next();
+		«ELSE-»
+nextValue = (org.eclipse.emf.ecore.EObject) «EXPAND MetaModel::getFeatureValue("modelObject", null, false) FOR childMetaFeature»;
+		«ENDIF-»
+nodeVID = «getDiagram().getVisualIDRegistryQualifiedClassName()».getNodeVisualID(viewObject, nextValue);
+		«LET genNodesCollection.size() > 1 AS generateSwitch-»
+		«IF generateSwitch-»
+switch (nodeVID) {
+		«ENDIF-»
+		«FOREACH genNodesCollection AS nextNode-»
+			«IF generateSwitch-»
+case «nextNode.getEditPartQualifiedClassName()».VISUAL_ID: {
+			«ELSE-»
+if («nextNode.getEditPartQualifiedClassName()».VISUAL_ID == nodeVID) {
+			«ENDIF-»
+	result.add(new org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.ElementDescriptor(nextValue, nodeVID));
+			«IF generateSwitch-»
+	break;
+	}
+			«ELSE-»
+	}
+			«ENDIF-»
+		«ENDFOREACH-»
+		«IF generateSwitch-»
+}
+		«ENDIF-»
+		«IF childMetaFeature.isListType()-»
+	}
+		«ENDIF-»
+		«ENDLET-»
+	«ENDIF-»
+	«ENDLET-»
+«ENDFOREACH-»
+	return result;
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE addPhantoms FOR gmfgen::GenContainerBase»«ENDDEFINE»
+
+«DEFINE addPhantoms FOR gmfgen::GenDiagram-»
+«IF getPhantomNodes().size() > 0-»
+org.eclipse.emf.ecore.resource.Resource resource = «EXPAND xpt::commands::Common::getPhantomContainmentResource FOR "viewObject"»;
+for (java.util.Iterator semanticIterator = getPhantomNodesIterator(resource); semanticIterator.hasNext(); ) {
+	org.eclipse.emf.ecore.EObject childElement = (org.eclipse.emf.ecore.EObject) semanticIterator.next();
+	if (childElement == modelObject) {
+		continue;
+	}
+	nodeVID = «getDiagram().getVisualIDRegistryQualifiedClassName()».getNodeVisualID(viewObject, childElement);
+	switch (nodeVID) {
+	«EXPAND addNextIfPhantom FOREACH getPhantomNodes()-»
+	}
+}
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE addNextIfPhantom FOR gmfgen::GenTopLevelNode-»
+case «getEditPartQualifiedClassName()».VISUAL_ID: {
+«LET getPhantomFeatures() AS phantomFeatures-»
+	org.eclipse.emf.ecore.EStructuralFeature containmentFeature = childElement.eContainmentFeature();
+	if (childElement.eContainer() == null«IF phantomFeatures.size() > 0» || «EXPAND checkFeature FOREACH phantomFeatures SEPARATOR "||"»«ENDIF») {
+		result.add(new org.eclipse.gmf.runtime.lite.edit.parts.update.canonical.ElementDescriptor(childElement, nodeVID));
+	}
+«ENDLET-»
+	break;
+}
+«ENDDEFINE»
+
+«DEFINE checkFeature FOR genmodel::GenFeature»containmentFeature == «EXPAND MetaModel::MetaFeature»«ENDDEFINE»
+
+«DEFINE getPhantomNodesIterator FOR gmfgen::GenContainerBase»«ENDDEFINE»
+
+«DEFINE getPhantomNodesIterator FOR gmfgen::GenDiagram-»
+«IF getPhantomNodes().size() > 0-»
+«EXPAND xpt::Common::generatedMemberComment("By default, returns all contents of the resource. If phantoms are known to be confined in a subset of the resource contents,\n" + 
+ "overwriting this method (and marking it as generated NOT) will significantly improve performance.")»
+private java.util.Iterator getPhantomNodesIterator(org.eclipse.emf.ecore.resource.Resource resource) {
+	return resource.getAllContents();
+}
+«ENDIF-»
+«ENDDEFINE»

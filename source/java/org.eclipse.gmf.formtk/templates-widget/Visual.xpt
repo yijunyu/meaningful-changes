@@ -1,0 +1,111 @@
+/*
+ * Copyright (c) 2008 Borland Software Corp.
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    Artem Tikhomirov (Borland) - initial API and implementation
+ */
+«IMPORT "http://www.eclipse.org/gmf/2008/Widget"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+
+«EXTENSION Widgets»
+
+// TODO pass only those widgets that would be accessed from outside
+// (i.e. listeners/enablement code) to minimize number of class fields
+«DEFINE Fields FOR List[Widget]-»
+«FOREACH allWidgets() AS w-»
+	private «EXPAND className FOR w» «w.fieldName()»;
+«ENDFOREACH»«REM»XXX think of an alternative Button myR1, myR2, myR3 to save some line count«ENDREM»
+«ENDDEFINE»
+
+«DEFINE className FOR Widget»«ERROR "Abstract className FOR Widget"»«ENDDEFINE»
+«DEFINE className FOR TextEntry»Text«ENDDEFINE»
+«DEFINE className FOR CheckBox»Button«ENDDEFINE»
+«DEFINE className FOR RadioButton»Button«ENDDEFINE»
+«DEFINE className FOR Spin»Spinner«ENDDEFINE»
+«DEFINE className FOR Composite»Composite«ENDDEFINE»
+«DEFINE className FOR Group»Group«ENDDEFINE»
+«DEFINE className FOR Combo»Combo«ENDDEFINE»
+
+«DEFINE Main(String compositeVar, String formToolkit/*var or accessor*/) FOR List[Widget]-»
+«EXPAND Visuals(compositeVar, formToolkit) FOREACH this-»
+«ENDDEFINE»
+
+«DEFINE ExtraMethods(boolean extendedToolkit, String formToolkitAccess) FOR List[Widget]-»
+«IF createsAnyLabel()»
+	private org.eclipse.swt.widgets.Label createLabel(org.eclipse.swt.widgets.Composite parent, String label) {
+		org.eclipse.swt.widgets.Label l = new org.eclipse.swt.widgets.Label(parent, SWT.NONE);
+		if (label != null) l.setText(label);
+        «formToolkitAccess».adapt(l, false, false); 
+		return l;
+	}
+«ENDIF-»
+«IF !allWidgets().typeSelect(Group).isEmpty() /* the only reason to have that method even with extended toolkit is null check for label*/»
+	private org.eclipse.swt.widgets.Group createGroup(org.eclipse.swt.widgets.Composite parent, String label) {
+        org.eclipse.swt.widgets.Group g = new org.eclipse.swt.widgets.Group(parent, SWT.SHADOW_NONE);
+        if (label != null) g.setText(label);
+        «formToolkitAccess».adapt(g, false, false);
+        «formToolkitAccess».paintBordersFor(g); 
+		return g;
+	}
+«ENDIF-»
+«ENDDEFINE»
+
+/////////////////////////////////////////////////////////////////////////////////
+// Create UI elements
+
+// @param compositeVar, formToolkit - never null
+«DEFINE Visuals(String compositeVar, String formToolkit) FOR Widget»«ERROR "abstract Visuals"»«ENDDEFINE»
+
+«DEFINE Visuals(String compositeVar, String formToolkit) FOR TextEntry-»
+«IF label != null-»
+	createLabel(«compositeVar», "«label»");
+«ENDIF-»
+	«fieldName()» = «formToolkit».createText(«compositeVar», null);
+«ENDDEFINE»
+
+«DEFINE Visuals(String compositeVar, String formToolkit) FOR RadioButton-»
+	«fieldName()» = «formToolkit».createButton(«compositeVar», «EXPAND nullOrString(label)», SWT.RADIO);
+«ENDDEFINE»
+
+«DEFINE Visuals(String compositeVar, String formToolkit) FOR CheckBox-»
+	«fieldName()» = «formToolkit».createButton(«compositeVar», «EXPAND nullOrString(label)», SWT.CHECK);
+«ENDDEFINE»
+
+«DEFINE Visuals(String compositeVar, String formToolkit) FOR Spin-»
+«IF label != null-»
+	createLabel(«compositeVar», "«label»");
+«ENDIF-»
+	«fieldName()» = new Spinner(«compositeVar», SWT.FLAT);
+	«fieldName()».setMinimum(«minimum»);
+	«fieldName()».setMaximum(«maximum»);
+	«fieldName()».setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER); // @see #145837
+«ENDDEFINE»
+
+«DEFINE Visuals(String compositeVar, String formToolkit) FOR Composite-»
+	«fieldName()» = «formToolkit».createComposite(«compositeVar»);
+	«formToolkit».paintBordersFor(«fieldName()»);
+	«EXPAND Visuals(fieldName(), formToolkit) FOREACH children-»
+	«IF layout != null»«EXPAND Layout::Main(fieldName()) FOR layout»«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE Visuals(String compositeVar, String formToolkit) FOR Group-»
+	«fieldName()» = createGroup(«compositeVar», «EXPAND nullOrString(label)»);
+	«EXPAND Visuals(fieldName(), formToolkit) FOREACH children-»
+	«IF layout != null»«EXPAND Layout::Main(fieldName()) FOR layout»«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE Visuals(String compositeVar, String formToolkit) FOR Combo-»
+«IF label != null-»
+	createLabel(«compositeVar», "«label»");
+«ENDIF-»
+	«fieldName()» = new Combo(«compositeVar», SWT.FLAT | SWT.READ_ONLY);
+	«fieldName()».setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
+    «formToolkit».adapt(«fieldName()», false, false); 
+«ENDDEFINE»
+
+«DEFINE nullOrString(String label) FOR Object»«IF label != null»"«label»"«ELSE»null«ENDIF»«ENDDEFINE»

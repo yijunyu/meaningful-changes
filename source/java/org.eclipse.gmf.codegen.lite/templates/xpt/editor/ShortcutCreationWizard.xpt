@@ -1,0 +1,234 @@
+/*
+ * Copyright (c) 2007 Borland Software Corporation
+ * 
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *    bblajer (Borland) - initial API and implementation
+ */
+
+«IMPORT "http://www.eclipse.org/gmf/2008/GenModel"»
+«IMPORT "http://www.eclipse.org/emf/2002/Ecore"»
+«IMPORT "http://www.eclipse.org/emf/2002/GenModel"»
+«EXTENSION xpt::editor::Wizard»
+«EXTENSION xpt::editor::i18n»
+
+«DEFINE className FOR gmfgen::GenDiagram»«defaultShortcutCreationWizardName()»«ENDDEFINE»
+
+«DEFINE qualifiedClassName FOR gmfgen::GenDiagram»«editorGen.editor.packageName».«EXPAND className»«ENDDEFINE»
+
+«DEFINE ShortcutCreationWizard FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::copyright FOR editorGen-»
+package «editorGen.editor.packageName»;
+
+«EXPAND xpt::Common::generatedClassComment("Allows to add a shortcut to an element from a foreign model")»
+public class «EXPAND className» «EXPAND supertypes» {
+	«EXPAND editingDomain-»
+	«EXPAND graphicalViewer-»
+	«EXPAND parentView-»
+	«EXPAND shortcutDomainModelURI-»
+	«EXPAND shortcutDomainModelElement-»
+	«EXPAND ctor-»
+	«EXPAND addPages-»
+	«EXPAND performFinish-»
+	«EXPAND getCreateShortcutCommand-»
+	«EXPAND SourceURISelectorPage-»
+	«EXPAND ShortcutElementSelectorPage-»
+	«EXPAND additions-»
+}
+«ENDDEFINE»
+
+«DEFINE supertypes FOR gmfgen::GenDiagram»extends org.eclipse.jface.wizard.Wizard«ENDDEFINE»
+
+«DEFINE editingDomain FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.emf.transaction.TransactionalEditingDomain myEditingDomain;
+«ENDDEFINE»
+
+«DEFINE graphicalViewer FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.gef.GraphicalViewer myGraphicalViewer;
+«ENDDEFINE»
+
+«DEFINE parentView FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.gmf.runtime.notation.View myParentView;
+«ENDDEFINE»
+
+«DEFINE shortcutDomainModelURI FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.emf.common.util.URI myShortcutDomainModelURI;
+«ENDDEFINE»
+
+«DEFINE shortcutDomainModelElement FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.emf.ecore.EObject myShortcutDomainModelElement;
+«ENDDEFINE»
+
+«DEFINE ctor FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public «EXPAND className»(org.eclipse.gmf.runtime.notation.View parentView, org.eclipse.emf.transaction.TransactionalEditingDomain editingDomain, org.eclipse.gef.GraphicalViewer graphicalViewer) {
+	myParentView = parentView;
+	myEditingDomain = editingDomain;
+	myGraphicalViewer = graphicalViewer;
+}
+«ENDDEFINE»
+
+«DEFINE addPages FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public void addPages() {
+	addPage(new SourceURISelectorPage());
+	addPage(new ShortcutElementSelectorPage());
+}
+«ENDDEFINE»
+
+«DEFINE performFinish FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+public boolean performFinish() {
+	org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand createShortcutCommand = getCreateShortcutCommand();
+	if (createShortcutCommand != null && createShortcutCommand.canExecute()) {
+		if (myGraphicalViewer.getEditDomain() != null && myGraphicalViewer.getEditDomain().getCommandStack() != null) {
+			myGraphicalViewer.getEditDomain().getCommandStack().execute(new org.eclipse.gmf.runtime.lite.commands.WrappingCommand(myEditingDomain, createShortcutCommand));
+		} else {
+			new org.eclipse.gmf.runtime.lite.commands.WrappingCommand(myEditingDomain, createShortcutCommand).execute();
+		}
+		return true;
+	}
+	return false;
+}
+«ENDDEFINE»
+
+«DEFINE getCreateShortcutCommand FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedMemberComment»
+private org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand getCreateShortcutCommand() {
+	«FOREACH containsShortcutsTo AS nextModelID ITERATOR it-»
+	«IF it.isFirstIteration()»org.eclipse.gmf.runtime.lite.shortcuts.IShortcutProvider «ENDIF»shortcutProvider = org.eclipse.gmf.runtime.lite.shortcuts.ShortcutProvidersRegistry.INSTANCE.getShortcutProvider(«IF nextModelID == editorGen.modelID»«getEditPartQualifiedClassName()».MODEL_ID«ELSE»"«nextModelID»"«ENDIF»);«IF nextModelID != editorGen.modelID»	«EXPAND xpt::Common::nonNLS»«ENDIF»
+	if (shortcutProvider != null) {
+		org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand result = shortcutProvider.getCreateShortcutCommand(myParentView, myShortcutDomainModelElement);
+		if (result != null && result.canExecute()) {
+			return result;
+		}
+	}
+	«ENDFOREACH-»
+	return null;
+}
+«ENDDEFINE»
+
+«DEFINE SourceURISelectorPage FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedClassComment»
+private class SourceURISelectorPage extends «EXPAND xpt::editor::URISelectorPage::qualifiedClassName» {
+	«EXPAND xpt::Common::generatedMemberComment»
+	public SourceURISelectorPage() {
+		super(«EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardSourceURISelectorPageName()) FOR editorGen»);
+		setTitle(«EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardSourceURISelectorPageTitle()) FOR editorGen»);
+		setDescription(«EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardSourceURISelectorPageDescription()) FOR editorGen»);
+	}
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected String getFileExtension() {
+		return null;
+	}
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected boolean validatePage() {
+		if (super.validatePage()) {
+			myShortcutDomainModelURI = getFileURI();
+			return true;
+		}
+		return false;
+	}
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected String validateFile(java.io.File file) {
+		if (!file.exists()) {
+			return «EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardNoSourceFile()) FOR editorGen»;
+		}
+		return null;
+	}
+}
+«ENDDEFINE»
+
+«DEFINE ShortcutElementSelectorPage FOR gmfgen::GenDiagram-»
+«EXPAND xpt::Common::generatedClassComment»
+private class ShortcutElementSelectorPage extends «EXPAND xpt::editor::ModelElementSelectionPage::qualifiedClassName» {
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected ShortcutElementSelectorPage() {
+		super(«EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardShortcutElementSelectorPageName()) FOR editorGen»);
+		setTitle(«EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardShortcutElementSelectorPageTitle()) FOR editorGen»);
+		setDescription(«EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardShortcutElementSelectorPageDescription()) FOR editorGen»);
+	}
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected String getSelectionTitle() {
+		return «EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardShortcutElementSelectorPageLabelText()) FOR editorGen»;
+	}
+	«EXPAND xpt::Common::generatedMemberComment»
+	public void setVisible(boolean visible) {
+		if (visible) {
+			org.eclipse.emf.ecore.resource.Resource resource;
+			try {
+				resource = myEditingDomain.getResourceSet().getResource(myShortcutDomainModelURI, true);
+			} catch (org.eclipse.emf.common.util.WrappedException e) {
+				resource = null;
+			}
+			setModelResource(resource);
+		}
+		super.setVisible(visible);
+	}
+	«EXPAND xpt::Common::generatedMemberComment»
+	protected boolean validatePage() {
+		myShortcutDomainModelElement = getModelElement();
+		if (myShortcutDomainModelElement == null) {
+			setErrorMessage(«EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardShortcutElementSelectorPageNoElementSelected()) FOR editorGen»);
+			return false;
+		}
+		if (myGraphicalViewer.getEditPartRegistry().get(myShortcutDomainModelElement) != null) {
+			setErrorMessage(«EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardShortcutElementSelectorPageDuplicateShortcut()) FOR editorGen»);
+			myShortcutDomainModelElement = null;
+			return false;
+		}
+		org.eclipse.gmf.runtime.lite.commands.CreateNotationalElementCommand createShortcutCommand = getCreateShortcutCommand();
+		if (createShortcutCommand == null || !createShortcutCommand.canExecute()) {
+			setErrorMessage(«EXPAND xpt::Externalizer::accessorCall(i18nForNewShortcutWizardShortcutElementSelectorPageCannotCreateShortcut()) FOR editorGen»);
+			return false;
+		} else {
+			setErrorMessage(null);
+			return true;
+		}
+	}
+}
+«ENDDEFINE»
+
+«DEFINE additions FOR gmfgen::GenDiagram»«ENDDEFINE»
+
+«DEFINE i18nAccessors FOR gmfgen::GenDiagram-»
+«IF isRichClientPlatform() && generateCreateShortcutAction()-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardSourceURISelectorPageName())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardSourceURISelectorPageTitle())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardSourceURISelectorPageDescription())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardNoSourceFile())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardShortcutElementSelectorPageName())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardShortcutElementSelectorPageTitle())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardShortcutElementSelectorPageDescription())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardShortcutElementSelectorPageLabelText())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardShortcutElementSelectorPageNoElementSelected())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardShortcutElementSelectorPageDuplicateShortcut())-»
+«EXPAND xpt::Externalizer::accessorField(i18nForNewShortcutWizardShortcutElementSelectorPageCannotCreateShortcut())-»
+«ENDIF-»
+«ENDDEFINE»
+
+«DEFINE i18nValues FOR gmfgen::GenDiagram-»
+«IF isRichClientPlatform() && generateCreateShortcutAction()-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardNoSourceFile(), "Source file does not exist")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardSourceURISelectorPageName(), "Select source file")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardSourceURISelectorPageTitle(), "Source file")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardSourceURISelectorPageDescription(), "Select file with semantic model element to be depicted as shortcut")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardShortcutElementSelectorPageName(), "Select shortcut element")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardShortcutElementSelectorPageTitle(), "Shortcut element")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardShortcutElementSelectorPageDescription(), "Select semantic model element to be depicted as shortcut")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardShortcutElementSelectorPageLabelText(), "&Select shortcut element")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardShortcutElementSelectorPageNoElementSelected(), "No shortcut element selected")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardShortcutElementSelectorPageDuplicateShortcut(), "Cannot create shortcut: the given semantic model element is already present on the diagram")-»
+«EXPAND xpt::Externalizer::messageEntry(i18nForNewShortcutWizardShortcutElementSelectorPageCannotCreateShortcut(), "Cannot create shortcut with the given semantic model element")-»
+«ENDIF-»
+«ENDDEFINE»
+
