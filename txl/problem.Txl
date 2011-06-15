@@ -19,12 +19,9 @@ define desc
     [opt  ':]  [stringlit] 
 end define
 define phenomena
-            [NL]
     [name] 
-    |    [NL]
-    'event  [name] 
-    |    [NL]
-    'state  [name] 
+    |    'event  [name] 
+    |    'state  [name] 
 end define
 define type
     'R 
@@ -77,13 +74,13 @@ define tok
     |    '- 
 end define
 define header
-    [comment_nl]  'problem  [SPOFF]  ':  [SPON]  [name] 
+    [comment_nl]  'problem  [SPOFF]  ':  [SPON]  [name]  [NL] 
 end define
 define my_comment
     [comment] 
 end define
 define comment_nl
-    [repeat my_comment]  [NL] 
+    [repeat my_comment] 
 end define
 define program
     [header]  [opt problem_description] 
@@ -92,14 +89,12 @@ define problem_description
     [indent]  [repeat E +]  [dedent] 
 end define
 define E
-    [comment_nl]  [NL]
-    [name]  [opt type]  [opt details]  [comment_nl]  [opt  ':]  [comment_nl]  [opt stringlit] 
-    |    [comment_nl]  [NL]
-    [name]  [SP]  [SPOFF]  [rel]  [SPON]  [name]  [comment_nl]  [opt details]  [comment_nl]  [opt desc] 
+    [comment_nl]  [name]  [opt type]  [opt details]  [comment_nl]  [opt  ':]  [comment_nl]  [opt stringlit]  [NL] 
+    |    [comment_nl]  [name]  [SP]  [SPOFF]  [rel]  [SPON]  [name]  [comment_nl]  [opt details]  [comment_nl]  [opt desc]  [NL
+              ] 
 end define
 define details
-    '{ [indent]  [list phenomena]  [NL]
-    [dedent]  '} 
+    '{ [indent]  [list phenomena]  [dedent]  '} 
 end define
 rule Small B  [E]
     match  [E]
