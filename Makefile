@@ -23,6 +23,7 @@ target+=$(bin)/normc
 target+=$(bin)/norm-include-c 
 target+=$(bin)/problemcc 
 target+=$(bin)/api_clone_javacc 
+target+=$(bin)/xml-mctc 
 target+=$(bin)/mdsdcc 
 target+=$(bin)/modelcc 
 target+=$(bin)/verilog2cc 
@@ -130,6 +131,10 @@ $(bin)/%cc: Txl/%.Txl Makefile
 	$(txlc) -comment -d DEFINE -d COMMENTS Txl/$*.Txl
 	mv $*.x $@
 
+$(bin)/xml-mctc: Txl/xml-mct.Txl Makefile
+	$(txlc) Txl/xml-mct.Txl
+	mv xml-mct.x $@
+
 $(bin)/norm-include-c: Txl/norm.Txl Makefile
 	$(txlc) Txl/norm.Txl
 	mv norm.x $@
@@ -166,6 +171,14 @@ Txl/%.Txl: $(bin)/normc source/norm/%.norm
 	rm -f $TMPFILE t.norm
 
 Txl/verilog2.Txl: $(bin)/norm-include-c source/norm/verilog2.norm
+	/usr/bin/time $^ -o $@
+	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
+	echo $$TMPFILE
+	/usr/bin/time $^ -o $TMPFILE
+	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
+	rm -f $TMPFILE
+
+Txl/xml-mct.Txl: $(bin)/norm-include-c source/norm/xml-mct.norm
 	/usr/bin/time $^ -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE

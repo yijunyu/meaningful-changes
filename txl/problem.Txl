@@ -109,7 +109,7 @@ construct SA  [stringlit]
 construct SB  [stringlit]
     _  [quote  B] 
 where
-    SA  [<  SB] end rule
+    SA  [>  SB] end rule
 
     keys
         ... <<<<<<  >>>>>> 
@@ -465,6 +465,150 @@ where
             N2  N1  Rest 
     end rule
 
+    function normalise_ignore_by2_E_details2 E1  [E]
+        replace  [E *]
+            Seq  [E *] 
+        deconstruct not E1
+            X9  [comment_nl]  X10  [name]  X11  [opt type]  X12  [opt details]  X13  [comment_nl]  X14  [opt  ':]  X15  [
+              comment_nl]  X16  [opt stringlit] 
+        by
+            Seq  [ . E1 ] 
+    end function
+
+    function normalise_ignore_by3_E_details2 E1  [E]
+        replace  [E *]
+            Seq  [E *] 
+        deconstruct E1
+            X9  [comment_nl]  X10  [name]  X11  [opt type]  X12  [opt details]  X13  [comment_nl]  X14  [opt  ':]  X15  [
+              comment_nl]  X16  [opt stringlit] 
+        construct E2  [E]
+            X9  X10  X11  X13  X14  X15  X16 
+        by
+            Seq  [ . E2 ] 
+    end function
+
+    function normalise_ignore_by4_E_details2
+        replace  [program]
+            P1  [ program ] 
+        construct List1  [E *]
+            _  [ ^  P1 ] 
+        construct List2  [E *]
+            _  [normalise_ignore_by3_E_details2  each  List1]  [normalise_ignore_by2_E_details2  each  List1]
+ 
+        construct P2  [program]
+            P1  [ $  List1  List2 ] 
+        by
+            P2 
+    end function
+
+    function normalise_ignore_by2_E_details4 E1  [E]
+        replace  [E *]
+            Seq  [E *] 
+        deconstruct not E1
+            X28  [comment_nl]  X29  [name]  X30  [SP]  X31  [SPOFF]  X32  [rel]  X33  [SPON]  X34  [name]  X35  [comment_nl] 
+              X36  [opt details]  X37  [comment_nl]  X38  [opt desc] 
+        by
+            Seq  [ . E1 ] 
+    end function
+
+    function normalise_ignore_by3_E_details4 E1  [E]
+        replace  [E *]
+            Seq  [E *] 
+        deconstruct E1
+            X28  [comment_nl]  X29  [name]  X30  [SP]  X31  [SPOFF]  X32  [rel]  X33  [SPON]  X34  [name]  X35  [comment_nl] 
+              X36  [opt details]  X37  [comment_nl]  X38  [opt desc] 
+        construct E2  [E]
+            X28  X29  X30  X31  X32  X33  X34  X35  X37  X38 
+        by
+            Seq  [ . E2 ] 
+    end function
+
+    function normalise_ignore_by4_E_details4
+        replace  [program]
+            P1  [ program ] 
+        construct List1  [E *]
+            _  [ ^  P1 ] 
+        construct List2  [E *]
+            _  [normalise_ignore_by3_E_details4  each  List1]  [normalise_ignore_by2_E_details4  each  List1]
+ 
+        construct P2  [program]
+            P1  [ $  List1  List2 ] 
+        by
+            P2 
+    end function
+
+    function normalise_ignore_by2_E_details6 E1  [E]
+        replace  [E *]
+            Seq  [E *] 
+        deconstruct not E1
+            X47  [comment_nl]  X48  [name]  X49  [opt type]  X50  [opt details]  X51  [comment_nl]  X52  [opt  ':]  X53  [
+              comment_nl]  X54  [opt stringlit] 
+        by
+            Seq  [ . E1 ] 
+    end function
+
+    function normalise_ignore_by3_E_details6 E1  [E]
+        replace  [E *]
+            Seq  [E *] 
+        deconstruct E1
+            X47  [comment_nl]  X48  [name]  X49  [opt type]  X50  [opt details]  X51  [comment_nl]  X52  [opt  ':]  X53  [
+              comment_nl]  X54  [opt stringlit] 
+        construct E2  [E]
+            X47  X48  X49  X51  X52  X53  X54 
+        by
+            Seq  [ . E2 ] 
+    end function
+
+    function normalise_ignore_by4_E_details6
+        replace  [program]
+            P1  [ program ] 
+        construct List1  [E *]
+            _  [ ^  P1 ] 
+        construct List2  [E *]
+            _  [normalise_ignore_by3_E_details6  each  List1]  [normalise_ignore_by2_E_details6  each  List1]
+ 
+        construct P2  [program]
+            P1  [ $  List1  List2 ] 
+        by
+            P2 
+    end function
+
+    function normalise_ignore_by2_E_details8 E1  [E]
+        replace  [E *]
+            Seq  [E *] 
+        deconstruct not E1
+            X66  [comment_nl]  X67  [name]  X68  [SP]  X69  [SPOFF]  X70  [rel]  X71  [SPON]  X72  [name]  X73  [comment_nl] 
+              X74  [opt details]  X75  [comment_nl]  X76  [opt desc] 
+        by
+            Seq  [ . E1 ] 
+    end function
+
+    function normalise_ignore_by3_E_details8 E1  [E]
+        replace  [E *]
+            Seq  [E *] 
+        deconstruct E1
+            X66  [comment_nl]  X67  [name]  X68  [SP]  X69  [SPOFF]  X70  [rel]  X71  [SPON]  X72  [name]  X73  [comment_nl] 
+              X74  [opt details]  X75  [comment_nl]  X76  [opt desc] 
+        construct E2  [E]
+            X66  X67  X68  X69  X70  X71  X72  X73  X75  X76 
+        by
+            Seq  [ . E2 ] 
+    end function
+
+    function normalise_ignore_by4_E_details8
+        replace  [program]
+            P1  [ program ] 
+        construct List1  [E *]
+            _  [ ^  P1 ] 
+        construct List2  [E *]
+            _  [normalise_ignore_by3_E_details8  each  List1]  [normalise_ignore_by2_E_details8  each  List1]
+ 
+        construct P2  [program]
+            P1  [ $  List1  List2 ] 
+        by
+            P2 
+    end function
+
     rule normalise_list_details_phenomena
         replace  [list phenomena]
             N1  [phenomena] ,  N2  [phenomena] ,  Rest  [list phenomena] 
@@ -482,7 +626,9 @@ where
         replace  [program]
             Prg  [ program ] 
         by
-            Prg  [ normalise_list_problem_description_E ]  [ normalise_list_details_phenomena ] 
+            Prg  [ normalise_ignore_by4_E_details2 ]  [ normalise_ignore_by4_E_details4 ]  [ normalise_ignore_by4_E_details6 ] 
+              [ normalise_ignore_by4_E_details8 ]  [ normalise_list_problem_description_E ]  [ normalise_list_details_phenomena 
+              ] 
     end function
 
     function program_remove_clone
