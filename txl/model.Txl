@@ -1301,7 +1301,7 @@ function print_diff
     construct P_Left  [program]
         P_diff  [ print_diff_1 ]  [ print_diff_2 ]  [ printattr ] 
     construct P_Right  [program]
-        Program_Diff  [ print_diff_1 ]  [ print_diff_2 ]  [ printattr ] 
+        Program_Diff  [ print_diff_1 ]  [ print_diff_2 ]  [ print ] 
     by
         P_Clone 
 end function

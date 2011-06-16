@@ -24,6 +24,7 @@ target+=$(bin)/norm-include-c
 target+=$(bin)/problemcc 
 target+=$(bin)/api_clone_javacc 
 target+=$(bin)/xml-mctc 
+target+=$(bin)/xml-mctcc
 target+=$(bin)/mdsdcc 
 target+=$(bin)/modelcc 
 target+=$(bin)/verilog2cc 
@@ -139,6 +140,10 @@ $(bin)/norm-include-c: Txl/norm.Txl Makefile
 	$(txlc) Txl/norm.Txl
 	mv norm.x $@
 
+$(bin)/norm-no_clone-include-c: Txl/norm.Txl Makefile
+	$(txlc) -d NO_CLONE Txl/norm.Txl
+	mv norm.x $@
+
 $(bin)/verilog2c: Txl/verilog2.Txl Makefile
 	$(txlc) Txl/verilog2.Txl
 	mv verilog2.x $@
@@ -178,7 +183,7 @@ Txl/verilog2.Txl: $(bin)/norm-include-c source/norm/verilog2.norm
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-Txl/xml-mct.Txl: $(bin)/norm-include-c source/norm/xml-mct.norm
+Txl/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/xml-mct.norm
 	/usr/bin/time $^ -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
