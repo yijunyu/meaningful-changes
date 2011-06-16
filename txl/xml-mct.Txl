@@ -1,12 +1,17 @@
 include "XML.Grammar"
 redefine empty_elem_tag
 
-    '<  [name]  [spaces]  [repeat attribute]  '/> 
+    '<  [name]  [repeat attribute]  [opt spaces]  '/> 
 
 end define
 redefine stag
 
-    '<  [name]  [spaces]  [repeat attribute]  '> 
+    '<  [name]  [repeat attribute]  [opt spaces]  '> 
+
+end define
+redefine attribute
+
+    [spaces]  [name]  '=  [attvalue] 
 
 end define
 keys
