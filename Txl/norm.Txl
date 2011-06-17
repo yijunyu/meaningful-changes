@@ -29,6 +29,29 @@ function DS_replace DS [redefineStatement]
  by S
 end function
 
+function printRepeat
+ replace [typeSpec*] S1 [typeSpec] S2 [typeSpec*]
+ construct Str [stringlit] _ [quote S1]
+ where Str [grep "repeat"]
+ construct T2 [typeSpec*] S2 [printRepeat] [printRepeatNot]
+ construct T1 [typeSpec] S1 [print]
+ by _ [. T1] [. T2]
+end function
+
+function printRepeatNot
+ replace [typeSpec*] S1 [typeSpec] S2 [typeSpec*]
+ construct Str [stringlit] _ [quote S1]
+ where not Str [grep "repeat"]
+ construct T2 [typeSpec*] S2 [printRepeatNot] [printRepeat]
+ by _ [. T2]
+end function
+
+function promptTerms
+ replace [program] P [program]
+ construct T [typeSpec*] _ [^ P] [printRepeat][printRepeatNot]
+ by P
+end function
+
 % Normalise all definitions where [list X] or [repeat X] have to be ordered by
 % a function.
 %
@@ -200,11 +223,15 @@ function main
 #ifdef DEFINE
 	[redefine2define]
 #endif
+#ifdef PROMPT
+	[promptTerms]
+#endif
 	[typeSpec_eliminateKeptAnnotations] 
 	[typeSpec_eliminateOrderedAnnotations]
 	[typeSpec_eliminateIgnoredAnnotations]
 	[typeSpec_eliminatePreferredAnnotations]
 end function
+
 
 % Yijun Yu: TXL program is hard to read, some conventions I try to adopt: 
 %%%% Variable names:
