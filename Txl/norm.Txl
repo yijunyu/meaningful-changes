@@ -8,6 +8,14 @@ include "mct-ordered.txl"
 include "mct-ignored.txl"
 include "mct-preferred.txl"
 include "mct-kept.txl"
+
+rule typeSpec_eliminateAnnotations
+ replace * [typeSpec] T [typeSpec] 
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [opt preferredWith]
+ deconstruct not T M I R
+ by M I R
+end rule
+
 %
 % Process all the [list Foo] or [repeat Foo] in the redefine statements
 %
@@ -23,8 +31,8 @@ function DS_replace DS [redefineStatement]
  construct S3 [statement*] _ [typeSpec_list_byField DS each T1]
  construct S4 [statement*] _ [typeSpec_list DS each T1]
  construct S5 [statement*] _ [typeSpec_ignore_when DS each T1]
- construct S6 [statement*] _ [typeSpec_ignore DS each T1]
- construct S7 [statement*] _ [typeSpec_preferred_withField DS each T1]
+ construct S6 [statement*] _ [typeSpec_ignore DS each T1] 
+ construct S7 [statement*] _ [typeSpec_preferred_withLiterals DS each T1] [typeSpec_preferred_withRuleApplications DS each T1]
  construct S [statement*] S0 [. S1] [. S2] [. S3] [. S4] [. S5] [. S6] [. S7]
  by S
 end function
@@ -226,24 +234,5 @@ function main
 #ifdef PROMPT
 	[promptTerms]
 #endif
-	[typeSpec_eliminateKeptAnnotations] 
-	[typeSpec_eliminateOrderedAnnotations]
-	[typeSpec_eliminateIgnoredAnnotations]
-	[typeSpec_eliminatePreferredAnnotations]
+	[typeSpec_eliminateAnnotations] 
 end function
-
-
-% Yijun Yu: TXL program is hard to read, some conventions I try to adopt: 
-%%%% Variable names:
-%   Type_VariableName, or more commonly 
-%   T<number>? where T is the abbreviation of the Type name (often the
-%	first letter) and the <number> is to differentiate the variables
-%	function/rule names   type_FunctionName
-%   d_VariableNameAbove -- for debug purposes:
-%	construct d_VariableNameAbove [Type] VariableNameAbove [print]
-%%%% Function names, except for `main' whose type is always [program]:
-%   function type_FunctionName ...
-%     replace [type] FunctionName [type]
-%     by _
-%   end function
-

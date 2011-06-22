@@ -1,11 +1,3 @@
-
-rule typeSpec_eliminateKeptAnnotations
- replace * [typeSpec] T [typeSpec] 
- deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] 
-	K [kept] 
- by M I R
-end rule
-
 % Construct rules to eliminate all clones in type T 
 %
 rule typeSpec_removeClones

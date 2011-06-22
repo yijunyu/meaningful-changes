@@ -1,10 +1,3 @@
-rule typeSpec_eliminateIgnoredAnnotations
- replace * [typeSpec] T [typeSpec] 
- deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] 
-	Ig [ignoredWhen] 
- by M I R
-end rule
-
 %
 % Ignore the node unconditionally
 %
@@ -37,9 +30,9 @@ end function
 % LoT 
 function typeSpec_ignore_LoT0 TID [typeid] T [typeSpec] LoT [literalOrType*] 
  replace [statement*] S [statement*] 
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
  where LoT [contains T]
- deconstruct Ig 'ignored 
+ deconstruct Ig 'ignored
  construct StrID [id] _ [quote TID]
  export Expression [literalOrExpression*] _
  construct TT [type] '[ T ']
@@ -65,6 +58,7 @@ function typeSpec_ignore_LoT0 TID [typeid] T [typeSpec] LoT [literalOrType*]
     'function ruleID3 'E1 '[ TID ']
     	'replace '[ TID '* '] 'Seq '[ TID '* ']
         'deconstruct 'E1 Pattern
+% Ignore the singleton, that's different from the next function
      	'by 'Seq 
     'end 'function
     'function ruleID4
@@ -83,7 +77,7 @@ function typeSpec_ignore_LoT0 TID [typeid] T [typeSpec] LoT [literalOrType*]
 end function
 function typeSpec_ignore_LoT TID [typeid] T [typeSpec] LoT [literalOrType*] 
  replace [statement*] S [statement*] 
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
  where LoT [contains T]
  deconstruct Ig 'ignored 
  construct StrID [id] _ [quote TID]
@@ -159,7 +153,7 @@ T [typeSpec]
 'redefine 
 #endif
 TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
  deconstruct Ig 'ignored W [whenField]
  deconstruct W 'when F [id]
  by S [typeSpec_ignore_when_LoT F TID T LoT] 
@@ -175,7 +169,7 @@ function typeSpec_ignore_when_LoT F [id] TID [typeid] T [typeSpec] LoT [literalO
  construct Pat [literalOrVariable*] _ [pattern_replacement_N12 TT each LoT]
  construct Pattern [pattern] Pat 
  construct Replacement [replacement] Expression
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] Ig [ignoredWhen]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
  deconstruct I TypeID [id] 
  construct ID1 [id] 'normalise_ignore_by1
  construct ruleID1 [id] ID1 [_ F] [_ StrID] [_ TypeID] [!]

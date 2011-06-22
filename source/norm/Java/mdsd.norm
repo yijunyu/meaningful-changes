@@ -1,0 +1,206 @@
+include "Java/java.grm"
+#ifdef COMMENTS
+include "Java/javaCommentOverrides.grm"
+#endif
+
+% Yijun Yu: May 2011
+% redefine method_body
+%         [repeat block preferred with '; ]
+%     |  [opt annotation_default] ';             % T.D. Oct 2007
+% end define
+
+redefine modifier
+        'abstract
+    |   'final
+    |   'public
+    |   'protected
+    |   'private
+    |   'static
+    |   'transient
+    |   'volatile
+    |   'native
+    |   'synchronized
+    |   'strictfp		% Added strictfp XG July 23, 2002
+    |   [repeat annotation ignored]		% T.D. Oct 2007
+end define
+
+redefine program
+    [package_declaration*]
+end define
+
+redefine type_declaration
+        [class_declaration]      [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    |   [interface_declaration]  [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    |   [enum_declaration]	    [NL] % T.D. Oct 2007
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+end define
+
+%redefine enum_body
+%    '{                                    [IN]
+%       [list enum_element] [opt ',]
+%       [repeat class_body_declaration ordered ]    [EX]
+%    '} [opt ';]                           [NL][NL]
+%end define
+
+% remove some extra spaces
+redefine import_declaration
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+	'import [opt 'static] [imported_name] '; [NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    | 	
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+'; [NL] 	% JRC Apr 08
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+end define
+
+redefine class_header
+    [repeat modifier ordered] 'class [class_name] [opt extends_clause] [opt implements_clause]
+end define
+
+% T.D. Oct 2007 -- added annotation marker 
+redefine interface_header
+    [repeat modifier ordered] [opt annot_marker] 'interface [interface_name] [opt extends_clause] [opt implements_clause]
+end define
+
+redefine enum_header
+    [repeat modifier ordered] [opt id] 'enum [opt declared_name][opt extends_clause] [opt implements_clause]
+end define
+
+redefine extends_clause
+    'extends [list type_name+ ordered]
+end define
+
+redefine implements_clause
+    'implements [list qualified_name+ ordered]
+end define
+
+redefine package_declaration
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    [opt package_header kept]
+    [repeat import_declaration ignored] 
+    [repeat type_declaration kept]
+end define
+
+redefine class_or_interface_body
+    '{                                    [NL][IN]
+       [repeat class_body_declaration kept ordered ignored when NotGeneratedNot preferred with [LiftToComment] ]    [EX] [NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    '} [opt ';]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+[NL][NL]
+end define
+
+% to match Java Code like:
+% public <T> void someMethod(T t) {
+%	// ...
+% }
+redefine constructor_declaration
+    [NL] [repeat modifier ordered] [opt generic_parameter] [constructor_declarator] [opt throws] [constructor_body] [NL][NL]
+end define
+
+redefine variable_declaration
+    [repeat modifier ordered] [type_specifier] [variable_declarators] '; [NL]
+end define
+
+redefine variable_declarators
+    [list variable_declarator+ ordered]
+end define
+
+% Method declarations 
+
+% generic method declaration (to match generic types used only in a method's declaration and body)
+redefine method_declaration
+    [NL] [repeat modifier ordered] [opt generic_parameter] [type_specifier] [method_declarator] [opt throws] [method_body]
+end define
+
+redefine throws
+    'throws [list qualified_name+ ordered]
+end define
+
+redefine annotation_value_list
+      [single_annotation_value]	% for single value annotation
+    | [list keyed_annotation_value ordered]
+end define
+
+redefine single_annotation_value
+      [expression]					% must be constant
+    | [nested_annotation]
+    | { [list expression_or_nested_annotation ordered] }	% array of annotation values
+end define
+
+redefine comment_nl
+%    [empty] | [repeat mycomment kept ignored when NotJavaDoc]
+    [empty] | [repeat mycomment kept]
+end define
+
+function contains Object [any] 
+    match * [any] Object
+end function
+
+function Private A  [class_body_declaration]
+    match  [class_or_interface_body]
+        B  [class_or_interface_body] 
+    construct M  [modifier *] _  [^ A] 
+    construct PublicModifiers [modifier*] 'public 'protected 
+    where not M [contains each PublicModifiers]
+end function
+
+function NotJavaDoc A  [mycomment]
+    match  [comment_nl]
+        B  [comment_nl] 
+    construct S_Comment [stringlit] _ [quote A] 
+    where not S_Comment [grep "\/\*\*"]
+end function
+
+function NotGeneratedNot A  [class_body_declaration]
+    match  [class_or_interface_body]
+        B  [class_or_interface_body] 
+    construct S_Cs [stringlit] _ [quote A]
+    where not S_Cs [grep "@generated NOT"]
+    import Program [program]
+    deconstruct * [class_or_interface_body] Program C [class_or_interface_body]
+    where C [= B]
+end function
+
+function remove_comment
+    replace * [comment_nl] X [comment_nl]
+    by _
+end function
+
+function self_comment
+    replace [class_body_declaration] X [class_body_declaration]
+    construct nc_X [class_body_declaration] X [remove_comment]
+    construct s_X [stringlit] _ [unparse nc_X]
+    construct s_Y [stringlit] _ [+ "/"] [+ "*"] [+ "* "] [+ "\n * <!-- begin-user-doc -->\n"] [+ s_X] [+ "\n * <!-- e"] [+ "nd-user-doc --> \n"] [+ " * @generated\n"] [+ " *"] [+ "/ "] [+ s_X]
+    construct Y [class_body_declaration] _ [parse s_Y]
+    by Y
+end function
+
+function LiftToComment 
+    replace [class_body_declaration*] A1 [class_body_declaration] A2 [class_body_declaration*]
+    construct B1 [class_body_declaration] A1 [self_comment]
+    construct B2 [class_body_declaration*] A2 [LiftToComment]
+    by _ [. B1] [. B2]
+end function

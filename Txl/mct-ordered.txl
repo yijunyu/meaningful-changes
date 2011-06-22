@@ -1,9 +1,3 @@
-rule typeSpec_eliminateOrderedAnnotations
- replace * [typeSpec] T [typeSpec] 
- deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept]
-	O [orderedBy] 
- by M I R
-end rule
 
 %
 % Process [repeat Foo ordered by Bar]

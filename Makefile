@@ -5,29 +5,29 @@ txlc=$(bin)/txlc
 #==== T A R G E T S ====
 norm=$(wildcard source/norm/*.norm)
 extensions+=$(norm:source/norm/%.norm=%)
-languages+=$(wildcard Txl/*.Txl)
+languages+=$(wildcard Txl/*/*.Txl)
 generated_language=$(norm:source/norm/%.norm=Txl/%.Txl)
 extensions+=$(languages:Txl/%.Txl=%)
 program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:source/%=result/%) 
-results+=result/mct/java/HelloWorld--2.java result/mct/java/HelloWorld-2-3.java
-results+=result/mct-comment/java/HelloWorld--2.java result/mct-comment/java/HelloWorld-2-3.java
-results+=result/mct-mdsd/java/HelloWorld--2.java result/mct-mdsd/java/HelloWorld-2-3.java
-results+=result/mct-mdsd-comment/java/HelloWorld--2.java result/mct-mdsd-comment/java/HelloWorld-2-3.java
-results+=result/mct-model/java/HelloWorld--2.java result/mct-model/java/HelloWorld-2-3.java
-results+=result/mct-model-comment/java/HelloWorld--2.java result/mct-model-comment/java/HelloWorld-2-3.java
+tools+=api_clone_java
+
+define diff_example_1
+results+=result/Java/$(1)/HelloWorld--2.java result/Java/$(1)/HelloWorld-2-3.java
+endef
+$(foreach tool,$(tools),$(eval $(call diff_example_1,$(tool))))
 example+=$(results)
 target+=$(bin)/normc 
 target+=$(bin)/norm-include-c 
-target+=$(bin)/problemcc 
-target+=$(bin)/api_clone_javacc 
-target+=$(bin)/xml-mctc 
-target+=$(bin)/xml-mctcc
-target+=$(bin)/mdsdcc 
-target+=$(bin)/modelcc 
-target+=$(bin)/verilog2cc 
+target+=$(bin)/ProblemFrames/problemcc 
+target+=$(bin)/Java/api_clone_javacc 
+target+=$(bin)/XML/xml-mctc 
+target+=$(bin)/Java/mdsdcc 
+target+=$(bin)/Java/modelcc 
+#target+=$(bin)/Verilog/verilog2cc 
+target+=$(bin)/cc 
 target+=$(program) $(results)
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
 package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
@@ -45,12 +45,25 @@ endef
 
 $(foreach ext,$(extensions),$(eval $(call example,$(ext))))
 
-Txl/api_clone_java.Txl: Txl/java.grm Txl/javaCommentOverrides.grm
-Txl/mdsd.Txl: Txl/java.grm Txl/javaCommentOverrides.grm
-Txl/model.Txl: Txl/java.grm Txl/javaCommentOverrides.grm
+define diff_example_2
+result/Java/$(1)/HelloWorld--2.java: $(bin)/Java/$(1)c source/Java/java/HelloWorld.java source/Java/java/HelloWorld-2.java 
+	@mkdir -p result/Java/$(1)
+	$(bin)/Java/$(1)c source/Java/java/HelloWorld.java -diff source/Java/java/HelloWorld-2.java -o $$@
+	if [ -e test/Java/$(1)/HelloWorld--2.java ]; then diff $$@ test/Java/$(1)/HelloWorld--2.java; fi
+
+result/Java/$(1)/HelloWorld-2-3.java: $(bin)/Java/$(1)c source/Java/java/HelloWorld-2.java source/Java/java/HelloWorld-3.java 
+	@mkdir -p result/Java/$(1)
+	$(bin)/Java/$(1)c source/Java/java/HelloWorld.java -diff source/Java/java/HelloWorld-2.java -o $$@
+	if [ -e test/Java/$(1)/HelloWorld-2-3.java ]; then diff $$@ test/Java/$(1)/HelloWorld-2-3.java; fi
+endef
+$(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool))))
+
 Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl
-Txl/problem.Txl: Txl/problem.grm
-Txl/xtext.Txl: Txl/xtext.grm
+Txl/Java/api_clone_java.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
+Txl/Java/mdsd.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
+Txl/Java/model.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
+Txl/ProblemFrames/problem.Txl: Txl/ProblemFrames/problem.grm
+Txl/Xtext/xtext.Txl: Txl/Xtext/xtext.grm
 
 result/v/%.v: $(bin)/vc source/v/%.v
 	@mkdir -p result/v
@@ -59,82 +72,36 @@ result/v/%.v: $(bin)/vc source/v/%.v
 	rm -f result/v/$*.v.tmp
 	if [ -e test/v/$*.v ]; then diff $@ test/v/$*.v; fi
 
-result/mct-model-comment/java/%--2.java: source/java/%.java source/java/%-2.java
-	@mkdir -p result/mct-model-comment/java
-	scripts/mct-model -comment $^ > $@
-	if [ -e test/mct-model-comment/java/$*--2.java ]; then diff $@ test/mct-model-comment/java/$*--2.java; fi
-
-result/mct-model-comment/java/%-2-3.java: source/java/%-2.java source/java/%-3.java
-	@mkdir -p result/mct-model-comment/java
-	scripts/mct-model -comment $^ > $@
-	if [ -e test/mct-model-comment/java/$*-2-3.java ]; then diff $@ test/mct-model-comment/java/$*-2-3.java; fi
-
-result/mct-model/java/%--2.java: scripts/mct-model source/java/%.java source/java/%-2.java
-	@mkdir -p result/mct-model/java
-	$^ > $@
-	if [ -e test/mct-model/java/$*--2.java ]; then diff $@ test/mct-model/java/$*--2.java; fi
-
-result/mct-model/java/%-2-3.java: scripts/mct-model source/java/%-2.java source/java/%-3.java
-	@mkdir -p result/mct-model/java
-	$^ > $@
-	if [ -e test/mct-model/java/$*-2-3.java ]; then diff $@ test/mct-model/java/$*-2-3.java; fi
-
-result/mct-mdsd-comment/java/%--2.java: source/java/%.java source/java/%-2.java
-	@mkdir -p result/mct-mdsd-comment/java
-	scripts/mct-mdsd -comment $^ > $@
-	if [ -e test/mct-mdsd-comment/java/$*--2.java ]; then diff $@ test/mct-mdsd-comment/java/$*--2.java; fi
-
-result/mct-mdsd-comment/java/%-2-3.java: source/java/%-2.java source/java/%-3.java
-	@mkdir -p result/mct-mdsd-comment/java
-	scripts/mct-mdsd -comment $^ > $@
-	if [ -e test/mct-mdsd-comment/java/$*-2-3.java ]; then diff $@ test/mct-mdsd-comment/java/$*-2-3.java; fi
-
-result/mct-mdsd/java/%--2.java: scripts/mct-mdsd source/java/%.java source/java/%-2.java
-	@mkdir -p result/mct-mdsd/java
-	$^ > $@
-	if [ -e test/mct-mdsd/java/$*--2.java ]; then diff $@ test/mct-mdsd/java/$*--2.java; fi
-
-result/mct-mdsd/java/%-2-3.java: scripts/mct-mdsd source/java/%-2.java source/java/%-3.java
-	@mkdir -p result/mct-mdsd/java
-	$^ > $@
-	if [ -e test/mct-mdsd/java/$*-2-3.java ]; then diff $@ test/mct-mdsd/java/$*-2-3.java; fi
-
-result/mct-comment/java/%--2.java: source/java/%.java source/java/%-2.java
-	@mkdir -p result/mct-comment/java
-	scripts/mct -comment $^ > $@
-	if [ -e test/mct-comment/java/$*--2.java ]; then diff $@ test/mct-comment/java/$*--2.java; fi
-
-result/mct-comment/java/%-2-3.java: source/java/%-2.java source/java/%-3.java
-	@mkdir -p result/mct-comment/java
-	scripts/mct -comment $^ > $@
-	if [ -e test/mct-comment/java/$*-2-3.java ]; then diff $@ test/mct-comment/java/$*-2-3.java; fi
-
-result/mct/java/%--2.java: scripts/mct source/java/%.java source/java/%-2.java
-	@mkdir -p result/mct/java
-	$^ > $@
-	if [ -e test/mct/java/$*--2.java ]; then diff $@ test/mct/java/$*--2.java; fi
-
-result/mct/java/%-2-3.java: scripts/mct source/java/%-2.java source/java/%-3.java
-	@mkdir -p result/mct/java
-	$^ > $@
-	if [ -e test/mct/java/$*-2-3.java ]; then diff $@ test/mct/java/$*-2-3.java; fi
-
 result/verilog2/%.v: $(bin)/verilog2c source/v/%.v
 	@mkdir -p result/verilog2
 	$(bin)/verilog2c result/v/$*.v -o $@
 	if [ -e test/verilog2/$*.v ]; then diff $@ test/verilog2/$*.v; fi
 
 $(bin)/%c: Txl/%.Txl Makefile
-	$(txlc) -d DEFINE Txl/$*.Txl
-	mv $*.x $@
+	mkdir -p $$(dirname $@)
+	if [ "$$(basename Txl/$*.Txl)" != "$*.Txl" ]; then cp Txl/$*.Txl Txl/$$(basename Txl/$*.Txl); fi
+	$(txlc) -d DEFINE Txl/$$(basename Txl/$*.Txl)
+	mv $$(basename $*.x) $@
+	rm -f Txl/$$(basename Txl/$*.Txl)
 
 $(bin)/%cc: Txl/%.Txl Makefile
-	$(txlc) -comment -d DEFINE -d COMMENTS Txl/$*.Txl
-	mv $*.x $@
+	mkdir -p $$(dirname $@)
+	cp Txl/$*.Txl Txl/$$(basename Txl/$*.Txl)
+	$(txlc) -comment -d DEFINE -d COMMENTS Txl/$$(basename Txl/$*.Txl)
+	mv $$(basename $*.x) $@
+	rm -f Txl/$$(basename Txl/$*.Txl)
 
-$(bin)/xml-mctc: Txl/xml-mct.Txl Makefile
-	$(txlc) Txl/xml-mct.Txl
+$(bin)/normc: Txl/norm.Txl Makefile
+	$(txlc) -d DEFINE Txl/norm.Txl
+	mv norm.x $@
+
+$(bin)/xml-mctc: Txl/XML/xml-mct.Txl Makefile
+	$(txlc) Txl/XML/xml-mct.Txl
 	mv xml-mct.x $@
+
+$(bin)/cidc: Txl/cid.Txl Makefile
+	$(txlc) Txl/cid.Txl
+	mv cid.x $@
 
 $(bin)/norm-include-c: Txl/norm.Txl Makefile
 	$(txlc) Txl/norm.Txl
@@ -144,17 +111,23 @@ $(bin)/norm-no_clone-include-c: Txl/norm.Txl Makefile
 	$(txlc) -d NO_CLONE Txl/norm.Txl
 	mv norm.x $@
 
-$(bin)/verilog2c: Txl/verilog2.Txl Makefile
-	$(txlc) Txl/verilog2.Txl
-	mv verilog2.x $@
+#$(bin)/verilog2c: Txl/verilog2.Txl Makefile
+#	$(txlc) Txl/verilog2.Txl
+#	mv verilog2.x $@
 
-$(bin)/problemc: Txl/problem.Txl Makefile
+$(bin)/ProblemFrames/problemc: Txl/ProblemFrames/problem.Txl Makefile
+	cp Txl/ProblemFrames/problem.Txl Txl/problem.Txl
 	$(txlc) Txl/problem.Txl
+	mkdir -p $$(dirname $@)
 	mv problem.x $@
+	rm -f Txl/problem.Txl
 
-$(bin)/problemcc: Txl/problem.Txl Makefile
-	$(txlc) -comment -d COMMENTS Txl/problem.Txl
-	mv problem.x $@
+#$(bin)/ProblemFrames/problemcc: Txl/ProblemFrames/problem.Txl Makefile
+#	mkdir -p $$(dirname $@)
+#	mv Txl/ProblemFrames/problem.Txl Txl/problem.Txl
+#	$(txlc) -comment -d COMMENTS Txl/problem.Txl
+#	mv problem.x $@
+#	rm -f Txl/problem.Txl
 
 # if the grammar does not handle comments, don't use -comment -d COMMENTS options yet
 $(bin)/vc: Txl/v.Txl Makefile
@@ -164,6 +137,13 @@ $(bin)/vc: Txl/v.Txl Makefile
 $(bin)/xtextc: Txl/xtext.Txl Makefile
 	$(txlc) Txl/xtext.Txl
 	mv xtext.x $@
+
+$(bin)/cc: Txl/C/c.Txl Makefile
+	mkdir -p $$(dirname $@)
+	cp Txl/C/c.Txl Txl/c.Txl
+	$(txlc) Txl/c.Txl
+	mv c.x $@
+	rm -f Txl/c.Txl
 
 # normalise 
 Txl/%.Txl: $(bin)/normc source/norm/%.norm
@@ -184,6 +164,14 @@ Txl/verilog2.Txl: $(bin)/norm-include-c source/norm/verilog2.norm
 	rm -f $TMPFILE
 
 Txl/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/xml-mct.norm
+	/usr/bin/time $^ -o $@
+	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
+	echo $$TMPFILE
+	/usr/bin/time $^ -o $TMPFILE
+	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
+	rm -f $TMPFILE
+
+Txl/cid.Txl: $(bin)/norm-no_clone-include-c source/norm/cid.norm
 	/usr/bin/time $^ -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
