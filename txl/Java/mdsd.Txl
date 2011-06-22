@@ -698,6 +698,15 @@ function remove_comment
         _ 
 end function
 
+function construct_comment S  [stringlit]
+    replace  [comment]
+        _  [comment] 
+    construct C  [comment]
+        _  [+  "/"]  [+  "** "]  [+  S]  [+  " *"]  [+  "/"] 
+    by
+        C 
+end function
+
 function self_comment
     replace  [class_body_declaration]
         X  [class_body_declaration] 
@@ -705,9 +714,18 @@ function self_comment
         X  [remove_comment] 
     construct s_X  [stringlit]
         _  [unparse  nc_X] 
+    construct C_1  [comment]
+        _  [construct_comment  " <!-- begin-user-doc -->"] 
+    construct C_2  [comment]
+        _  [construct_comment  s_X] 
+    construct C_3  [comment]
+        _  [construct_comment  " <!-- end-user-doc -->"] 
+    construct C_4  [comment]
+        _  [construct_comment  " @generated "] 
+    construct C  [comment *]
+        _  [. C_1]  [. C_2]  [. C_3]  [. C_4] 
     construct s_Y  [stringlit]
-        _  [+  "/"]  [+  "*"]  [+  "* "]  [+  "\n * <!-- begin-user-doc -->\n"]  [+  s_X]  [+  "\n * <!-- e"]  [+ 
-                  "nd-user-doc --> \n"]  [+  " * @generated\n"]  [+  " *"]  [+  "/ "]  [+  s_X] 
+        _  [quote  C]  [+  s_X] 
     construct Y  [class_body_declaration]
         _  [parse  s_Y] 
     by
