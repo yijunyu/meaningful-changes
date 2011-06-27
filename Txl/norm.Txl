@@ -16,6 +16,11 @@ rule typeSpec_eliminateAnnotations
  by M I R
 end rule
 
+rule mct_eliminateAnnotations
+ replace [statement*] T [MCT_annotate] Rest [statement*]
+ by Rest
+end rule
+
 %
 % Process all the [list Foo] or [repeat Foo] in the redefine statements
 %
@@ -271,4 +276,5 @@ function main
 	[promptTerms]
 #endif
 	[typeSpec_eliminateAnnotations] 
+	[mct_eliminateAnnotations] 
 end function

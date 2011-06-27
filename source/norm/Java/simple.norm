@@ -1,0 +1,43 @@
+include "Java/java.grm"
+
+% Yijun Yu, June, 2011
+% The rules are redefined to include annotations
+
+annotate class_or_interface_body [repeat class_body_declaration kept ordered ignored when Private] 
+annotate method_body [repeat block preferred with ';] 
+annotate constructor_body [repeat block preferred with '{ '}] 
+annotate enum_body [repeat class_body_declaration kept ordered] 
+annotate type_declaration [class_declaration kept] 
+annotate type_declaration [interface_declaration kept ordered] 
+annotate type_declaration [enum_declaration kept] 
+annotate package_declaration [opt package_header kept] 
+annotate package_declaration [repeat import_declaration kept ordered] 
+annotate class_header [repeat modifier ordered]
+annotate interface_header [repeat modifier ordered]
+annotate enum_header [repeat modifier ordered]
+annotate extends_clause [list type_name+ ordered]
+annotate implements_clause [list qualified_name+ ordered]
+annotate constructor_declaration [repeat modifier ordered] 
+annotate variable_declaration [repeat modifier ordered] 
+annotate variable_declarators [list variable_declarator+ ordered]
+annotate method_declaration [repeat modifier ordered] 
+annotate throws [list qualified_name+ ordered]
+annotate annotation_value_list [list keyed_annotation_value ordered]
+annotate single_annotation_value [list expression_or_nested_annotation ordered]
+annotate catch_clause [repeat modifier ordered]
+
+#ifdef COMMENTS
+    include "Java/javaCommentOverrides.grm"
+#endif
+
+function contains Object [any] 
+    match * [any] Object
+end function
+
+function Private A  [class_body_declaration]
+    match  [class_or_interface_body]
+        B  [class_or_interface_body] 
+    construct M  [modifier *] _  [^ A] 
+    construct PublicModifiers [modifier*] 'public 'protected 
+    where not M [contains each PublicModifiers]
+end function
