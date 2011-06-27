@@ -3,13 +3,13 @@ bin=bin.$(shell uname -s -m | sed 's/ /_/')
 txl=$(bin)/txl
 txlc=$(bin)/txlc
 #==== T A R G E T S ====
-norm=$(wildcard source/norm/*.norm)
+norm=$(wildcard source/norm/*/*.norm)
 extensions+=$(norm:source/norm/%.norm=%)
 languages+=$(wildcard Txl/*/*.Txl)
 generated_language=$(norm:source/norm/%.norm=Txl/%.Txl)
 extensions+=$(languages:Txl/%.Txl=%)
 program+=$(extensions:%=$(bin)/%c)
-source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.$(ext)))
+source+=$(foreach ext,$(extensions),$(wildcard source/*/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(source:source/%=result/%) 
 tools+=api_clone_java
@@ -26,7 +26,9 @@ target+=$(bin)/Java/api_clone_javacc
 target+=$(bin)/XML/xml-mctc 
 target+=$(bin)/Java/mdsdcc 
 target+=$(bin)/Java/modelcc 
-#target+=$(bin)/Verilog/verilog2cc 
+target+=$(bin)/Q7/q7c 
+target+=$(bin)/Argument/argumentc 
+target+=$(bin)/Verilog/verilog2c
 target+=$(bin)/cc 
 target+=$(program) $(results)
 package=/home/share/sead/mct/mct-$(shell uname).tar.gz
@@ -99,9 +101,11 @@ $(bin)/xml-mctc: Txl/XML/xml-mct.Txl Makefile
 	$(txlc) Txl/XML/xml-mct.Txl
 	mv xml-mct.x $@
 
-$(bin)/cidc: Txl/cid.Txl Makefile
+$(bin)/C/cidc: Txl/C/cid.Txl Makefile
+	cp Txl/C/cid.Txl Txl/c.Txl
 	$(txlc) Txl/cid.Txl
 	mv cid.x $@
+	rm -f Txl/c.Txl
 
 $(bin)/norm-include-c: Txl/norm.Txl Makefile
 	$(txlc) Txl/norm.Txl
@@ -111,9 +115,9 @@ $(bin)/norm-no_clone-include-c: Txl/norm.Txl Makefile
 	$(txlc) -d NO_CLONE Txl/norm.Txl
 	mv norm.x $@
 
-#$(bin)/verilog2c: Txl/verilog2.Txl Makefile
-#	$(txlc) Txl/verilog2.Txl
-#	mv verilog2.x $@
+$(bin)/verilog2c: Txl/Verilog/verilog2.Txl Makefile
+	$(txlc) Txl/Verilog/verilog2.Txl
+	mv verilog2.x $@
 
 $(bin)/ProblemFrames/problemc: Txl/ProblemFrames/problem.Txl Makefile
 	cp Txl/ProblemFrames/problem.Txl Txl/problem.Txl
@@ -155,7 +159,7 @@ Txl/%.Txl: $(bin)/normc source/norm/%.norm
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE t.norm
 
-Txl/verilog2.Txl: $(bin)/norm-include-c source/norm/verilog2.norm
+Txl/Verilog/verilog2.Txl: $(bin)/norm-include-c source/norm/Verilog/verilog2.norm
 	/usr/bin/time $^ -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
@@ -171,8 +175,8 @@ Txl/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/xml-mct.norm
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-Txl/cid.Txl: $(bin)/norm-no_clone-include-c source/norm/cid.norm
-	/usr/bin/time $^ -o $@
+Txl/C/cid.Txl: $(bin)/norm-no_clone-include-c source/norm/C/cid.norm
+	/usr/bin/time $(bin)/norm-no_clone-include-c -iTxl source/norm/C/cid.norm -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
 	/usr/bin/time $^ -o $TMPFILE
@@ -183,7 +187,7 @@ install: $(package)
 $(package): README.html $(program) $(norm) $(source) $(target) scripts # cvs
 	rm -rf $(dir $(package))
 	mkdir -p  $(dir $(package))
-	tar cfz $@ $^ result/*.txt
+	tar cfz $@ $^ result/*.txt $(results)
 	tar xfz $@ -C $(dir $(package))
 
 source/norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm

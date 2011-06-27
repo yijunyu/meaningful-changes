@@ -37,26 +37,62 @@ function DS_replace DS [redefineStatement]
  by S
 end function
 
-function printRepeat
+function selectYes S [stringlit]
  replace [typeSpec*] S1 [typeSpec] S2 [typeSpec*]
  construct Str [stringlit] _ [quote S1]
- where Str [grep "repeat"]
- construct T2 [typeSpec*] S2 [printRepeat] [printRepeatNot]
- construct T1 [typeSpec] S1 [print]
+ where Str [grep S]
+ construct T2 [typeSpec*] S2 [selectYes S] [selectNo S]
+ construct T1 [typeSpec] S1
  by _ [. T1] [. T2]
 end function
 
-function printRepeatNot
+function selectNo S [stringlit]
  replace [typeSpec*] S1 [typeSpec] S2 [typeSpec*]
  construct Str [stringlit] _ [quote S1]
- where not Str [grep "repeat"]
- construct T2 [typeSpec*] S2 [printRepeatNot] [printRepeat]
+ where not Str [grep S]
+ construct T2 [typeSpec*] S2 [selectYes S] [selectNo S]
  by _ [. T2]
+end function
+
+function choose S [stringlit]
+ replace [typeSpec*] SS [typeSpec*]
+ by SS [selectYes S] [selectNo S]
+end function
+
+rule sort
+  replace [typeSpec*] N1 [typeSpec] N2 [typeSpec] Rest [typeSpec*] 
+  construct S1 [stringlit] _ [quote N1]
+  construct S2 [stringlit] _ [quote N2]
+  where S1 [ > S2]
+  by N2 N1 Rest 
+end rule
+
+rule uniq
+  replace [typeSpec*] N1 [typeSpec] N2 [typeSpec] Rest [typeSpec*] 
+  construct S1 [stringlit] _ [quote N1]
+  construct S2 [stringlit] _ [quote N2]
+  where S1 [= S2]
+  by N1 Rest 
+end rule
+
+function typeSpec2typeid T [typeSpec*]
+  replace [typeid*] V [typeid*] 
+  deconstruct T T1 [typeSpec] T2 [typeSpec*]
+  construct d_T1 [typeSpec] T1 
+  deconstruct * [typeid] T1 V1 [typeid]
+  construct d_V1 [typeid] V1 
+  construct V2 [typeid*] _ [typeSpec2typeid T2]
+  by _ [. V1] [. V2] 
 end function
 
 function promptTerms
  replace [program] P [program]
- construct T [typeSpec*] _ [^ P] [printRepeat][printRepeatNot]
+ construct PT [program] P
+#ifdef DEFINE
+    [include_all] 
+#endif
+ construct T [typeSpec*] _ [^ PT] [choose "repeat"] [sort] [uniq]
+ construct varid_T [typeid*] _ [typeSpec2typeid T] [print]
  by P
 end function
 
