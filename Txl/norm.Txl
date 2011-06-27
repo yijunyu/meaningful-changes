@@ -8,6 +8,7 @@ include "mct-ordered.txl"
 include "mct-ignored.txl"
 include "mct-preferred.txl"
 include "mct-kept.txl"
+include "mct-meta.txl"
 
 rule typeSpec_eliminateAnnotations
  replace * [typeSpec] T [typeSpec] 
@@ -149,11 +150,11 @@ function main
       P 
 #ifdef DEFINE
 	[include_all] 
-#endif
-	[typeSpec_removeClones] 
-#ifdef DEFINE
 	[redefine2define]
 #endif
+	[metaAnnotation]
+	[mct_eliminateAnnotations] % [print]
+	[typeSpec_removeClones]
  import Rules
  construct Statements_ChangeRule [statement*]
 	'keys
@@ -276,5 +277,4 @@ function main
 	[promptTerms]
 #endif
 	[typeSpec_eliminateAnnotations] 
-	[mct_eliminateAnnotations] 
 end function

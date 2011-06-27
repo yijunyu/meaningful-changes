@@ -966,7 +966,7 @@ function normalise_ignore_by2_modifier_annotation1 E1  [modifier]
     replace  [modifier *]
         Seq  [modifier *] 
     deconstruct not E1
-        X1  [repeat annotation] 
+        X8  [repeat annotation] 
     by
         Seq  [ . E1 ] 
 end function
@@ -975,7 +975,7 @@ function normalise_ignore_by3_modifier_annotation1 E1  [modifier]
     replace  [modifier *]
         Seq  [modifier *] 
     deconstruct E1
-        X1  [repeat annotation] 
+        X8  [repeat annotation] 
     by
         Seq 
 end function
@@ -1063,7 +1063,7 @@ function normalise_ignore_by2_package_declaration_import_declaration2 E1  [packa
     replace  [package_declaration *]
         Seq  [package_declaration *] 
     deconstruct not E1
-        X7  [comment_nl]  X8  [opt package_header]  X9  [repeat import_declaration]  X10  [repeat type_declaration] 
+        X14  [comment_nl]  X15  [opt package_header]  X16  [repeat import_declaration]  X17  [repeat type_declaration] 
     by
         Seq  [ . E1 ] 
 end function
@@ -1072,9 +1072,9 @@ function normalise_ignore_by3_package_declaration_import_declaration2 E1  [packa
     replace  [package_declaration *]
         Seq  [package_declaration *] 
     deconstruct E1
-        X7  [comment_nl]  X8  [opt package_header]  X9  [repeat import_declaration]  X10  [repeat type_declaration] 
+        X14  [comment_nl]  X15  [opt package_header]  X16  [repeat import_declaration]  X17  [repeat type_declaration] 
     construct E2  [package_declaration]
-        X7  X8  X10 
+        X14  X15  X17 
     by
         Seq  [ . E2 ] 
 end function
@@ -1118,13 +1118,13 @@ function normalise_ignore_by3_NotGeneratedNot_class_or_interface_body_class_body
     replace  [class_or_interface_body *]
         Seq  [class_or_interface_body *] 
     deconstruct E1
-        '{ N1  [repeat class_body_declaration]  X11  [comment_nl]  '}  X12  [opt  ';]  X13  [comment_nl] 
+        '{ N1  [repeat class_body_declaration]  X18  [comment_nl]  '}  X19  [opt  ';]  X20  [comment_nl] 
     construct N2  [class_body_declaration *]
         _  [normalise_ignore_by1_NotGeneratedNot_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
                   normalise_ignore_by2_NotGeneratedNot_class_or_interface_body_class_body_declaration1  E1  each  N1]
  
     construct E2  [class_or_interface_body]
-        '{ N2  X11  '}  X12  X13 
+        '{ N2  X18  '}  X19  X20 
     by
         Seq  [ . E2 ] 
 end function
@@ -1148,7 +1148,7 @@ function normalise_prefer_by2_class_or_interface_body_class_body_declaration1 E1
     replace  [class_or_interface_body *]
         Seq  [class_or_interface_body *] 
     deconstruct not E1
-        '{ X14  [repeat class_body_declaration]  X16  [comment_nl]  '}  X17  [opt  ';]  X18  [comment_nl] 
+        '{ X21  [repeat class_body_declaration]  X23  [comment_nl]  '}  X24  [opt  ';]  X25  [comment_nl] 
     by
         Seq  [ . E1 ] 
 end function
@@ -1157,12 +1157,12 @@ function normalise_prefer_by3_class_or_interface_body_class_body_declaration1 E1
     replace  [class_or_interface_body *]
         Seq  [class_or_interface_body *] 
     deconstruct E1
-        '{ X14  [repeat class_body_declaration]  X16  [comment_nl]  '}  X17  [opt  ';]  X18  [comment_nl] 
-    construct X15  [repeat class_body_declaration]
-        X14  [LiftToComment]
+        '{ X21  [repeat class_body_declaration]  X23  [comment_nl]  '}  X24  [opt  ';]  X25  [comment_nl] 
+    construct X22  [repeat class_body_declaration]
+        X21  [LiftToComment]
  
     construct E2  [class_or_interface_body]
-        '{ X15  X16  '}  X17  X18 
+        '{ X22  X23  '}  X24  X25 
     by
         Seq  [ . E2 ] 
 end function

@@ -975,7 +975,7 @@ function normalise_ignore_by2_modifier_annotation1 E1  [modifier]
     replace  [modifier *]
         Seq  [modifier *] 
     deconstruct not E1
-        X1  [repeat annotation] 
+        X8  [repeat annotation] 
     by
         Seq  [ . E1 ] 
 end function
@@ -984,7 +984,7 @@ function normalise_ignore_by3_modifier_annotation1 E1  [modifier]
     replace  [modifier *]
         Seq  [modifier *] 
     deconstruct E1
-        X1  [repeat annotation] 
+        X8  [repeat annotation] 
     by
         Seq 
 end function
@@ -1092,13 +1092,13 @@ function normalise_ignore_by3_NotModel_class_or_interface_body_class_body_declar
     replace  [class_or_interface_body *]
         Seq  [class_or_interface_body *] 
     deconstruct E1
-        '{ N1  [repeat class_body_declaration]  X3  [comment_nl]  '}  X4  [opt  ';]  X5  [comment_nl] 
+        '{ N1  [repeat class_body_declaration]  X10  [comment_nl]  '}  X11  [opt  ';]  X12  [comment_nl] 
     construct N2  [class_body_declaration *]
         _  [normalise_ignore_by1_NotModel_class_or_interface_body_class_body_declaration1  E1  each  N1]  [
                   normalise_ignore_by2_NotModel_class_or_interface_body_class_body_declaration1  E1  each  N1]
  
     construct E2  [class_or_interface_body]
-        '{ N2  X3  '}  X4  X5 
+        '{ N2  X10  '}  X11  X12 
     by
         Seq  [ . E2 ] 
 end function

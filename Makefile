@@ -60,7 +60,8 @@ result/Java/$(1)/HelloWorld-2-3.java: $(bin)/Java/$(1)c source/Java/java/HelloWo
 endef
 $(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool))))
 
-Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl
+Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl Txl/mct-meta.txl
+	touch norm.Txl
 Txl/Java/api_clone_java.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
 Txl/Java/mdsd.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
 Txl/Java/model.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
