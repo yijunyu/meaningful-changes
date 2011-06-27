@@ -698,13 +698,13 @@ function remove_comment
         _ 
 end function
 
-function construct_comment S  [stringlit]
-    replace  [comment]
-        _  [comment] 
-    construct C  [comment]
-        _  [+  "/"]  [+  "** "]  [+  S]  [+  " *"]  [+  "/"] 
+function put_string F  [stringlit] S  [stringlit]
+    replace  [stringlit]
+        Str  [stringlit] 
+    construct d_S  [stringlit]
+        S  [fput  F] 
     by
-        C 
+        Str 
 end function
 
 function self_comment
@@ -714,20 +714,26 @@ function self_comment
         X  [remove_comment] 
     construct s_X  [stringlit]
         _  [unparse  nc_X] 
-    construct C_1  [comment]
-        _  [construct_comment  " <!-- begin-user-doc -->"] 
-    construct C_2  [comment]
-        _  [construct_comment  s_X] 
-    construct C_3  [comment]
-        _  [construct_comment  " <!-- end-user-doc -->"] 
-    construct C_4  [comment]
-        _  [construct_comment  " @generated "] 
-    construct C  [comment *]
-        _  [. C_1]  [. C_2]  [. C_3]  [. C_4] 
-    construct s_Y  [stringlit]
-        _  [quote  C]  [+  s_X] 
+    construct fName  [id]
+        'tmp_comment 
+    construct fNameNew  [id]
+        fName  [!] 
+    construct s_fNameNew  [stringlit]
+        _  [quote  fNameNew] 
+    construct s_Head  [stringlit]
+        _  [+  "/"]  [+  "*"]  [+  "*"] 
+    construct s_End  [stringlit]
+        _  [+  " * <!-- e"]  [+  "nd-user-doc -->"] 
+    construct s_Tail  [stringlit]
+        _  [+  " *"]  [+  "/"] 
+    construct d_put  [stringlit]
+        _  [put_string  s_fNameNew  s_Head]  [put_string  s_fNameNew  " * <!-- begin-user-doc -->"]  [put_string  s_fNameNew 
+                  s_X]  [put_string  s_fNameNew  s_End]  [put_string  s_fNameNew  " * @generated "]  [put_string  s_fNameNew 
+                  s_Tail]  [put_string  s_fNameNew  s_X] 
+    construct rm_fNameNew  [stringlit]
+        _  [+  "rm -f "]  [+  s_fNameNew] 
     construct Y  [class_body_declaration]
-        _  [parse  s_Y] 
+        _  [read  fNameNew]  [system  rm_fNameNew] 
     by
         Y 
 end function
