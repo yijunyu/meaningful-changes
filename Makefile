@@ -18,7 +18,9 @@ define diff_example_1
 results+=result/Java/$(1)/HelloWorld--2.java result/Java/$(1)/HelloWorld-2-3.java
 endef
 $(foreach tool,$(tools),$(eval $(call diff_example_1,$(tool))))
+
 example+=$(results)
+target+=result/C/cid/vim73/eval.c
 target+=$(bin)/normc 
 target+=$(bin)/norm-include-c 
 target+=$(bin)/norm-id-c 
@@ -103,11 +105,18 @@ $(bin)/xml-mctc: Txl/XML/xml-mct.Txl Makefile
 	$(txlc) Txl/XML/xml-mct.Txl
 	mv xml-mct.x $@
 
-$(bin)/C/cidc: Txl/C/cid.Txl Makefile
-	cp Txl/C/cid.Txl Txl/cid.Txl
-	$(txlc) Txl/cid.Txl
-	mv cid.x $@
-	rm -f Txl/c.Txl
+$(bin)/%c: result/norm/%.norm Makefile
+	mkdir -p $$(dirname $@)
+	cp result/norm/$*.norm id.Txl
+	$(txlc) -i Txl id.Txl
+	mv id.x $@
+	rm id.Txl
+
+result/C/cid/vim73/eval.c: source/C/vim73/eval.c
+	mkdir -p $$(dirname $@)
+	grep -v "^#" $< > eval.c
+	$(bin)/C/cidc eval.c | sort | uniq > $@
+	rm -f eval.c
 
 $(bin)/norm-include-c: Txl/norm.Txl Makefile
 	$(txlc) Txl/norm.Txl
@@ -181,7 +190,8 @@ Txl/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/xml-mct.norm
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-Txl/C/cid.Txl: $(bin)/norm-id-c source/norm/C/cid.norm
+result/norm/C/cid.norm: $(bin)/norm-id-c source/norm/C/cid.norm
+	mkdir -p $$(dirname $@)
 	/usr/bin/time $(bin)/norm-id-c -iTxl source/norm/C/cid.norm -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE

@@ -13,11 +13,11 @@ redefine module_declaration
 
 end define
 keys
-    ... <<<<<<  >>>>>> 
+    <<<<<<  >>>>>> 
 end keys
 
 compounds
-    ... <<<<<<  >>>>>> 
+    <<<<<<  >>>>>> 
 end compounds
 
 define Change
@@ -31,7 +31,7 @@ function normalise_ignore_by2_module_statement2 E1  [module]
     replace  [module *]
         Seq  [module *] 
     deconstruct not E1
-        X3  [module_declaration]  ';  X4  [repeat statement]  'endmodule 
+        X10  [module_declaration]  ';  X11  [repeat statement]  'endmodule 
     by
         Seq  [ . E1 ] 
 end function
@@ -40,9 +40,9 @@ function normalise_ignore_by3_module_statement2 E1  [module]
     replace  [module *]
         Seq  [module *] 
     deconstruct E1
-        X3  [module_declaration]  ';  X4  [repeat statement]  'endmodule 
+        X10  [module_declaration]  ';  X11  [repeat statement]  'endmodule 
     construct E2  [module]
-        X3  ';  'endmodule 
+        X10  ';  'endmodule 
     by
         Seq  [ . E2 ] 
 end function
