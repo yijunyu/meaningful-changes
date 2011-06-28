@@ -57,7 +57,7 @@ function replace_annotate A [MCT_annotate*] Tid [typeid]
   replace [typeSpec*] T1 [typeSpec] Rest [typeSpec*]
   construct Rest2 [typeSpec*] Rest [replace_annotate A Tid]
   construct T_A [typeSpec*] _ [gather_types A] % [print]
-  construct M_A [typeSpec*] _ [find_type T1 each T_A] [find_type_not T1 each T_A] 
+  construct M_A [typeSpec*] _ [find_type T1 each T_A] [find_type_not T1 each T_A] % [print]
   by _ [. M_A] [. Rest2]
 end function
 

@@ -18,9 +18,10 @@ T [typeSpec]
 'redefine 
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [preferredWith]
+ deconstruct T TM [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [preferredWith]
+ construct d_T [typeSpec] T [print]
  deconstruct P 'preferred 'with L [literal+]
- construct StrID [id] _ [quote TID]
+ construct StrID [id] _ [quote TID] % [print]
  deconstruct I TypeID [id] 
  construct ID1 [id] 'normalise_preferred_tokens
  construct ruleID1 [id] ID1 [_ StrID] [_ TypeID] [!]

@@ -12,6 +12,9 @@ include "mct-meta.txl"
 #ifdef PROMPT
 include "mct-prompt.txl"
 #endif
+#ifdef ID
+include "mct-id.txl"
+#endif
 
 rule typeSpec_eliminateAnnotations
  replace * [typeSpec] T [typeSpec] 
@@ -42,7 +45,13 @@ function DS_replace DS [redefineStatement]
  construct S5 [statement*] _ [typeSpec_ignore_when DS each T1]
  construct S6 [statement*] _ [typeSpec_ignore DS each T1] 
  construct S7 [statement*] _ [typeSpec_preferred_withLiterals DS each T1] [typeSpec_preferred_withRuleApplications DS each T1]
+#ifdef ID
+ construct S8 [statement*] _ [typeSpec_id DS]
+#endif
  construct S [statement*] S0 [. S1] [. S2] [. S3] [. S4] [. S5] [. S6] [. S7]
+#ifdef ID
+	[. S8]
+#endif
  by S
 end function
 
@@ -81,6 +90,7 @@ end function
 %   KeepRuleIDs [id*]	%% The name of the Keep normalisation rules
 %   PreferRuleIDs [id*]	%% The name of the Prefer normalisation rules
 %   IgnoreRuleIDs [id*]	%% The name of the Ignore normalisation rules
+%   IdRuleIDs [id*]	%% The name of the Ignore normalisation rules
 %
 function main 
  replace [program] P [program]
@@ -89,6 +99,9 @@ function main
  export IgnoreRuleIDs [id*] _
  export PreferRuleIDs [id*] _
  export KeepRuleIDs [id*] _
+#ifdef ID
+ export IdRuleIDs [id*] _
+#endif
  export TypeIDs [id*] _
  construct P0 [program] 
       P 
@@ -96,7 +109,7 @@ function main
 	[include_all] 
 	[redefine2define]
 #endif
-	[metaAnnotation]
+        [metaAnnotation] % [print]
 	[mct_eliminateAnnotations] % [print]
 	[typeSpec_removeClones]
  import Rules
@@ -138,10 +151,16 @@ function main
  import OrderRuleIDs
  import IgnoreRuleIDs
  import PreferRuleIDs
+#ifdef ID
+ import IdRuleIDs
+#endif
  construct lOfE_NormaliseRuleIDs [literalOrExpression*]
 	_ [id_to_type each IgnoreRuleIDs]
 	  [id_to_type each PreferRuleIDs]
 	  [id_to_type each OrderRuleIDs]
+#ifdef ID
+	  [id_to_type each IdRuleIDs]
+#endif
  construct lOfE_KeepRuleIDs [literalOrExpression*] _ [id_to_type each KeepRuleIDs]
  construct lOfE_Normalise [literalOrExpression*] _ [. PL] [. lOfE_NormaliseRuleIDs ]
  construct lOfE_RemoveClone [literalOrExpression*] _ [. PL] [. lOfE_KeepRuleIDs ]
@@ -207,11 +226,11 @@ function main
 		'...  '| '[ 'id_nl '* ']
 	'end 'define
 	'define 'id_nl
-   		'['id'] '['NL']
+   		'['id'] '['id'] '['NL']
 	'end 'define
 	'function 'id2id_nl 'T '['id']
   		'replace '['id_nl'*'] 'V '['id_nl'*'] 
-		'construct 'V2 '['id_nl'*'] 'T
+		'construct 'V2 '['id_nl'*'] 'T 'T
 		'by '_ '['. 'V'] '['. 'V2'] 
 	'end 'function
 	'function 'exportIds
