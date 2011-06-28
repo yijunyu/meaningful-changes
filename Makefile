@@ -66,11 +66,11 @@ $(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool))))
 Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl Txl/mct-meta.txl
 	touch norm.Txl
 
-result/norm/Java/api_clone_java.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
-result/norm/Java/mdsd.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
-result/norm/Java/model.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
-result/norm/ProblemFrames/problem.Txl: Txl/ProblemFrames/problem.grm
-result/norm/Txl/Xtext/xtext.Txl: Txl/Xtext/xtext.grm
+#result/norm/Java/api_clone_java.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
+#result/norm/Java/mdsd.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
+#result/norm/Java/model.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
+#result/norm/ProblemFrames/problem.Txl: Txl/ProblemFrames/problem.grm
+#result/norm/Txl/Xtext/xtext.Txl: Txl/Xtext/xtext.grm
 
 result/C/cid/vim73/eval.c: source/C/vim73/eval.c
 	mkdir -p $$(dirname $@)
@@ -128,12 +128,11 @@ $(bin)/norm-no_clone-include-c: Txl/norm.Txl Makefile
 	mv norm.x $@
 
 # default normalisation transformation
-result/norm/%.Txl: source/norm/%.norm
+result/norm/%.Txl: $(bin)/normc source/norm/%.norm
 	mkdir -p $$(dirname $@)
-	/usr/bin/time $^ -o $@
+	/usr/bin/time $(bin)/normc -iTxl source/norm/$*.norm -o $TMPFILE
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
-	$(bin)/normc -iTxl $< -o $TMPFILE
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
