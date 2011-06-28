@@ -6,11 +6,12 @@ txlc=$(bin)/txlc
 norm=$(wildcard source/norm/*/*.norm)
 extensions+=$(norm:source/norm/%.norm=%)
 languages+=$(wildcard Txl/*/*.Txl)
-generated_language=$(norm:source/norm/%.norm=Txl/%.Txl)
+generated_language=$(norm:source/norm/%.norm=result/norm/%.Txl)
 extensions+=$(languages:Txl/%.Txl=%)
 program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard source/*/$(ext)/*.$(ext)))
 example+=$(source)
+results+=$(generated_language) 
 results+=$(source:source/%=result/%) 
 tools+=api_clone_java
 
@@ -26,7 +27,6 @@ target+=$(bin)/norm-include-c
 target+=$(bin)/norm-id-c 
 target+=$(bin)/ProblemFrames/problemcc 
 target+=$(bin)/Java/api_clone_javacc 
-target+=$(bin)/XML/xml-mctc 
 target+=$(bin)/Java/mdsdcc 
 target+=$(bin)/Java/modelcc 
 target+=$(bin)/Q7/q7c 
@@ -65,11 +65,18 @@ $(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool))))
 
 Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl Txl/mct-meta.txl
 	touch norm.Txl
-Txl/Java/api_clone_java.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
-Txl/Java/mdsd.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
-Txl/Java/model.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
-Txl/ProblemFrames/problem.Txl: Txl/ProblemFrames/problem.grm
-Txl/Xtext/xtext.Txl: Txl/Xtext/xtext.grm
+
+result/norm/Java/api_clone_java.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
+result/norm/Java/mdsd.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
+result/norm/Java/model.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
+result/norm/ProblemFrames/problem.Txl: Txl/ProblemFrames/problem.grm
+result/norm/Txl/Xtext/xtext.Txl: Txl/Xtext/xtext.grm
+
+result/C/cid/vim73/eval.c: source/C/vim73/eval.c
+	mkdir -p $$(dirname $@)
+	grep -v "^#" $< > eval.c
+	$(bin)/C/cidc eval.c | sort | uniq > $@
+	rm -f eval.c
 
 result/v/%.v: $(bin)/vc source/v/%.v
 	@mkdir -p result/v
@@ -101,22 +108,12 @@ $(bin)/normc: Txl/norm.Txl Makefile
 	$(txlc) -d DEFINE Txl/norm.Txl
 	mv norm.x $@
 
-$(bin)/xml-mctc: Txl/XML/xml-mct.Txl Makefile
-	$(txlc) Txl/XML/xml-mct.Txl
-	mv xml-mct.x $@
-
-$(bin)/%c: result/norm/%.norm Makefile
+$(bin)/%c: result/norm/%.Txl Makefile
 	mkdir -p $$(dirname $@)
-	cp result/norm/$*.norm id.Txl
+	cp result/norm/$*.Txl id.Txl
 	$(txlc) -i Txl id.Txl
 	mv id.x $@
 	rm id.Txl
-
-result/C/cid/vim73/eval.c: source/C/vim73/eval.c
-	mkdir -p $$(dirname $@)
-	grep -v "^#" $< > eval.c
-	$(bin)/C/cidc eval.c | sort | uniq > $@
-	rm -f eval.c
 
 $(bin)/norm-include-c: Txl/norm.Txl Makefile
 	$(txlc) Txl/norm.Txl
@@ -130,16 +127,15 @@ $(bin)/norm-no_clone-include-c: Txl/norm.Txl Makefile
 	$(txlc) -d NO_CLONE Txl/norm.Txl
 	mv norm.x $@
 
-$(bin)/verilog2c: Txl/Verilog/verilog2.Txl Makefile
-	$(txlc) Txl/Verilog/verilog2.Txl
-	mv verilog2.x $@
-
-$(bin)/ProblemFrames/problemc: Txl/ProblemFrames/problem.Txl Makefile
-	cp Txl/ProblemFrames/problem.Txl Txl/problem.Txl
-	$(txlc) Txl/problem.Txl
+# default normalisation transformation
+result/norm/%.Txl: source/norm/%.norm
 	mkdir -p $$(dirname $@)
-	mv problem.x $@
-	rm -f Txl/problem.Txl
+	/usr/bin/time $^ -o $@
+	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
+	echo $$TMPFILE
+	$(bin)/normc -iTxl $< -o $TMPFILE
+	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
+	rm -f $TMPFILE
 
 #$(bin)/ProblemFrames/problemcc: Txl/ProblemFrames/problem.Txl Makefile
 #	mkdir -p $$(dirname $@)
@@ -164,17 +160,8 @@ $(bin)/cc: Txl/C/c.Txl Makefile
 	mv c.x $@
 	rm -f Txl/c.Txl
 
-# normalise 
-Txl/%.Txl: $(bin)/normc source/norm/%.norm
-	sed 's/^include "/#include "/' source/norm/$*.norm  | cpp -DCOMMENTS -DDEFINE -ITxl | grep -v "^# [0-9]" > t.norm
-	/usr/bin/time $(bin)/normc t.norm -o $@
-	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
-	echo $$TMPFILE
-	/usr/bin/time $^ -o $TMPFILE
-	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
-	rm -f $TMPFILE t.norm
-
-Txl/Verilog/verilog2.Txl: $(bin)/norm-include-c source/norm/Verilog/verilog2.norm
+result/norm/Verilog/verilog2.Txl: $(bin)/norm-include-c source/norm/Verilog/verilog2.norm
+	mkdir -p $$(dirname $@)
 	/usr/bin/time $^ -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
@@ -182,7 +169,8 @@ Txl/Verilog/verilog2.Txl: $(bin)/norm-include-c source/norm/Verilog/verilog2.nor
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-Txl/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/xml-mct.norm
+result/norm/XML/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/XML/xml-mct.norm
+	mkdir -p $$(dirname $@)
 	/usr/bin/time $^ -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
@@ -190,7 +178,7 @@ Txl/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/xml-mct.norm
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-result/norm/C/cid.norm: $(bin)/norm-id-c source/norm/C/cid.norm
+result/norm/C/cid.Txl: $(bin)/norm-id-c source/norm/C/cid.norm
 	mkdir -p $$(dirname $@)
 	/usr/bin/time $(bin)/norm-id-c -iTxl source/norm/C/cid.norm -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
