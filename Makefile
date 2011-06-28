@@ -21,6 +21,7 @@ $(foreach tool,$(tools),$(eval $(call diff_example_1,$(tool))))
 example+=$(results)
 target+=$(bin)/normc 
 target+=$(bin)/norm-include-c 
+target+=$(bin)/norm-id-c 
 target+=$(bin)/ProblemFrames/problemcc 
 target+=$(bin)/Java/api_clone_javacc 
 target+=$(bin)/XML/xml-mctc 
@@ -103,13 +104,17 @@ $(bin)/xml-mctc: Txl/XML/xml-mct.Txl Makefile
 	mv xml-mct.x $@
 
 $(bin)/C/cidc: Txl/C/cid.Txl Makefile
-	cp Txl/C/cid.Txl Txl/c.Txl
+	cp Txl/C/cid.Txl Txl/cid.Txl
 	$(txlc) Txl/cid.Txl
 	mv cid.x $@
 	rm -f Txl/c.Txl
 
 $(bin)/norm-include-c: Txl/norm.Txl Makefile
 	$(txlc) Txl/norm.Txl
+	mv norm.x $@
+
+$(bin)/norm-id-c: Txl/norm.Txl Makefile
+	$(txlc) -d ID Txl/norm.Txl
 	mv norm.x $@
 
 $(bin)/norm-no_clone-include-c: Txl/norm.Txl Makefile
@@ -176,8 +181,8 @@ Txl/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/xml-mct.norm
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-Txl/C/cid.Txl: $(bin)/norm-no_clone-include-c source/norm/C/cid.norm
-	/usr/bin/time $(bin)/norm-no_clone-include-c -iTxl source/norm/C/cid.norm -o $@
+Txl/C/cid.Txl: $(bin)/norm-id-c source/norm/C/cid.norm
+	/usr/bin/time $(bin)/norm-id-c -iTxl source/norm/C/cid.norm -o $@
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
 	/usr/bin/time $^ -o $TMPFILE

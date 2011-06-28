@@ -9,7 +9,9 @@ include "mct-ignored.txl"
 include "mct-preferred.txl"
 include "mct-kept.txl"
 include "mct-meta.txl"
+#ifdef PROMPT
 include "mct-prompt.txl"
+#endif
 
 rule typeSpec_eliminateAnnotations
  replace * [typeSpec] T [typeSpec] 
@@ -101,13 +103,13 @@ function main
  construct Statements_ChangeRule [statement*]
 	'keys
 	% '<<<<<< is removed from left, '>>>>>> is added to right
-		'... '<<<<<< '>>>>>> 
+		'<<<<<< '>>>>>> 
 #ifdef LINENO
 		'# 'line
 #endif
 	'end 'keys
 	'compounds
-		'... '<<<<<< '>>>>>>
+		'<<<<<< '>>>>>>
 	'end 'compounds
 	'define Change
 		'[ 'NL '] '<<<<<< '['opt 'stringlit'] '[ 'NL '] 
@@ -200,12 +202,34 @@ function main
 #endif
 		'by 'P_Clone
 	'end 'function
+#ifdef ID
+	'redefine 'program 
+		'...  '| '[ 'id_nl '* ']
+	'end 'define
+	'define 'id_nl
+   		'['id'] '['NL']
+	'end 'define
+	'function 'id2id_nl 'T '['id']
+  		'replace '['id_nl'*'] 'V '['id_nl'*'] 
+		'construct 'V2 '['id_nl'*'] 'T
+		'by '_ '['. 'V'] '['. 'V2'] 
+	'end 'function
+	'function 'exportIds
+    		'replace '['program'] 'Prg '['program']
+		'construct 'I '['id'*'] '_ '['^ 'Prg '] 
+    		'construct 'I2 '['id_nl'*'] '_ '['id2id_nl 'each 'I']
+    		'by 'I2
+	'end 'function
+#endif
 	'function 'main 'replace '[ 'program '] 'Prg '[ 'program '] 
 	  'export 'Program_Diff '['program'] '_
 	  'export 'Program '['program'] 'Prg
 	  'by 'Prg '[ 'program_normalise ']
 		   '[ 'program_remove_clone ']
 		   '[ 'print_diff ']
+#ifdef ID
+		   '[ 'exportIds ']
+#endif
 	'end 'function
  deconstruct P0 S0 [statement*]
  import Rules

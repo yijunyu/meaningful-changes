@@ -2,11 +2,11 @@ include "C/C.Grm"
 include "C/CGnuOverrides.Grm"
 include "C/CCommentOverrides.Grm"
 keys
-    ... <<<<<<  >>>>>> 
+    <<<<<<  >>>>>> 
 end keys
 
 compounds
-    ... <<<<<<  >>>>>> 
+    <<<<<<  >>>>>> 
 end compounds
 
 define Change
@@ -96,11 +96,42 @@ function print_diff
     construct P_Clone  [program]
         CloneNumber 
     construct P_Left  [program]
-        P_diff  [ print_diff_1 ]  [ print_diff_2 ]  [ print ] 
+        P_diff  [ print_diff_1 ]  [ print_diff_2 ]  [ printattr ] 
     construct P_Right  [program]
         Program_Diff  [ print_diff_1 ]  [ print_diff_2 ]  [ print ] 
     by
         P_Clone 
+end function
+
+redefine program
+    ...
+|       
+    [id_nl *] 
+
+end define
+define id_nl
+    [id]  [NL]
+ 
+end define
+function id2id_nl T  [id]
+    replace  [id_nl *]
+        V  [ id_nl  * ] 
+    construct V2  [id_nl *]
+        T 
+    by
+        _  [ . V ]  [ . V2 ] 
+end function
+
+function exportIds
+    replace  [program]
+        Prg  [ program ] 
+    construct I  [id *]
+        _  [ ^  Prg ] 
+    construct I2  [id_nl *]
+        _  [id2id_nl  each  I]
+ 
+    by
+        I2 
 end function
 
 function main
@@ -111,6 +142,6 @@ function main
     export Program [program]
         Prg 
     by
-        Prg  [ program_normalise ]  [ program_remove_clone ]  [ print_diff ] 
+        Prg  [ program_normalise ]  [ program_remove_clone ]  [ print_diff ]  [ exportIds ] 
 end function
 
