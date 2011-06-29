@@ -119,13 +119,13 @@ function main
  construct Statements_ChangeRule [statement*]
 	'keys
 	% '<<<<<< is removed from left, '>>>>>> is added to right
-		'<<<<<< '>>>>>> 
+		'... '<<<<<< '>>>>>> 
 #ifdef LINENO
 		'# 'line
 #endif
 	'end 'keys
 	'compounds
-		'<<<<<< '>>>>>>
+		'... '<<<<<< '>>>>>>
 	'end 'compounds
 	'define Change
 		'[ 'NL '] '<<<<<< '['opt 'stringlit'] '[ 'NL '] 
@@ -211,17 +211,9 @@ function main
 		'% output the differences
 		'construct 'P_Clone '[ 'program '] 'CloneNumber
 		'construct 'P_Left '['program'] 'P_diff '[print_diff_1'] '[print_diff_2'] 
-#ifdef NO_CLONE
-'['print']
-#else
-'['printattr']
-#endif
+		'['printattr']
 		'construct 'P_Right '['program'] 'Program_Diff '[print_diff_1'] '[print_diff_2']
-#ifdef ATTR
-'['printattr']
-#else
-'['print']
-#endif
+		'['printattr']
 		'by 'P_Clone
 	'end 'function
 #ifdef ID

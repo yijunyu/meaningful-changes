@@ -3,30 +3,7 @@ include "Java/java.grm"
 include "Java/javaCommentOverrides.grm"
 #endif
 
-% Yijun Yu: May 2011
-% redefine method_body
-%         [repeat block preferred with '; ]
-%     |  [opt annotation_default] ';             % T.D. Oct 2007
-% end define
-
-redefine modifier
-        'abstract
-    |   'final
-    |   'public
-    |   'protected
-    |   'private
-    |   'static
-    |   'transient
-    |   'volatile
-    |   'native
-    |   'synchronized
-    |   'strictfp		% Added strictfp XG July 23, 2002
-    |   [repeat annotation ignored]		% T.D. Oct 2007
-end define
-
-redefine program
-    [package_declaration*]
-end define
+annotate modifier [repeat annotation ignored]
 
 redefine type_declaration
         [class_declaration]      [NL][NL]
@@ -42,13 +19,6 @@ redefine type_declaration
     [comment_nl]
 #endif
 end define
-
-%redefine enum_body
-%    '{                                    [IN]
-%       [list enum_element] [opt ',]
-%       [repeat class_body_declaration ordered ]    [EX]
-%    '} [opt ';]                           [NL][NL]
-%end define
 
 % remove some extra spaces
 redefine import_declaration
@@ -69,26 +39,11 @@ redefine import_declaration
 #endif
 end define
 
-redefine class_header
-    [repeat modifier ordered] 'class [class_name] [opt extends_clause] [opt implements_clause]
-end define
-
-% T.D. Oct 2007 -- added annotation marker 
-redefine interface_header
-    [repeat modifier ordered] [opt annot_marker] 'interface [interface_name] [opt extends_clause] [opt implements_clause]
-end define
-
-redefine enum_header
-    [repeat modifier ordered] [opt id] 'enum [opt declared_name][opt extends_clause] [opt implements_clause]
-end define
-
-redefine extends_clause
-    'extends [list type_name+ ordered]
-end define
-
-redefine implements_clause
-    'implements [list qualified_name+ ordered]
-end define
+annotate class_header [repeat modifier ordered] 
+annotate interface_header [repeat modifier ordered]
+annotate enum_header [repeat modifier ordered] 
+annotate extends_clause [list type_name+ ordered]
+annotate implements_clause [list qualified_name+ ordered]
 
 redefine package_declaration
 #ifdef COMMENTS
@@ -112,46 +67,15 @@ redefine class_or_interface_body
 [NL][NL]
 end define
 
-% to match Java Code like:
-% public <T> void someMethod(T t) {
-%	// ...
-% }
-redefine constructor_declaration
-    [NL] [repeat modifier ordered] [opt generic_parameter] [constructor_declarator] [opt throws] [constructor_body] [NL][NL]
-end define
-
-redefine variable_declaration
-    [repeat modifier ordered] [type_specifier] [variable_declarators] '; [NL]
-end define
-
-redefine variable_declarators
-    [list variable_declarator+ ordered]
-end define
-
-% Method declarations 
-
-% generic method declaration (to match generic types used only in a method's declaration and body)
-redefine method_declaration
-    [NL] [repeat modifier ordered] [opt generic_parameter] [type_specifier] [method_declarator] [opt throws] [method_body]
-end define
-
-redefine throws
-    'throws [list qualified_name+ ordered]
-end define
-
-redefine annotation_value_list
-      [single_annotation_value]	% for single value annotation
-    | [list keyed_annotation_value ordered]
-end define
-
-redefine single_annotation_value
-      [expression]					% must be constant
-    | [nested_annotation]
-    | { [list expression_or_nested_annotation ordered] }	% array of annotation values
-end define
+annotate constructor_declaration [repeat modifier ordered] 
+annotate variable_declaration [repeat modifier ordered]
+annotate variable_declarators [list variable_declarator+ ordered]
+annotate method_declaration [repeat modifier ordered]
+annotate throws [list qualified_name+ ordered]
+annotate annotation_value_list [list keyed_annotation_value ordered]
+annotate single_annotation_value [list expression_or_nested_annotation ordered]
 
 redefine comment_nl
-%    [empty] | [repeat mycomment kept ignored when NotJavaDoc]
     [empty] | [repeat mycomment kept]
 end define
 

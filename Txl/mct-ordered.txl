@@ -23,16 +23,17 @@ T [typeSpec]
 'redefine 
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
- deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] 
  deconstruct O 'ordered 
+ deconstruct not M 'list
  construct StrID [id] _ [quote TID]
  deconstruct I TypeID [id] 
  construct ID [id] 'normalise_list
  construct ruleID [id] ID [_ StrID] [_ TypeID]
  construct S [statement*]
     'rule ruleID
-	'replace '[ 'repeat I '] 
-	   'N1 '[ I '] 'N2 '[ I '] 'Rest '[ 'repeat I '] 
+	'replace '[ M I R '] 
+	   'N1 '[ I '] 'N2 '[ I '] 'Rest '[ M I R '] 
            'construct 'T1 '[ 'stringlit '] '_ '[ 'quote 'N1 ']
            'construct 'T2 '[ 'stringlit '] '_ '[ 'quote 'N2 ']
 	'where 'T1 '[ '> 'T2 ']
@@ -60,7 +61,8 @@ T [typeSpec]
 'redefine 
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
- deconstruct T 'repeat I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct not M 'list
  deconstruct O 'ordered B [opt byField]
  deconstruct B 'by F [id]
  construct StrID [id] _ [quote TID]
@@ -69,8 +71,8 @@ TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  construct ruleID [id] ID [_ StrID] [_ TypeID]
  construct S [statement*]
     'rule ruleID
-	'replace '[ 'repeat I '] 
-	   'N1 '[ I '] 'N2 '[ I '] 'Rest '[ 'repeat I '] 
+	'replace '[ M I R '] 
+	   'N1 '[ I '] 'N2 '[ I '] 'Rest '[ M I R '] 
 	'where 'N1 '[ F 'N2 ']
 	'by 
 	   'N2 'N1 'Rest 
@@ -104,7 +106,8 @@ T [typeSpec]
 'redefine 
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
- deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct M 'list
  deconstruct O 'ordered
  construct StrID [id] _ [quote TID]
  deconstruct I TypeID [id] 
@@ -112,8 +115,8 @@ TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  construct ruleID [id] ID [_ StrID] [_ TypeID]
  construct S [statement*]
     'rule ruleID
-	'replace '[ 'list I '] 
-	   'N1 '[ I '] ', 'N2 '[ I '] ', 'Rest '[ 'list I '] 
+	'replace '[ M I R '] 
+	   'N1 '[ I '] ', 'N2 '[ I '] ', 'Rest '[ M I R '] 
            'construct 'T1 '[ 'stringlit '] '_ '[ 'quote 'N1 ']
            'construct 'T2 '[ 'stringlit '] '_ '[ 'quote 'N2 ']
 	'where 'T1 '[ '> 'T2 ']
@@ -141,7 +144,8 @@ T [typeSpec]
 'redefine 
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
- deconstruct T 'list I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+ deconstruct M 'list
  deconstruct O 'ordered B [byField]
  deconstruct B 'by F [id]
  construct StrID [id] _ [quote TID]
@@ -150,8 +154,8 @@ TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  construct ruleID [id] ID [_ StrID] [_ TypeID]
  construct S [statement*]
     'rule ruleID
-	'replace '[ 'list I '] 
-	   'N1 '[ I '] ', 'N2 '[ I '] ', 'Rest '[ 'list I '] 
+	'replace '[ M I R '] 
+	   'N1 '[ I '] ', 'N2 '[ I '] ', 'Rest '[ M I R '] 
 	'where 'N1 '[ F 'N2 ']
 	'by 
 	   'N2 ', 'N1 ', 'Rest 

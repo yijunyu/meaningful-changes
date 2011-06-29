@@ -54,6 +54,9 @@ function replace_annotate A [MCT_annotate*] Tid [typeid]
   replace [typeSpec*] T1 [typeSpec] Rest [typeSpec*]
   construct Rest2 [typeSpec*] Rest [replace_annotate A Tid]
   construct T_A [typeSpec*] _ [gather_types A] 
+#ifdef DEBUG_REPL_ANNOT
+	[print]
+#endif
   construct M_A [typeSpec*] _ [. T1] [find_type each T_A] 
 #ifdef DEBUG_REPL_ANNOT
 	[print]
@@ -70,6 +73,9 @@ function define2redefine A [MCT_annotate*]
 		BLoT [repeat barLiteralsAndTypes] 
 	'end 'define 
   construct A_relevant [MCT_annotate*] A [gather_relevant T] [gather_irrelevant T] 
+#ifdef DEBUG_DEF2RE
+ 		[print]
+#endif
   construct n_A_relevant [number] _ [length A_relevant]
   where n_A_relevant [> 0]
   construct R1 [defineStatement]

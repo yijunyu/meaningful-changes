@@ -14,7 +14,6 @@ example+=$(source)
 results+=$(generated_language) 
 results+=$(source:source/%=result/%) 
 
-tools+=api_clone_java
 tools+=simple
 define diff_example_1
 results+=result/Java/$(1)/HelloWorld--2.java result/Java/$(1)/HelloWorld-2-3.java
@@ -26,10 +25,9 @@ target+=result/C/cid/vim73/eval.c
 target+=$(bin)/normc 
 target+=$(bin)/norm-include-c 
 target+=$(bin)/norm-id-c 
-#target+=$(bin)/ProblemFrames/problemcc 
-#target+=$(bin)/Java/api_clone_javacc 
-#target+=$(bin)/Java/mdsdcc 
-#target+=$(bin)/Java/modelcc 
+target+=$(bin)/ProblemFrames/problemcc 
+target+=$(bin)/Java/mdsdcc 
+target+=$(bin)/Java/modelcc 
 target+=$(bin)/Q7/q7c 
 target+=$(bin)/Argument/argumentc 
 target+=$(bin)/Verilog/verilog2c
@@ -131,12 +129,12 @@ result/norm/%.Txl: $(bin)/normc source/norm/%.norm
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-#$(bin)/ProblemFrames/problemcc: Txl/ProblemFrames/problem.Txl Makefile
-#	mkdir -p $$(dirname $@)
-#	mv Txl/ProblemFrames/problem.Txl Txl/problem.Txl
-#	$(txlc) -comment -d COMMENTS Txl/problem.Txl
-#	mv problem.x $@
-#	rm -f Txl/problem.Txl
+$(bin)/%cc: result/norm/%.Txl Makefile
+	mkdir -p $$(dirname $@)
+	cp result/norm/$*.Txl comment.Txl
+	$(txlc) -comment -d COMMENTS comment.Txl
+	mv comment.x $@
+	rm -f comment.Txl
 
 # if the grammar does not handle comments, don't use -comment -d COMMENTS options yet
 $(bin)/vc: Txl/v.Txl Makefile
