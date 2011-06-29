@@ -5,6 +5,6 @@
 char_u *default_vim_dir = (char_u *)"/usr/local/share/vim";
 char_u *default_vimruntime_dir = (char_u *)"";
 char_u *all_cflags = (char_u *)"gcc -c -I. -Iproto -DHAVE_CONFIG_H   -DMACOS_X_UNIX -no-cpp-precomp  -g -O2 -D_FORTIFY_SOURCE=1      ";
-char_u *all_lflags = (char_u *)"gcc   -L/usr/local/lib -o vim       -lm -lncurses  -framework Cocoa          ";
+char_u *all_lflags = (char_u *)"gcc   -L/usr/local/lib -o vim       -lm  -lncurses -liconv -framework Cocoa          ";
 char_u *compiled_user = (char_u *)"yy66";
-char_u *compiled_sys = (char_u *)"mcmt033.open.ac.uk";
+char_u *compiled_sys = (char_u *)"MCMT033.local";

@@ -371,7 +371,7 @@
 /* #undef FEAT_CSCOPE */
 
 /* Define if you want to include multibyte support. */
-/* #undef FEAT_MBYTE */
+#define FEAT_MBYTE 1
 
 /* Define if you want to include fontset support. */
 /* #undef FEAT_XFONTSET */

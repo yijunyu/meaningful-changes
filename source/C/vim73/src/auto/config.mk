@@ -24,7 +24,7 @@ CPPFLAGS	=  -DMACOS_X_UNIX -no-cpp-precomp
 srcdir		= .
 
 LDFLAGS		=  -L/usr/local/lib
-LIBS		= -lm -lncurses  -liconv -framework Cocoa
+LIBS		= -lm  -lncurses -liconv -framework Cocoa
 TAGPRG		= ctags -t
 
 CPP		= gcc -E
