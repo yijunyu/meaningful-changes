@@ -109,7 +109,10 @@ function main
 	[include_all] 
 	[redefine2define]
 #endif
-        [metaAnnotation] % [print]
+        [metaAnnotation] 
+#ifdef DEBUG_META
+	[print]
+#endif
 	[mct_eliminateAnnotations] % [print]
 	[typeSpec_removeClones]
  import Rules

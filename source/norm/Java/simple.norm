@@ -1,21 +1,58 @@
 include "Java/java.grm"
+#ifdef COMMENTS
+    include "Java/javaCommentOverrides.grm"
+#endif
 
-% Yijun Yu, June, 2011
-% The rules are redefined to include annotations
-annotate class_or_interface_body [repeat class_body_declaration kept ordered ignored when Private] 
 annotate method_body [block preferred with ';] 
+annotate modifier [repeat annotation ignored] 
 annotate constructor_body [block preferred with '{ '}] 
-annotate enum_body [repeat class_body_declaration kept ordered] 
-annotate type_declaration [class_declaration kept] 
-annotate type_declaration [interface_declaration kept ordered] 
-annotate type_declaration [enum_declaration kept] 
-annotate package_declaration [opt package_header kept] 
-annotate package_declaration [repeat import_declaration kept ordered] 
+
+redefine type_declaration
+        [class_declaration]      [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    |   [interface_declaration]  [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    |   [enum_declaration]	    [NL] % T.D. Oct 2007
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+end define
+
+annotate enum_body [repeat class_body_declaration ordered] 
+% remove some extra spaces
+redefine import_declaration
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+	'import [opt 'static] [imported_name] '; [NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    | 	
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+'; [NL] 	% JRC Apr 08
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+end define
+
 annotate class_header [repeat modifier ordered]
 annotate interface_header [repeat modifier ordered]
 annotate enum_header [repeat modifier ordered]
 annotate extends_clause [list type_name+ ordered]
 annotate implements_clause [list qualified_name+ ordered]
+annotate package_declaration [opt package_header kept] 
+annotate package_declaration [repeat import_declaration kept ordered] 
+annotate package_declaration [repeat type_declaration kept] 
+
+annotate class_or_interface_body [repeat class_body_declaration kept ordered ignored when Private]
+
 annotate constructor_declaration [repeat modifier ordered] 
 annotate variable_declaration [repeat modifier ordered] 
 annotate variable_declarators [list variable_declarator+ ordered]
@@ -23,11 +60,15 @@ annotate method_declaration [repeat modifier ordered]
 annotate throws [list qualified_name+ ordered]
 annotate annotation_value_list [list keyed_annotation_value ordered]
 annotate single_annotation_value [list expression_or_nested_annotation ordered]
-annotate catch_clause [repeat modifier ordered]
 
-#ifdef COMMENTS
-    include "Java/javaCommentOverrides.grm"
-#endif
+redefine comment_nl
+    [my_comment kept ignored when JavaDoc]
+end define
+
+define my_comment
+    [repeat comment] 
+end define
+
 function contains Object [any] 
     match * [any] Object
 end function

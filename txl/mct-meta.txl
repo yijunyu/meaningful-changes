@@ -33,31 +33,31 @@ function gather_irrelevant T [typeid]
   by Rest [gather_relevant T] [gather_irrelevant T]
 end function
 
-function find_type T1 [typeSpec] T_A [typeSpec]
-  replace [typeSpec*] _ [typeSpec*]
+function find_type T_A [typeSpec]
+  replace [typeSpec*] T [typeSpec*]
+  deconstruct T T1 [typeSpec]
   deconstruct T1 
 	X1 [opt typeModifier] X2 [typeid] X3 [opt typeRepeater]
+#ifdef DEBUG_FIND_TYPE
+  construct d_T1 [typeSpec] T1 [print]
+#endif
   deconstruct T_A 
 	X1 X2 X3 X4 [opt kept] X5 [opt orderedBy] X6 [opt ignoredWhen] X7 [opt preferredWith]
+#ifdef DEBUG_FIND_TYPE
+  construct d_TA [typeSpec] T_A [print]
+#endif
   by 
-	T_A
-end function
-
-function find_type_not T1 [typeSpec] T_A [typeSpec]
-  replace [typeSpec*] _ [typeSpec*]
-  deconstruct T1 
-	X1 [opt typeModifier] X2 [typeid] X3 [opt typeRepeater]
-  deconstruct not T_A 
-	X1 X2 X3 X4 [opt kept] X5 [opt orderedBy] X6 [opt ignoredWhen] X7 [opt preferredWith]
-  by 
-	T1
+	_ [. T_A]
 end function
 
 function replace_annotate A [MCT_annotate*] Tid [typeid]
   replace [typeSpec*] T1 [typeSpec] Rest [typeSpec*]
   construct Rest2 [typeSpec*] Rest [replace_annotate A Tid]
-  construct T_A [typeSpec*] _ [gather_types A] % [print]
-  construct M_A [typeSpec*] _ [find_type T1 each T_A] [find_type_not T1 each T_A] % [print]
+  construct T_A [typeSpec*] _ [gather_types A] 
+  construct M_A [typeSpec*] _ [. T1] [find_type each T_A] 
+#ifdef DEBUG_REPL_ANNOT
+	[print]
+#endif
   by _ [. M_A] [. Rest2]
 end function
 
@@ -69,11 +69,9 @@ function define2redefine A [MCT_annotate*]
 		LoT [repeat literalOrType] 
 		BLoT [repeat barLiteralsAndTypes] 
 	'end 'define 
-  construct A_relevant [MCT_annotate*] A [gather_relevant T] [gather_irrelevant T]
+  construct A_relevant [MCT_annotate*] A [gather_relevant T] [gather_irrelevant T] 
   construct n_A_relevant [number] _ [length A_relevant]
   where n_A_relevant [> 0]
-%  construct R1 [redefineStatement]
-%	'redefine T
   construct R1 [defineStatement]
 	'define T
 		LoT
@@ -81,7 +79,9 @@ function define2redefine A [MCT_annotate*]
 	'end 'define
   construct Types [typeSpec*] _ [^ R1]
   construct Types2 [typeSpec*] Types [replace_annotate A_relevant T] 
-%  construct R2 [redefineStatement] R1 [$ each Types Types2] % [print]
+#ifdef DEBUG_DEF2RE
+ 		[print]
+#endif
   construct R2 [defineStatement] R1 [$ each Types Types2] % [print]
   by R2 
 end function

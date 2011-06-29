@@ -13,8 +13,9 @@ source+=$(foreach ext,$(extensions),$(wildcard source/*/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(generated_language) 
 results+=$(source:source/%=result/%) 
-tools+=api_clone_java
 
+tools+=api_clone_java
+tools+=simple
 define diff_example_1
 results+=result/Java/$(1)/HelloWorld--2.java result/Java/$(1)/HelloWorld-2-3.java
 endef
@@ -25,10 +26,10 @@ target+=result/C/cid/vim73/eval.c
 target+=$(bin)/normc 
 target+=$(bin)/norm-include-c 
 target+=$(bin)/norm-id-c 
-target+=$(bin)/ProblemFrames/problemcc 
-target+=$(bin)/Java/api_clone_javacc 
-target+=$(bin)/Java/mdsdcc 
-target+=$(bin)/Java/modelcc 
+#target+=$(bin)/ProblemFrames/problemcc 
+#target+=$(bin)/Java/api_clone_javacc 
+#target+=$(bin)/Java/mdsdcc 
+#target+=$(bin)/Java/modelcc 
 target+=$(bin)/Q7/q7c 
 target+=$(bin)/Argument/argumentc 
 target+=$(bin)/Verilog/verilog2c
@@ -64,13 +65,7 @@ endef
 $(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool))))
 
 Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl Txl/mct-meta.txl
-	touch norm.Txl
-
-#result/norm/Java/api_clone_java.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
-#result/norm/Java/mdsd.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
-#result/norm/Java/model.Txl: Txl/Java/java.grm Txl/Java/javaCommentOverrides.grm
-#result/norm/ProblemFrames/problem.Txl: Txl/ProblemFrames/problem.grm
-#result/norm/Txl/Xtext/xtext.Txl: Txl/Xtext/xtext.grm
+	touch Txl/norm.Txl
 
 result/C/cid/vim73/eval.c: source/C/vim73/eval.c
 	mkdir -p $$(dirname $@)
