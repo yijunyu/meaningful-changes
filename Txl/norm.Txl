@@ -119,13 +119,13 @@ function main
  construct Statements_ChangeRule [statement*]
 	'keys
 	% '<<<<<< is removed from left, '>>>>>> is added to right
-		'... '<<<<<< '>>>>>> 
+		'<<<<<< '>>>>>> 
 #ifdef LINENO
 		'# 'line
 #endif
 	'end 'keys
 	'compounds
-		'... '<<<<<< '>>>>>>
+		'<<<<<< '>>>>>>
 	'end 'compounds
 	'define Change
 		'[ 'NL '] '<<<<<< '['opt 'stringlit'] '[ 'NL '] 

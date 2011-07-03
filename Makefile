@@ -13,12 +13,12 @@ source+=$(foreach ext,$(extensions),$(wildcard source/*/$(ext)/*.$(ext)))
 example+=$(source)
 results+=$(generated_language) 
 results+=$(source:source/%=result/%) 
-
-tools+=simple
+tools+=$(patsubst source/norm/%.norm,%,$(filter source/norm/Java/%,$(norm)))
 define diff_example_1
-results+=result/Java/$(1)/HelloWorld--2.java result/Java/$(1)/HelloWorld-2-3.java
+results+=result/$(1)/$(2)$(3)$(4).$(5)
 endef
-$(foreach tool,$(tools),$(eval $(call diff_example_1,$(tool))))
+$(foreach tool,$(tools),$(eval $(call diff_example_1,$(tool),HelloWorld,-1,-2,java)))
+$(foreach tool,$(tools),$(eval $(call diff_example_1,$(tool),HelloWorld,-2,-3,java)))
 
 example+=$(results)
 target+=result/C/cid/vim73/eval.c
@@ -50,17 +50,13 @@ endef
 $(foreach ext,$(extensions),$(eval $(call example,$(ext))))
 
 define diff_example_2
-result/Java/$(1)/HelloWorld--2.java: $(bin)/Java/$(1)c source/Java/java/HelloWorld.java source/Java/java/HelloWorld-2.java 
-	@mkdir -p result/Java/$(1)
-	$(bin)/Java/$(1)c source/Java/java/HelloWorld.java -diff source/Java/java/HelloWorld-2.java -o $$@
-	if [ -e test/Java/$(1)/HelloWorld--2.java ]; then diff $$@ test/Java/$(1)/HelloWorld--2.java; fi
-
-result/Java/$(1)/HelloWorld-2-3.java: $(bin)/Java/$(1)c source/Java/java/HelloWorld-2.java source/Java/java/HelloWorld-3.java 
-	@mkdir -p result/Java/$(1)
-	$(bin)/Java/$(1)c source/Java/java/HelloWorld.java -diff source/Java/java/HelloWorld-2.java -o $$@
-	if [ -e test/Java/$(1)/HelloWorld-2-3.java ]; then diff $$@ test/Java/$(1)/HelloWorld-2-3.java; fi
+result/$(1)/$(2)$(3)$(4).$(5): $(bin)/$(1)c source/$(1)/$(2)$(3).$(5) source/$(1)/$(2)$(4).$(5) 
+	@mkdir -p result/$(1)
+	$(bin)/$(1)c source/$(1)/$(2)$(3).$(5) -diff source/$(1)/$(2)$(4).$(5) >& $$@
+	if [ -e test/$(1)/$(2)$(3)$(4).$(5) ]; then diff $$@ test/$(1)/$(2)$(3)$(4).$(5); fi
 endef
-$(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool))))
+$(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool),HelloWorld,-1,-2,java)))
+$(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool),HelloWorld,-2,-3,java)))
 
 Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl Txl/mct-meta.txl
 	touch Txl/norm.Txl
@@ -83,40 +79,40 @@ result/verilog2/%.v: $(bin)/verilog2c source/v/%.v
 	$(bin)/verilog2c result/v/$*.v -o $@
 	if [ -e test/verilog2/$*.v ]; then diff $@ test/verilog2/$*.v; fi
 
-$(bin)/%c: Txl/%.Txl Makefile
+$(bin)/%c: Txl/%.Txl
 	mkdir -p $$(dirname $@)
 	if [ "$$(basename Txl/$*.Txl)" != "$*.Txl" ]; then cp Txl/$*.Txl Txl/$$(basename Txl/$*.Txl); fi
 	$(txlc) -d DEFINE Txl/$$(basename Txl/$*.Txl)
 	mv $$(basename $*.x) $@
 	rm -f Txl/$$(basename Txl/$*.Txl)
 
-$(bin)/%cc: Txl/%.Txl Makefile
+$(bin)/%cc: Txl/%.Txl
 	mkdir -p $$(dirname $@)
 	cp Txl/$*.Txl Txl/$$(basename Txl/$*.Txl)
 	$(txlc) -comment -d DEFINE -d COMMENTS Txl/$$(basename Txl/$*.Txl)
 	mv $$(basename $*.x) $@
 	rm -f Txl/$$(basename Txl/$*.Txl)
 
-$(bin)/normc: Txl/norm.Txl Makefile
+$(bin)/normc: Txl/norm.Txl
 	$(txlc) -d DEFINE Txl/norm.Txl
 	mv norm.x $@
 
-$(bin)/%c: result/norm/%.Txl Makefile
+$(bin)/%c: result/norm/%.Txl
 	mkdir -p $$(dirname $@)
 	cp result/norm/$*.Txl id.Txl
 	$(txlc) -i Txl id.Txl
 	mv id.x $@
 	rm id.Txl
 
-$(bin)/norm-include-c: Txl/norm.Txl Makefile
+$(bin)/norm-include-c: Txl/norm.Txl
 	$(txlc) Txl/norm.Txl
 	mv norm.x $@
 
-$(bin)/norm-id-c: Txl/norm.Txl Makefile
+$(bin)/norm-id-c: Txl/norm.Txl
 	$(txlc) -d ID Txl/norm.Txl
 	mv norm.x $@
 
-$(bin)/norm-no_clone-include-c: Txl/norm.Txl Makefile
+$(bin)/norm-no_clone-include-c: Txl/norm.Txl
 	$(txlc) -d NO_CLONE Txl/norm.Txl
 	mv norm.x $@
 
@@ -129,7 +125,7 @@ result/norm/%.Txl: $(bin)/normc source/norm/%.norm
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-$(bin)/%cc: result/norm/%.Txl Makefile
+$(bin)/%cc: result/norm/%.Txl
 	mkdir -p $$(dirname $@)
 	cp result/norm/$*.Txl comment.Txl
 	$(txlc) -comment -d COMMENTS comment.Txl
@@ -137,15 +133,15 @@ $(bin)/%cc: result/norm/%.Txl Makefile
 	rm -f comment.Txl
 
 # if the grammar does not handle comments, don't use -comment -d COMMENTS options yet
-$(bin)/vc: Txl/v.Txl Makefile
+$(bin)/vc: Txl/v.Txl
 	$(txlc) Txl/v.Txl
 	mv v.x $@
 
-$(bin)/xtextc: Txl/xtext.Txl Makefile
+$(bin)/xtextc: Txl/xtext.Txl
 	$(txlc) Txl/xtext.Txl
 	mv xtext.x $@
 
-$(bin)/cc: Txl/C/c.Txl Makefile
+$(bin)/cc: Txl/C/c.Txl
 	mkdir -p $$(dirname $@)
 	cp Txl/C/c.Txl Txl/c.Txl
 	$(txlc) Txl/c.Txl
