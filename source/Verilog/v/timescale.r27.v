@@ -1,3 +1,1 @@
-// Timescale define
-
-`timescale 1ns/10ps
+`timescale 1 ns / 10 ps
