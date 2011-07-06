@@ -31,9 +31,11 @@ function typeSpec_id_LoT TID [typeid] LoT [literalOrType*]
  replace [statement*] S [statement*] 
  construct StrID [id] _ [quote TID] 
  export Expression [literalOrExpression*] _
- construct TT [type] '[ T ']
+ export IDs [varid*] _
+ construct TT [type] '[ 'id ']
  construct Pat [literalOrVariable*] _ [pattern_replacement TT each LoT]
- construct Pattern [pattern] Pat % [print]
+ import IDs
+ construct Pattern [pattern] Pat 
  construct Replacement [replacement] Expression % [print]
  construct ID2 [id] 'normalise_id_by2
  construct ruleID2 [id] ID2 [_ StrID] [!]
@@ -44,11 +46,13 @@ function typeSpec_id_LoT TID [typeid] LoT [literalOrType*]
  construct pID [id] StrID
  construct n_Replacement [number] _ [length Pat]
  where n_Replacement [= 1]
- construct S1 [statement*]
-    'function ruleID4 'Path '['list 'id'+']
-        'replace '[ TID '] 'P1 '[ TID '] 
+ construct DEC [constructDeconstructImportExportOrCondition] 
 	'deconstruct 'P1 Pattern
-%	ConstructNodesPrint
+ construct Construct [constructDeconstructImportExportOrCondition*] _ [. DEC]
+ construct S1 [statement*]
+    'function ruleID4
+        'replace '[ 'program '] 'P1 '[ 'program '] 
+	Construct
         'by 'P1
     'end 'function
  import Rules [statement*]

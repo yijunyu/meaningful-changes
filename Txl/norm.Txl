@@ -19,6 +19,9 @@ include "mct-id.txl"
 rule typeSpec_eliminateAnnotations
  replace * [typeSpec] T [typeSpec] 
  deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [opt preferredWith]
+#ifdef ID
+	       Ident [opt identified]
+#endif
  deconstruct not T M I R
  by M I R
 end rule
@@ -94,6 +97,7 @@ end function
 %
 function main 
  replace [program] P [program]
+ export IDs [varid*] _
  export Rules [statement*] _
  export OrderRuleIDs [id*] _
  export IgnoreRuleIDs [id*] _
@@ -106,8 +110,8 @@ function main
  construct P0 [program] 
       P 
 #ifdef DEFINE
-	[include_all] 
-	[redefine2define]
+	[include_all] % [print]
+	[redefine2define] %[print]
 #endif
         [metaAnnotation] 
 #ifdef DEBUG_META
@@ -242,7 +246,7 @@ function main
 		   '[ 'program_remove_clone ']
 		   '[ 'print_diff ']
 #ifdef ID
-		   '[ 'exportIds ']
+%		   '[ 'exportIds ']
 #endif
 	'end 'function
  deconstruct P0 S0 [statement*]

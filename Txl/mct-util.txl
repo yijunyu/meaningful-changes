@@ -103,6 +103,8 @@ function pattern_replacement_ignore_per_literal1 T [type] LoT [literalOrType]
  construct X [id] 'X 
  construct V [varid] X [!]
  construct Var [literalOrVariable] V T 
+ import IDs [varid*]
+ export IDs IDs [. V]
  by Pattern [. Var]
  % ignore the variable in the Expression
 end function

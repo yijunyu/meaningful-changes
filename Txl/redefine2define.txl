@@ -71,7 +71,7 @@ function redefine2define_one R [redefineStatement]
   replace [program] P [program]
   construct D [defineStatement*] _ [^ P]
   by P 	  [redefine2define_prefix R each D] 
-	  [redefine2define_suffix R each D]
+	  [redefine2define_suffix R each D] 
 	  [redefine2define_replace R each D]
 end function
 
@@ -80,5 +80,5 @@ function redefine2define
   % construct d_P [program] P [print]
   construct R [redefineStatement*] _ [^ P]
   %  construct d_R [redefineStatement*] R [print]
-  by P [redefine2define_one each R]
+  by P [redefine2define_one each R] 
 end function

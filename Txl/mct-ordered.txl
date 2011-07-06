@@ -24,6 +24,9 @@ T [typeSpec]
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+#ifdef ID
+	       Ident [opt identified]
+#endif
  deconstruct O 'ordered 
  deconstruct not M 'list
  construct StrID [id] _ [quote TID]
@@ -62,6 +65,9 @@ T [typeSpec]
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+#ifdef ID
+	       Ident [opt identified]
+#endif
  deconstruct not M 'list
  deconstruct O 'ordered B [opt byField]
  deconstruct B 'by F [id]
@@ -107,6 +113,9 @@ T [typeSpec]
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+#ifdef ID
+	       Ident [opt identified]
+#endif
  deconstruct M 'list
  deconstruct O 'ordered
  construct StrID [id] _ [quote TID]
@@ -145,6 +154,9 @@ T [typeSpec]
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
  deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] O [opt orderedBy] 
+#ifdef ID
+	       Ident [opt identified]
+#endif
  deconstruct M 'list
  deconstruct O 'ordered B [byField]
  deconstruct B 'by F [id]
