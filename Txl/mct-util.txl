@@ -66,6 +66,8 @@ function pattern_replacement_prefer_per_literal2 T [type] R [ruleApplication+] L
  deconstruct LoT T1 [type]
  construct S [stringlit] _ [quote T1]
  where not S [grep "NL"]
+ where not S [grep "SPON"]
+ where not S [grep "SPOFF"]
  construct X [id] 'X 
  construct V [varid] X [!]
  construct Var [literalOrVariable] V T1 
@@ -115,6 +117,8 @@ function pattern_replacement_ignore_per_literal2 T [type] LoT [literalOrType]
  deconstruct LoT T1 [type]
  construct S [stringlit] _ [quote T1]
  where not S [grep "NL"]
+ where not S [grep "SPON"]
+ where not S [grep "SPOFF"]
  construct X [id] 'X 
  construct V [varid] X [!]
  construct Var [literalOrVariable] V T1 

@@ -68,7 +68,8 @@ result/C/cid/vim73/eval.c: source/C/vim73/eval.c
 #	rm -f eval.c
 
 eval.c.id: eval.c result/norm/C/cid.Txl
-	txl -i Txl eval.c result/norm/C/cid.Txl -o $@
+	txl -s 1024 -i Txl eval.c result/norm/C/cid.Txl -o t.t >& $@
+	rm -f t.t
 
 result/Verilog/v/%.v: $(bin)/Verilog/vc source/Verilog/v/%.v
 	@mkdir -p result/Verilog/v
@@ -173,9 +174,9 @@ result/norm/XML/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/XML/xml-
 result/norm/C/cid.Txl: $(bin)/norm-id-c source/norm/C/cid.norm
 	mkdir -p $$(dirname $@)
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
-	/usr/bin/time $(bin)/norm-id-c -iTxl source/norm/C/cid.norm -o $@
-	/usr/bin/time $^ -o $TMPFILE
-#	$(txl) -i Txl -d ID -d DEFINE source/norm/C/cid.norm Txl/norm.Txl -o $TMPFILE
+#	/usr/bin/time $(bin)/norm-id-c -iTxl source/norm/C/cid.norm -o $@
+#	/usr/bin/time $^ -o $TMPFILE
+	$(txl) -i Txl -d ID -d DEFINE source/norm/C/cid.norm Txl/norm.Txl -o $TMPFILE
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
