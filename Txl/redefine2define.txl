@@ -1,4 +1,4 @@
-% redefine2define
+% file redefine2define
 % convert all defineStatements to equivalent defineStatements
 
 % auxiliary function: replace the Redefine statement to the new Define statement
@@ -13,6 +13,17 @@ function remove_dotdotdot
   by Rest
 end function
 
+function replace_newD D [defineStatement] NewD [defineStatement]
+  replace * [statement*] D 
+  construct d_D [defineStatement] D [print]
+  by NewD 
+end function
+
+function replace_R R [redefineStatement] 
+  replace * [statement*] R 
+  by _ 
+end function
+
 function redefine2define_replace R [redefineStatement] D [defineStatement]
   deconstruct R 
 	'redefine 
@@ -25,8 +36,8 @@ function redefine2define_replace R [redefineStatement] D [defineStatement]
   construct NewD [defineStatement]
 	'define T1 T3 T4
 	'end 'define
-  replace * [statement*] D S1 [statement*] 
-  by S1 [replace_redefine R NewD]
+  replace [program] S [statement*]
+  by S [replace_newD D NewD] [replace_R R]
 end function
 
 function redefine2define_prefix  R [redefineStatement] D [defineStatement]
@@ -35,9 +46,10 @@ function redefine2define_prefix  R [redefineStatement] D [defineStatement]
   construct TT3 [repeat literalOrType] T7 [. T3]
   construct TT4 [repeat barLiteralsAndTypes] T8 [append T3]
   construct NewD [defineStatement] 'define T1 TT3 TT4 'end 'define
-  replace * [statement*] D S1 [statement*] 
-  by S1 [replace_redefine R NewD] 
+  replace [program] S [statement*] 
+  by S [replace_newD D NewD] [replace_R R]
 end function
+
 function append T3 [repeat literalOrType]
   replace [repeat barLiteralsAndTypes] T81 [barLiteralsAndTypes] T82 [repeat barLiteralsAndTypes] 
   deconstruct T81 '| LoT [literalOrType*]
@@ -55,8 +67,8 @@ function redefine2define_suffix R [redefineStatement] D [defineStatement]
   construct TT3 [repeat literalOrType] TT31 [. T7]
   construct TT4 [repeat barLiteralsAndTypes] T8 [prepend TT31]
   construct NewD [defineStatement] 'define T1 TT3 TT4 'end 'define
-  replace * [statement*] D S1 [statement*] 
-  by S1 [replace_redefine R NewD] 
+  replace [program] S [statement*] 
+  by S [replace_newD D NewD] [replace_R R]
 end function
 function prepend T3 [repeat literalOrType]
   replace [repeat barLiteralsAndTypes] T81 [barLiteralsAndTypes] T82 [repeat barLiteralsAndTypes] 
@@ -77,8 +89,6 @@ end function
 
 function redefine2define 
   replace [program] P [program]
-  % construct d_P [program] P [print]
   construct R [redefineStatement*] _ [^ P]
-  %  construct d_R [redefineStatement*] R [print]
   by P [redefine2define_one each R] 
 end function
