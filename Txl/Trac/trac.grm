@@ -1,0 +1,107 @@
+#pragma -w 32000 -noesc
+keys
+    INDENT DEDENT BULLET ENUM ENUMINDENT ENUMDEDENT
+end keys
+
+tokens
+    url "http://[$\u0123456789.-&\?/]+"
+%    id  "$[\u0123456789'][$\u0123456789-']*"
+    id "[\u0123456789][\i012345679]*"
+    macrobeg "\[\[" 
+    macroend "\]\]"
+    para "\n"
+    alphanum "[\u0123456789]+"
+%    number "[\u0123456789]+"
+end tokens
+
+comments
+    '#
+    /*  */
+    //
+    {{{ }}}
+end comments
+
+define indent
+    [attr 'INDENT]
+  | [attr 'ENUMINDENT]
+end define
+
+define dedent
+    [attr 'DEDENT]
+  | [attr 'ENUMDEDENT]
+end define
+
+define bullet
+    [attr 'BULLET]
+  | [attr 'ENUM]
+end define
+
+define trac
+  [section*]
+end define
+
+define punct
+    [SPOFF] '( [SPON]
+  | [SPOFF] '[ [SPON]
+  | [SPOFF] ') [SPON] 
+  | [SPOFF] '] [SPON]
+  | '* | '/ 
+  | '`'` | '` | '-'- | '+ | [SPOFF] '- [SPON]
+  | '|
+  | [SPOFF] '> [SP] [SPON] 
+  | [SPOFF] '& [SP] [SPON] 
+  | [SPOFF] ': [SP] [SPON]
+  | [SPOFF] ', [SP] [SPON] 
+  | [SPOFF] '? [SP] [SPON] 
+  | [SPOFF] '. [SP] [SPON] [NL]
+  | [SPOFF] '; [SP] [SPON] [NL]
+  | [SPOFF] '\'\ [SP] [SPON] [NL]
+  | [SPOFF] '/'/ [SP] [SPON] [NL]
+end define
+
+define itemize
+  [indent] [item+] [dedent]
+end define
+
+define item
+   [bullet] [id_or_macro*] 
+ | [itemize]
+end define
+
+define id_or_assign
+  [id] | [id] '= [id*]
+end define
+
+define id_or_macro
+  [empty] | [url] | [stringlit] | [id] | [punct]  | [macro] | [comment] | [number] | [alphanum]
+end define
+
+define macro
+  [NL][macrobeg] [id_or_macro*] [opt macropara] [macroend] 
+end define
+
+define macropara
+  '( [list id_or_assign] ')
+end define
+
+define paragraph
+  [NL] [id_or_macro*] [opt para]
+end define
+
+define sentence
+   [paragraph] | [itemize] | [item]
+end define
+
+define section
+  [NL] [opt section_title]
+  [sentence*]
+end define
+
+define section_title
+  '= [not '=] [SP] [title] [SP] '=
+  | [SPOFF] '= [section_title] [SPOFF] '= [SPON]
+end define
+
+define title
+    [SPON] [id_or_macro*] 
+end define

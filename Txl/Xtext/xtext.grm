@@ -1,0 +1,107 @@
+tokens
+  id  "[$\u][$\i]*"
+end tokens
+
+keys
+  'grammar 'with 'generate '= '+= '| '? '* 'enum 'terminal 
+  '; '.. '. '[ '] '+ 'import 'as 'returns '::
+end keys
+
+comments
+   /* */
+   //
+end comments
+
+define qname
+    [id] 
+%  | [qname] [SPOFF] '. [id] [SPON]
+  | [qname] '. [id] 
+end define
+
+define grammar
+  'grammar [qname] 'with [qname] [NL]
+end define
+
+define generate
+  'generate [id] [opt stringlit] [NL]
+end define
+
+define import_stmt
+  'import [stringlit] 'as [id] [NL]
+end define
+
+define returns
+    'returns [id]
+%  | 'returns [id] [SPOFF] ':: [SPON] [id] 
+  | 'returns [id] ':: [id] 
+end define
+
+define grammar_rule
+%  [opt 'enum] [id] [opt returns] [SPOFF] ': [SPON] [expr*] [SPOFF] '; [SPON] [NL]
+  [opt 'enum] [id] [opt returns] ': [expr*] '; [NL]
+end define
+
+define terminal_rule
+%  'terminal [id] [opt returns] ': [SPON] [char_expr*] [SPOFF] '; [SPON] [NL]
+  'terminal [id] [opt returns] ': [char_expr*] '; [NL]
+end define
+
+define term
+  [xtext_literal] | [xtext_type] | [id] | [qname] [assign_op] [id] 
+end define
+
+define assign_op
+  '= | '+= 
+end define
+
+define mod
+  '? | '* | '+
+end define
+
+define expr
+    [term]
+  | '{ [list expr] '}
+%  | '( [expr*] [SPOFF] ') [SPON]
+  | '( [SP] [expr*] ') [SP]
+  | [expr] '| [expr]
+%  | [expr] [SPOFF] [mod] [SPON]
+  | [expr] [mod] [SP] 
+end define
+
+define char_expr
+    [charlit] 
+  | [id]
+%  | [charlit] [SPOFF] '.. [SPON] [charlit]
+  | [charlit] '.. [charlit]
+  | '( [char_expr *] ')
+%  | [char_expr] [SPOFF] [mod] [SPON]
+  | [char_expr] [mod] 
+  | [char_expr] '| [char_expr]
+%  | [SPOFF] '! [SPON] [char_expr] 
+  | '! [char_expr] 
+end define
+
+define xtext_literal
+    [xtext_type]
+  | [stringlit] 
+  | [charlit] 
+  | [id]
+end define
+
+define op
+%  '= | [SPOFF] '+= [SPON]
+  '= | '+= 
+end define
+
+define operand
+	[id] | [stringlit] | [charlit]
+end define
+
+define xtext_type
+%     [id] [SPOFF] [opt '?] [op] [opt '[ ] [operand] [opt '] ]
+     [id] [opt '?] [op] [opt '[ ] [operand] [opt '] ]
+end define
+
+define xtext
+  [grammar] [opt import_stmt] [generate] [grammar_rule*] [terminal_rule*]
+end define

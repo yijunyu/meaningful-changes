@@ -1,0 +1,100 @@
+#pragma -newline
+tokens
+  SCOPE "::"
+  DEPENDS "==>"
+  CONTRIBUTES "=>"
+  MAKES "++"
+  BREAKS "--"
+end tokens
+keys 
+  INDENT DEDENT
+  '[ '] '{ '} '& '| 'AND 'and 'OR 'or '< '> '( ')
+  'Actor 'Agent 'Role 'Position
+  'Task 'Resource 'Goal 'Softgoal
+  '~ '+ '- 
+  'MAKE 'make 'HELP 'help 'HURT 'hurt 'BREAK 'break
+end keys
+
+define indent [IN] [attr 'INDENT] end define
+define dedent [EX] [attr 'DEDENT] end define
+
+tokens
+    id  "[$\u][$\i]*"
+%    id  "[$\u]*"
+end tokens
+
+define advice
+    [SP] [opt whenQ] [opt whoQ] [whyQ] [opt whatQ] [opt whereQ] [opt howQ] [opt howMuchQ] [newline]
+  | [SP] [opt whenQ] [whoQ] [opt whyQ] [opt whatQ] [opt whereQ] [opt howQ] [opt howMuchQ] [newline]
+end define
+
+define whenQ
+   '( [list name+] ') [CONTRIBUTES]
+end define
+
+define whatQ
+   '[ [list name+] ']
+end define
+
+define whoQ
+   '< [actor] '> [opt SCOPE]
+end define
+
+define actor
+   [name] 
+ | 'Actor    [name]
+ | 'Agent    [name]
+ | 'Role     [name]
+ | 'Position [name]
+end define
+
+define whyQ  % hard goal
+  [name] 
+| 'Task [name] 
+| 'Resource [name] 
+| 'Goal [name] 
+end define
+
+define howMuchQ  % soft goal
+    [DEPENDS] [list name+]
+  | [CONTRIBUTES] [opt indent] [howMuch*] [opt dedent]
+  | [CONTRIBUTES] [opt indent] [list howMuch+] [opt dedent]
+end define
+
+define who
+  '~ [whoQ]
+end define
+
+define howMuch
+  [opt newline] [howMuchOp] [opt whoQ] [whyQ]
+end define
+
+define howOp
+  [empty] | 'AND | 'and | '& | 'OR | 'or | '|  
+end define
+
+define howQ
+    [howOp] [opt indent] [opt newline] [advice+] [opt dedent] 
+  | '{ [SP] [howOp] [opt newline] [opt indent] [advice+] [opt dedent] '} 
+end define
+
+define howMuchOp
+  [opt ',]  [MAKES] | 'MAKE | 'make 
+  | '+ | 'HELP | 'help 
+  | [BREAKS] | 'BREAK | 'break 
+  | '- | 'HURT | 'hurt 
+  | '? | 'MAY | 'perhaps | 'Softgoal
+  | '~ | 'DEPENDS | 'depends
+end define
+
+define whereQ
+   [CONTRIBUTES] [list name+] 
+end define
+
+define name
+   [name_token+]
+end define
+
+define name_token
+   [stringlit] | [number] | [id]
+end define
