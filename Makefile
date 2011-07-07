@@ -13,6 +13,7 @@ source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.*))
 results+=$(generated_language) 
 results+=$(source:source/%=result/%) 
 results+=eval.c.id
+results+=eval.c.id.type
 tools+=$(patsubst source/norm/%.norm,%,$(filter source/norm/Java/%,$(norm)))
 pf_tools+=$(patsubst source/norm/%.norm,%,$(filter source/norm/ProblemFrames/%,$(norm)))
 define diff_example_1
@@ -67,6 +68,9 @@ result/C/cid/vim73/eval.c: source/C/vim73/eval.c
 	$(bin)/C/cidc eval.c | sort | uniq > $@
 #	rm -f eval.c
 
+eval.c.id.type: eval.c.id
+	sort eval.c.id | uniq -c | sort -n > eval.c.id.type
+
 eval.c.id: eval.c result/norm/C/cid.Txl
 	txl -s 1024 -i Txl eval.c result/norm/C/cid.Txl -o t.t >& $@
 	rm -f t.t
@@ -113,7 +117,7 @@ $(bin)/norm-include-c: Txl/norm.Txl
 	mv norm.x $@
 
 $(bin)/norm-id-c: Txl/norm.Txl Txl/mct-id.txl
-	$(txlc) -d ID Txl/norm.Txl
+	$(txlc) -d ID -d DEFINE Txl/norm.Txl
 	mv norm.x $@
 
 $(bin)/norm-no_clone-include-c: Txl/norm.Txl
@@ -170,13 +174,11 @@ result/norm/XML/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/XML/xml-
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-#result/norm/C/cid.Txl: $(bin)/norm-id-c source/norm/C/cid.norm
-result/norm/C/cid.Txl: $(bin)/norm-id-c source/norm/C/cid.norm
+result/norm/C/cid.Txl: $(bin)/norm-id-c source/norm/C/cid.norm config.id 
 	mkdir -p $$(dirname $@)
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
-#	/usr/bin/time $(bin)/norm-id-c -iTxl source/norm/C/cid.norm -o $@
-#	/usr/bin/time $^ -o $TMPFILE
-	$(txl) -i Txl -d ID -d DEFINE source/norm/C/cid.norm Txl/norm.Txl -o $TMPFILE
+	/usr/bin/time $(bin)/norm-id-c -iTxl source/norm/C/cid.norm -o $TMPFILE
+#	$(txl) -i Txl -d ID -d DEFINE source/norm/C/cid.norm Txl/norm.Txl -o $TMPFILE
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
