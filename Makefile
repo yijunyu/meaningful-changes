@@ -82,10 +82,15 @@ result/Verilog/v/%.v: $(bin)/Verilog/vc source/Verilog/v/%.v
 	rm -f result/Verilog/v/$*.v.tmp
 	if [ -e test/Verilog/v/$*.v ]; then diff $@ test/Verilog/v/$*.v; fi
 
-result/Verilog/verilog2/%.v: $(bin)/verilog2c source/v/%.v
+result/Verilog/verilog2/%.v: $(bin)/Verilog/verilog2c source/v/%.v
 	@mkdir -p result/Verilog/verilog2
 	$(bin)/Verilog/verilog2c result/Verilog/v/$*.v -o $@
 	if [ -e test/Verilog/verilog2/$*.v ]; then diff $@ test/Verilog/verilog2/$*.v; fi
+
+result/JSON/example/%.json: $(bin)/JSON/examplec source/JSON/example/%.json
+	@mkdir -p result/JSON/example
+	$^ -o $@
+	if [ -e test/JSON/example/$*.json ]; then diff $@ test/JSON/example/$*.json; fi
 
 $(bin)/%c: Txl/%.Txl
 	mkdir -p $$(dirname $@)
