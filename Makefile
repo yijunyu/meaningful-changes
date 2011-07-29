@@ -32,8 +32,9 @@ target+=$(bin)/ProblemFrames/problemcc
 target+=$(bin)/Java/mdsdcc 
 target+=$(bin)/Java/modelcc 
 target+=$(program) $(results)
-package=/home/share/sead/mct/mct-$(shell uname).tar.gz
-package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
+#package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
+dateFolder=$(shell date +%Y-%m-%d)
+package=/home/share/sead/mct/$(dateFolder)/mct-$(shell uname).tar.gz
 #==== R U L E S ====
 .PHONEY: all clean install
 all: $(target)
