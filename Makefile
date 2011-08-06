@@ -60,7 +60,7 @@ $(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool),HelloWorld,-1,-2,ja
 $(foreach tool,$(tools),$(eval $(call diff_example_2,$(tool),HelloWorld,-2,-3,java)))
 $(foreach tool,$(pf_tools),$(eval $(call diff_example_2,$(tool),,CommandedBehaviour,RequiredBehaviour,problem)))
 
-Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-kept.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl Txl/mct-meta.txl
+Txl/norm.Txl: Txl/mct.grm Txl/mct-util.txl Txl/mct-scoped.txl Txl/mct-ignored.txl Txl/mct-preferred.txl Txl/mct-ordered.txl Txl/redefine2define.txl Txl/include_all.txl Txl/mct-meta.txl
 	touch Txl/norm.Txl
 
 result/C/cid/vim73/eval.c: source/C/vim73/eval.c
@@ -199,5 +199,5 @@ source/norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm
 	touch -f $@
 
 clean:
-	rm -rf ${target} $(generated_language)
+	rm -rf ${target} $(generated_language) eval.c
 #	git clean -X -f

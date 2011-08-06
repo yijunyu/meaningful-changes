@@ -18,7 +18,7 @@ T [typeSpec]
 'redefine 
 #endif
 TID [typeid] Type [literalOrType*] RestDS [barLiteralsAndTypes*] 'end 'define
- deconstruct T TM [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [preferredWith]
+ deconstruct T TM [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt scoped] O [opt orderedBy] Ig [opt ignoredWhen] P [preferredWith]
 #ifdef ID
 	       Ident [opt identified]
 #endif
@@ -82,7 +82,7 @@ end function
 
 function typeSpec_prefer_LoT TID [typeid] T [typeSpec] LoT [literalOrType*] 
  replace [statement*] S [statement*] 
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [preferredWith]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt scoped] O [opt orderedBy] Ig [opt ignoredWhen] P [preferredWith]
 #ifdef ID
 	       Ident [opt identified]
 #endif

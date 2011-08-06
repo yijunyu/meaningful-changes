@@ -42,7 +42,7 @@ function find_type T_A [typeSpec]
   construct d_T1 [typeSpec] T1 [print]
 #endif
   deconstruct T_A 
-	X1 X2 X3 X4 [opt kept] X5 [opt orderedBy] X6 [opt ignoredWhen] X7 [opt preferredWith]
+	X1 X2 X3 X4 [opt scoped] X5 [opt orderedBy] X6 [opt ignoredWhen] X7 [opt preferredWith]
 #ifdef DEBUG_FIND_TYPE
   construct d_TA [typeSpec] T_A [print]
 #endif

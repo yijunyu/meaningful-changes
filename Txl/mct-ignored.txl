@@ -24,13 +24,13 @@ T [typeSpec]
 	PostRule [opt barDotDotDot] 
 #endif
 	'end 'define
- by S [typeSpec_ignore_LoT0 TID T LoT] [typeSpec_ignore_LoT TID T LoT] 
+ by S [typeSpec_ignore_LoT0 TID T LoT] [typeSpec_ignore_LoT_repeat TID T LoT] [typeSpec_ignore_LoT_opt TID T LoT] 
       [typeSpec_ignore_BLoT TID T each BLoT] 
 end function
 % LoT 
 function typeSpec_ignore_LoT0 TID [typeid] T [typeSpec] LoT [literalOrType*] 
  replace [statement*] S [statement*] 
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt scoped] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
 #ifdef ID
 	       Ident [opt identified]
 #endif
@@ -78,9 +78,9 @@ function typeSpec_ignore_LoT0 TID [typeid] T [typeSpec] LoT [literalOrType*]
  export IgnoreRuleIDs IgnoreRuleIDs [. ruleID4]
  by S [. S1]
 end function
-function typeSpec_ignore_LoT TID [typeid] T [typeSpec] LoT [literalOrType*] 
+function typeSpec_ignore_LoT_opt TID [typeid] T [typeSpec] LoT [literalOrType*] 
  replace [statement*] S [statement*] 
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt scoped] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
 #ifdef ID
 	       Ident [opt identified]
 #endif
@@ -102,6 +102,58 @@ function typeSpec_ignore_LoT TID [typeid] T [typeSpec] LoT [literalOrType*]
  construct pID [id] TypeID [_ StrID]
  construct n_Replacement [number] _ [length Pat]
  where not n_Replacement [= 1]
+ deconstruct TM 'opt
+ construct S1 [statement*]
+    'function ruleID2 'E1 '[ TID ']
+    	'replace '[ TID '* '] 'Seq '[ TID '* ']
+        'deconstruct 'not 'E1 Pattern
+     	'by 'Seq '[ '. 'E1 '] 
+    'end 'function
+    'function ruleID3 'E1 '[ TID ']
+    	'replace '[ TID '* '] 'Seq '[ TID '* ']
+        'deconstruct 'E1 Pattern
+	'construct 'E2 '[ TID '] Replacement
+     	'by 'Seq '[ '. 'E2 '] 
+    'end 'function
+    'function ruleID4
+        'replace '[ 'program '] 'P1 '[ 'program '] 
+        'construct 'List1 '[ TID '* '] '_ '[ '^ 'P1 '] 
+        'construct 'List2 '[ TID '* ']
+            '_ '[ ruleID3 'each 'List1 '] '[ ruleID2 'each 'List1 ']
+        'construct 'P2 '[ 'program '] 'P1 '[ '$ 'each 'List1 'List2 ']
+       'by 'P2
+    'end 'function
+ import Rules [statement*]
+ export Rules Rules [. S1] 
+ import IgnoreRuleIDs [id*]
+ export IgnoreRuleIDs IgnoreRuleIDs [. ruleID4]
+ by S [. S1]
+end function
+function typeSpec_ignore_LoT_repeat TID [typeid] T [typeSpec] LoT [literalOrType*] 
+ replace [statement*] S [statement*] 
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt scoped] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
+#ifdef ID
+	       Ident [opt identified]
+#endif
+ where LoT [contains T]
+ deconstruct Ig 'ignored 
+ construct StrID [id] _ [quote TID]
+ export Expression [literalOrExpression*] _
+ construct TT [type] '[ T ']
+ construct Pat [literalOrVariable*] _ [pattern_replacement TT each LoT]
+ construct Pattern [pattern] Pat
+ construct Replacement [replacement] Expression
+ deconstruct I TypeID [id] 
+ construct ID2 [id] 'normalise_ignore_by2
+ construct ruleID2 [id] ID2 [_ StrID] [_ TypeID] [!]
+ construct ID3 [id] 'normalise_ignore_by3
+ construct ruleID3 [id] ID3 [_ StrID] [_ TypeID] [!]
+ construct ID4 [id] 'normalise_ignore_by4
+ construct ruleID4 [id] ID4 [_ StrID] [_ TypeID] [!]
+ construct pID [id] TypeID [_ StrID]
+ construct n_Replacement [number] _ [length Pat]
+ where not n_Replacement [= 1]
+ deconstruct not TM 'opt
  construct S1 [statement*]
     'function ruleID2 'E1 '[ TID ']
     	'replace '[ TID '* '] 'Seq '[ TID '* ']
@@ -132,7 +184,7 @@ end function
 function typeSpec_ignore_BLoT TID [typeid] T [typeSpec] BLoT [barLiteralsAndTypes] 
  replace [statement*] S [statement*] 
  deconstruct BLoT '| LoT [literalOrType*]
- by S [typeSpec_ignore_LoT0 TID T LoT] [typeSpec_ignore_LoT TID T LoT]
+ by S [typeSpec_ignore_LoT0 TID T LoT] [typeSpec_ignore_LoT_repeat TID T LoT] [typeSpec_ignore_LoT_opt TID T LoT]
 end function
 
 %
@@ -159,7 +211,7 @@ T [typeSpec]
 'redefine 
 #endif
 TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt scoped] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
 #ifdef ID
 	       Ident [opt identified]
 #endif
@@ -178,7 +230,7 @@ function typeSpec_ignore_when_LoT F [id] TID [typeid] T [typeSpec] LoT [literalO
  construct Pat [literalOrVariable*] _ [pattern_replacement_N12 TT each LoT]
  construct Pattern [pattern] Pat 
  construct Replacement [replacement] Expression
- deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt scoped] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
 #ifdef ID
 	       Ident [opt identified]
 #endif

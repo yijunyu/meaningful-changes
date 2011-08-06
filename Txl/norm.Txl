@@ -7,7 +7,7 @@ include "mct-util.txl"
 include "mct-ordered.txl"
 include "mct-ignored.txl"
 include "mct-preferred.txl"
-include "mct-kept.txl"
+include "mct-scoped.txl"
 include "mct-meta.txl"
 #ifdef PROMPT
 include "mct-prompt.txl"
@@ -18,7 +18,7 @@ include "mct-id.txl"
 
 rule typeSpec_eliminateAnnotations
  replace * [typeSpec] T [typeSpec] 
- deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt kept] O [opt orderedBy] Ig [opt ignoredWhen] P [opt preferredWith]
+ deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [opt scoped] O [opt orderedBy] Ig [opt ignoredWhen] P [opt preferredWith]
 #ifdef ID
 	       Ident [opt identified]
 #endif
@@ -182,6 +182,7 @@ function main
 	  'import 'TXLargs '[ 'repeat 'stringlit ']
 	  'deconstruct '* 'TXLargs
 		"-diff" 'Filename '[ 'stringlit ']
+    	  'export 'CloneNumber '99
 	  'construct 'P2 '[ 'program '] _ '[ 'read 'Filename '] '[ 'program_normalise ']
 	  'export 'Program_Diff '['program'] 'P2
 	  'by R_RemoveClone
@@ -213,7 +214,7 @@ function main
 		'import 'Program_Diff '[ 'program ']
 		'where 'CloneNumber '[ '> '0 ']
 		'% output the differences
-		'construct 'P_Clone '[ 'program '] 'CloneNumber
+		'construct 'P_Clone '[ 'program '] 'CloneNumber '['- '99']
 		'construct 'P_Left '['program'] 'P_diff '[print_diff_1'] '[print_diff_2'] 
 		'['printattr']
 		'construct 'P_Right '['program'] 'Program_Diff '[print_diff_1'] '[print_diff_2']
