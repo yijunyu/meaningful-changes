@@ -10,6 +10,7 @@ generated_language=$(norm:source/norm/%.norm=result/norm/%.Txl)
 extensions+=$(languages:Txl/%.Txl=%)
 program+=$(extensions:%=$(bin)/%c)
 source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.*))
+source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)c/*.*))
 results+=$(generated_language) 
 results+=$(source:source/%=result/%) 
 results+=eval.c.id
@@ -48,6 +49,7 @@ result/$(1)/%: $(bin)/$(1)c source/$(1)/%
 	if [ -e test/$(1)/$$* ]; then diff $$@ test/$(1)/$$*; fi
 endef
 $(foreach ext,$(extensions),$(eval $(call example,$(ext))))
+$(foreach ext,$(extensions),$(eval $(call example,$(ext)c)))
 
 define diff_example_2
 result/$(1)/$(2)$(3)$(4).$(5): 
@@ -103,7 +105,7 @@ $(bin)/%c: Txl/%.Txl
 $(bin)/%cc: Txl/%.Txl
 	mkdir -p $$(dirname $@)
 	cp Txl/$*.Txl Txl/$$(basename Txl/$*.Txl)
-	$(txlc) -comment -d DEFINE -d COMMENTS Txl/$$(basename Txl/$*.Txl)
+	$(txlc) -i Txl -comment -d DEFINE -d COMMENTS Txl/$$(basename Txl/$*.Txl)
 	mv $$(basename $*.x) $@
 	rm -f Txl/$$(basename Txl/$*.Txl)
 
@@ -130,10 +132,20 @@ $(bin)/norm-no_clone-include-c: Txl/norm.Txl
 	$(txlc) -d NO_CLONE Txl/norm.Txl
 	mv norm.x $@
 
+result/norm/Java/%.Txl: source/norm/Java/%.norm
+	mkdir -p $$(dirname $@)
+	$(txl) -i Txl -d SINGLETON source/norm/Java/$*.norm -o $TMPFILE
+	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
+	echo $$TMPFILE
+	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
+	rm -f $TMPFILE
+
 # default normalisation transformation
 result/norm/%.Txl: $(bin)/normc source/norm/%.norm
 	mkdir -p $$(dirname $@)
-	/usr/bin/time $(bin)/normc -iTxl source/norm/$*.norm -o $TMPFILE
+#	/usr/bin/time $(bin)/normc -iTxl source/norm/$*.norm -o $TMPFILE
+#	$(txl) -i Txl source/norm/$*.norm -o $TMPFILE
+	$(txl) -i Txl -d DEFINE -d SINGLETON source/norm/$*.norm -o $TMPFILE
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
@@ -142,7 +154,7 @@ result/norm/%.Txl: $(bin)/normc source/norm/%.norm
 $(bin)/%cc: result/norm/%.Txl
 	mkdir -p $$(dirname $@)
 	cp result/norm/$*.Txl comment.Txl
-	$(txlc) -comment -d COMMENTS comment.Txl
+	$(txlc) -i Txl -comment -d COMMENTS comment.Txl
 	mv comment.x $@
 	rm -f comment.Txl
 

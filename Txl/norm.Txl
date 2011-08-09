@@ -48,6 +48,7 @@ function DS_replace DS [redefineStatement]
  construct S5 [statement*] _ [typeSpec_ignore_when DS each T1]
  construct S6 [statement*] _ [typeSpec_ignore DS each T1] 
  construct S7 [statement*] _ [typeSpec_preferred_withLiterals DS each T1] [typeSpec_preferred_withRuleApplications DS each T1]
+ % construct d_S7 [statement*] S7 [print]
 #ifdef ID
  construct S8 [statement*] _ [typeSpec_id DS]
 #endif
@@ -161,6 +162,7 @@ function main
 #ifdef ID
  import IdRuleIDs
 #endif
+ construct d_S [id*] PreferRuleIDs [print]
  construct lOfE_NormaliseRuleIDs [literalOrExpression*]
 	_ [id_to_type each IgnoreRuleIDs]
 	  [id_to_type each PreferRuleIDs]
@@ -193,6 +195,7 @@ function main
 		'import 'TXLinput '[ 'stringlit ']
 		'construct 'Str_TmpFile '[ 'stringlit '] 'TXLinput '['+ ".tmp" ']
 		'construct 'Str_RmTmpFile '[ 'stringlit '] '_ '[ '+ "/bin/rm -f " '] '[ '+ 'Str_TmpFile ']
+%		'where 'not 'Prg '[ 'istype 'comment_nl ']
 		'construct 'P2 '['program'] 'Prg '[ 'write 'Str_TmpFile '] '[ 'read 'Str_TmpFile '] '[ 'system 'Str_RmTmpFile '] 
 		'construct 'S_Diff '['stringlit'] '_ '['quote 'P2 ']
 		'where 'not 'S_Diff '['= "" ']
@@ -203,6 +206,7 @@ function main
 		'import 'TXLinput '[ 'stringlit ']
 		'construct 'Str_TmpFile '[ 'stringlit '] 'TXLinput '['+ ".tmp" ']
 		'construct 'Str_RmTmpFile '[ 'stringlit '] '_ '[ '+ "/bin/rm -f " '] '[ '+ 'Str_TmpFile ']
+%		'where 'not 'Prg '[ 'istype 'comment_nl ']
 		'construct 'P2 '['program'] 'Prg '['program_normalise'] '[ 'write 'Str_TmpFile '] '[ 'read 'Str_TmpFile '] '[ 'system 'Str_RmTmpFile '] 
 		'construct 'S_Diff '['stringlit'] '_ '['quote 'P2 ']
 		'where 'S_Diff '['= "" ']
@@ -252,8 +256,7 @@ function main
 	'end 'function
  deconstruct P0 S0 [statement*]
  import Rules
- construct P1 [program] S0 [. Rules] 
-[. statements_Rule ] 
+ construct P1 [program] S0 [. Rules] [. statements_Rule ] 
  by  P1 
 #ifdef DEFINE
 	[redefine2define]

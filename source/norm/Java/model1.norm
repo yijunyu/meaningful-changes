@@ -1,0 +1,107 @@
+include "Java/java.grm"
+#ifdef COMMENTS
+include "Java/javaCommentOverrides.grm"
+#endif
+
+redefine type_declaration
+        [class_declaration]      [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    |   [interface_declaration]  [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    |   [enum_declaration]	    [NL] % T.D. Oct 2007
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+end define
+
+% remove some extra spaces
+redefine import_declaration
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+	'import [opt 'static] [imported_name] '; [NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    | 	
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+'; [NL] 	% JRC Apr 08
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+end define
+
+redefine package_declaration
+#ifdef COMMENTS
+    [comment_nl] [NL]
+#endif
+    [opt package_header scoped]
+    [repeat import_declaration] 
+    [repeat type_declaration scoped]
+end define
+
+redefine class_or_interface_body
+    '{                                    [NL][IN]
+       [repeat class_body_declaration scoped ordered ignored when NotModel]    [EX] [NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    '} [opt ';]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+[NL][NL]
+end define
+
+annotate modifier [repeat annotation ignored]
+annotate class_header [repeat modifier ordered] 
+annotate interface_header [repeat modifier ordered]
+annotate enum_header [repeat modifier ordered] 
+annotate extends_clause [list type_name+ ordered]
+annotate implements_clause [list qualified_name+ ordered]
+annotate constructor_declaration [repeat modifier ordered] 
+annotate variable_declaration [repeat modifier ordered]
+annotate variable_declarators [list variable_declarator+ ordered]
+annotate method_declaration [repeat modifier ordered]
+annotate throws [list qualified_name+ ordered]
+annotate annotation_value_list [list keyed_annotation_value ordered]
+annotate single_annotation_value [list expression_or_nested_annotation ordered]
+
+redefine comment_nl
+    [empty] | [repeat mycomment scoped]
+end define
+
+function contains Object [any] 
+    match * [any] Object
+end function
+
+function Private A  [class_body_declaration]
+    match  [class_or_interface_body]
+        B  [class_or_interface_body] 
+    construct M  [modifier *] _  [^ A] 
+    construct PublicModifiers [modifier*] 'public 'protected 
+    where not M [contains each PublicModifiers]
+end function
+
+function NotJavaDoc A  [mycomment]
+    match  [comment_nl]
+        B  [comment_nl] 
+    construct S_Comment [stringlit] _ [quote A] 
+    where not S_Comment [grep "\/\*\*"]
+end function
+
+function NotModel A  [class_body_declaration]
+    match  [class_or_interface_body]
+        B  [class_or_interface_body] 
+    construct S_Cs [stringlit] _ [quote A]
+    where not S_Cs [grep "@model"]
+    import Program [program]
+    deconstruct * [class_or_interface_body] Program C [class_or_interface_body]
+    where C [= B]
+end function

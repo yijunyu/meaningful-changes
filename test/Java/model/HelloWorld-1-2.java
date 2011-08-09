@@ -1,16 +1,16 @@
+/**
+   * HelloWorld 
+   * @model
+   */
 public class HelloWorld {
-    private static String hello = "Hello";
-    private static String world = "world";
-
-    <<<<<< "public static void main (String args []) {System.out.println (hello + \", \" + world + \"!\");}"
+    /**
+       * @model
+       */ private static String world = "world";
 
 }
 
+/* HelloWorld */
 public class HelloWorld {
-    static String world = "world";
-    static String hello = "Hello";
-
-    >>>>>> "public static void main (String args []) {System.out.println (hello + \", \" + world + \"!\");}"
 
 }
 
