@@ -1,9 +1,31 @@
-if [ ! -f test-model.txt ]; then
-	grep -l "@model" cvs/gmf/J/[A-F]*.java > test-model.txt
-	grep -l "@model" cvs/gmf/J/[G-M]*.java >> test-model.txt
-	grep -l "@model" cvs/gmf/J/[N-Z]*.java >> test-model.txt
+#!/bin/bash
+folder=`pwd`/cvs/gmf/raw 
+if [ ! -f result/test-model-all.txt ]; then
+	find $folder -name "*.java" > result/test-model-all.txt
 fi
-for f in `cat test-model.txt`; do
- echo $f
- scripts/mct-model -comment $f > $f.model
+for f in `cat result/test-model-all.txt`; do
+   file=$f.model.j
+   g=${f/*-/}
+   g1=${f/-*/}
+   h=${g/\.java/}
+   if [ "$h" != "1" -a "$h" != "" ]; then
+   	 let h1="$h + 1"
+   	 f1=$g1-$h1.java
+	if [ -e $f1 ]; then
+   	 x=$(grep "@model" $f1)
+	 if [ "$x" != "" ]; then
+		 file1=$g1-$h1.java.model.j
+		 if [ ! -e $f.model ]; then
+		    scripts/mct-model -comment $f > $f.model
+		 fi
+		 if [ ! -e $file ]; then
+		    txl -i Txl $f.model Txl/Java/java5.Txl -o $file
+		 fi
+		 if [ -e $file1 ]; then
+			echo "==" diff $file $file1
+			scripts/ldiff.pl $file $file1 
+		 fi
+	 fi
+	fi
+   fi
 done

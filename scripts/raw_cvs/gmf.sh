@@ -1,8 +1,8 @@
-cd gmf
+#cd gmf
 rm -f *.time
 if [ ! -e java.txt ]; then
 	echo get all non-trival java.txt
-	find . -name *.java,v -print | grep -v example | grep -v examples | grep -v test | grep -v Attic > java.txt
+	find org.* -name *.java,v -print | grep -v example | grep -v examples | grep -v test > java.txt
 fi
 x=0
 for f in `cat java.txt`; do

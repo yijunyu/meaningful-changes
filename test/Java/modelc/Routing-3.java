@@ -10,10 +10,6 @@
    ****************************************************************************/
 package org.eclipse.gmf.runtime.notation;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import org.eclipse.emf.common.util.AbstractEnumerator;
 /**
    * <!-- begin-user-doc -->
    * A representation of the literals of the enumeration '<em><b>Routing</b></em>',

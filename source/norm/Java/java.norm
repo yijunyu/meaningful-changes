@@ -1,123 +1,70 @@
 include "Java/java.grm"
-
-% Yijun Yu, April, 2011
-% The rules are redefined to include annotations
-
-redefine class_or_interface_body
-    '{                                    [NL][IN]
-       [repeat class_body_declaration scoped ordered ignored when Private]    [EX] [NL]
-    '} [opt ';]                           [NL][NL]
-end define
-
-redefine method_body
-        [repeat block preferred with ';] 
-    |  [opt annotation_default] ';             % T.D. Oct 2007
-end define
-
-redefine constructor_body
-    [repeat block preferred with '{ '}]
-end define
-
-redefine enum_body
-    '{                                    [IN]
-       [list enum_element] [opt ',]
-       [repeat class_body_declaration scoped ordered]    [EX]
-    '} [opt ';]                           [NL][NL]
-end define
-
-redefine type_declaration
-        [class_declaration scoped]      [NL][NL]
-    |   [interface_declaration scoped]  [NL][NL]
-    |   [enum_declaration scoped]	    [NL] % T.D. Oct 2007
-end define
-
-redefine import_declaration
-	'import [opt 'static] [imported_name] '; [NL]
-    | 	'; [NL] 	% JRC Apr 08
-end define
-
-redefine package_declaration
-    [opt package_header scoped]
-    [repeat import_declaration scoped ordered] 
-    [repeat type_declaration]
-end define
-
-redefine class_header
-    [repeat modifier ordered] 'class [class_name] [opt extends_clause] [opt implements_clause]
-end define
-
-% T.D. Oct 2007 -- added annotation marker 
-redefine interface_header
-    [repeat modifier ordered] [opt annot_marker] 'interface [interface_name] [opt extends_clause] [opt implements_clause]
-end define
-
-redefine enum_header
-    [repeat modifier ordered] [opt id] 'enum [opt declared_name][opt extends_clause] [opt implements_clause]
-end define
-
-redefine extends_clause
-    'extends [list type_name+ ordered]
-end define
-
-redefine implements_clause
-    'implements [list qualified_name+ ordered]
-end define
-
-
-% to match Java Code like:
-% public <T> void someMethod(T t) {
-%	// ...
-% }
-redefine constructor_declaration
-    [NL] [repeat modifier ordered] [opt generic_parameter] [constructor_declarator] [opt throws] [constructor_body] [NL][NL]
-end define
-
-redefine variable_declaration
-    [repeat modifier ordered] [type_specifier] [variable_declarators] '; [NL]
-end define
-
-redefine variable_declarators
-    [list variable_declarator+ ordered]
-end define
-
-% Method declarations 
-
-% generic method declaration (to match generic types used only in a method's declaration and body)
-redefine method_declaration
-    [NL] [repeat modifier ordered] [opt generic_parameter] [type_specifier] [method_declarator] [opt throws] [method_body]
-end define
-
-redefine throws
-    'throws [list qualified_name+ ordered]
-end define
-
-redefine annotation_value_list
-      [single_annotation_value]	% for single value annotation
-    | [list keyed_annotation_value ordered]
-end define
-
-redefine single_annotation_value
-      [expression]					% must be constant
-    | [nested_annotation]
-    | { [list expression_or_nested_annotation ordered] }	% array of annotation values
-end define
-
-redefine catch_clause
-     'catch '( [repeat modifier ordered] [type_specifier] [variable_name] ') [block]  % July 15
-end define
-
 #ifdef COMMENTS
     include "Java/javaCommentOverrides.grm"
 #endif
 
-function contains Object [any] 
-    match * [any] Object
-end function
+annotate modifier [repeat annotation] 
 
-function Private A  [class_body_declaration]
-    match  [class_or_interface_body]
-        B  [class_or_interface_body] 
-    construct M  [modifier *] _  [^ A] 
-    construct PublicModifiers [modifier*] 'public 'protected 
-    where not M [contains each PublicModifiers]
-end function
+redefine type_declaration
+        [class_declaration]      [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    |   [interface_declaration]  [NL][NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    |   [enum_declaration]	    [NL] % T.D. Oct 2007
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+end define
+
+annotate enum_body [repeat class_body_declaration ordered] 
+% remove some extra spaces
+redefine import_declaration
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+	'import [opt 'static] [imported_name] '; [NL]
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+    | 	
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+'; [NL] 	% JRC Apr 08
+#ifdef COMMENTS
+    [comment_nl]
+#endif
+end define
+
+annotate class_header [repeat modifier ordered]
+annotate interface_header [repeat modifier ordered]
+annotate enum_header [repeat modifier ordered]
+annotate extends_clause [list type_name+ ordered]
+annotate implements_clause [list qualified_name+ ordered]
+annotate package_declaration [opt package_header scoped] 
+annotate package_declaration [repeat import_declaration scoped ordered] 
+annotate package_declaration [repeat type_declaration scoped] 
+annotate class_or_interface_body [repeat class_body_declaration scoped ordered]
+annotate constructor_declaration [repeat modifier ordered] 
+annotate variable_declaration [repeat modifier ordered] 
+annotate variable_declarators [list variable_declarator+ ordered]
+annotate method_declaration [repeat modifier ordered] 
+annotate throws [list qualified_name+ ordered]
+annotate annotation_value_list [list keyed_annotation_value ordered]
+annotate single_annotation_value [list expression_or_nested_annotation ordered]
+
+redefine program
+    [package_declaration scoped]
+end define
+
+redefine comment_nl
+    [my_comment scoped]
+end define
+
+define my_comment
+    [repeat comment] 
+end define
