@@ -153,7 +153,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
 	/**
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @generated INV
+	 * @generated NOT
 	 */
 	@Override
 	public String toString() {

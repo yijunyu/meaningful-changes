@@ -15,12 +15,6 @@ for f in `cat $folder/test-model-all.txt`; do
    i=0
  fi
  if [ -f $f.old ]; then
-	 mv -f $f.old $f
- fi
- x=$(grep "@generated NOT" $f)
- if [ "$x" != "" ]; then
- 	scripts/mct-mdsd $f > $f.tmp
-	mv $f $f.old
-	mv $f.tmp $f
+ 	scripts/mct-mdsd-diff $f > $f.diff
  fi
 done

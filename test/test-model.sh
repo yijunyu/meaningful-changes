@@ -1,9 +1,15 @@
 #!/bin/bash
-folder=`pwd`/cvs/gmf/raw 
+folder=`pwd`/cvs/modeling/org.eclipse.gmp
 if [ ! -f result/test-model-all.txt ]; then
 	find $folder -name "*.java" > result/test-model-all.txt
 fi
+x=0
 for f in `cat result/test-model-all.txt`; do
+ x=$(( $x + 1 ))
+ if [ $x -eq 10 ]; then
+   echo -n .
+   x=0
+ fi
    file=$f.model.j
    g=${f/*-/}
    g1=${f/-*/}

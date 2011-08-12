@@ -106,8 +106,7 @@ end define
 
 redefine class_or_interface_body
     '{                                    [NL][IN]
-%       [repeat class_body_declaration scoped ordered ignored when NotGeneratedNot preferred with [LiftToComment] [LiftToComment2] ]    [EX] [NL]
-       [repeat class_body_declaration scoped ordered preferred with [LiftToComment] [LiftToComment2] ]    [EX] [NL]
+       [repeat class_body_declaration scoped ordered preferred with [UserModifiedComment] [UserModifiedCommentNot] ]    [EX] [NL]
 #ifdef COMMENTS
     [comment_nl]
 #endif
@@ -198,42 +197,40 @@ function put_string F [stringlit] S [stringlit]
    by Str
 end function
 
-function self_comment
-    replace [class_body_declaration] X [class_body_declaration]
-    construct nc_X [class_body_declaration] X [remove_comment]
-    construct s_X [stringlit] _ [unparse nc_X]
-    construct fName [id] 'tmp_comment
-    construct fNameNew [id] fName [!]
-    construct s_fNameNew [stringlit] _ [quote fNameNew]
-    construct s_Head [stringlit] _ [+ "/"] [+ "*"] [+ "*"]
-    construct s_End [stringlit] _ [+ " * <!-- e"] [+ "nd-user-doc -->"]
-    construct s_Tail [stringlit] _ [+ " *"] [+ "/"]
-    construct d_put [stringlit] _
-	      [put_string s_fNameNew s_Head]
-	      [put_string s_fNameNew " * <!-- begin-user-doc -->"]
-	      [put_string s_fNameNew s_X]
-    	      [put_string s_fNameNew s_End]
-    	      [put_string s_fNameNew " * @generated "]
-    	      [put_string s_fNameNew s_Tail]
-    	      [put_string s_fNameNew s_X]
-    construct rm_fNameNew [stringlit] _ [+ "rm -f "] [+ s_fNameNew]
-    construct Y [class_body_declaration] _ [read fNameNew] [system rm_fNameNew]
-    by Y
+function diff S1 [stringlit] S2 [stringlit]
+   replace [any] S [any]
+   where not S1 [= ""]
+   construct file1 [stringlit] "t.1"
+   construct file2 [stringlit] "t.2"
+   construct diffCmd [stringlit] _ [+ "diff "] [+ file1] [+ " "] [+ file2]
+   construct d_S1 [class_body_declaration] _ [parse S1] [write file1]
+   construct d_S2 [class_body_declaration] _ [parse S2] [write file2] [system diffCmd]
+   by S
 end function
 
-function LiftToComment 
+function UserModifiedComment 
     replace [class_body_declaration*] A1 [class_body_declaration] A2 [class_body_declaration*]
-    construct S_Cs [stringlit] _ [quote A1]
-    where S_Cs [grep "@generated NOT"]
-    construct B1 [class_body_declaration] A1 [self_comment]
-    construct B2 [class_body_declaration*] A2 [LiftToComment] [LiftToComment2]
+    construct nc_X [class_body_declaration] A1 [remove_comment]
+    construct s_X [stringlit] _ [unparse nc_X] % [print]
+    construct S_Cs [stringlit] _ [quote A1] 
+    where S_Cs [grep "@generated"]
+    where S_Cs [grep "<!-- begin-user-doc -->"]
+    where S_Cs [grep "<!-- end-user-doc -->"]
+    construct L_begin [number] _ [# "<!-- begin-user-doc -->" ]
+    construct I_begin [number] _ [index S_Cs "<!-- begin-user-doc -->" ] [+ L_begin] [+ 1]
+    construct I_end [number] _ [index S_Cs "* <!-- end-user-doc -->" ] [- 5]
+    construct S_code [stringlit] S_Cs [: I_begin I_end] 
+    construct P [any] _ [diff S_code s_X]
+    construct B1 [class_body_declaration] A1 % [print]
+    construct B2 [class_body_declaration*] A2 [UserModifiedComment]
     by _ [. B1] [. B2]
 end function
 
-function LiftToComment2
+function UserModifiedCommentNot
     replace [class_body_declaration*] A1 [class_body_declaration] A2 [class_body_declaration*]
-    construct S_Cs [stringlit] _ [quote A1]
-    where not S_Cs [grep "@generated NOT"]
-    construct B2 [class_body_declaration*] A2 [LiftToComment] [LiftToComment2]
+    construct S_Cs [stringlit] _ [quote A1] 
+    where not S_Cs [grep "@generated"]
+    construct B2 [class_body_declaration*] A2 [UserModifiedComment] [UserModifiedCommentNot]
     by _ [. A1] [. B2]
 end function
+
