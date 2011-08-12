@@ -33,8 +33,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
        * @see #getName()
        * @generated
        * @ordered
-       */ final protected static String NAME_EDEFAULT =
-    null;
+       */ final protected static String NAME_EDEFAULT = null;
     /**
        * The cached value of the '{@link #getName() <em>Name</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -42,8 +41,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
        * @see #getName()
        * @generated
        * @ordered
-       */ protected String name =
-    NAME_EDEFAULT;
+       */ protected String name = NAME_EDEFAULT;
     /**
        * <!-- begin-user-doc -->
        * <!-- end-user-doc -->
@@ -51,8 +49,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
        */
     protected EntityImpl () {
 
-        super ();
-    }
+        super ();}
 
     /**
        * <!-- begin-user-doc -->
@@ -62,9 +59,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
     @Override
     protected EClass eStaticClass () {
 
-        return
-        ExamplePackage.Literals.ENTITY;
-
+        return ExamplePackage.Literals.ENTITY;
     }
 
     /**
@@ -74,9 +69,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
        */
     public String getName () {
 
-        return
-        name;
-
+        return name;
     }
 
     /**
@@ -86,21 +79,10 @@ public class EntityImpl extends EObjectImpl implements Entity {
        */
     public void setName (String newName) {
 
-        String oldName =
-        name;
+        String oldName = name;
 
         name = newName;
-
-        if (
-        eNotificationRequired ())
-        eNotify (
-        new ENotificationImpl (
-        this,
-        Notification.SET,
-        ExamplePackage.ENTITY__NAME,
-        oldName,
-        name));
-
+        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, ExamplePackage.ENTITY__NAME, oldName, name));
     }
 
     /**
@@ -111,22 +93,13 @@ public class EntityImpl extends EObjectImpl implements Entity {
     @Override
     public Object eGet (int featureID, boolean resolve, boolean coreType) {
 
-        switch (
-        featureID) {
-            case
-            ExamplePackage.ENTITY__NAME :
+        switch (featureID) {
+            case ExamplePackage.ENTITY__NAME :
 
-                return
-                getName ();
-
+                return getName ();
         }
 
-        return
-        super.eGet (
-        featureID,
-        resolve,
-        coreType);
-
+        return super.eGet (featureID, resolve, coreType);
     }
 
     /**
@@ -137,22 +110,14 @@ public class EntityImpl extends EObjectImpl implements Entity {
     @Override
     public void eSet (int featureID, Object newValue) {
 
-        switch (
-        featureID) {
-            case
-            ExamplePackage.ENTITY__NAME :
+        switch (featureID) {
+            case ExamplePackage.ENTITY__NAME :
 
-                setName (
-                (String) newValue);
-
+                setName ((String) newValue);
                 return;
-
         }
 
-        super.eSet (
-        featureID,
-        newValue);
-    }
+        super.eSet (featureID, newValue);}
 
     /**
        * <!-- begin-user-doc -->
@@ -162,21 +127,14 @@ public class EntityImpl extends EObjectImpl implements Entity {
     @Override
     public void eUnset (int featureID) {
 
-        switch (
-        featureID) {
-            case
-            ExamplePackage.ENTITY__NAME :
+        switch (featureID) {
+            case ExamplePackage.ENTITY__NAME :
 
-                setName (
-                NAME_EDEFAULT);
-
+                setName (NAME_EDEFAULT);
                 return;
-
         }
 
-        super.eUnset (
-        featureID);
-    }
+        super.eUnset (featureID);}
 
     /**
        * <!-- begin-user-doc -->
@@ -186,22 +144,13 @@ public class EntityImpl extends EObjectImpl implements Entity {
     @Override
     public boolean eIsSet (int featureID) {
 
-        switch (
-        featureID) {
-            case
-            ExamplePackage.ENTITY__NAME :
+        switch (featureID) {
+            case ExamplePackage.ENTITY__NAME :
 
-                return
-                NAME_EDEFAULT == null ?
-                name != null : ! NAME_EDEFAULT.equals (
-                name);
-
+                return NAME_EDEFAULT == null ? name != null : ! NAME_EDEFAULT.equals (name);
         }
 
-        return
-        super.eIsSet (
-        featureID);
-
+        return super.eIsSet (featureID);
     }
 
     /**
@@ -213,29 +162,15 @@ public class EntityImpl extends EObjectImpl implements Entity {
     @Override
     public String toString () {
 
-        if (
-        eIsProxy ()) return
-        super.toString ();
+        if (eIsProxy ()) return super.toString ();
 
-        StringBuffer result =
-        new StringBuffer (
-        super.toString ());
+        StringBuffer result = new StringBuffer (super.toString ());
 
-        result.append (
-        " (name: ");
-
-        result.append (
-        name);
-
-        result.append (
-        name);
-
-        result.append (
-        ')');
-
-        return
-        result.toString ();
-
+        result.append (" (name: ");
+        result.append (name);
+        result.append (name);
+        result.append (')');
+        return result.toString ();
     }
 
 }

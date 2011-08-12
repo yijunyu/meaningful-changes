@@ -34,7 +34,7 @@ package org.eclipse.gmf.codegen.gmfgen;
    * @generated
    */
 public interface GenNode extends GenChildContainer {
-    /**
+    //$NON-NLS-1$ /**
        * <!-- begin-user-doc -->
        * <p>
        * If the meaning of the '<em>Domain Meta Class</em>' reference isn't clear,
