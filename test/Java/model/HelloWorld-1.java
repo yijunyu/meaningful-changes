@@ -10,8 +10,3 @@ public class HelloWorld {
 
 }
 
-/* HelloWorld */
-public class HelloWorld {
-
-}
-

@@ -211,5 +211,5 @@ source/norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm
 	touch -f $@
 
 clean:
-	rm -rf ${target} $(generated_language) eval.c
+	rm -rf ${target} $(generated_language) eval.c t.1 t.2 tmp_*
 #	git clean -X -f

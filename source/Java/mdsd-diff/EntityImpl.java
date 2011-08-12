@@ -155,7 +155,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
 
     /**
        * <!-- begin-user-doc -->
-    @Override public String toString () {if (eIsProxy ()) return super.toString (); StringBuffer result = new StringBuffer (super.toString ()); result.append (" (name: "); result.append (name); result.append (name); result.append (')'); return result.toString ();}
+    @Override public String toString () {if (eIsProxy ()) return super.toString (); StringBuffer result = new StringBuffer (super.toString ()); result.append (" (name: "); result.append (name); result.append (" " + name); result.append (')'); return result.toString ();}
        * <!-- end-user-doc -->
        * @generated 
        */
@@ -166,7 +166,6 @@ public class EntityImpl extends EObjectImpl implements Entity {
         StringBuffer result = new StringBuffer (super.toString ());
 
         result.append (" (name: ");
-        result.append (name);
         result.append (name);
         result.append (')');
         return result.toString ();

@@ -1,4 +1,4 @@
-workspace=`pwd`/tmp
+workspace=`pwd`/tmp/org.eclipse.gmp/org.eclipse.gmf.tooling/plugins
 project=org.eclipse.gmf.map
 genmodel=models/gmfmap.genmodel
 

@@ -1,15 +1,19 @@
 <<<<<< "/* HelloWorld */"
 
 public class HelloWorld {
-    static String world = "world";
+    static String world =
+    "world";
 
     <<<<<< "// ending"
-    static String hello = "Hello";
+    static String hello =
+    "Hello";
 
     <<<<<< "// beginning"
 
     public static void main (String args []) {
-        System.out.println (hello + ", " + world + "!");
+
+        System.out.println (
+        hello + ", " + world + "!");
     }
 
 }
@@ -17,15 +21,19 @@ public class HelloWorld {
 >>>>>> "/* HelloWorld */"
 
 public class HelloWorld {
-    public static String world = "world";
+    public static String world =
+    "world";
 
     >>>>>> "// ending"
-    static String hello = "Hello";
+    static String hello =
+    "Hello";
 
     >>>>>> "// beginning"
 
     public static void main (String args []) {
-        System.out.println (hello + ", " + world + "!");
+
+        System.out.println (
+        hello + ", " + world + "!");
     }
 
 }
