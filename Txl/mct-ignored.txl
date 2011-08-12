@@ -217,11 +217,66 @@ TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
 #endif
  deconstruct Ig 'ignored W [whenField]
  deconstruct W 'when F [id]
- by S [typeSpec_ignore_when_LoT F TID T LoT] 
-      [typeSpec_ignore_when_BLoT F TID T each BLoT]
+ construct empty_LoT [literalOrType] '[ 'empty '] 
+ construct d_el [literalOrType] empty_LoT [print]
+ deconstruct * [literalOrType] DS empty_LoT
+ construct Choice [number] 1
+ by S [typeSpec_ignore_when_LoT Choice F TID T LoT] 
+      [typeSpec_ignore_when_BLoT Choice F TID T each BLoT] [print]
 end function
+
+function typeSpec_ignore_when_2 DS 
+#ifdef DEFINE
+[defineStatement] 
+#else
+[redefineStatement] 
+#endif
+T [typeSpec]
+ import Rules [statement*]
+ import IgnoreRuleIDs [id*]
+ replace [statement*] S [statement*] 
+ deconstruct DS 
+#ifdef DEFINE
+'define 
+#else
+'redefine 
+#endif
+TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
+ deconstruct T TM [typeModifier] I [typeid] R [opt typeRepeater] K [opt scoped] O [opt orderedBy] Ig [opt ignoredWhen] Pr [opt preferredWith]
+#ifdef ID
+	       Ident [opt identified]
+#endif
+ deconstruct Ig 'ignored W [whenField]
+ deconstruct W 'when F [id]
+ construct empty_LoT [literalOrType] '[ 'empty '] 
+ % construct d_el [literalOrType] empty_LoT [print]
+ deconstruct not * [literalOrType] DS empty_LoT
+ construct Choice [number] 2
+ by S [typeSpec_ignore_when_LoT Choice F TID T LoT] 
+      [typeSpec_ignore_when_BLoT Choice F TID T each BLoT] [print]
+end function
+
+
+function choose1 T [number] S1 [statements] S2 [statements]
+ replace [statement*] _ [statement*]
+ where T [= 1]
+ deconstruct S1 S [statement*]
+ by S
+end function
+
+function choose2 T [number] S1 [statements] S2 [statements]
+ replace [statement*] _ [statement*]
+ where T [= 2]
+ deconstruct S2 S [statement*]
+ by S 
+end function
+
+define statements
+  [statement*]
+end define
+
 % LoT 
-function typeSpec_ignore_when_LoT F [id] TID [typeid] T [typeSpec] LoT [literalOrType*] 
+function typeSpec_ignore_when_LoT Choice [number] F [id] TID [typeid] T [typeSpec] LoT [literalOrType*] 
  replace [statement*] S [statement*] 
  where LoT [contains T]
  construct StrID [id] _ [quote TID]
@@ -243,6 +298,8 @@ function typeSpec_ignore_when_LoT F [id] TID [typeid] T [typeSpec] LoT [literalO
  construct ruleID3 [id] ID3 [_ F] [_ StrID] [_ TypeID] [!]
  construct ID4 [id] 'normalise_ignore_by4
  construct ruleID4 [id] ID4 [_ F] [_ StrID] [_ TypeID] [!]
+ construct NonEmpty [id] 'nonempty 
+ construct ID5 [id] NonEmpty [!]
  construct pID [id] TypeID [_ StrID]
  construct S1 [statement*]
     'function ruleID1 'E1 '[ TID '] 'N1 '[ I ']
@@ -264,25 +321,44 @@ function typeSpec_ignore_when_LoT F [id] TID [typeid] T [typeSpec] LoT [literalO
         'construct 'E2  '[ TID '] Expression
      	'by 'Seq '[ '. 'E2 '] 
     'end 'function
+  construct S2 [statement*]
+    'function ID5 'Term '[ TID ']
+       'replace '[ TID '*'] 'List1 '[ TID '*']
+       'deconstruct 'not 'Term
+       'by '_ '[ '. 'List1 '] '['. 'Term ']
+    'end 'function
     'function ruleID4
         'replace '[ 'program '] 'P1 '[ 'program '] 
         'construct 'List1 '[ TID '* '] '_ '[ '^ 'P1 '] 
-        'construct 'List2 '[ TID '* ']
-            '_ '[ ruleID3 'each 'List1 ']
+	'construct 'List3 '[ TID '* '] '_ '[ ID5 'each 'List1 ']
+        'construct 'List2 '[ TID '* '] '_ '[ ruleID3 'each 'List1 ']
+        'construct 'P2 '[ 'program '] 'P1 '[ '$ 'each 'List3 'List2 ']
+       'by 'P2
+    'end 'function
+  construct S3 [statement*]
+    'function ruleID4
+        'replace '[ 'program '] 'P1 '[ 'program '] 
+        'construct 'List1 '[ TID '* '] '_ '[ '^ 'P1 '] 
+        'construct 'List2 '[ TID '* '] '_ '[ ruleID3 'each 'List1 ']
         'construct 'P2 '[ 'program '] 'P1 '[ '$ 'each 'List1 'List2 ']
        'by 'P2
     'end 'function
  import Rules [statement*]
- export Rules Rules [. S1] 
+ construct SS1 [statements] S2 
+ construct SS2 [statements] S3 
+ construct d_Choice [number] Choice
+ construct Choosen [statement*] 
+	_ [choose1 Choice SS1 SS2] [choose2 Choice SS1 SS2]
+ export Rules Rules [. S1] [. Choosen]
  import IgnoreRuleIDs [id*]
  export IgnoreRuleIDs IgnoreRuleIDs [. ruleID4]
- by S [. S1]
+ by S [. Choosen]
 end function
 %
 % BLoT
 %
-function typeSpec_ignore_when_BLoT F [id] TID [typeid] T [typeSpec] BLoT [barLiteralsAndTypes] 
+function typeSpec_ignore_when_BLoT Choice [number] F [id] TID [typeid] T [typeSpec] BLoT [barLiteralsAndTypes] 
  replace [statement*] S [statement*] 
  deconstruct BLoT '| LoT [literalOrType*]
- by S [typeSpec_ignore_when_LoT F TID T LoT]
+ by S [typeSpec_ignore_when_LoT Choice F TID T LoT]
 end function

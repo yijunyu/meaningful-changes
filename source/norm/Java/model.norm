@@ -157,9 +157,9 @@ redefine single_annotation_value
 end define
 
 redefine comment_nl
-%    [empty] | [repeat mycomment scoped ignored when NotJavaDoc]
-    [empty] | [repeat mycomment scoped]
-%    [empty] | [repeat mycomment scoped preferred with [NoTrailingSpace]]
+    [empty] | 
+   [repeat mycomment scoped ignored when SingleLine]
+%   [repeat mycomment scoped]
 end define
 
 function contains Object [any] 
@@ -174,11 +174,11 @@ function Private A  [class_body_declaration]
     where not M [contains each PublicModifiers]
 end function
 
-function NotJavaDoc A  [mycomment]
+function SingleLine A  [mycomment]
     match  [comment_nl]
         B  [comment_nl] 
     construct S_Comment [stringlit] _ [quote A] 
-    where not S_Comment [grep "\/\*\*"]
+    where S_Comment [grep "^//NON"]
 end function
 
 function NotModel A  [class_body_declaration]
@@ -186,18 +186,4 @@ function NotModel A  [class_body_declaration]
         B  [class_or_interface_body] 
     construct S_Cs [stringlit] _ [quote A]
     where not S_Cs [grep "@model"]
-end function
-
-function replace_model C [mycomment]
- replace [repeat mycomment] C0 [repeat mycomment]
- construct S_C1 [stringlit] _ [quote C]
- where S_C1 [grep "@model "]
- construct C1 [mycomment] C
- by _  [. C1]
-end function
-
-function NoTrailingSpace
-    replace [repeat mycomment] C [repeat mycomment]
-    construct C1 [repeat mycomment] _ [replace_model each C] [print]
-    by C
 end function

@@ -1,14 +1,19 @@
-# extract the @model from the classes
-if [ ! -f test-model2.txt ]; then
-	find source/java/org* -name "*.java" > test-model2.txt
+#!/bin/bash
+folder=`pwd`/cvs/modeling/org.eclipse.gmp
+if [ ! -f $folder/test-model-all.txt ]; then
+	find $folder -name "*.java" > $folder/test-model-all.txt
 fi
-for f in `cat test-model2.txt`; do
- for g in `grep -l "@model" $f`; do
-   h=${g/source\/java\//}
-   h1=$(dirname $h)
-   h2=$(basename $h)
-   mkdir -p result/java/model/$h1
-   hh=result/java/model/$h1/$h2
-   scripts/mct-model -comment $g > $hh
- done
-done
+if [ ! -f $folder/test-model.txt ]; then
+	touch -f $folder/test-model.txt
+	for f in `cat $folder/test-model-all.txt`; do
+	 x=$(( $x + 1 ))
+	 if [ $x -eq 10 ]; then
+	   echo -n .
+	   x=0
+	 fi
+	 file=$f.model.j
+	 if [ -f $file ]; then
+	   echo $f >> $folder/test-model.txt
+	 fi
+	done
+fi

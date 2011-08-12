@@ -30,8 +30,7 @@ final public class Routing extends AbstractEnumerator {
        * @model name="Manual"
        * @generated
        * @ordered
-       */ final public static int MANUAL =
-    0;
+       */ final public static int MANUAL = 0;
     /**
        * The '<em><b>Rectilinear</b></em>' literal value.
        * <!-- begin-user-doc -->
@@ -40,8 +39,7 @@ final public class Routing extends AbstractEnumerator {
        * @model name="Rectilinear"
        * @generated
        * @ordered
-       */ final public static int RECTILINEAR =
-    1;
+       */ final public static int RECTILINEAR = 1;
     /**
        * The '<em><b>Tree</b></em>' literal value.
        * <!-- begin-user-doc -->
@@ -50,8 +48,7 @@ final public class Routing extends AbstractEnumerator {
        * @model name="Tree"
        * @generated
        * @ordered
-       */ final public static int TREE =
-    2;
+       */ final public static int TREE = 2;
 
 }
 

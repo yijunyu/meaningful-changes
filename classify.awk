@@ -4,6 +4,7 @@ BEGIN{
   to_modify = 0
 }
 /^==/ {
+  print $3
   t++;
   if (to_modify) {
     m++;

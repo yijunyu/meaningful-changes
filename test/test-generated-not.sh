@@ -22,6 +22,6 @@ for f in `cat $folder/test-model-all.txt`; do
  	scripts/mct-mdsd $f > $f.tmp
 	mv $f $f.old
 	mv $f.tmp $f
-# 	scripts/mct-mdsd-diff $f > $f.tmp
+ 	scripts/mct-mdsd-diff $f > $f.tmp
  fi
 done
