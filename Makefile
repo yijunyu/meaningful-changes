@@ -69,7 +69,6 @@ result/C/cid/vim73/eval.c: source/C/vim73/eval.c
 	mkdir -p $$(dirname $@)
 	grep -v "^#" $< > eval.c
 	$(bin)/C/cidc eval.c | sort | uniq > $@
-#	rm -f eval.c
 
 eval.c.id.type: eval.c.id
 	sort eval.c.id | uniq -c | sort -n > eval.c.id.type
@@ -192,11 +191,19 @@ result/norm/XML/xml-mct.Txl: $(bin)/norm-no_clone-include-c source/norm/XML/xml-
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
-result/norm/C/cid.Txl: $(bin)/norm-id-c source/norm/C/cid.norm config.id 
+result/norm/C/cid.Txl: $(bin)/norm-id-c source/norm/C/cid.norm config.c.id 
+	cp config.c.id config.id
 	mkdir -p $$(dirname $@)
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	/usr/bin/time $(bin)/norm-id-c -iTxl source/norm/C/cid.norm -o $TMPFILE
-#	$(txl) -i Txl -d ID -d DEFINE source/norm/C/cid.norm Txl/norm.Txl -o $TMPFILE
+	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
+	rm -f $TMPFILE
+
+result/norm/Java/jid.Txl: $(bin)/norm-id-c source/norm/Java/jid.norm config.java.id 
+	cp config.java.id config.id
+	mkdir -p $$(dirname $@)
+	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
+	/usr/bin/time $(bin)/norm-id-c -iTxl source/norm/Java/jid.norm -o $TMPFILE
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
 	rm -f $TMPFILE
 
@@ -213,3 +220,16 @@ source/norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm
 clean:
 	rm -rf ${target} $(generated_language) eval.c t.1 t.2 tmp_*
 #	git clean -X -f
+
+m=update
+dcommit:
+	git stash
+	git svn rebase
+	git stash apply
+	git add .
+	git commit -a -m "$(m)"
+	git svn dcommit --rmdir
+
+commit:
+	git add .
+	git commit -a -m "$(m)"
