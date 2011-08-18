@@ -211,7 +211,7 @@ install: $(package)
 $(package): README.html $(program) $(norm) $(source) $(target) scripts # cvs
 	rm -rf $(dir $(package))
 	mkdir -p  $(dir $(package))
-	tar cfz $@ $^ result/*.txt $(results)
+	tar cfz $@ $^ $(results)
 	tar xfz $@ -C $(dir $(package))
 
 source/norm/java.norm : Txl/java.grm Txl/javaCommentOverridesNorm.grm
