@@ -1,32 +1,34 @@
-<<<<<< "/* HelloWorld */"
+<<<<<< 101 "/* HelloWorld */"
 
 public class HelloWorld {
     static String world = "world";
 
-    <<<<<< "// ending"
+    <<<<<< 102 "// ending"
     static String hello = "Hello";
 
-    <<<<<< "// beginning"
+    <<<<<< 103 "// beginning"
 
     public static void main (String args []) {
 
-        System.out.println (hello + ", " + world + "!");}
+        System.out.println (hello + ", " + world + "!");
+    }
 
 }
 
->>>>>> "/* HelloWorld */"
+>>>>>> 101 "/* HelloWorld */"
 
 public class HelloWorld {
     public static String world = "world";
 
-    >>>>>> "// ending"
+    >>>>>> 102 "// ending"
     static String hello = "Hello";
 
-    >>>>>> "// beginning"
+    >>>>>> 103 "// beginning"
 
     public static void main (String args []) {
 
-        System.out.println (hello + ", " + world + "!");}
+        System.out.println (hello + ", " + world + "!");
+    }
 
 }
 

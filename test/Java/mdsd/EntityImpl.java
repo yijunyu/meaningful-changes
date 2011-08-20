@@ -49,7 +49,8 @@ public class EntityImpl extends EObjectImpl implements Entity {
        */
     protected EntityImpl () {
 
-        super ();}
+        super ();
+    }
 
     /**
        * <!-- begin-user-doc -->
@@ -60,6 +61,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
     protected EClass eStaticClass () {
 
         return ExamplePackage.Literals.ENTITY;
+
     }
 
     /**
@@ -70,6 +72,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
     public String getName () {
 
         return name;
+
     }
 
     /**
@@ -82,7 +85,9 @@ public class EntityImpl extends EObjectImpl implements Entity {
         String oldName = name;
 
         name = newName;
+
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, ExamplePackage.ENTITY__NAME, oldName, name));
+
     }
 
     /**
@@ -97,9 +102,11 @@ public class EntityImpl extends EObjectImpl implements Entity {
             case ExamplePackage.ENTITY__NAME :
 
                 return getName ();
+
         }
 
         return super.eGet (featureID, resolve, coreType);
+
     }
 
     /**
@@ -114,10 +121,13 @@ public class EntityImpl extends EObjectImpl implements Entity {
             case ExamplePackage.ENTITY__NAME :
 
                 setName ((String) newValue);
+
                 return;
+
         }
 
-        super.eSet (featureID, newValue);}
+        super.eSet (featureID, newValue);
+    }
 
     /**
        * <!-- begin-user-doc -->
@@ -131,10 +141,13 @@ public class EntityImpl extends EObjectImpl implements Entity {
             case ExamplePackage.ENTITY__NAME :
 
                 setName (NAME_EDEFAULT);
+
                 return;
+
         }
 
-        super.eUnset (featureID);}
+        super.eUnset (featureID);
+    }
 
     /**
        * <!-- begin-user-doc -->
@@ -148,9 +161,11 @@ public class EntityImpl extends EObjectImpl implements Entity {
             case ExamplePackage.ENTITY__NAME :
 
                 return NAME_EDEFAULT == null ? name != null : ! NAME_EDEFAULT.equals (name);
+
         }
 
         return super.eIsSet (featureID);
+
     }
 
     /**
@@ -167,10 +182,15 @@ public class EntityImpl extends EObjectImpl implements Entity {
         StringBuffer result = new StringBuffer (super.toString ());
 
         result.append (" (name: ");
+
         result.append (name);
+
         result.append (name);
+
         result.append (')');
+
         return result.toString ();
+
     }
 
 }

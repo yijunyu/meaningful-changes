@@ -133,8 +133,8 @@ function main
 		'<<<<<< '>>>>>>
 	'end 'compounds
 	'define Change
-		'[ 'NL '] '<<<<<< '['opt 'stringlit'] '[ 'NL '] 
-	     '| '[ 'NL '] '>>>>>> '['opt 'stringlit'] '[ 'NL '] 
+		'[ 'NL '] '<<<<<< '['opt 'number'] '['opt 'stringlit'] '[ 'NL '] 
+	     '| '[ 'NL '] '>>>>>> '['opt 'number'] '['opt 'stringlit'] '[ 'NL '] 
 	'end 'define
 #ifdef LINENO_XYZ
 	'define 'coordinates
@@ -220,9 +220,17 @@ function main
 		'% output the differences
 		'construct 'P_Clone '[ 'program '] 'CloneNumber '['- '99']
 		'construct 'P_Left '['program'] 'P_diff '[print_diff_1'] '[print_diff_2'] 
+#ifdef DEBUG
+		'['debug']
+#else
 		'['printattr']
+#endif
 		'construct 'P_Right '['program'] 'Program_Diff '[print_diff_1'] '[print_diff_2']
+#ifdef DEBUG
+		'['debug']
+#else
 		'['printattr']
+#endif
 		'by 'P_Clone
 	'end 'function
 #ifdef ID

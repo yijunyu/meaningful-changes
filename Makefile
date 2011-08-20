@@ -36,6 +36,7 @@ target+=$(program) $(results)
 #package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 dateFolder=$(shell date +%Y-%m-%d)
 package=/home/share/sead/mct/$(dateFolder)/mct-$(shell uname).tar.gz
+package=${HOME}/Documents/demo/mct/$(dateFolder)/mct-$(shell uname).tar.gz
 #==== R U L E S ====
 .PHONEY: all clean install
 all: $(target)
@@ -233,3 +234,10 @@ dcommit:
 commit:
 	git add .
 	git commit -a -m "$(m)"
+
+deploy: 
+	cp -r bin.Darwin_x86_64 ../open-nii/bin
+	cp -r bin.Linux_x86_64 ../open-nii/bin
+	cp -r Txl ../open-nii
+	cp -r scripts ../open-nii
+	cp -r source ../open-nii

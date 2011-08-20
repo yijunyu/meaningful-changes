@@ -73,10 +73,10 @@ function update_id I [typeid]
 	    'export 'CloneNumber 'CloneNumber '['+ '1']
 	    'construct 'C '[ 'stringlit '] '_ '['quote 'S ']
 	    'where 'not 'C '['= ""']
-	    'construct 'S2 '[ TypeID '] '>>>>>> 'C
+	    'construct 'S2 '[ TypeID '] '>>>>>> 'CloneNumber 'C
 	    'export 'Program_Diff 'Program_Diff  '[ '$ 'S 'S2 ']
 	    'replace '[ 'program '] 'P '[ 'program '] 
-	    'construct 'S1 '[ TypeID '] '<<<<<< 'C
+	    'construct 'S1 '[ TypeID '] '<<<<<< 'CloneNumber 'C
 	    'by 'P '[ '$ 'S 'S1 ']
      'end 'function
  export Rules Rules [. Stmt_1] 

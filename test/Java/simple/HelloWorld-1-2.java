@@ -3,14 +3,16 @@
    */
 public class HelloWorld {
 
-    <<<<<< "// beginning"
+    <<<<<< 100 "// beginning"
     static private String hello = "Hello";
     private static String world = "world";
 
-    <<<<<< "// ending"
+    <<<<<< 119 "// ending"
 
     static public void main (String args []) {
-        System.out.println (hello + ", " + world + "!");}
+
+        System.out.println (hello + ", " + world + "!");
+    }
 
 }
 
@@ -18,13 +20,15 @@ public class HelloWorld {
 public class HelloWorld {
     static String world = "world";
 
-    >>>>>> "// ending"
+    >>>>>> 119 "// ending"
     static String hello = "Hello";
 
-    >>>>>> "// beginning"
+    >>>>>> 100 "// beginning"
 
     public static void main (String args []) {
-        System.out.println (hello + ", " + world + "!");}
+
+        System.out.println (hello + ", " + world + "!");
+    }
 
 }
 

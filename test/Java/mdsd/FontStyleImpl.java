@@ -158,7 +158,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        */
     protected FontStyleImpl () {
 
-        super ();}
+        super ();
+    }
 
     /**
        * <!-- begin-user-doc -->
@@ -168,6 +169,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
     protected EClass eStaticClass () {
 
         return NotationPackage.eINSTANCE.getFontStyle ();
+
     }
 
     /**
@@ -178,6 +180,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
     public String getFontName () {
 
         return fontName;
+
     }
 
     /**
@@ -191,7 +194,9 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         String oldFontName = fontName;
 
         fontName = (newFontName == null) ? null : newFontName;
+
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__FONT_NAME, oldFontName, fontName));
+
     }
 
     /**
@@ -202,6 +207,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
     public int getFontHeight () {
 
         return fontHeight;
+
     }
 
     /**
@@ -214,7 +220,9 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         int oldFontHeight = fontHeight;
 
         fontHeight = newFontHeight;
+
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__FONT_HEIGHT, oldFontHeight, fontHeight));
+
     }
 
     /**
@@ -225,6 +233,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
     public boolean isBold () {
 
         return (eFlags & BOLD_EFLAG) != 0;
+
     }
 
     /**
@@ -239,6 +248,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         if (newBold) eFlags |= BOLD_EFLAG; else eFlags &= ~ BOLD_EFLAG;
 
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__BOLD, oldBold, newBold));
+
     }
 
     /**
@@ -249,6 +259,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
     public boolean isItalic () {
 
         return (eFlags & ITALIC_EFLAG) != 0;
+
     }
 
     /**
@@ -263,6 +274,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         if (newItalic) eFlags |= ITALIC_EFLAG; else eFlags &= ~ ITALIC_EFLAG;
 
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__ITALIC, oldItalic, newItalic));
+
     }
 
     /**
@@ -273,6 +285,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
     public boolean isUnderline () {
 
         return (eFlags & UNDERLINE_EFLAG) != 0;
+
     }
 
     /**
@@ -287,6 +300,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         if (newUnderline) eFlags |= UNDERLINE_EFLAG; else eFlags &= ~ UNDERLINE_EFLAG;
 
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__UNDERLINE, oldUnderline, newUnderline));
+
     }
 
     /**
@@ -297,6 +311,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
     public boolean isStrikeThrough () {
 
         return (eFlags & STRIKE_THROUGH_EFLAG) != 0;
+
     }
 
     /**
@@ -311,6 +326,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         if (newStrikeThrough) eFlags |= STRIKE_THROUGH_EFLAG; else eFlags &= ~ STRIKE_THROUGH_EFLAG;
 
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__STRIKE_THROUGH, oldStrikeThrough, newStrikeThrough));
+
     }
 
     /**
@@ -321,6 +337,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
     public int getFontColor () {
 
         return fontColor;
+
     }
 
     /**
@@ -333,7 +350,9 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         int oldFontColor = fontColor;
 
         fontColor = newFontColor;
+
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__FONT_COLOR, oldFontColor, fontColor));
+
     }
 
     /**
@@ -347,27 +366,35 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
             case NotationPackage.FONT_STYLE__FONT_COLOR :
 
                 return new Integer (getFontColor ());
+
             case NotationPackage.FONT_STYLE__FONT_NAME :
 
                 return getFontName ();
+
             case NotationPackage.FONT_STYLE__FONT_HEIGHT :
 
                 return new Integer (getFontHeight ());
+
             case NotationPackage.FONT_STYLE__BOLD :
 
                 return isBold () ? Boolean.TRUE : Boolean.FALSE;
+
             case NotationPackage.FONT_STYLE__ITALIC :
 
                 return isItalic () ? Boolean.TRUE : Boolean.FALSE;
+
             case NotationPackage.FONT_STYLE__UNDERLINE :
 
                 return isUnderline () ? Boolean.TRUE : Boolean.FALSE;
+
             case NotationPackage.FONT_STYLE__STRIKE_THROUGH :
 
                 return isStrikeThrough () ? Boolean.TRUE : Boolean.FALSE;
+
         }
 
         return eDynamicGet (eFeature, resolve);
+
     }
 
     /**
@@ -381,34 +408,49 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
             case NotationPackage.FONT_STYLE__FONT_COLOR :
 
                 setFontColor (((Integer) newValue).intValue ());
+
                 return;
+
             case NotationPackage.FONT_STYLE__FONT_NAME :
 
                 setFontName ((String) newValue);
+
                 return;
+
             case NotationPackage.FONT_STYLE__FONT_HEIGHT :
 
                 setFontHeight (((Integer) newValue).intValue ());
+
                 return;
+
             case NotationPackage.FONT_STYLE__BOLD :
 
                 setBold (((Boolean) newValue).booleanValue ());
+
                 return;
+
             case NotationPackage.FONT_STYLE__ITALIC :
 
                 setItalic (((Boolean) newValue).booleanValue ());
+
                 return;
+
             case NotationPackage.FONT_STYLE__UNDERLINE :
 
                 setUnderline (((Boolean) newValue).booleanValue ());
+
                 return;
+
             case NotationPackage.FONT_STYLE__STRIKE_THROUGH :
 
                 setStrikeThrough (((Boolean) newValue).booleanValue ());
+
                 return;
+
         }
 
-        eDynamicSet (eFeature, newValue);}
+        eDynamicSet (eFeature, newValue);
+    }
 
     /**
        * <!-- begin-user-doc -->
@@ -421,34 +463,49 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
             case NotationPackage.FONT_STYLE__FONT_COLOR :
 
                 setFontColor (FONT_COLOR_EDEFAULT);
+
                 return;
+
             case NotationPackage.FONT_STYLE__FONT_NAME :
 
                 setFontName (FONT_NAME_EDEFAULT);
+
                 return;
+
             case NotationPackage.FONT_STYLE__FONT_HEIGHT :
 
                 setFontHeight (FONT_HEIGHT_EDEFAULT);
+
                 return;
+
             case NotationPackage.FONT_STYLE__BOLD :
 
                 setBold (BOLD_EDEFAULT);
+
                 return;
+
             case NotationPackage.FONT_STYLE__ITALIC :
 
                 setItalic (ITALIC_EDEFAULT);
+
                 return;
+
             case NotationPackage.FONT_STYLE__UNDERLINE :
 
                 setUnderline (UNDERLINE_EDEFAULT);
+
                 return;
+
             case NotationPackage.FONT_STYLE__STRIKE_THROUGH :
 
                 setStrikeThrough (STRIKE_THROUGH_EDEFAULT);
+
                 return;
+
         }
 
-        eDynamicUnset (eFeature);}
+        eDynamicUnset (eFeature);
+    }
 
     /**
        * <!-- begin-user-doc -->
@@ -461,27 +518,35 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
             case NotationPackage.FONT_STYLE__FONT_COLOR :
 
                 return fontColor != FONT_COLOR_EDEFAULT;
+
             case NotationPackage.FONT_STYLE__FONT_NAME :
 
                 return FONT_NAME_EDEFAULT == null ? fontName != null : ! FONT_NAME_EDEFAULT.equals (fontName);
+
             case NotationPackage.FONT_STYLE__FONT_HEIGHT :
 
                 return fontHeight != FONT_HEIGHT_EDEFAULT;
+
             case NotationPackage.FONT_STYLE__BOLD :
 
                 return ((eFlags & BOLD_EFLAG) != 0) != BOLD_EDEFAULT;
+
             case NotationPackage.FONT_STYLE__ITALIC :
 
                 return ((eFlags & ITALIC_EFLAG) != 0) != ITALIC_EDEFAULT;
+
             case NotationPackage.FONT_STYLE__UNDERLINE :
 
                 return ((eFlags & UNDERLINE_EFLAG) != 0) != UNDERLINE_EDEFAULT;
+
             case NotationPackage.FONT_STYLE__STRIKE_THROUGH :
 
                 return ((eFlags & STRIKE_THROUGH_EFLAG) != 0) != STRIKE_THROUGH_EDEFAULT;
+
         }
 
         return eDynamicIsSet (eFeature);
+
     }
 
     /**
@@ -496,21 +561,37 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         StringBuffer result = new StringBuffer (super.toString ());
 
         result.append (" (fontColor: ");
+
         //$NON-NLS-1$ result.append (fontColor);
+
         result.append (", fontName: ");
+
         //$NON-NLS-1$ result.append (fontName);
+
         result.append (", fontHeight: ");
+
         //$NON-NLS-1$ result.append (fontHeight);
+
         result.append (", bold: ");
+
         //$NON-NLS-1$ result.append ((eFlags & BOLD_EFLAG) != 0);
+
         result.append (", italic: ");
+
         //$NON-NLS-1$ result.append ((eFlags & ITALIC_EFLAG) != 0);
+
         result.append (", underline: ");
+
         //$NON-NLS-1$ result.append ((eFlags & UNDERLINE_EFLAG) != 0);
+
         result.append (", strikeThrough: ");
+
         //$NON-NLS-1$ result.append ((eFlags & STRIKE_THROUGH_EFLAG) != 0);
+
         result.append (')');
+
         return result.toString ();
+
     }
 
 }

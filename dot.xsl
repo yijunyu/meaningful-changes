@@ -7,9 +7,9 @@
 ]>
 <xsl:stylesheet version="1.0" xmlns:xsl="&xsl;">
     <xsl:output method="text" indent="yes"/>
-    <xsl:template match="/"><xsl:text>(&separator2;</xsl:text>
+    <xsl:template match="/"><xsl:text>{&separator2;</xsl:text>
       <xsl:apply-templates> <xsl:with-param name="indent" select="1"/></xsl:apply-templates>
-    <xsl:text>&separator2;)</xsl:text>
+    <xsl:text>&separator2;}</xsl:text>
     </xsl:template>
     <xsl:template name="spaces"><xsl:param name="nb"/>               
             <xsl:if test="$nb &gt; 0"> <xsl:text>  </xsl:text>

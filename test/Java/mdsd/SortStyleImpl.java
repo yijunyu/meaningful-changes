@@ -90,7 +90,8 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
        */
     protected SortingStyleImpl () {
 
-        super ();}
+        super ();
+    }
 
     /**
        * <!-- begin-user-doc -->
@@ -100,6 +101,7 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
     protected EClass eStaticClass () {
 
         return NotationPackage.eINSTANCE.getSortingStyle ();
+
     }
 
     /**
@@ -110,6 +112,7 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
     public Sorting getSorting () {
 
         return sorting;
+
     }
 
     /**
@@ -122,7 +125,9 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
         Sorting oldSorting = sorting;
 
         sorting = newSorting == null ? SORTING_EDEFAULT : newSorting;
+
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.SORTING_STYLE__SORTING, oldSorting, sorting));
+
     }
 
     /**
@@ -134,6 +139,7 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
     public Map getSortingKeys () {
 
         return Collections.unmodifiableMap (sortingKeys);
+
     }
 
     /**
@@ -162,11 +168,14 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
 
                 if (! (value instanceof SortingDirection)) throw new IllegalArgumentException ("One or more values in the map is not of type org.eclipse.gmf.runtime.notation.SortingDirection");
 
-                tempMap.put (key, value);}
+                tempMap.put (key, value);
+            }
 
-            sortingKeys = tempMap;}
+            sortingKeys = tempMap;
+        }
 
         if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.SORTING_STYLE__SORTING_KEYS, oldSortingKeys, sortingKeys));
+
     }
 
     /**
@@ -178,9 +187,11 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
 
         if (sortedObjects == null) {
 
-            sortedObjects = new EObjectResolvingEList (EObject.class, this, NotationPackage.SORTING_STYLE__SORTED_OBJECTS);}
+            sortedObjects = new EObjectResolvingEList (EObject.class, this, NotationPackage.SORTING_STYLE__SORTED_OBJECTS);
+        }
 
         return sortedObjects;
+
     }
 
     /**
@@ -194,15 +205,19 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
             case NotationPackage.SORTING_STYLE__SORTING :
 
                 return getSorting ();
+
             case NotationPackage.SORTING_STYLE__SORTING_KEYS :
 
                 return getSortingKeys ();
+
             case NotationPackage.SORTING_STYLE__SORTED_OBJECTS :
 
                 return getSortedObjects ();
+
         }
 
         return eDynamicGet (eFeature, resolve);
+
     }
 
     /**
@@ -216,19 +231,27 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
             case NotationPackage.SORTING_STYLE__SORTING :
 
                 setSorting ((Sorting) newValue);
+
                 return;
+
             case NotationPackage.SORTING_STYLE__SORTING_KEYS :
 
                 setSortingKeys ((Map) newValue);
+
                 return;
+
             case NotationPackage.SORTING_STYLE__SORTED_OBJECTS :
 
                 getSortedObjects ().clear ();
+
                 getSortedObjects ().addAll ((Collection) newValue);
+
                 return;
+
         }
 
-        eDynamicSet (eFeature, newValue);}
+        eDynamicSet (eFeature, newValue);
+    }
 
     /**
        * <!-- begin-user-doc -->
@@ -241,18 +264,25 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
             case NotationPackage.SORTING_STYLE__SORTING :
 
                 setSorting (SORTING_EDEFAULT);
+
                 return;
+
             case NotationPackage.SORTING_STYLE__SORTING_KEYS :
 
                 setSortingKeys (SORTING_KEYS_EDEFAULT);
+
                 return;
+
             case NotationPackage.SORTING_STYLE__SORTED_OBJECTS :
 
                 getSortedObjects ().clear ();
+
                 return;
+
         }
 
-        eDynamicUnset (eFeature);}
+        eDynamicUnset (eFeature);
+    }
 
     /**
        * <!-- begin-user-doc -->
@@ -265,15 +295,19 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
             case NotationPackage.SORTING_STYLE__SORTING :
 
                 return sorting != SORTING_EDEFAULT;
+
             case NotationPackage.SORTING_STYLE__SORTING_KEYS :
 
                 return SORTING_KEYS_EDEFAULT == null ? sortingKeys != null : ! SORTING_KEYS_EDEFAULT.equals (sortingKeys);
+
             case NotationPackage.SORTING_STYLE__SORTED_OBJECTS :
 
                 return sortedObjects != null && ! sortedObjects.isEmpty ();
+
         }
 
         return eDynamicIsSet (eFeature);
+
     }
 
     /**
@@ -288,11 +322,17 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
         StringBuffer result = new StringBuffer (super.toString ());
 
         result.append (" (sorting: ");
+
         //$NON-NLS-1$ result.append (sorting);
+
         result.append (", sortingKeys: ");
+
         //$NON-NLS-1$ result.append (sortingKeys);
+
         result.append (')');
+
         return result.toString ();
+
     }
 
 }
