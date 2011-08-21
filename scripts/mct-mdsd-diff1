@@ -1,0 +1,75 @@
+#!/bin/bash
+TIMER_INTERRUPT=14
+TIMELIMIT=10
+PrintAnswer()
+{
+  if [ "$answer" = TIMEOUT ]
+  then
+    echo $answer
+  else       # Don't want to mix up the two instances. 
+    kill $!  #  Kills no-longer-needed TimerOn function
+             #+ running in background.
+             #  $! is PID of last job running in background.
+  fi
+
+}  
+TimerOn()
+{
+  sleep $TIMELIMIT && kill -s $TIMER_INTERRUPT $$ > /dev/null &
+}  
+Int14Vector()
+{
+  answer="TIMEOUT"
+  PrintAnswer
+  exit $TIMER_INTERRUPT
+} 
+trap Int14Vector $TIMER_INTERRUPT
+answer=success
+p=$(dirname $0)
+if [ "$1" == "-comment" ]; then
+  cc=cc
+  shift
+else
+  cc=c
+fi
+type=${1/*.}
+case $type in
+java) language=Java/mdsd-diff ;;
+v) language=Verilog/verilog2 ;;
+*) language=$type ;;
+esac
+mct=$p/../bin.`uname -s -m | sed 's/ /_/'`/"$language"$cc
+mct1=$p/../bin.`uname -s -m | sed 's/ /_/'`/Java/javac
+if [ "$#" == "1" ]; then
+	TimerOn
+	error=$(txl -i Txl -comment -d COMMENTS $1 Txl/Java/java5.Txl 2>&1 | grep "Syntax error")
+	PrintAnswer
+	if [ "$error" == "" ]; then
+		$mct -s 400 $opt -q $1 -o t.t >& /dev/null
+		rm -f t.t
+		$mct1 -s 400 $opt -q t.1 -diff t.2 2>&1
+	else
+		echo $error > $1.error
+	fi
+elif [ "$#" == "2" ]; then
+	TimerOn
+	error=$(txl -i Txl -comment -d COMMENTS $1 Txl/Java/java5.Txl 2>&1 | grep "Syntax error")
+	PrintAnswer
+	if [ "$error" == "" ]; then
+		$mct -s 400 $opt -q $1 -o t.t >& /dev/null
+	else
+		echo $error > $1.error
+	fi
+elif [ "$#" == "3" ]; then
+	TimerOn
+	error1=$(txl -i Txl -comment -d COMMENTS $1 Txl/Java/java5.Txl 2>&1 | grep "Syntax error")
+	PrintAnswer
+	TimerOn
+	error2=$(txl -i Txl -comment -d COMMENTS $2 Txl/Java/java5.Txl 2>&1 | grep "Syntax error")
+	PrintAnswer
+	if [ "$error1" == "" -a "$error2" == "" ]; then
+		$mct -s 400 $opt -attr -q $1 -diff $2 >& t.t
+	fi
+else
+	echo usage: mct program [program_to_compare]
+fi
