@@ -46,7 +46,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #getFontColor()
        * @generated
        * @ordered
-       */ final protected static int FONT_COLOR_EDEFAULT = 0;
+       */
+    final protected static int FONT_COLOR_EDEFAULT = 0;
     /**
        * The cached value of the '{@link #getFontColor() <em>Font Color</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -54,7 +55,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #getFontColor()
        * @generated
        * @ordered
-       */ protected int fontColor = FONT_COLOR_EDEFAULT;
+       */
+    protected int fontColor = FONT_COLOR_EDEFAULT;
     /**
        * The default value of the '{@link #getFontName() <em>Font Name</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -62,7 +64,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #getFontName()
        * @generated
        * @ordered
-       */ final protected static String FONT_NAME_EDEFAULT = "Tahoma";
+       */
+    final protected static String FONT_NAME_EDEFAULT = "Tahoma";
     //$NON-NLS-1$ /**
        * The cached value of the '{@link #getFontName() <em>Font Name</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -70,7 +73,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #getFontName()
        * @generated
        * @ordered
-       */ protected String fontName = FONT_NAME_EDEFAULT;
+       */
+    protected String fontName = FONT_NAME_EDEFAULT;
     /**
        * The default value of the '{@link #getFontHeight() <em>Font Height</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -78,7 +82,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #getFontHeight()
        * @generated
        * @ordered
-       */ final protected static int FONT_HEIGHT_EDEFAULT = 9;
+       */
+    final protected static int FONT_HEIGHT_EDEFAULT = 9;
     /**
        * The cached value of the '{@link #getFontHeight() <em>Font Height</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -86,7 +91,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #getFontHeight()
        * @generated
        * @ordered
-       */ protected int fontHeight = FONT_HEIGHT_EDEFAULT;
+       */
+    protected int fontHeight = FONT_HEIGHT_EDEFAULT;
     /**
        * The default value of the '{@link #isBold() <em>Bold</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -94,7 +100,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #isBold()
        * @generated
        * @ordered
-       */ final protected static boolean BOLD_EDEFAULT = false;
+       */
+    final protected static boolean BOLD_EDEFAULT = false;
     /**
        * The flag representing the value of the '{@link #isBold() <em>Bold</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -102,7 +109,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #isBold()
        * @generated
        * @ordered
-       */ final protected static int BOLD_EFLAG = 1 << 8;
+       */
+    final protected static int BOLD_EFLAG = 1 << 8;
     /**
        * The default value of the '{@link #isItalic() <em>Italic</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -110,7 +118,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #isItalic()
        * @generated
        * @ordered
-       */ final protected static boolean ITALIC_EDEFAULT = false;
+       */
+    final protected static boolean ITALIC_EDEFAULT = false;
     /**
        * The flag representing the value of the '{@link #isItalic() <em>Italic</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -118,7 +127,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #isItalic()
        * @generated
        * @ordered
-       */ final protected static int ITALIC_EFLAG = 1 << 9;
+       */
+    final protected static int ITALIC_EFLAG = 1 << 9;
     /**
        * The default value of the '{@link #isUnderline() <em>Underline</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -126,7 +136,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #isUnderline()
        * @generated
        * @ordered
-       */ final protected static boolean UNDERLINE_EDEFAULT = false;
+       */
+    final protected static boolean UNDERLINE_EDEFAULT = false;
     /**
        * The flag representing the value of the '{@link #isUnderline() <em>Underline</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -134,7 +145,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #isUnderline()
        * @generated
        * @ordered
-       */ final protected static int UNDERLINE_EFLAG = 1 << 10;
+       */
+    final protected static int UNDERLINE_EFLAG = 1 << 10;
     /**
        * The default value of the '{@link #isStrikeThrough() <em>Strike Through</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -142,7 +154,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #isStrikeThrough()
        * @generated
        * @ordered
-       */ final protected static boolean STRIKE_THROUGH_EDEFAULT = false;
+       */
+    final protected static boolean STRIKE_THROUGH_EDEFAULT = false;
     /**
        * The flag representing the value of the '{@link #isStrikeThrough() <em>Strike Through</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -150,7 +163,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        * @see #isStrikeThrough()
        * @generated
        * @ordered
-       */ final protected static int STRIKE_THROUGH_EFLAG = 1 << 11;
+       */
+    final protected static int STRIKE_THROUGH_EFLAG = 1 << 11;
     /**
        * <!-- begin-user-doc -->
        * <!-- end-user-doc -->
@@ -159,6 +173,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
     protected FontStyleImpl () {
 
         super ();
+
     }
 
     /**
@@ -195,7 +210,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
 
         fontName = (newFontName == null) ? null : newFontName;
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__FONT_NAME, oldFontName, fontName));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__FONT_NAME, oldFontName, fontName));
 
     }
 
@@ -221,7 +237,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
 
         fontHeight = newFontHeight;
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__FONT_HEIGHT, oldFontHeight, fontHeight));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__FONT_HEIGHT, oldFontHeight, fontHeight));
 
     }
 
@@ -245,9 +262,13 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
 
         boolean oldBold = (eFlags & BOLD_EFLAG) != 0;
 
-        if (newBold) eFlags |= BOLD_EFLAG; else eFlags &= ~ BOLD_EFLAG;
+        if (newBold)
+        eFlags |= BOLD_EFLAG;
+        else
+        eFlags &= ~ BOLD_EFLAG;
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__BOLD, oldBold, newBold));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__BOLD, oldBold, newBold));
 
     }
 
@@ -271,9 +292,13 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
 
         boolean oldItalic = (eFlags & ITALIC_EFLAG) != 0;
 
-        if (newItalic) eFlags |= ITALIC_EFLAG; else eFlags &= ~ ITALIC_EFLAG;
+        if (newItalic)
+        eFlags |= ITALIC_EFLAG;
+        else
+        eFlags &= ~ ITALIC_EFLAG;
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__ITALIC, oldItalic, newItalic));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__ITALIC, oldItalic, newItalic));
 
     }
 
@@ -297,9 +322,13 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
 
         boolean oldUnderline = (eFlags & UNDERLINE_EFLAG) != 0;
 
-        if (newUnderline) eFlags |= UNDERLINE_EFLAG; else eFlags &= ~ UNDERLINE_EFLAG;
+        if (newUnderline)
+        eFlags |= UNDERLINE_EFLAG;
+        else
+        eFlags &= ~ UNDERLINE_EFLAG;
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__UNDERLINE, oldUnderline, newUnderline));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__UNDERLINE, oldUnderline, newUnderline));
 
     }
 
@@ -323,9 +352,13 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
 
         boolean oldStrikeThrough = (eFlags & STRIKE_THROUGH_EFLAG) != 0;
 
-        if (newStrikeThrough) eFlags |= STRIKE_THROUGH_EFLAG; else eFlags &= ~ STRIKE_THROUGH_EFLAG;
+        if (newStrikeThrough)
+        eFlags |= STRIKE_THROUGH_EFLAG;
+        else
+        eFlags &= ~ STRIKE_THROUGH_EFLAG;
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__STRIKE_THROUGH, oldStrikeThrough, newStrikeThrough));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__STRIKE_THROUGH, oldStrikeThrough, newStrikeThrough));
 
     }
 
@@ -351,7 +384,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
 
         fontColor = newFontColor;
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__FONT_COLOR, oldFontColor, fontColor));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.FONT_STYLE__FONT_COLOR, oldFontColor, fontColor));
 
     }
 
@@ -450,6 +484,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         }
 
         eDynamicSet (eFeature, newValue);
+
     }
 
     /**
@@ -505,6 +540,7 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
         }
 
         eDynamicUnset (eFeature);
+
     }
 
     /**
@@ -556,7 +592,8 @@ public class FontStyleImpl extends EObjectImpl implements FontStyle {
        */
     public String toString () {
 
-        if (eIsProxy ()) return super.toString ();
+        if (eIsProxy ())
+        return super.toString ();
 
         StringBuffer result = new StringBuffer (super.toString ());
 

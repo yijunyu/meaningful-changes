@@ -33,7 +33,8 @@ public class EntityImpl extends EObjectImpl implements Entity {
        * @see #getName()
        * @generated
        * @ordered
-       */ final protected static String NAME_EDEFAULT = null;
+       */
+    final protected static String NAME_EDEFAULT = null;
     /**
        * The cached value of the '{@link #getName() <em>Name</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -41,7 +42,8 @@ public class EntityImpl extends EObjectImpl implements Entity {
        * @see #getName()
        * @generated
        * @ordered
-       */ protected String name = NAME_EDEFAULT;
+       */
+    protected String name = NAME_EDEFAULT;
     /**
        * <!-- begin-user-doc -->
        * <!-- end-user-doc -->
@@ -50,6 +52,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
     protected EntityImpl () {
 
         super ();
+
     }
 
     /**
@@ -86,7 +89,8 @@ public class EntityImpl extends EObjectImpl implements Entity {
 
         name = newName;
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, ExamplePackage.ENTITY__NAME, oldName, name));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, ExamplePackage.ENTITY__NAME, oldName, name));
 
     }
 
@@ -127,6 +131,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
         }
 
         super.eSet (featureID, newValue);
+
     }
 
     /**
@@ -147,6 +152,7 @@ public class EntityImpl extends EObjectImpl implements Entity {
         }
 
         super.eUnset (featureID);
+
     }
 
     /**
@@ -177,7 +183,8 @@ public class EntityImpl extends EObjectImpl implements Entity {
     @Override
     public String toString () {
 
-        if (eIsProxy ()) return super.toString ();
+        if (eIsProxy ())
+        return super.toString ();
 
         StringBuffer result = new StringBuffer (super.toString ());
 

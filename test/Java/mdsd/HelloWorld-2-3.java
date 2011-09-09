@@ -1,9 +1,11 @@
 <<<<<< 101 "/* HelloWorld */"
 
 public class HelloWorld {
+
     static String world = "world";
 
     <<<<<< 102 "// ending"
+
     static String hello = "Hello";
 
     <<<<<< 103 "// beginning"
@@ -11,6 +13,7 @@ public class HelloWorld {
     public static void main (String args []) {
 
         System.out.println (hello + ", " + world + "!");
+
     }
 
 }
@@ -18,9 +21,11 @@ public class HelloWorld {
 >>>>>> 101 "/* HelloWorld */"
 
 public class HelloWorld {
+
     public static String world = "world";
 
     >>>>>> 102 "// ending"
+
     static String hello = "Hello";
 
     >>>>>> 103 "// beginning"
@@ -28,6 +33,7 @@ public class HelloWorld {
     public static void main (String args []) {
 
         System.out.println (hello + ", " + world + "!");
+
     }
 
 }

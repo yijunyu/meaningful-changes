@@ -52,7 +52,8 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
        * @see #getSorting()
        * @generated
        * @ordered
-       */ final protected static Sorting SORTING_EDEFAULT = Sorting.NONE_LITERAL;
+       */
+    final protected static Sorting SORTING_EDEFAULT = Sorting.NONE_LITERAL;
     /**
        * The cached value of the '{@link #getSorting() <em>Sorting</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -60,13 +61,15 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
        * @see #getSorting()
        * @generated
        * @ordered
-       */ protected Sorting sorting = SORTING_EDEFAULT;
+       */
+    protected Sorting sorting = SORTING_EDEFAULT;
     /**
        * <!-- begin-user-doc -->
        protected static final Map SORTING_KEYS_EDEFAULT = Collections.EMPTY_MAP;
        * <!-- end-user-doc -->
        * @generated 
-       */ final protected static Map SORTING_KEYS_EDEFAULT = Collections.EMPTY_MAP;
+       */
+    final protected static Map SORTING_KEYS_EDEFAULT = Collections.EMPTY_MAP;
     /**
        * The cached value of the '{@link #getSortingKeys() <em>Sorting Keys</em>}' attribute.
        * <!-- begin-user-doc -->
@@ -74,7 +77,8 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
        * @see #getSortingKeys()
        * @generated
        * @ordered
-       */ protected Map sortingKeys = SORTING_KEYS_EDEFAULT;
+       */
+    protected Map sortingKeys = SORTING_KEYS_EDEFAULT;
     /**
        * The cached value of the '{@link #getSortedObjects() <em>Sorted Objects</em>}' reference list.
        * <!-- begin-user-doc -->
@@ -82,7 +86,8 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
        * @see #getSortedObjects()
        * @generated
        * @ordered
-       */ protected EList sortedObjects = null;
+       */
+    protected EList sortedObjects = null;
     /**
        * <!-- begin-user-doc -->
        * <!-- end-user-doc -->
@@ -91,6 +96,7 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
     protected SortingStyleImpl () {
 
         super ();
+
     }
 
     /**
@@ -126,7 +132,8 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
 
         sorting = newSorting == null ? SORTING_EDEFAULT : newSorting;
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.SORTING_STYLE__SORTING, oldSorting, sorting));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.SORTING_STYLE__SORTING, oldSorting, sorting));
 
     }
 
@@ -152,29 +159,41 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
 
         Map oldSortingKeys = sortingKeys;
 
-        if (newSortingKeys == null) throw new NullPointerException ("the 'newSortingKeys' parameter is null");
-        else if (newSortingKeys.isEmpty ()) sortingKeys = SORTING_KEYS_EDEFAULT; else {
+        if (newSortingKeys == null)
+        throw new NullPointerException ("the 'newSortingKeys' parameter is null");
+
+        else
+        if (newSortingKeys.isEmpty ())
+        sortingKeys = SORTING_KEYS_EDEFAULT;
+        else
+        {
 
             Map tempMap = new LinkedHashMap (newSortingKeys.size ());
 
             for (Iterator i = newSortingKeys.keySet ().iterator ();
-            i.hasNext ();) {
+            i.hasNext ();)
+            {
 
                 Object key = i.next ();
 
-                if (! (key instanceof String)) throw new IllegalArgumentException ("One or more keys in the map is not of type java.lang.String");
+                if (! (key instanceof String))
+                throw new IllegalArgumentException ("One or more keys in the map is not of type java.lang.String");
 
                 Object value = newSortingKeys.get (key);
 
-                if (! (value instanceof SortingDirection)) throw new IllegalArgumentException ("One or more values in the map is not of type org.eclipse.gmf.runtime.notation.SortingDirection");
+                if (! (value instanceof SortingDirection))
+                throw new IllegalArgumentException ("One or more values in the map is not of type org.eclipse.gmf.runtime.notation.SortingDirection");
 
                 tempMap.put (key, value);
+
             }
 
             sortingKeys = tempMap;
+
         }
 
-        if (eNotificationRequired ()) eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.SORTING_STYLE__SORTING_KEYS, oldSortingKeys, sortingKeys));
+        if (eNotificationRequired ())
+        eNotify (new ENotificationImpl (this, Notification.SET, NotationPackage.SORTING_STYLE__SORTING_KEYS, oldSortingKeys, sortingKeys));
 
     }
 
@@ -185,9 +204,11 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
        */
     public EList getSortedObjects () {
 
-        if (sortedObjects == null) {
+        if (sortedObjects == null)
+        {
 
             sortedObjects = new EObjectResolvingEList (EObject.class, this, NotationPackage.SORTING_STYLE__SORTED_OBJECTS);
+
         }
 
         return sortedObjects;
@@ -251,6 +272,7 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
         }
 
         eDynamicSet (eFeature, newValue);
+
     }
 
     /**
@@ -282,6 +304,7 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
         }
 
         eDynamicUnset (eFeature);
+
     }
 
     /**
@@ -317,7 +340,8 @@ public class SortingStyleImpl extends EObjectImpl implements SortingStyle {
        */
     public String toString () {
 
-        if (eIsProxy ()) return super.toString ();
+        if (eIsProxy ())
+        return super.toString ();
 
         StringBuffer result = new StringBuffer (super.toString ());
 

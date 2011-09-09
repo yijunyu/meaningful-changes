@@ -156,7 +156,7 @@ redefine single_annotation_value
 end define
 
 redefine comment_nl
-    [empty] | 
+    [empty] |
    [repeat mycomment scoped ignored when SingleLine]
 end define
 
@@ -187,10 +187,11 @@ function NotGeneratedNot A  [class_body_declaration]
     where not S_Cs [grep "@generated NOT"]
 end function
 
-function remove_comment
+rule remove_comment
     replace * [comment_nl] X [comment_nl]
+    deconstruct * [comment] X Y [comment]
     by _
-end function
+end rule
 
 function put_string F [stringlit] S [stringlit]
    replace [stringlit] Str [stringlit]
@@ -205,10 +206,10 @@ end define
 function diff S1 [stringlit] S2 [stringlit]
    replace [any] S [any]
    where not S1 [= ""]
-   construct file1 [stringlit] "t.1"
-   construct file2 [stringlit] "t.2"
+   import TXLinput [stringlit]
+   construct file1 [stringlit] TXLinput [+ ".1"]
+   construct file2 [stringlit] TXLinput [+ ".2"]
    import TXLprogram [stringlit]
-%   construct diffCmd [stringlit] _ [+ "bin.Darwin_x86_64/Java/javac "] [+ file1] [+ " -diff "] [+ file2]
    construct diffCmd [stringlit] _ [+ "txl -i Txl "] [+ file1] [+ " result/norm/Java/java.Txl - -diff "] [+ file2]
    construct d_S1 [class_body_declaration] _ [parse S1] [write file1]
    construct d_S2 [class_body_declaration] _ [parse S2] [write file2] [system diffCmd]
@@ -235,9 +236,8 @@ end function
 
 function UserModifiedCommentNot
     replace [class_body_declaration*] A1 [class_body_declaration] A2 [class_body_declaration*]
-    construct S_Cs [stringlit] _ [quote A1] 
+    construct S_Cs [stringlit] _ [quote A1]
     where not S_Cs [grep "@generated"]
     construct B2 [class_body_declaration*] A2 [UserModifiedComment] [UserModifiedCommentNot]
     by _ [. A1] [. B2]
 end function
-
