@@ -9,6 +9,7 @@ include "mct-ignored.txl"
 include "mct-preferred.txl"
 include "mct-scoped.txl"
 include "mct-meta.txl"
+include "mct-abstracted.txl"
 #ifdef PROMPT
 include "mct-prompt.txl"
 #endif
@@ -28,6 +29,11 @@ end rule
 
 rule mct_eliminateAnnotations
  replace [statement*] T [MCT_annotate] Rest [statement*]
+ by Rest
+end rule
+
+rule mct_eliminateAbstractions
+ replace [statement*] T [MCT_abstract] Rest [statement*]
  by Rest
 end rule
 
@@ -115,10 +121,12 @@ function main
 	[redefine2define] %[print]
 #endif
         [metaAnnotation] 
+        [abstractAnnotation] 
 #ifdef DEBUG_META
 	[print]
 #endif
 	[mct_eliminateAnnotations] % [print]
+	[mct_eliminateAbstractions] % [print]
 	[typeSpec_removeClones]
  import Rules
  construct Statements_ChangeRule [statement*]

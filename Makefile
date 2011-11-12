@@ -13,8 +13,8 @@ source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)/*.*))
 source+=$(foreach ext,$(extensions),$(wildcard source/$(ext)c/*.*))
 results+=$(generated_language) 
 results+=$(source:source/%=result/%) 
-results+=eval.c.id
-results+=eval.c.id.type
+#results+=eval.c.id
+#results+=eval.c.id.type
 tools+=$(patsubst source/norm/%.norm,%,$(filter source/norm/Java/%,$(norm)))
 pf_tools+=$(patsubst source/norm/%.norm,%,$(filter source/norm/ProblemFrames/%,$(norm)))
 define diff_example_1
