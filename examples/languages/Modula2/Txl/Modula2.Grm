@@ -1,0 +1,484 @@
+% Die Syntax von Modula-2
+%       aus Anhang 1, Niklaus Wirth,
+%       "Programmieren in Modula-2", Springer Verlag 1985
+% J.R. Cordy, GMD Karlsruhe, 23.10.90
+
+compounds
+        <>  <=  >=  := 
+end compounds
+
+comments
+        (* *)
+end comments
+
+keys
+        'IN  OR  DIV  MOD  AND  NOT 
+        ARRAY  OF  RECORD  END  CASE  ELSE  SET  POINTER  TO  PROCEDURE 
+        VAR  EXIT  RETURN  IF  THEN  WHILE  DO  REPEAT  UNTIL  FOR  BY 
+        LOOP  WITH  BEGIN  MODULE  EXPORT  QUALIFIED 
+        FROM  IMPORT  DEFINITION  IMPLEMENTATION
+end keys
+
+define program 
+        [compilation_unit]
+end define
+
+define qualident
+        [id] [repeat dot_ident]
+end define
+
+define dot_ident
+        . [id]
+end define
+
+define constant_declaration
+        [id] = [const_expression]        
+end define
+
+define const_expression
+        [simple_const_expr] [repeat relation_simple_const_expr]
+end define
+
+define relation_simple_const_expr
+        [relation] [simple_const_expr]
+end define
+
+define relation
+        = | # | <> | < | <= | > | >= | 'IN
+end define
+
+define simple_const_expr
+        [opt sign]  [const_term] [repeat add_operator_const_term]
+end define
+
+define sign
+        + | -
+end define
+
+define add_operator_const_term
+        [add_operator] [const_term]
+end define
+
+define add_operator
+        + | - | OR
+end define
+
+define const_term
+        [const_factor] [repeat mul_operator_const_factor]
+end define
+
+define mul_operator_const_factor
+        [mul_operator] [const_factor]
+end define
+
+define mul_operator
+        * | / | DIV | MOD | AND | &
+end define
+
+define const_factor
+        [qualident]
+    |   [number]
+    |   [stringlit]
+    |   [const_set]
+    |   ( [const_expression] )
+    |   NOT [const_factor]
+end define
+
+define const_set
+        [qualident] { [list const_element] }
+end define
+
+define const_element
+        [const_expression] [opt dotdot_const_expression]
+end define
+
+define dotdot_const_expression
+        .. [const_expression]
+end define
+
+define type_declaration
+        [id] = [type]
+end define
+
+define type 
+        [simple_type]
+    |   [array_type]
+    |   [record_type]
+    |   [set_type]
+    |   [pointer_type]
+    |   [procedure_type]
+end define
+
+define simple_type
+        [qualident]
+    |   [enumeration]
+    |   [subrange_type]
+end define
+
+define enumeration
+        ( [ident_list] )
+end define
+
+define ident_list
+        [list id+]
+end define
+
+define subrange_type
+        [opt id] '[ [const_expression] .. [const_expression] ']
+end define
+
+define array_type
+        ARRAY [list simple_type+] OF [type]
+end define
+
+define record_type
+                                [IN][NL]
+        RECORD                  [NL][IN]
+            [field_list_sequence] [NL][EX]
+        END                     [EX]
+end define
+
+define field_list_sequence
+        [field_list] [repeat semi_field_list]     
+end define
+
+define semi_field_list
+        ;               [NL]
+        [field_list]
+end define
+
+define field_list
+        [ident_list] : [type]
+    |   CASE [opt id] : [qualident] OF          [IN][NL]
+            [variant]                           
+            [repeat or_variant]
+            [opt else_field_list_sequence]        [EX]
+        END
+end define
+
+define or_variant
+        OR [variant]    
+end define
+
+define else_field_list_sequence
+        ELSE                    [IN][NL]
+            [field_list_sequence] [EX][NL]
+end define
+
+define variant
+        [case_label_list] :       [IN][NL]
+            [field_list_sequence] [EX][NL]
+end define
+
+define case_label_list
+        [list case_labels+]
+end define
+
+define case_labels
+        [const_expression] [opt dotdot_const_expression]
+end define
+
+define set_type
+        SET OF [simple_type]
+end define
+
+define pointer_type
+        POINTER TO [type]
+end define
+
+define procedure_type
+        PROCEDURE [formal_type_list]
+end define
+
+define formal_type_list
+        ( [list var_formal_type+] ) [opt procedure_result]
+end define
+
+define var_formal_type
+        [opt 'VAR] [formal_type]
+end define
+
+define variable_declaration
+        [ident_list] : [type]
+end define
+
+define designator
+        [qualident] [repeat dot_subscript_or_arrow]
+end define
+
+define dot_subscript_or_arrow
+        . [id]
+    |   '[ [exp_list] ']
+    |   ^
+end define
+
+define exp_list
+        [list expression+]
+end define
+
+define expression
+        [simple_expression] [opt relation_simple_expression]
+end define
+
+define relation_simple_expression
+        [relation] [simple_expression]
+end define
+
+define simple_expression
+        [opt sign] [term] [repeat add_operator_term]
+end define
+
+define add_operator_term
+        [add_operator] [term]
+end define
+
+define term
+        [factor] [repeat mul_operator_factor]
+end define
+
+define mul_operator_factor
+        [mul_operator] [factor]
+end define
+
+define factor
+        [number]
+    |   [stringlit]
+    |   [set]
+    |   [designator] [opt actual_parameters]
+    |   ( [expression] )
+    |   NOT [factor]
+end define
+
+define set
+        [opt qualident] { [list element] }
+end define
+
+define element
+        [expression] [opt dotdot_expression]
+end define
+
+define dotdot_expression
+        .. [expression]
+end define
+
+define actual_parameters
+        ( [opt exp_list] )
+end define
+
+define statement
+        [assignment]
+    |   [procedure_call]
+    |   [if_statement]
+    |   [case_statement]
+    |   [while_statement]
+    |   [repeatuntil_statement]
+    |   [loop_statement]
+    |   [for_statement]
+    |   [with_statement]
+    |   EXIT
+    |   RETURN [opt expression]
+end define
+
+define assignment
+        [designator] := [expression]
+end define
+
+define procedure_call
+        [designator] [opt actual_parameters]
+end define
+
+define statement_sequence
+        [statement] [repeat semi_statement]     [NL]
+end define
+
+define semi_statement
+        ;               [NL]
+        [statement]
+end define
+
+define if_statement
+        IF [expression] THEN             [IN][NL]
+            [statement_sequence]         [EX]
+        [repeat elsif_clause]
+        [opt else_statement_sequence]
+        END     
+end define
+
+define elsif_clause
+        ELSIF [expression] THEN          [IN][NL]
+            [statement_sequence]         [EX]
+end define
+
+define else_statement_sequence
+        ELSE                             [IN][NL]
+            [statement_sequence]         [EX]
+end define
+
+define case_statement
+        CASE [expression] OF                     [IN][NL]
+                [case] 
+                [repeat or_case]
+                [opt else_statement_sequence]    [EX]
+        END
+end define
+
+define or_case
+        '| [case]
+end define
+
+define case
+        [case_label_list] :       [IN][NL]
+            [statement_sequence]  [EX]
+end define
+
+define while_statement
+        WHILE [expression] DO     [IN][NL]
+            [statement_sequence]  [EX]
+        END
+end define
+
+define repeatuntil_statement
+        REPEAT                    [IN][NL]
+            [statement_sequence]  [EX]
+        UNTIL [expression]
+end define
+
+define for_statement
+        FOR [id] := [expression] TO [expression] [opt by_const_expression] DO    [IN][NL]
+            [statement_sequence]  [EX]
+        END
+end define
+
+define by_const_expression
+        BY [const_expression]
+end define
+
+define loop_statement
+        LOOP                      [IN][NL]
+            [statement_sequence]  [EX]
+        END
+end define
+
+define with_statement
+        WITH [designator] DO      [IN][NL]
+            [statement_sequence]  [EX]
+        END
+end define
+
+define procedure_declaration
+                                  [NL]
+        [procedure_heading] ;    
+        [block] [id]            
+end define
+
+define procedure_heading
+        PROCEDURE [id] [opt formal_parameters]
+end define
+
+define block
+                                  [NL]
+        [repeat declaration]    
+        BEGIN                     [IN][NL]
+            [statement_sequence]  [EX]
+        END
+end define
+
+define declaration
+        CONST                                    [IN][NL]
+            [repeat constant_declaration_semi]   [EX]
+    |   TYPE                                     [IN][NL]
+            [repeat type_declaration_semi]       [EX]
+    |   VAR                                      [IN][NL]
+            [repeat variable_declaration_semi]   [EX]
+    |   [procedure_declaration] ;                [NL][NL]
+    |   [module_declaration] ;                   [NL][NL]
+end define
+
+define constant_declaration_semi
+        [constant_declaration] ; [NL]
+end define
+
+define type_declaration_semi
+        [type_declaration] ;     [NL]
+end define
+
+define variable_declaration_semi
+        [variable_declaration] ; [NL]
+end define
+
+define formal_parameters
+        ( [formal_parameter] [repeat semi_formal_parameter] ) [opt procedure_result]
+end define
+
+define semi_formal_parameter
+        ; [formal_parameter]
+end define
+
+define formal_parameter
+        [opt 'VAR] [ident_list] : [formal_type]
+end define
+
+define formal_type
+        [opt array_of] [qualident]
+end define
+
+define procedure_result
+        : [qualident]
+end define
+
+define array_of
+        ARRAY OF
+end define
+
+define module_declaration
+                                        [NL]
+        MODULE [id] [opt priority] ;    [NL][NL]
+                [repeat import_]
+                [opt export_]
+                [block] [id] ;          [NL]
+end define
+
+define priority
+        '[ [const_expression] ']
+end define
+
+define export_
+        EXPORT [opt 'QUALIFIED] [ident_list] ;   [NL]
+end define
+
+define import_
+        [opt from_ident] IMPORT [ident_list] ;   [NL]
+end define
+
+define from_ident
+        FROM [id]
+end define
+
+define definition_module
+                                        [NL]
+        DEFINITION MODULE [id] ;        [NL][NL]
+                [repeat import_]
+                [repeat definition]
+        END [id] .                      [NL]
+end define
+
+define definition
+        CONST                                    [IN][NL]
+            [repeat constant_declaration_semi]   [EX]
+    |   TYPE                                     [IN][NL]
+            [repeat type_declaration_semi]       [EX]
+    |   VAR                                      [IN][NL]
+            [repeat variable_declaration_semi]   [EX]
+    |   [procedure_heading] ;                    [NL]
+end define
+
+define program_module
+        MODULE [id] [opt priority] ;    [NL][NL]
+                [repeat import_]
+                [block] [id] .          
+end define
+
+define compilation_unit
+        [definition_module] 
+    |   [opt 'IMPLEMENTATION] [program_module]
+end define

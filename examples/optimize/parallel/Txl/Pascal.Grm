@@ -1,0 +1,407 @@
+% TXL Basis Grammar for Jensen & Wirth Standard PASCAL
+% J.R. Cordy, Queen's University, 22.10.92
+
+#pragma -width 160
+
+comments
+        { }
+        (* *)
+end comments
+
+compounds
+        := >= <= <>
+end compounds
+
+keys
+	array begin boolean case const char do downto
+	else 'end enum for 'function if                             
+	integer of packed procedure real record             
+	'repeat type var file program write writeln read
+	readln then while until to with and or
+	'not true false set goto in
+end keys
+
+define program
+        'program [id] ( [list id+] ) ;  [NL]
+        [block] .
+end define
+
+define block
+        [IN]
+        [repeat declaration]            
+        [repeat subprogram_declaration]  
+        [EX] [NL]
+        [begin_end] 
+end define
+
+define begin_end
+        begin                   [NL] [IN]
+            [opt statements]    [EX]
+        'end                                            
+end define 
+
+define statements
+        [repeat statement_semicolon+] 
+end define
+
+define statement_semicolon
+        [statement] [opt ';]    [NL]
+end define
+
+define declaration
+        [const_declaration]      
+    |   [type_declaration]       
+    |   [variable_declaration]   
+    |   [label_declaration]      
+end define
+
+define const_declaration
+        const                           [IN][NL]
+            [repeat const_definition+]   [EX]
+end define
+
+define const_definition
+        [id] = [constant] ;     [NL]
+end define
+
+define constant
+        [opt plus_or_minus] [id]
+    |   [opt plus_or_minus] [number]
+    |   [charlit] 
+    |   ''' [SPOFF] ''' [SPON]  % ''''
+    |   true
+    |   false
+end define
+
+define plus_or_minus
+        + | -
+end define
+
+define type_declaration
+        type                            [IN][NL]
+            [repeat type_definition+]    [EX]
+end define
+
+define type_definition
+        [id] = [type_spec] ;     [NL]
+end define
+
+define type_spec
+        [simple_type]
+    |   [pointer_type]
+    |   [opt 'packed] [array_type]
+    |   [opt 'packed] [set_type]
+    |   [opt 'packed] [file_type]
+    |   [opt 'packed] [record_type]
+end define
+
+define simple_type
+        [type_identifier]
+    |   [enumerated_type]
+    |   [subrange_type]
+end define
+
+define type_identifier
+        [id]
+    |   'integer
+    |   'real
+    |   'boolean
+    |   'char
+end define
+
+define enumerated_type
+        ( [list id+] )
+end define
+
+define subrange_type
+        [constant] .. [constant]
+end define
+
+define pointer_type
+        ^ [type_spec]
+end define
+
+define array_type
+        array '[ [list simple_type+] '] of [type_spec]
+end define
+
+define file_type
+        file of [type_spec]
+end define
+
+define set_type
+        set of [simple_type]
+end define
+
+define record_type
+                                [NL] [IN]
+        record                  [IN]
+            [field_list]         [EX] [NL]
+        'end                    [EX]
+end define
+
+define field_list
+        [record_field] [repeat semicolon_record_field] 
+    |   [variant_record]
+end define
+
+define record_field
+        [NL]
+        [list id+] : [type_spec]
+end define
+
+define semicolon_record_field
+        ; [record_field]
+end define
+
+define variant_record
+        case [expression] of            [IN][IN]
+            [case_alternative]
+            [repeat case_alternative]    [EX][EX][NL]
+        'end
+        case [id] : [type_spec] of       [IN][IN]
+            [variant]           
+            [repeat semicolon_variant]   [EX][EX][NL]
+end define
+
+define variant
+        [NL][EX]
+        [list constant+] :      [IN][NL]
+            ( [field_list] )
+end define
+
+define semicolon_variant
+        ; [variant]
+end define
+
+define variable_declaration
+        var                             [IN][NL]
+            [repeat id_type_spec+]        [EX]
+end define
+
+define id_type_spec
+        [list id+] : [type_spec] ; [NL]
+end define
+
+define label_declaration
+        label [list number+] ;
+end define
+
+define subprogram_declaration
+        [procedure_declaration]
+    |   [function_declaration]
+end define
+
+define procedure_declaration
+        [NL]
+        procedure [id] [opt parameter_list] ; [NL]
+        [block] ; [NL]
+end define
+
+define parameter_list
+        ( [parameter_declaration] [repeat semicolon_parameter_declaration] )
+end define
+
+define parameter_declaration
+        [opt 'var] [list id+] : [type_identifier]
+    |   'function [id] : [type_identifier]
+    |   procedure [id] 
+end define
+
+define semicolon_parameter_declaration
+        ; [parameter_declaration]
+end define
+
+define function_declaration
+        [NL]
+        'function [id] [opt parameter_list] : [type_identifier] ; [NL]
+        [block] ; [NL]
+end define
+
+define statement
+        [opt statement_label] [unlabeled_statement]
+end define
+
+define statement_label
+        [number] :
+end define
+
+define unlabeled_statement
+        [assignment_statement]                    
+    |   [call_statement]
+    |   [write_statement]                
+    |   [writeln_statement]              
+    |   [read_statement]                 
+    |   [readln_statement]               
+    |   [begin_end] 
+    |   [if_statement]           
+    |   [case_statement] 
+    |   [while_statement]                
+    |   [repeatuntil_statement]               
+    |   [for_statement]                  
+    |   [with_statement]                 
+    |   [goto_statement]         
+    |   ;               
+end define
+
+define assignment_statement
+        [variable] := [expression]
+end define
+
+define call_statement
+        [id] [opt argument_list]
+end define
+
+define argument_list
+        ( [list expression+] ) 
+end define
+
+define write_statement
+        write [write_argument_list] 
+end define
+
+define write_argument_list
+        ( [list write_argument+] )        
+end define
+
+define write_argument
+        [expression] [opt colon_expression]
+end define
+
+define colon_expression
+        : [expression]
+end define
+    
+define writeln_statement
+        writeln [opt write_argument_list]
+end define
+
+define read_statement
+        read [read_argument_list]
+end define
+
+define read_argument_list
+        ( [list id+] )
+end define
+
+define readln_statement
+        readln [opt read_argument_list]
+end define
+
+define if_statement
+        if [expression] then    [IN][NL]
+            [statement]         [EX]
+        [opt else_part]
+end define
+
+define else_part
+        [NL]
+        else                    [IN][NL]
+            [statement]         [EX]
+end define
+
+define case_statement
+        case [expression] of            [IN][IN]
+            [case_alternative]
+            [repeat case_alternative]    [EX][EX][NL]
+        'end
+end define
+
+define case_alternative
+        [NL] [EX] 
+        [list constant+] :      [IN][NL]
+            [opt statement] ;   
+end define
+
+define while_statement
+        while [expression] do   [IN][NL]
+            [statement]         [EX]
+end define
+
+define repeatuntil_statement
+        'repeat                 [IN][NL]
+            [opt statements]    [EX]
+        until [expression]
+end define
+
+define for_statement
+        for [id] := [expression] [to_or_downto] [expression] do   [IN][NL]
+            [statement] [EX]
+end define
+
+define to_or_downto
+        to | downto
+end define
+
+define with_statement
+        with [list variable+] do        [IN][NL]
+            [statement]                 [EX]
+end define
+
+define goto_statement
+        goto [number] 
+end define
+
+define variable
+        [id] [repeat component_selector]
+end define
+
+define component_selector
+        '[ [list expression+] ']
+    |   . [id]
+    |   ^
+end define
+
+define expression
+        [simple_expression] [repeat operator_simple_expression]
+end define
+
+define operator_simple_expression
+        [operator] [simple_expression]
+end define
+
+define operator
+        =  |  <  |  >  |  <>  |  >=  |  <=  |  in
+end define
+
+define simple_expression
+        [opt prefix_operator] [term] [repeat term_operator_term]
+end define
+
+define term_operator_term
+        [term_operator] [term]
+end define
+
+define term_operator
+        + | - | or
+end define
+
+define term
+        [factor] [repeat factor_operator_factor]
+end define
+
+define factor_operator_factor
+        [factor_operator] [factor]
+end define
+
+define factor_operator
+        * | / | div | mod | and
+end define
+
+define factor
+        [constant]
+    |   [variable] 
+    |   [id] ( [list expression+] )        
+    |   ( [expression] )
+    |   'not [factor]
+    |   '[ [list subrange_expn+] ']
+end define
+
+define subrange_expn
+        [expression] .. [expression]
+end define
+
+define prefix_operator
+        +  |  -  
+end define
+

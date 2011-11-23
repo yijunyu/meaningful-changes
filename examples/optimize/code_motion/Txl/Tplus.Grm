@@ -1,0 +1,1061 @@
+% TXL Turing Plus basis grammar
+% J.R. Cordy, GMD Karlsruhe, 14.03.91
+% (from yacc grammar for T+, R.C. Holt)
+
+compounds
+        := .. >> >>> <= >= => ** /* */
+        += -= *= /= **= 
+end compounds
+
+comments
+        '%
+        /* */
+end comments
+
+keys
+        const init pervasive var collection of forward
+        bind to type set int real boolean string
+        enum array record 'end union label pointer
+        'import body procedure proc 'function fcn
+        pre post module 'export invariant begin
+        'assert new free tag if then else elsif
+        loop exit when case for decreasing return
+        result put skip get true false div mod
+        'not and or in 'all opaque 
+        int1 int2 int4 nat1 nat2 nat4 nat real4 real8
+        stub grant parent monitor child condition priority
+        deferred timeout 'external register char addressint
+        packed process handler unqualified read write seek tell
+        open quit fork asm signal wait pause bits xor shl shr close 
+        checked unchecked 'include
+end keys
+
+
+% required by TXL
+define program
+        [compilation]
+end define
+
+
+define compilation
+        [opt grant_list]
+        [main_program]
+
+    |   [opt parent_clause]
+        stub [module_or_monitor_stub]
+        [opt body_module_or_monitor_body]
+
+    |   [opt parent_clause]
+        stub [extended_subprogram_header]
+        [opt body_subprogram_implementation]
+
+    |   body [stringlit] [NL]
+        [module_or_monitor_body]
+
+    |   body [stringlit] [NL]
+        [subprogram_implementation]
+end define
+
+
+define grant_list
+        grant (  [list var_id] ) [NL]
+end define
+
+
+define parent_clause
+        parent [stringlit] [NL]
+end define
+
+
+define module_or_monitor_stub
+        module [id] [IN] [NL]
+            [opt import_list]
+            [opt export_list]
+            [opt grant_list]
+            [repeat declaration_in_stub] [EX]
+        'end [id]
+
+    |   monitor [id] [IN] [NL]
+            [opt import_list]
+            [opt export_list]
+            [opt grant_list]
+            [repeat declaration_in_stub] [EX]
+        'end [id]
+end define
+
+
+define body_module_or_monitor_body
+        body [module_or_monitor_body]
+end define
+
+
+define module_or_monitor_body
+        module [id] [IN] [NL]
+            [opt pre_clause]
+            [repeat declaration_or_statement]
+            [opt post_clause] [EX]
+        'end [id]
+
+    |   monitor [id] [IN] [NL]
+            [opt colon_expn]     % device monitor priority 
+            [opt pre_clause]
+            [repeat declaration_or_statement]
+            [opt post_clause] [EX]
+        'end [id]
+end define
+
+
+define declaration_in_stub
+        [constant_declaration] [NL]
+    |   [type_declaration] [NL]
+    |   [collection_declaration] [NL]
+    |   [opt 'external] [subprogram_header] [EX][NL]
+    |   child [stringlit] [NL]
+end define
+    
+
+define body_subprogram_implementation
+        body [subprogram_implementation]
+end define
+
+
+define external_declaration
+        'external [opt stringlit]       % external name override
+        [subprogram_header] [EX]
+end define
+
+
+define main_program
+        [repeat declaration_or_statement]
+end define
+
+
+define declaration
+        [constant_declaration]   
+    |   [variable_declaration]   
+    |   [collection_declaration] 
+    |   [type_declaration]       
+    |   [external_declaration]   
+    |   [subprogram_declaration] 
+    |   [process_declaration]    
+    |   [module_declaration]     
+    |   [monitor_declaration]    
+    |   [condition_declaration]  
+end define
+
+
+define constant_declaration
+        const [opt 'register] [opt pervasive_spec] [id] [opt colon_type_spec] 
+            := [initializing_value]
+end define
+
+
+define colon_type_spec
+        : [type_spec]
+end define
+
+
+define initializing_value
+        [expn]
+    |   [IN] [NL] init ( [list initializing_value] ) [EX]
+end define
+
+
+define pervasive_spec
+        pervasive
+    |   *
+end define
+
+
+define variable_declaration
+        [opt external_spec] var [opt 'register] [list id+] 
+            [colon_type_spec_or_colon_equal_initializing_value]
+end define
+
+
+define colon_type_spec_or_colon_equal_initializing_value
+        : [type_spec] [opt colon_equal_initializing_value]
+    |   [colon_equal_initializing_value]
+end define
+
+
+define collection_declaration
+        var [list id+] : [opt 'unchecked] collection of [type_spec_or_forward_id]
+end define
+
+
+define type_spec_or_forward_id
+        [type_spec]
+    |   forward [id]
+end define
+
+
+define external_spec
+        'external [opt expn]  % external address
+end define
+
+
+define condition_declaration
+        var [list id+] : [opt array_of] condition [opt condition_option]
+end define
+
+
+define condition_option
+        priority
+    |   deferred
+    |   timeout
+end define
+
+
+define array_of
+        array [list index_type+] of
+    |   { [list index_type+] }
+end define
+
+
+define colon_equal_initializing_value
+        := [initializing_value]
+end define
+
+
+define variable_binding
+        bind [list bind_clause+]
+end define
+
+
+define bind_clause
+        [opt 'var] [opt 'register] [id] to [variable_reference]
+end define
+
+
+define var_id
+        [opt 'var] [id]
+end define
+
+
+define type_declaration
+        type [opt pervasive_spec] [id] : [type_spec]
+end define
+
+
+% Type Specifications 
+
+define type_spec
+        [opt 'packed] [unpacked_type_spec]
+end define
+
+
+define unpacked_type_spec
+        [standard_type]
+    |   [subrange_type] [opt storage_size]
+    |   [enumerated_type]
+    |   [array_type]
+    |   set of [base_type]
+    |   [record_type]
+    |   [union_type]
+    |   [pointer_type]
+    |   [subprogram_type]
+    |   [named_type]
+end define
+
+
+define standard_type
+        int
+    |   int1
+    |   int2
+    |   int4
+    |   nat
+    |   nat1
+    |   nat2
+    |   nat4
+    |   real
+    |   real4
+    |   real8
+    |   boolean
+    |   string  [opt parenthesized_compile_time_expn]
+    |   char    [opt parenthesized_expn]
+    |   addressint
+end define
+
+
+define subprogram_type
+        [proc_spec] [id] [opt parameter_list_declaration]
+    |   [fcn_spec] [id] [opt parameter_list_declaration] [opt id] : [type_spec]
+end define
+
+
+define storage_size
+        : [compile_time_expn]
+end define
+
+
+define parenthesized_compile_time_expn
+        ( [compile_time_expn] )
+end define
+
+define parenthesized_expn
+        ( [expn] )
+end define
+
+
+define subrange_type
+        [compile_time_expn] .. [expn]
+end define
+
+
+define enumerated_type
+        enum ( [list id+] )
+end define
+
+
+define array_type
+        array [list index_type+] of [type_spec]
+    |   { [list index_type+] } [type_spec]
+end define
+
+
+define base_type
+        [index_type]
+end define
+
+
+define index_type
+        [subrange_type]
+    |   [enumerated_type]
+    |   [named_type]
+end define
+
+
+define record_type
+        record [NL]
+            [repeat record_field_declaration+]
+        'end record
+end define
+
+
+define record_field_declaration
+        [list id+]  : [type_spec] [opt ';] [NL]
+end define
+
+
+define union_type
+        union [opt id] : [index_type] of [IN] [IN] [NL]
+            [repeat union_alternative_declaration+]
+            [opt union_otherwise_declaration] [EX] [EX]
+        'end union
+end define
+
+
+define union_alternative_declaration
+        [EX] [label_or_bar] [list compile_time_expn+] : [IN] [NL]
+            [repeat union_field_declaration+]
+end define
+
+
+define union_otherwise_declaration
+        [EX] [label_or_bar] : [IN] [NL]
+            [repeat union_field_declaration+]
+end define
+
+
+define label_or_bar
+        label 
+    |   '|
+end define
+
+
+define union_field_declaration
+        [list id+] : [type_spec] [opt ';] [NL]
+end define
+
+
+define pointer_type
+        pointer to [collection_id]
+end define
+
+
+define named_type
+        [reference]
+end define
+
+
+define collection_id
+        [id]
+end define
+
+
+
+% Subprogram Declarations 
+
+
+define subprogram_declaration
+        [subprogram_header] [opt import_list] [subprogram_body]
+    |   forward [subprogram_header] [forward_import_list]
+    |   body [proc_spec] [id] [IN] [NL] [subprogram_body]
+    |   body [fcn_spec] [id] [IN] [NL] [subprogram_body]
+end define
+
+
+define process_declaration
+        [process_header]
+        [subprogram_body]
+end define
+
+
+define subprogram_header
+        [proc_spec] [id] [opt parameter_list_declaration] [opt ';] [IN][NL]
+    |   [proc_spec] [id] : [compile_time_expn] [opt ';] [IN][NL]
+    |   [fcn_spec] [id] [opt parameter_list_declaration] [opt id] : 
+            [type_spec] [opt ';] [IN][NL]
+end define
+
+
+define extended_subprogram_header
+        [subprogram_header]
+        [opt import_list]
+        [opt pre_clause]
+        [opt init_clause]
+        [opt post_clause]
+end define
+
+
+define subprogram_implementation
+        [fcn_spec] [id] [IN] [NL]
+            [opt exception_handler]
+            [repeat declaration_or_statement] [EX]
+        'end [id]
+
+    |   [proc_spec] [id] [IN] [NL]
+            [opt exception_handler]
+            [repeat declaration_or_statement] [EX]
+        'end [id]
+end define
+
+
+define process_header
+        process [id] [opt parameter_list_declaration] [opt colon_expn] [IN] [NL]
+end define
+
+
+define parameter_list_declaration
+        ( [parameter_declaration_list] )
+end define
+
+
+define parameter_declaration_list
+        [list parameter_declaration+] [opt comma_varying_parameter_declaration]
+    |   [id] : ..       % (only) varying parameter
+end define
+
+
+define comma_varying_parameter_declaration
+        , [id] : ..     % (last) varying parameter
+end define
+
+
+define parameter_declaration
+        [subprogram_header]
+    |   [opt 'register] [opt 'var] [list id+] : [parameter_type]
+end define
+
+
+define parameter_type
+        [type_spec]
+    |   type [type_spec]
+    |   [string_char_star]
+    |   array [list compile_time_expn_dot_dot_star+] of [type_spec]
+    |   { [list compile_time_expn_dot_dot_star+] } [type_spec]
+    |   array [list compile_time_expn_dot_dot_star+] of [string_char_star]
+    |   { [list compile_time_expn_dot_dot_star+] } [string_char_star]
+end define
+
+
+define compile_time_expn_dot_dot_star
+        [compile_time_expn] .. *
+end define
+
+
+define string_char_star
+        string ( * )
+    |   char   ( * )
+end define
+
+
+define import_list
+        'import ( [list import_item] ) [NL]
+    |   'import [list import_item] [NL]
+end define
+
+
+define import_item
+        [opt 'var] [id] 
+end define
+
+
+define forward_import_list
+        'import ( [list forward_import] ) [EX] [NL]
+    |   'import [list forward_import] [EX] [NL]
+end define
+
+
+define forward_import
+        [opt var_or_forward] [id]
+end define
+
+
+define var_or_forward
+        forward
+    |   var
+end define
+
+
+define proc_spec
+        proc
+    |   procedure
+end define
+
+
+define fcn_spec
+        fcn
+    |   'function
+end define
+
+
+define subprogram_body
+        [opt pre_clause]
+        [opt init_clause]
+        [opt post_clause]
+        [opt exception_handler]
+        [repeat declaration_or_statement] [EX]
+    'end [id]
+end define
+
+
+define pre_clause
+        pre [boolean_expn] [NL]
+end define
+
+
+define init_clause
+        init [list id_colon_equal_expn+] [NL]
+end define
+
+
+define id_colon_equal_expn
+        [id] := [compile_time_expn] 
+end define
+    
+
+define post_clause
+        post [boolean_expn] [NL]
+end define
+
+
+define exception_handler
+        handler ( [id] ) [NL] [IN]
+            [repeat declaration_or_statement] [EX]
+        'end handler [NL]
+end define
+
+
+define module_declaration
+        module [id] [IN] [NL]
+            [opt import_list]
+            [opt export_list]
+            [opt grant_list]
+            [opt pre_clause]
+            [repeat declaration_or_statement]
+            [opt post_clause] [EX]
+        'end [id]
+end define
+
+
+define monitor_declaration
+        monitor [id] [IN] [NL]
+            [opt colon_expn]
+            [opt import_list]
+            [opt export_list]
+            [opt grant_list]
+            [opt pre_clause]
+            [repeat declaration_or_statement]
+            [opt post_clause] [EX]
+        'end [id]
+end define
+
+
+define export_list
+        'export ( [list export_item+] ) [NL]
+    |   'export [list export_item+] [NL]
+end define
+
+
+define export_item
+        [opt 'opaque] [opt unqualified_spec] [id]
+end define
+
+
+define unqualified_spec
+        unqualified
+    |   ~ .
+    |   'not .
+end define
+
+
+
+% Statements 
+
+define declaration_or_statement
+        [declaration]           [opt ';] [NL] 
+    |   [variable_binding]       [opt ';] [NL] 
+    |   [statement]             [opt ';] [NL] 
+end define
+
+
+define statement
+        [assignment_statement]   
+    |   [call_statement]         
+    |   'assert [boolean_expn]    
+    |   [result_statement]       
+    |   [return_statement]       
+    |   [if_statement]           
+    |   [loop_statement]         
+    |   [exit_statement]         
+    |   [case_statement]         
+    |   begin [IN] [NL]
+            [repeat declaration_or_statement] [EX]
+        'end                    
+    |   new [id] , [variable_reference]  
+    |   free [id] , [variable_reference] 
+    |   [for_statement]          
+    |   tag [variable_reference] , [expn] 
+    |   [put_statement]          
+    |   [get_statement]          
+    |   [read_or_write_statement]  
+    |   [seek_statement]         
+    |   [tell_statement]         
+    |   [open_statement]         
+    |   close : [expn]          
+    |   close ( [expn] )        
+    |   [quit_statement]         
+    |   [fork_statement]         
+    |   [assembler_statement]    
+    |   [signal_statement]       
+    |   [wait_statement]         
+    |   [pause_statement]        
+    |   unchecked               
+    |   checked                 
+    |   invariant [boolean_expn]  [opt ';] 
+    |   'include [stringlit]    
+end define
+
+
+define assignment_statement
+        [variable_reference] [assignment_operator] [expn]
+end define
+
+
+define if_statement
+        if [boolean_expn] then [IN] [NL]
+            [repeat declaration_or_statement] [EX]
+          [repeat elsif_clause] 
+          [opt else_clause]
+        'end if
+
+    |   '[ [boolean_expn] : [IN] [NL]
+            [repeat declaration_or_statement] [EX]
+          [repeat short_elsif_clause] 
+          [opt short_else_clause]
+        ']
+end define
+
+
+define elsif_clause 
+        elsif [boolean_expn] then  [IN] [NL]
+            [repeat declaration_or_statement] [EX]
+end define
+
+
+define else_clause
+        else  [IN] [NL]
+            [repeat declaration_or_statement] [EX]
+end define
+
+
+define short_elsif_clause
+        '| [boolean_expn] : [IN] [NL]
+            [repeat declaration_or_statement] [EX]
+end define
+
+
+define short_else_clause
+        '| : [IN] [NL]
+            [repeat declaration_or_statement] [EX]
+end define
+
+
+define loop_statement
+        loop [IN] [NL]
+            [opt invariant_clause]
+            [repeat declaration_or_statement] [EX]
+        'end loop
+
+    |   {  [IN] [NL]
+            [opt invariant_clause]
+            [repeat declaration_or_statement] [EX]
+        }
+end define
+
+
+define invariant_clause
+        invariant [boolean_expn] [NL]
+end define
+
+
+define return_statement
+        return
+    |   >>>
+end define
+
+
+define result_statement
+        result [expn]
+    |   >>> : [expn]
+end define
+
+
+define exit_statement
+        exit [opt when_boolean_expn]
+    |   >> [opt colon_boolean_expn]
+end define
+
+
+define when_boolean_expn
+        when [boolean_expn]
+end define
+
+
+define colon_boolean_expn
+        : [boolean_expn]
+end define
+
+
+define case_statement
+        case [expn] of [IN] [IN] [NL]
+            [repeat case_alternative]
+            [opt case_otherwise] [EX] [EX]
+        'end case
+end define
+
+
+define case_alternative
+        [EX] [label_or_bar] [list compile_time_expn+] : [IN] [NL]
+            [repeat declaration_or_statement] 
+end define
+
+
+define case_otherwise
+        [EX] [label_or_bar] : [IN] [NL]
+            [repeat declaration_or_statement]
+end define
+
+
+define for_statement
+        for [opt 'decreasing] [opt indexid] : [for_range] [IN] [NL]
+            [opt invariant_clause]
+            [repeat declaration_or_statement] [EX]
+        'end for
+
+    |   { [plus_or_minus] [opt indexid] : [for_range] [IN] [NL]
+            [opt invariant_clause]
+            [repeat declaration_or_statement] [EX]
+        }
+end define
+
+
+define indexid
+        [id]
+end define
+
+
+define for_range
+        [expn] .. [expn]
+    |   [named_type]
+end define
+
+
+define plus_or_minus
+        + | -
+end define
+
+
+define call_statement
+        [reference]
+end define
+
+
+define put_statement
+        put [opt stream_spec] [list put_item+] [opt '..]
+    |   ! [opt stream_spec] [list put_item+] [opt '..]
+end define
+
+
+define stream_spec
+        : [expn] ,
+end define
+
+
+define put_item
+        [expn] [opt colon_expn] [opt colon_expn] [opt colon_expn]
+    |   skip
+end define
+
+
+define colon_expn
+        : [expn]
+end define
+
+
+define get_statement
+        get [opt stream_spec] [list get_item+]
+    |   ? [opt stream_spec] [list get_item+]
+end define
+
+
+define get_item
+        [variable_reference] [opt get_width]
+    |   skip
+end define
+
+
+define get_width
+        : [expn]
+    |   : *
+end define
+
+
+define read_or_write_statement
+        read : [expn] [opt colon_status] , [list read_write_item+]
+    |   write : [expn] [opt colon_status] , [list read_write_item+]
+end define
+
+
+define colon_status
+        : [variable_reference]
+end define
+
+
+define read_write_item
+        [variable_reference] [opt colon_expn] [opt colon_variable_reference]
+end define
+
+
+define colon_variable_reference
+        : [variable_reference]
+end define
+
+
+define seek_statement
+        seek : [expn] , [expn]
+    |   seek : [expn] , *
+end define
+
+
+define tell_statement
+        tell : [expn] , [variable_reference]
+end define
+
+
+define open_statement
+        open : [variable_reference] , [expn] , [list io_capability+]
+    |   open ( [variable_reference] , [expn] , [expn] )
+end define
+
+
+define io_capability
+        get
+    |   put
+    |   read
+    |   write
+    |   seek
+end define
+
+
+define quit_statement
+        quit [opt guilty_party] [opt colon_expn]
+end define
+
+
+define guilty_party
+        >
+    |   <
+end define
+
+
+define fork_statement
+        fork [id] [opt parameters] [opt fork_parameters]
+end define
+
+
+define fork_parameters
+        : [variable_reference] [opt comma_expn] [opt comma_variable_reference]
+end define
+
+
+define comma_expn
+        , [expn]
+end define
+
+
+define comma_variable_reference
+        , [variable_reference]
+end define
+
+
+define parameters
+    ( [list expn+] )
+end define
+
+
+define assembler_statement
+        asm [stringlit] [opt colon_string_lit] [repeat comma_expn]
+end define
+
+
+define colon_string_lit
+        : [stringlit]
+end define
+
+
+define signal_statement
+        signal [variable_reference]
+end define
+
+
+define wait_statement
+        wait [variable_reference] [opt comma_expn]
+end define
+
+
+define pause_statement
+        pause [expn]
+end define
+
+
+% References 
+
+define variable_reference
+        [reference]
+    |   # [variable_reference]
+    |   bits ( [variable_reference] , [bits_range] )
+end define
+
+
+define reference
+        [id] [repeat component_selector]
+    |   type ( [type_cheat_spec] , [variable_reference] ) [repeat component_selector]
+    |   [type_cheat_spec] @ ( [expn] ) [repeat component_selector]
+end define
+
+
+define type_cheat_spec
+        [standard_type]
+    |   [id]
+end define
+
+
+define bits_range
+        [subrange_type]
+    |   [compile_time_expn]  % named_type is a subset of compile_time_expn -- handle semantically
+end define
+    
+
+define component_selector
+        ( [list expn] ) 
+    |   . [id] 
+end define
+
+
+% Expressions 
+
+define boolean_expn
+        [expn]
+end define
+
+
+define compile_time_expn
+        [expn]
+end define
+
+
+define expn
+        [unary_expn] [repeat binary_operator_unary_expn]
+end define
+
+
+define binary_operator_unary_expn
+        [binary_operator] [unary_expn]
+end define
+
+
+define binary_operator
+        =>  |  or  |  xor  |  and  |  & 
+     |  <  |  >  |  =  |  <=  |  >=  |  [not_spec] =  |  in  |  [not_spec] in 
+     |  +  |  -  |  *  |  /  |  div  |  mod  |  shl  |  shr  |  ** 
+end define
+
+
+define unary_expn
+        [opt unary_operator] [sub_expn]
+end define
+
+
+define unary_operator
+        [not_spec]  |  +  |  -  |  #
+end define
+
+
+define not_spec
+        'not  |  ~
+end define
+
+
+define assignment_operator
+        :=  |  +=  |  -=  |  xor=  |  *=  |  /=  |  div=  |  mod= 
+    |   shl=  |  shr=  |  **=  |  and=  |  or=
+end define
+
+
+define sub_expn
+        [reference] [opt substring_or_set_constructor]
+    |   [explicit_constant]
+    |   ( [expn] )
+end define
+
+
+define explicit_constant
+        [integernumber]
+    |   [floatnumber]
+    |   [stringlit]
+    |   [charlit]       
+    |   true
+    |   false
+end define
+
+
+define substring_or_set_constructor
+        ( [substring_position] [opt dot_dot_substring_position] )
+    |   ( [opt 'all] )
+end define
+
+define substring_position
+        * [opt minus_expn]
+    |   [expn]
+end define
+
+define dot_dot_substring_position
+        .. [substring_position]
+end define
+
+define minus_expn
+        - [expn]
+end define

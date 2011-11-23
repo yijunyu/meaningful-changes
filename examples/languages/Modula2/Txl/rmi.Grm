@@ -1,0 +1,104 @@
+% Syntax of Rex extended Modula-2 
+% Georg Etzkorn, GMD Karlsruhe, 25.2.91
+
+% This is a variant of the original Modula-2 grammar
+include "Modula2.Grm"
+
+% Now we give the extensions and other differences 
+
+% New compound tokens 
+compounds
+        =>  &&
+end compounds
+
+% New keywords
+keys
+        CALL WAIT ACCEPT REPLY SELECT
+end keys
+
+redefine statement
+        [communication_call]     % New statement forms
+    |   [communication_primitive]
+    |   [select_statement]       
+    |        ...
+end redefine
+
+define communication_call
+        [comm_name]  ( [id] , [exp_list] ) [opt handle]
+end define
+
+define comm_name
+        WAIT
+    |   ACCEPT
+    |   CALL
+    |   REPLY 
+end define
+
+define communication_primitive
+        [delay_statement]
+    |   [abort_statement]
+    |   [forward_statement]
+    |   [valid_statement]
+    |   [timeout_statement]
+end define
+
+define delay_statement
+        'DELAY ( [expression] )
+end define
+
+define abort_statement
+        'ABORT ( [qualident] ) [opt handle]
+end define
+
+define forward_statement
+        'FORWARD ( [qualident] , [qualident] , [exp_list] ) [opt handle]
+end define
+
+define valid_statement
+        'VALID ( [qualident] , [expression] )
+end define
+
+define timeout_statement
+        'TIMEOUT ( [expression] )
+end define
+
+define handle
+        WITH [id]       
+end define
+
+% Modified syntax of statement sequences - requires semicolons
+% on all statements (to make transforms simpler)
+redefine statement_sequence
+        [repeat statement_semi]
+end redefine
+
+define statement_semi
+        [statement] ;   [NL]
+end define
+
+% New statement SELECT
+define select_statement
+        SELECT                          [IN][NL]
+          [alternative]
+          [repeat or_alternative]
+          [opt else_statement_sequence]  [EX]
+        END                             
+end define
+
+define or_alternative
+                        [NL]
+        '| [alternative]
+end define
+
+define alternative
+        [guard] :               [IN][NL]
+            [statement_sequence] [EX]
+end define
+
+define guard
+        [opt bool_and] [communication_call]
+end define
+
+define bool_and
+        [expression] && 
+end define
