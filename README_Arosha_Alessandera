@@ -1,0 +1,60 @@
+1. Txl/UML
+dot.Grm -- the Graphviz grammar
+uml.Grm -- the TextUML grammar
+dot.Txl -- the transformation rules from TextUML to Graphviz
+
+2. source/UML
+sample1.uml -- the example 1 TextUML program
+sample2.uml -- the example 2 TextUML program
+
+3. scripts/transform.sh sample1.uml
+
+txl -i Txl ./template/graph0.dot Txl/UML/dot.Txl -o result.dot - -umlfile $1
+dot -Tpng result.dot > result.png
+
+// It produces result.png as the diagram
+
+4. source/norm/UML/uml.norm
+
+include "UML/uml.Grm"
+annotate program [repeat class_relation scoped ordered]
+annotate class_attributes [repeat class_attribute ordered]
+annotate class_methods [repeat class_method ordered]
+
+// here the "ordered" annotation indicates that the list needs to be ordered,
+// the "scoped" annotation indicates that the sentence needs to be the target
+// for the clone detection and removal.
+
+5. result/norm/uml.Txl is generated from the meta-transformations
+make result/norm/uml.Txl
+
+6. apply the normalisation
+mct source/UML/sample1.uml source/UML/sample2.uml
+
+<<<<<< 100 "[Rectangle] -^ [Shape]"
+[Shape] ^- [Circle]
+[Circle] -^ [Shape]
+
+>>>>>> 100 "[Rectangle] -^ [Shape]"
+
+// Here 100 is the first clone detected
+
+======= Discussion notes =======
+
+B
+
+stmt(S1, shape, ^-, circle)
+stmt(S2, circle, -^, shape)
+stmt(S3, shape, ^-, rectangle)
+
+E+
+equiv(S1, S2)
+
+E-
+
+! equiv (S2, S3)
+
+H:
+
+equiv(S1, S2) :- stmt(S1, C1, ^-, C2), stmt(S2, C2, -^, C1).
+
