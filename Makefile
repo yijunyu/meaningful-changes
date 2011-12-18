@@ -25,7 +25,7 @@ $(foreach tool,$(tools),$(eval $(call diff_example_1,$(tool),HelloWorld,-2,-3,ja
 $(foreach tool,$(pf_tools),$(eval $(call diff_example_1,$(tool),,CommandedBehaviour,RequiredBehaviour,problem)))
 
 example+=$(results)
-target+=result/C/cid/vim73/eval.c
+#target+=result/C/cid/vim73/eval.c
 target+=$(bin)/normc 
 target+=$(bin)/norm-include-c 
 target+=$(bin)/norm-id-c 

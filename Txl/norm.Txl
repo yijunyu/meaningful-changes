@@ -10,9 +10,6 @@ include "mct-preferred.txl"
 include "mct-scoped.txl"
 include "mct-meta.txl"
 include "mct-abstracted.txl"
-#ifdef PROMPT
-include "mct-prompt.txl"
-#endif
 #ifdef ID
 include "mct-id.txl"
 #endif
