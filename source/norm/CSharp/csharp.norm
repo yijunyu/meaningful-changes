@@ -2,19 +2,41 @@ include "CSharp/CSharp.grm"
 #ifdef COMMENTS
     include "CSharp/CSharpCommentOverrides.grm"
 #endif
-annotate primary_no_array_creation_expression [repeat primary_expression_modifier ordered]
-annotate class_member_declarations [repeat class_member_declaration+ ordered]
+annotate primary_no_array_creation_expression [repeat primary_expression_modifier scoped ordered]
+annotate class_member_declarations [repeat class_member_declaration+ scoped ordered]
 annotate method_body [block preferred with ';]
-annotate interface_member_declarations [repeat interface_member_declaration+ ordered ignored when Private]
+annotate interface_member_declarations [repeat interface_member_declaration+ scoped ordered ignored when PrivateDelegateModifier]
+annotate struct_member_declarations [repeat struct_member_declaration+ scoped ordered ignored when PrivateStructMethodModifier]
+annotate class_member_declarations [repeat class_member_declaration* scoped ordered ignored when PrivateClassMethodModifier]
 
 function contains Object [any] 
     match * [any] Object
 end function
 
-function Private A  [interface_member_declaration]
-    match  [interface_member_declaration]
-        B  [interface_member_declaration] 
-    construct M  [delegate_modifier *] _  [^ A] 
-    construct PublicModifiers [delegate_modifier*] 'public 'protected 
+function PrivateDelegateModifier A  [interface_member_declaration]
+    match  [interface_member_declarations]
+        B  [interface_member_declarations] 
+    construct M  [method_modifier *] _  [^ A] 
+    construct PublicModifiers [method_modifier*] 'public 'protected 
     where not M [contains each PublicModifiers]
+end function
+
+function PrivateStructMethodModifier A  [struct_member_declaration]
+    match  [struct_member_declarations] B  [struct_member_declarations] 
+    construct Methods  [method_modifier *] _  [^ A] 
+    construct Fields  [field_modifier *] _  [^ A] 
+    construct MethodModifiers [method_modifier*] 'public 'protected 
+    construct FieldModifiers [field_modifier*] 'public 'protected 
+    where not Methods [contains each MethodModifiers]
+    where not Fields [contains each FieldModifiers]
+end function
+
+function PrivateClassMethodModifier A  [class_member_declaration]
+    match  [class_member_declarations] B  [class_member_declarations] 
+    construct Methods  [method_modifier *] _  [^ A] 
+    construct Fields  [field_modifier *] _  [^ A] 
+    construct MethodModifiers [method_modifier*] 'public 'protected 
+    construct FieldModifiers [field_modifier*] 'public 'protected 
+    where not Methods [contains each MethodModifiers]
+    where not Fields [contains each FieldModifiers]
 end function
