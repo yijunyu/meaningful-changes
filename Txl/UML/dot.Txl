@@ -15,7 +15,7 @@ function doTransform
     deconstruct * TXLargs
         "-umlfile" FileName [stringlit] MoreOptions [repeat stringlit]
     % parse UML class diagram file
-    construct UmlP [uml_dot_program]
+    construct UmlP [program]
         _ [read FileName]
     % get list of classes relations
     deconstruct UmlP
