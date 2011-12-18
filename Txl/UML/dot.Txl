@@ -1,15 +1,18 @@
 include "UML/uml.Grm"
 include "UML/dot.Grm"
+redefine program
+  ... | [dot_program]
+end define
 function main
-    replace [dot_program]
-        P [dot_program]
+    replace [program]
+        P [program]
     by
         P [doTransform]
 end function
 
 function doTransform
-    replace [dot_program]
-        P [dot_program]
+    replace [program]
+        P [program]
     % import command line args
     import TXLargs [repeat stringlit]
     deconstruct * TXLargs
@@ -21,6 +24,7 @@ function doTransform
     % get list of classes relations
     deconstruct UmlP
         CRO [repeat class_relation]
+    construct d_UmlP [program] UmlP [print]
     % apply inheritance relation transforms
     construct CR [repeat class_relation]
         _ [removeSelfInheritance each CRO] [rlInheritanceToDefault] [lrInheritanceToDefault]
