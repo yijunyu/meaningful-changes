@@ -51,7 +51,7 @@ function DS_replace DS [redefineStatement]
  construct S5 [statement*] _ [typeSpec_ignore_when DS each T1] [typeSpec_ignore_when_2 DS each T1]
  construct S6 [statement*] _ [typeSpec_ignore DS each T1] 
  construct S7 [statement*] _ [typeSpec_preferred_withLiterals DS each T1] [typeSpec_preferred_withRuleApplications DS each T1]
- % construct d_S7 [statement*] S7 [print]
+% construct d_S7 [statement*] S7 [print]
 #ifdef ID
  construct S8 [statement*] _ [typeSpec_id DS]
 #endif

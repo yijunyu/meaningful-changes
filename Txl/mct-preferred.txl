@@ -86,8 +86,11 @@ function typeSpec_prefer_LoT TID [typeid] T [typeSpec] LoT [literalOrType*]
 #ifdef ID
 	       Ident [opt identified]
 #endif
+%	 construct d_P [preferredWith] P [print]
  deconstruct P 'preferred 'with L [ruleApplication+]
+%	 construct d_L [ruleApplication+] L [print]
  where LoT [contains T]
+%	 construct d_LoT [literalOrType*] LoT [print]
  construct StrID [id] _ [quote TID]
  export Constructors [constructDeconstructImportExportOrCondition*] _
  export Expression [literalOrExpression*] _
@@ -104,7 +107,9 @@ function typeSpec_prefer_LoT TID [typeid] T [typeSpec] LoT [literalOrType*]
  construct ruleID4 [id] ID4 [_ StrID] [_ TypeID] [!]
  construct pID [id] TypeID [_ StrID]
  construct n_Replacement [number] _ [length Pat]
- where not n_Replacement [= 1]
+%	 construct d_n_Replacement [number] n_Replacement [print]
+% Maybe we don't need this condition?
+% where not n_Replacement [= 1]
  import Constructors 
  construct D1 [constructDeconstructImportExportOrCondition] 
         'deconstruct 'E1 Pattern
