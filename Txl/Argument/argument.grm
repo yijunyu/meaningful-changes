@@ -1,41 +1,141 @@
 keys 
-  'given 'grounds 'warranted 'by 'thus 'claim 'rebutted '( ') '. 'and
+	'argument ':
+	'rebutted 'by 'on
+	'mitigated
+	'round
+	'with
+	'-> '<->
+	'| '&
+	'!= '>= '<= '== '= '> '<
+	'+ '- '* '/
+	'^
+	'? '!
+	'( ')
+	'true 'false
+	'{ '}
 end keys
 
 tokens
-    id  "[$\u][$\i'.]*"
+    id  "[$\u][$\i'.0-9]*"
 end tokens
 
-define argument
-   [opt grounds]
-   [opt warrants]
-   [opt claims]
-   [opt rebuttals]
-   [opt '.]
+define program
+   [opt ArgumentName]
+   [repeat Statement]
 end define
 
-define grounds
-   [NL] 'given 'grounds [properties]
-end define
-define warrants
-   [NL] 'warranted 'by [properties]
-end define
-define claims
-   [NL] 'thus 'claim [properties]
-end define
-define rebuttals
-   [NL] 'rebutted 'by [properties]
-end define
-define properties
-    [property+]	
-  | [list property+]
-  | [property] 
-    [NL] [IN] 'and [EX]
-    [properties]
+define ArgumentName
+   'argument ': [id] [NL]
 end define
 
-define property
-       [NL] [IN] [id] ': [stringlit] [EX]
-    |  [NL] '( [IN] [argument] [EX] 
-       [NL] ') 
+define Statement
+    [Argument] [NL]
+  | [Link] [NL]
+end define
+
+define Link
+    [Rebuttal] | [Mitigation]
+end define
+
+define Rebuttal
+    [id] 'rebutted 'by [id] 'on [id]
+end define
+
+define Mitigation
+    [id] 'mitigated 'by [id] 'on [id]
+end define
+
+define Argument
+     [id] [opt ':]
+     [stringlit]
+     [opt Round]
+     [opt Replacement]
+     [opt WithExpression]
+     [opt Subarguments]
+end define
+
+define Round
+     'round [number] [NL]
+end define
+
+define Replacement
+     'replacing [id] [NL]
+end define
+
+define WithExpression
+     'with [Expression] [NL]
+end define
+
+define Subarguments
+	'{ [NL][IN] [opt Grounds] [opt Warrants] [EX] '} [NL]
+end define
+
+define Grounds
+	'supported 'by [NL][IN]
+	[repeat ListedArgument] [NL][EX]
+end define
+
+define Warrants
+	'warranted 'by [NL][IN]
+	[repeat ListedArgument] [NL][EX]
+end define
+
+define ListedArgument
+	[opt ',] [Argument] [NL]
+end define
+
+define Expression
+	[AssignmentOp]
+end define
+
+define AssignmentOp
+	[OrExp] -> [OrExp] | [OrExp] <-> [OrExp] | [OrExp] 
+end define
+
+define OrExp
+	[AndExp] '| [AndExp] | [AndExp]
+end define
+
+define AndExp
+	[Relational] '& [Relational] | [Relational]
+end define
+
+define Relational
+	[Addition] [RelOp] [Addition] | [Addition]
+end define
+
+define RelOp
+	'!= | '>= | '<= | '== | '= | '> | '<
+end define
+
+define Addition
+	[Multiplication] '+ [Multiplication] | [Multiplication] '- [Multiplication] | [Multiplication] 
+end define
+
+define Multiplication
+	[Power] '* [Power] | [Power] '/ [Power] | [Power]
+end define
+
+define Power
+	 [UnaryExpr] '^ [UnaryExpr] | [UnaryExpr] 
 end define 
+
+define UnaryExpr
+	[opt UnaryOp] [PrePrimaryExpr]
+end define
+
+define UnaryOp
+	'? | '!
+end define
+
+define PrePrimaryExpr
+	'( [Expression] ') | [opt '-] [number] | [TerminalExpression] 
+end define
+
+define TerminalExpression
+	  [number] | [Bool] | [id]
+end define
+
+define Bool
+    'true" | 'false
+end define
