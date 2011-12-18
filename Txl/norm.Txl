@@ -167,7 +167,6 @@ function main
 #ifdef ID
  import IdRuleIDs
 #endif
- construct d_S [id*] PreferRuleIDs [print]
  construct lOfE_NormaliseRuleIDs [literalOrExpression*]
 	_ [id_to_type each IgnoreRuleIDs]
 	  [id_to_type each PreferRuleIDs]

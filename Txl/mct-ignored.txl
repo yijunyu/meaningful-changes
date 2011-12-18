@@ -218,11 +218,11 @@ TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
  deconstruct Ig 'ignored W [whenField]
  deconstruct W 'when F [id]
  construct empty_LoT [literalOrType] '[ 'empty '] 
- construct d_el [literalOrType] empty_LoT [print]
+ % construct d_el [literalOrType] empty_LoT [print]
  deconstruct * [literalOrType] DS empty_LoT
  construct Choice [number] 1
  by S [typeSpec_ignore_when_LoT Choice F TID T LoT] 
-      [typeSpec_ignore_when_BLoT Choice F TID T each BLoT] [print]
+      [typeSpec_ignore_when_BLoT Choice F TID T each BLoT] % [print]
 end function
 
 function typeSpec_ignore_when_2 DS 
@@ -253,7 +253,7 @@ TID [typeid] LoT [literalOrType*] BLoT [barLiteralsAndTypes*] 'end 'define
  deconstruct not * [literalOrType] DS empty_LoT
  construct Choice [number] 2
  by S [typeSpec_ignore_when_LoT Choice F TID T LoT] 
-      [typeSpec_ignore_when_BLoT Choice F TID T each BLoT] [print]
+      [typeSpec_ignore_when_BLoT Choice F TID T each BLoT] % [print]
 end function
 
 

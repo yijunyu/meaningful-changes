@@ -134,7 +134,7 @@ $(bin)/norm-no_clone-include-c: Txl/norm.Txl
 
 result/norm/Java/%.Txl: source/norm/Java/%.norm
 	mkdir -p $$(dirname $@)
-	$(txl) -i Txl -d SINGLETON source/norm/Java/$*.norm -o $TMPFILE
+	$(txl) -i Txl -d DEFINE source/norm/Java/$*.norm -o $TMPFILE
 	TMPFILE=$$(mktemp /tmp/norm.XXXXXXXXXX) || exit 1
 	echo $$TMPFILE
 	sed -e 's/\/\*//' $TMPFILE | sed -e 's/*\//\/* *\//g' > $@
