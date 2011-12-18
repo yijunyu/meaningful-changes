@@ -3,10 +3,11 @@
 rule typeSpec_removeClones
  replace * [typeSpec] T [typeSpec] 
  deconstruct T M [opt typeModifier] I [typeid] R [opt typeRepeater] K [scoped] O [opt orderedBy] Ig [opt ignoredWhen]
+	P [opt preferredWith]
 #ifdef ID
 	       Ident [opt identified]
 #endif
- construct T1 [typeSpec] M I R O Ig
+ construct T1 [typeSpec] M I R O Ig P
  construct update_id_T1 [typeSpec] T1 [update_id I]
  by T1 
 end rule
