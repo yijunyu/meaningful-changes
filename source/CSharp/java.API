@@ -1548,3 +1548,1553 @@ public class HelloWorld {
 
 }
 
+package org.ofsm;
+
+import org.ofsm.impl.FiniteStateMachineBuilder;
+public class FiniteStateMachineFactory {
+
+    protected FiniteStateMachineFactory () {
+    }
+
+    public IFiniteStateMachineBuilder newBuilder () throws Exception;
+
+    public String getVersion ();
+
+    public static FiniteStateMachineFactory getInstance ();
+
+}
+
+package org.ofsm;
+
+abstract public interface IEvent extends INamedObject {
+}
+
+package org.ofsm;
+
+import java.util.Collection;
+abstract public interface IFiniteStateMachine extends INamedObject {
+
+    abstract public Collection < IStateTransition > getTransitions ();
+
+    abstract public IState fireEvent (IEvent event);
+
+    abstract public IState fireEvent (String eventName);
+
+    abstract public IState getCurrentState ();
+
+    abstract public IState getInitialState ();
+
+    abstract public IStateTransition getTransitionBy (IEvent event, IState state);
+
+    abstract public String getName ();
+
+    abstract public void addStateChangeListener (IStateChangeListener listener);
+
+    abstract public void addTransition (IStateTransition transition);
+
+    abstract public void delStateChangeListener (IStateChangeListener listener);
+
+    abstract public void delTranstition (IStateTransition transition);
+
+    abstract public void reset () throws Exception;
+
+    abstract public void setCurrentState (IState state);
+
+    abstract public void setInitialState (IState state);
+
+}
+
+package org.ofsm;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+abstract public interface IFiniteStateMachineBuilder {
+
+    abstract public IFiniteStateMachine getMachine () throws Exception;
+
+    abstract public IFiniteStateMachine getMachine (String streamType, InputStream stream) throws Exception;
+
+    abstract public IFiniteStateMachine getMachine (URI uri) throws Exception;
+
+    abstract public void addMachine (IFiniteStateMachineInitiable machine);
+
+    abstract public void addMachine (int index, IFiniteStateMachineInitiable machine);
+
+    abstract public void delMachine (IFiniteStateMachineInitiable machine);
+
+}
+
+package org.ofsm;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+public interface IFiniteStateMachineInitiable extends IFiniteStateMachine {
+
+    abstract public boolean mayProcessed (String streamName);
+
+    abstract public boolean mayProcessed (URI params);
+
+    abstract public void init (InputStream stream) throws Exception;
+
+    abstract public void init (URI params) throws Exception;
+
+}
+
+package org.ofsm.impl;
+
+import org.ofsm.IEvent;
+public class Event extends NamedObject implements IEvent {
+}
+
+package org.ofsm.impl;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StreamCorruptedException;
+import java.lang.reflect.Type;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+import org.ofsm.IEvent;
+import org.ofsm.IFiniteStateMachineInitiable;
+import org.ofsm.IState;
+public class FileFiniteStateMachine extends FiniteStateMachine implements IFiniteStateMachineInitiable {
+
+    public String getName ();
+
+    public boolean mayProcessed (String streamName);
+
+    public boolean mayProcessed (URI params);
+
+    public synchronized void init (URI params) throws Exception;
+
+    public void init (InputStream stream) throws Exception;
+
+    public void reset () throws Exception;
+
+}
+
+package org.ofsm.impl;
+
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import org.ofsm.IEvent;
+import org.ofsm.IState;
+public class FileFiniteStateMachineBaseModel implements Serializable {
+    abstract private class ObjectWithClassInfo {
+
+        public String getClassName ();
+
+        public void setClassName (String className);
+
+    }
+
+    public Collection < EventInfo > getEventInfos ();
+
+    public Collection < StateInfo > getStateInfos ();
+
+    public EventInfo getEventInfo (String name);
+
+    public IState getInitialState ();
+
+    public List < StateTransition > getTransitionInfo (IState state);
+
+    public Map < IState, List < StateTransition > > getTransitionInfos ();
+
+    public StateInfo getStateInfo (String name);
+
+    public StateTransition getTransitionInfo (IState state, IEvent event);
+
+    public class EventInfo extends ObjectWithClassInfo {
+
+        public Event getEvent ();
+
+        public String toString ();
+
+        public void setEvent (Event event);
+
+    }
+
+    public class StateInfo extends ObjectWithClassInfo implements Serializable {
+
+        public State getState ();
+
+        public String toString ();
+
+        public void setState (State state);
+
+    }
+
+    public void addEventInfo (EventInfo eventInfo) throws Exception;
+
+    public void addStateInfo (StateInfo stateInfo);
+
+    public void addTransitionInfo (StateTransition transition);
+
+    public void deleteEventInfo (EventInfo eventInfo);
+
+    public void deleteStateInfo (StateInfo stateInfo);
+
+    public void deleteTransitionInfo (IState state);
+
+    public void deleteTransitionInfo (IState state, IEvent event);
+
+    public void setInitialState (IState state);
+
+}
+
+package org.ofsm.impl;
+
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import org.ofsm.IEvent;
+import org.ofsm.IState;
+import org.ofsm.impl.schema.FiniteStateMachine;
+import org.ofsm.impl.schema.ObjectFactory;
+import org.ofsm.impl.schema.Transition;
+import org.ofsm.impl.schema.Transitions;
+public class FileFiniteStateMachineModel extends FileFiniteStateMachineBaseModel {
+
+    protected EventInfo unmarshalEvent (org.ofsm.impl.schema.EventType eventDef) throws ClassNotFoundException,
+      InstantiationException, IllegalAccessException;
+
+    protected StateInfo unmarshalState (org.ofsm.impl.schema.StateType stateDef) throws ClassNotFoundException,
+      InstantiationException, IllegalAccessException;
+
+    protected void unmarshalEvents (org.ofsm.impl.schema.Events events) throws Exception;
+
+    protected void unmarshalInitialState (String stateName) throws ClassNotFoundException;
+
+    protected void unmarshalTransition (org.ofsm.impl.schema.Transition defTransition) throws ClassNotFoundException;
+
+    protected void unmarshalTransitions (org.ofsm.impl.schema.Transitions defTransitions) throws ClassNotFoundException;
+
+    public FileFiniteStateMachineModel () {
+    }
+
+    public void marshal (OutputStream stream) throws Exception;
+
+    public void setSafeUnmarshallingMode (boolean mode);
+
+    public void unmarshal (InputStream stream) throws Exception;
+
+}
+
+package org.ofsm.impl;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.concurrent.*;
+import org.ofsm.*;
+public class FiniteStateMachine implements IFiniteStateMachine {
+
+    protected IState currentState, initialState;
+
+    protected Map < String, IStateTransition > transitions = new ConcurrentHashMap < String, IStateTransition > ();
+
+    protected String generateKey (IEvent event, IState state);
+
+    protected String generateKey (IStateTransition transition);
+
+    protected String generateKey (String eventName, IState state);
+
+    public Collection < IStateTransition > getTransitions ();
+
+    public IState fireEvent (IEvent event);
+
+    public IState fireEvent (String eventName);
+
+    public IState getCurrentState ();
+
+    public IState getInitialState ();
+
+    public IStateTransition getTransitionBy (IEvent event, IState whenState);
+
+    public String getName ();
+
+    public void addStateChangeListener (IStateChangeListener listener);
+
+    public void addTransition (IStateTransition transition);
+
+    public void clearTransitions ();
+
+    public void delStateChangeListener (IStateChangeListener listener);
+
+    public void delTranstition (IStateTransition transition);
+
+    public void reset () throws Exception;
+
+    public void setCurrentState (IState state);
+
+    public void setInitialState (IState state);
+
+}
+
+package org.ofsm.impl;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.util.LinkedList;
+import java.util.List;
+import org.ofsm.IFiniteStateMachine;
+import org.ofsm.IFiniteStateMachineBuilder;
+import org.ofsm.IFiniteStateMachineInitiable;
+public class FiniteStateMachineBuilder implements IFiniteStateMachineBuilder {
+
+    final protected String defaultMachineProperty = "org.ofsm.machine.default";
+
+    final protected String machineByURIPrefixProperty = "org.ofsm.machine.uri.";
+
+    protected IFiniteStateMachine defaultMachine = new FiniteStateMachine ();
+
+    protected List < IFiniteStateMachineInitiable > initiableMachines = new LinkedList < IFiniteStateMachineInitiable > ();
+
+    public FiniteStateMachineBuilder () {
+    }
+
+    public IFiniteStateMachine getDefaultMachine ();
+
+    public IFiniteStateMachine getMachine () throws Exception;
+
+    public IFiniteStateMachine getMachine (String streamType, InputStream stream) throws Exception;
+
+    public IFiniteStateMachine getMachine (URI uri) throws Exception;
+
+    public void addMachine (IFiniteStateMachineInitiable machine);
+
+    public void addMachine (int index, IFiniteStateMachineInitiable machine);
+
+    public void delMachine (IFiniteStateMachineInitiable machine);
+
+}
+
+package org.ofsm.impl;
+
+import org.ofsm.*;
+public class NamedObject implements INamedObject {
+
+    public String getName ();
+
+    public void setName (String name);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="definitions",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"events", "states"})
+public class Definitions {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected Events events;
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected States states;
+
+    public Events getEvents ();
+
+    public States getStates ();
+
+    public void setEvents (Events value);
+
+    public void setStates (States value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="events",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"event"})
+public class Events {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected List < EventType > event;
+
+    public List < EventType > getEvent ();
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlType (name = "EventType", namespace = "http://ofsm.sourceforge.net", propOrder = {"className"})
+public class EventType extends NamedObject {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected String className;
+
+    public String getClassName ();
+
+    public void setClassName (String value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="finite-state-machine",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"definitions", "initialState", "transitions"})
+public class FiniteStateMachine {
+
+    @XmlElement(name="initial-state",namespace="http://ofsm.sourceforge.net")
+    protected String initialState;
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected Definitions definitions;
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected Transitions transitions;
+
+    public Definitions getDefinitions ();
+
+    public String getInitialState ();
+
+    public Transitions getTransitions ();
+
+    public void setDefinitions (Definitions value);
+
+    public void setInitialState (String value);
+
+    public void setTransitions (Transitions value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlType (name = "NamedObject", namespace = "http://ofsm.sourceforge.net", propOrder = {"name"})
+public class NamedObject {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected String name;
+
+    public String getName ();
+
+    public void setName (String value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.annotation.XmlElementDecl;
+import javax.xml.bind.annotation.XmlRegistry;
+import javax.xml.namespace.QName;
+@XmlRegistry
+public class ObjectFactory {
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="event")
+    public JAXBElement < EventType > createEvent (EventType value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="from-state")
+    public JAXBElement < String > createFromState (String value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="initial-state")
+    public JAXBElement < String > createInitialState (String value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="state")
+    public JAXBElement < StateType > createState (StateType value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="to-state")
+    public JAXBElement < String > createToState (String value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="when-event")
+    public JAXBElement < String > createWhenEvent (String value);
+
+    public Definitions createDefinitions ();
+
+    public EventType createEventType ();
+
+    public Events createEvents ();
+
+    public FiniteStateMachine createFiniteStateMachine ();
+
+    public NamedObject createNamedObject ();
+
+    public ObjectFactory () {
+    }
+
+    public StateType createStateType ();
+
+    public States createStates ();
+
+    public Transition createTransition ();
+
+    public Transitions createTransitions ();
+
+}
+
+package org.ofsm.impl.schema;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="states",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"state"})
+public class States {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected List < StateType > state;
+
+    public List < StateType > getState ();
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlType (name = "StateType", namespace = "http://ofsm.sourceforge.net", propOrder = {"className"})
+public class StateType extends NamedObject {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected String className;
+
+    public String getClassName ();
+
+    public void setClassName (String value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="transition",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"fromState", "toState", "whenEvent"})
+public class Transition {
+
+    @XmlElement(name="from-state",namespace="http://ofsm.sourceforge.net")
+    protected String fromState;
+
+    @XmlElement(name="to-state",namespace="http://ofsm.sourceforge.net")
+    protected String toState;
+
+    @XmlElement(name="when-event",namespace="http://ofsm.sourceforge.net")
+    protected String whenEvent;
+
+    public String getFromState ();
+
+    public String getToState ();
+
+    public String getWhenEvent ();
+
+    public void setFromState (String value);
+
+    public void setToState (String value);
+
+    public void setWhenEvent (String value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="transitions",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"transition"})
+public class Transitions {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected List < Transition > transition;
+
+    public List < Transition > getTransition ();
+
+}
+
+package org.ofsm.impl;
+
+import org.ofsm.*;
+public class State extends NamedObject implements IState {
+}
+
+package org.ofsm.impl;
+
+import java.util.LinkedList;
+import java.util.List;
+import org.ofsm.*;
+public class StateTransition implements IStateTransition {
+
+    protected List < IStateChangeListener > listeners = new LinkedList < IStateChangeListener > ();
+
+    public IEvent getEvent ();
+
+    public IState getFromState ();
+
+    public IState getToState ();
+
+    public boolean fireStateChangingEvent ();
+
+    public void addStateChangeListener (IStateChangeListener listener);
+
+    public void delStateChangeListener (IStateChangeListener listener);
+
+    public void fireStateChangedEvent ();
+
+    public void setEvent (IEvent event);
+
+    public void setFromState (IState state);
+
+    public void setToState (IState state);
+
+}
+
+package org.ofsm;
+
+;
+import java.io.Serializable;
+abstract public interface INamedObject extends Serializable {
+
+    abstract public String getName ();
+
+}
+
+package org.ofsm;
+
+abstract public interface IState extends INamedObject {
+}
+
+package org.ofsm;
+
+abstract public interface IStateChangeListener {
+
+    abstract public boolean onStateChanging (IStateTransition transition);
+
+    abstract public void onStateChanged (IStateTransition transition);
+
+}
+
+package org.ofsm;
+
+import java.util.Collection;
+abstract public interface IStateTransition {
+
+    abstract public IEvent getEvent ();
+
+    abstract public IState getFromState ();
+
+    abstract public IState getToState ();
+
+    abstract public boolean fireStateChangingEvent ();
+
+    abstract public void addStateChangeListener (IStateChangeListener listener);
+
+    abstract public void delStateChangeListener (IStateChangeListener listener);
+
+    abstract public void fireStateChangedEvent ();
+
+}
+
+package test.org.ofsm;
+
+import junit.framework.Test;
+import junit.framework.TestSuite;
+import junit.swingui.TestRunner;
+import test.org.ofsm.impl.FileFiniteStateMachineModelTest;
+public class AllTests {
+
+    public static Test suite ();
+
+    public static void main (String args []);
+
+}
+
+package test.org.ofsm;
+
+import junit.framework.TestCase;
+import org.ofsm.*;
+public class FiniteStateMachineBuilderTest extends TestCase {
+
+    public FiniteStateMachineBuilderTest (String sTestName) {
+    }
+
+    public void testGetBuilder ();
+
+    public void testGetInstance ();
+
+}
+
+package test.org.ofsm;
+
+import java.io.InputStream;
+import junit.framework.TestCase;
+import org.ofsm.*;
+public class FiniteStateMachineTest extends TestCase {
+
+    public FiniteStateMachineTest (String sTestName) {
+    }
+
+    public void testMachine ();
+
+}
+
+package test.org.ofsm.impl;
+
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.util.List;
+import junit.framework.TestCase;
+import org.ofsm.impl.FileFiniteStateMachineModel;
+import org.ofsm.impl.StateTransition;
+public class FileFiniteStateMachineModelTest extends TestCase {
+
+    public FileFiniteStateMachineModelTest (String sTestName) {
+    }
+
+    public void testMarshal ();
+
+    public void testUnmarshal ();
+
+}
+
+package org.ofsm.examples;
+
+import java.io.InputStream;
+import org.ofsm.FiniteStateMachineFactory;
+import org.ofsm.IFiniteStateMachine;
+import org.ofsm.IFiniteStateMachineBuilder;
+public class HelloWorld {
+
+    public HelloWorld () {
+    }
+
+    public static void main (String args []);
+
+}
+
+package org.ofsm;
+
+import org.ofsm.impl.FiniteStateMachineBuilder;
+public class FiniteStateMachineFactory {
+
+    protected FiniteStateMachineFactory () {
+    }
+
+    public IFiniteStateMachineBuilder newBuilder () throws Exception;
+
+    public String getVersion ();
+
+    public static FiniteStateMachineFactory getInstance ();
+
+}
+
+package org.ofsm;
+
+abstract public interface IEvent extends INamedObject {
+}
+
+package org.ofsm;
+
+import java.util.Collection;
+abstract public interface IFiniteStateMachine extends INamedObject {
+
+    abstract public Collection < IStateTransition > getTransitions ();
+
+    abstract public IState fireEvent (IEvent event);
+
+    abstract public IState fireEvent (String eventName);
+
+    abstract public IState getCurrentState ();
+
+    abstract public IState getInitialState ();
+
+    abstract public IStateTransition getTransitionBy (IEvent event, IState state);
+
+    abstract public String getName ();
+
+    abstract public void addStateChangeListener (IStateChangeListener listener);
+
+    abstract public void addTransition (IStateTransition transition);
+
+    abstract public void delStateChangeListener (IStateChangeListener listener);
+
+    abstract public void delTranstition (IStateTransition transition);
+
+    abstract public void reset () throws Exception;
+
+    abstract public void setCurrentState (IState state);
+
+    abstract public void setInitialState (IState state);
+
+}
+
+package org.ofsm;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+abstract public interface IFiniteStateMachineBuilder {
+
+    abstract public IFiniteStateMachine getMachine () throws Exception;
+
+    abstract public IFiniteStateMachine getMachine (String streamType, InputStream stream) throws Exception;
+
+    abstract public IFiniteStateMachine getMachine (URI uri) throws Exception;
+
+    abstract public void addMachine (IFiniteStateMachineInitiable machine);
+
+    abstract public void addMachine (int index, IFiniteStateMachineInitiable machine);
+
+    abstract public void delMachine (IFiniteStateMachineInitiable machine);
+
+}
+
+package org.ofsm;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+public interface IFiniteStateMachineInitiable extends IFiniteStateMachine {
+
+    abstract public boolean mayProcessed (String streamName);
+
+    abstract public boolean mayProcessed (URI params);
+
+    abstract public void init (InputStream stream) throws Exception;
+
+    abstract public void init (URI params) throws Exception;
+
+}
+
+package org.ofsm.impl;
+
+import org.ofsm.IEvent;
+public class Event extends NamedObject implements IEvent {
+}
+
+package org.ofsm.impl;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StreamCorruptedException;
+import java.lang.reflect.Type;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+import org.ofsm.IEvent;
+import org.ofsm.IFiniteStateMachineInitiable;
+import org.ofsm.IState;
+public class FileFiniteStateMachine extends FiniteStateMachine implements IFiniteStateMachineInitiable {
+
+    public String getName ();
+
+    public boolean mayProcessed (String streamName);
+
+    public boolean mayProcessed (URI params);
+
+    public synchronized void init (URI params) throws Exception;
+
+    public void init (InputStream stream) throws Exception;
+
+    public void reset () throws Exception;
+
+}
+
+package org.ofsm.impl;
+
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import org.ofsm.IEvent;
+import org.ofsm.IState;
+public class FileFiniteStateMachineBaseModel implements Serializable {
+    abstract private class ObjectWithClassInfo {
+
+        public String getClassName ();
+
+        public void setClassName (String className);
+
+    }
+
+    public Collection < EventInfo > getEventInfos ();
+
+    public Collection < StateInfo > getStateInfos ();
+
+    public EventInfo getEventInfo (String name);
+
+    public IState getInitialState ();
+
+    public List < StateTransition > getTransitionInfo (IState state);
+
+    public Map < IState, List < StateTransition > > getTransitionInfos ();
+
+    public StateInfo getStateInfo (String name);
+
+    public StateTransition getTransitionInfo (IState state, IEvent event);
+
+    public class EventInfo extends ObjectWithClassInfo {
+
+        public Event getEvent ();
+
+        public String toString ();
+
+        public void setEvent (Event event);
+
+    }
+
+    public class StateInfo extends ObjectWithClassInfo implements Serializable {
+
+        public State getState ();
+
+        public String toString ();
+
+        public void setState (State state);
+
+    }
+
+    public void addEventInfo (EventInfo eventInfo) throws Exception;
+
+    public void addStateInfo (StateInfo stateInfo);
+
+    public void addTransitionInfo (StateTransition transition);
+
+    public void deleteEventInfo (EventInfo eventInfo);
+
+    public void deleteStateInfo (StateInfo stateInfo);
+
+    public void deleteTransitionInfo (IState state);
+
+    public void deleteTransitionInfo (IState state, IEvent event);
+
+    public void setInitialState (IState state);
+
+}
+
+package org.ofsm.impl;
+
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import org.ofsm.IEvent;
+import org.ofsm.IState;
+import org.ofsm.impl.schema.FiniteStateMachine;
+import org.ofsm.impl.schema.ObjectFactory;
+import org.ofsm.impl.schema.Transition;
+import org.ofsm.impl.schema.Transitions;
+public class FileFiniteStateMachineModel extends FileFiniteStateMachineBaseModel {
+
+    protected EventInfo unmarshalEvent (org.ofsm.impl.schema.EventType eventDef) throws ClassNotFoundException,
+      InstantiationException, IllegalAccessException;
+
+    protected StateInfo unmarshalState (org.ofsm.impl.schema.StateType stateDef) throws ClassNotFoundException,
+      InstantiationException, IllegalAccessException;
+
+    protected void unmarshalEvents (org.ofsm.impl.schema.Events events) throws Exception;
+
+    protected void unmarshalInitialState (String stateName) throws ClassNotFoundException;
+
+    protected void unmarshalTransition (org.ofsm.impl.schema.Transition defTransition) throws ClassNotFoundException;
+
+    protected void unmarshalTransitions (org.ofsm.impl.schema.Transitions defTransitions) throws ClassNotFoundException;
+
+    public FileFiniteStateMachineModel () {
+    }
+
+    public void marshal (OutputStream stream) throws Exception;
+
+    public void setSafeUnmarshallingMode (boolean mode);
+
+    public void unmarshal (InputStream stream) throws Exception;
+
+}
+
+package org.ofsm.impl;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.concurrent.*;
+import org.ofsm.*;
+public class FiniteStateMachine implements IFiniteStateMachine {
+
+    protected IState currentState, initialState;
+
+    protected Map < String, IStateTransition > transitions = new ConcurrentHashMap < String, IStateTransition > ();
+
+    protected String generateKey (IEvent event, IState state);
+
+    protected String generateKey (IStateTransition transition);
+
+    protected String generateKey (String eventName, IState state);
+
+    public Collection < IStateTransition > getTransitions ();
+
+    public IState fireEvent (IEvent event);
+
+    public IState fireEvent (String eventName);
+
+    public IState getCurrentState ();
+
+    public IState getInitialState ();
+
+    public IStateTransition getTransitionBy (IEvent event, IState whenState);
+
+    public String getName ();
+
+    public void addStateChangeListener (IStateChangeListener listener);
+
+    public void addTransition (IStateTransition transition);
+
+    public void clearTransitions ();
+
+    public void delStateChangeListener (IStateChangeListener listener);
+
+    public void delTranstition (IStateTransition transition);
+
+    public void reset () throws Exception;
+
+    public void setCurrentState (IState state);
+
+    public void setInitialState (IState state);
+
+}
+
+package org.ofsm.impl;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.util.LinkedList;
+import java.util.List;
+import org.ofsm.IFiniteStateMachine;
+import org.ofsm.IFiniteStateMachineBuilder;
+import org.ofsm.IFiniteStateMachineInitiable;
+public class FiniteStateMachineBuilder implements IFiniteStateMachineBuilder {
+
+    final protected String defaultMachineProperty = "org.ofsm.machine.default";
+
+    final protected String machineByURIPrefixProperty = "org.ofsm.machine.uri.";
+
+    protected IFiniteStateMachine defaultMachine = new FiniteStateMachine ();
+
+    protected List < IFiniteStateMachineInitiable > initiableMachines = new LinkedList < IFiniteStateMachineInitiable > ();
+
+    public FiniteStateMachineBuilder () {
+    }
+
+    public IFiniteStateMachine getDefaultMachine ();
+
+    public IFiniteStateMachine getMachine () throws Exception;
+
+    public IFiniteStateMachine getMachine (String streamType, InputStream stream) throws Exception;
+
+    public IFiniteStateMachine getMachine (URI uri) throws Exception;
+
+    public void addMachine (IFiniteStateMachineInitiable machine);
+
+    public void addMachine (int index, IFiniteStateMachineInitiable machine);
+
+    public void delMachine (IFiniteStateMachineInitiable machine);
+
+}
+
+package org.ofsm.impl;
+
+import org.ofsm.*;
+public class NamedObject implements INamedObject {
+
+    public String getName ();
+
+    public void setName (String name);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="definitions",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"events", "states"})
+public class Definitions {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected Events events;
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected States states;
+
+    public Events getEvents ();
+
+    public States getStates ();
+
+    public void setEvents (Events value);
+
+    public void setStates (States value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="events",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"event"})
+public class Events {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected List < EventType > event;
+
+    public List < EventType > getEvent ();
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlType (name = "EventType", namespace = "http://ofsm.sourceforge.net", propOrder = {"className"})
+public class EventType extends NamedObject {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected String className;
+
+    public String getClassName ();
+
+    public void setClassName (String value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="finite-state-machine",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"definitions", "initialState", "transitions"})
+public class FiniteStateMachine {
+
+    @XmlElement(name="initial-state",namespace="http://ofsm.sourceforge.net")
+    protected String initialState;
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected Definitions definitions;
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected Transitions transitions;
+
+    public Definitions getDefinitions ();
+
+    public String getInitialState ();
+
+    public Transitions getTransitions ();
+
+    public void setDefinitions (Definitions value);
+
+    public void setInitialState (String value);
+
+    public void setTransitions (Transitions value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlType (name = "NamedObject", namespace = "http://ofsm.sourceforge.net", propOrder = {"name"})
+public class NamedObject {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected String name;
+
+    public String getName ();
+
+    public void setName (String value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.annotation.XmlElementDecl;
+import javax.xml.bind.annotation.XmlRegistry;
+import javax.xml.namespace.QName;
+@XmlRegistry
+public class ObjectFactory {
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="event")
+    public JAXBElement < EventType > createEvent (EventType value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="from-state")
+    public JAXBElement < String > createFromState (String value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="initial-state")
+    public JAXBElement < String > createInitialState (String value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="state")
+    public JAXBElement < StateType > createState (StateType value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="to-state")
+    public JAXBElement < String > createToState (String value);
+
+    @XmlElementDecl(namespace="http://ofsm.sourceforge.net",name="when-event")
+    public JAXBElement < String > createWhenEvent (String value);
+
+    public Definitions createDefinitions ();
+
+    public EventType createEventType ();
+
+    public Events createEvents ();
+
+    public FiniteStateMachine createFiniteStateMachine ();
+
+    public NamedObject createNamedObject ();
+
+    public ObjectFactory () {
+    }
+
+    public StateType createStateType ();
+
+    public States createStates ();
+
+    public Transition createTransition ();
+
+    public Transitions createTransitions ();
+
+}
+
+package org.ofsm.impl.schema;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="states",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"state"})
+public class States {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected List < StateType > state;
+
+    public List < StateType > getState ();
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlType (name = "StateType", namespace = "http://ofsm.sourceforge.net", propOrder = {"className"})
+public class StateType extends NamedObject {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected String className;
+
+    public String getClassName ();
+
+    public void setClassName (String value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="transition",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"fromState", "toState", "whenEvent"})
+public class Transition {
+
+    @XmlElement(name="from-state",namespace="http://ofsm.sourceforge.net")
+    protected String fromState;
+
+    @XmlElement(name="to-state",namespace="http://ofsm.sourceforge.net")
+    protected String toState;
+
+    @XmlElement(name="when-event",namespace="http://ofsm.sourceforge.net")
+    protected String whenEvent;
+
+    public String getFromState ();
+
+    public String getToState ();
+
+    public String getWhenEvent ();
+
+    public void setFromState (String value);
+
+    public void setToState (String value);
+
+    public void setWhenEvent (String value);
+
+}
+
+package org.ofsm.impl.schema;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.AccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+@XmlRootElement(name="transitions",namespace="http://ofsm.sourceforge.net")
+@XmlType (name = "", propOrder = {"transition"})
+public class Transitions {
+
+    @XmlElement(namespace="http://ofsm.sourceforge.net")
+    protected List < Transition > transition;
+
+    public List < Transition > getTransition ();
+
+}
+
+package org.ofsm.impl;
+
+import org.ofsm.*;
+public class State extends NamedObject implements IState {
+}
+
+package org.ofsm.impl;
+
+import java.util.LinkedList;
+import java.util.List;
+import org.ofsm.*;
+public class StateTransition implements IStateTransition {
+
+    protected List < IStateChangeListener > listeners = new LinkedList < IStateChangeListener > ();
+
+    public IEvent getEvent ();
+
+    public IState getFromState ();
+
+    public IState getToState ();
+
+    public boolean fireStateChangingEvent ();
+
+    public void addStateChangeListener (IStateChangeListener listener);
+
+    public void delStateChangeListener (IStateChangeListener listener);
+
+    public void fireStateChangedEvent ();
+
+    public void setEvent (IEvent event);
+
+    public void setFromState (IState state);
+
+    public void setToState (IState state);
+
+}
+
+package org.ofsm;
+
+;
+import java.io.Serializable;
+abstract public interface INamedObject extends Serializable {
+
+    abstract public String getName ();
+
+}
+
+package org.ofsm;
+
+abstract public interface IState extends INamedObject {
+}
+
+package org.ofsm;
+
+abstract public interface IStateChangeListener {
+
+    abstract public boolean onStateChanging (IStateTransition transition);
+
+    abstract public void onStateChanged (IStateTransition transition);
+
+}
+
+package org.ofsm;
+
+import java.util.Collection;
+abstract public interface IStateTransition {
+
+    abstract public IEvent getEvent ();
+
+    abstract public IState getFromState ();
+
+    abstract public IState getToState ();
+
+    abstract public boolean fireStateChangingEvent ();
+
+    abstract public void addStateChangeListener (IStateChangeListener listener);
+
+    abstract public void delStateChangeListener (IStateChangeListener listener);
+
+    abstract public void fireStateChangedEvent ();
+
+}
+
+package test.org.ofsm;
+
+import junit.framework.Test;
+import junit.framework.TestSuite;
+import junit.swingui.TestRunner;
+import test.org.ofsm.impl.FileFiniteStateMachineModelTest;
+public class AllTests {
+
+    public static Test suite ();
+
+    public static void main (String args []);
+
+}
+
+package test.org.ofsm;
+
+import junit.framework.TestCase;
+import org.ofsm.*;
+public class FiniteStateMachineBuilderTest extends TestCase {
+
+    public FiniteStateMachineBuilderTest (String sTestName) {
+    }
+
+    public void testGetBuilder ();
+
+    public void testGetInstance ();
+
+}
+
+package test.org.ofsm;
+
+import java.io.InputStream;
+import junit.framework.TestCase;
+import org.ofsm.*;
+public class FiniteStateMachineTest extends TestCase {
+
+    public FiniteStateMachineTest (String sTestName) {
+    }
+
+    public void testMachine ();
+
+}
+
+package test.org.ofsm.impl;
+
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.util.List;
+import junit.framework.TestCase;
+import org.ofsm.impl.FileFiniteStateMachineModel;
+import org.ofsm.impl.StateTransition;
+public class FileFiniteStateMachineModelTest extends TestCase {
+
+    public FileFiniteStateMachineModelTest (String sTestName) {
+    }
+
+    public void testMarshal ();
+
+    public void testUnmarshal ();
+
+}
+
+package org.ofsm.examples;
+
+import java.io.InputStream;
+import org.ofsm.FiniteStateMachineFactory;
+import org.ofsm.IFiniteStateMachine;
+import org.ofsm.IFiniteStateMachineBuilder;
+public class HelloWorld {
+
+    public HelloWorld () {
+    }
+
+    public static void main (String args []);
+
+}
+
