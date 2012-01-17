@@ -32,6 +32,7 @@ target+=$(bin)/norm-id-c
 target+=$(bin)/ProblemFrames/problemcc 
 target+=$(bin)/Java/mdsdcc 
 target+=$(bin)/Java/modelcc 
+target+=$(bin)/Argument/argumentc 
 target+=$(program) $(results)
 #package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 dateFolder=$(shell date +%Y-%m-%d)
