@@ -49,8 +49,8 @@ set l=Txl\CSharp\cs.txl
 goto :end
 set l=Txl\%e%.Txl
 :end
+:txl
 if "%1" == "" @echo usage: %0 program [ program_to_compare ]
-echo %l%
 if "%2" == "" txl -s 1000 -q -i %p%Txl %1 %l% 
 if not "%2" == "" txl -s 1000 -q -i %p%Txl %1 %l% - -diff %2 
 :fin

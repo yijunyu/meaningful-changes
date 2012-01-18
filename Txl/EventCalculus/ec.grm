@@ -1,46 +1,179 @@
-
 tokens
-  IMPLIES "->"
-  EQUIV "<->"
+    id  "[$\u][$\i]*"
+   EQUIV "<->"
+   IMPLY "->"
 end tokens
 
+keys
+  'noninertial 'option 'load 'sort '!= '==
+end keys
+
+comments
+  ';
+end comments
+
+define program
+  [repeat import_sentence]
+  [repeat EC_sentence]
+end define
+
+define import_sentence
+  'load [stringlit][NL]
+end define
+
 define EC_sentence
-    [predicate] '. [NL]
-  | 'range [id] [number] [number] [NL]
+    [declaration] [NL]
+  | [statement] '. [NL]
 end define
 
-define predicate
-     [id] 
-   | [pred_id] [SPOFF] '( [SPON] [list term] ')
-   | [expression] 
-   | [predicate] [pred_op] [predicate]
-   | '! [predicate]
-end define 
-
-define pred_id
-    'HoldsAt
-  | 'Happens
-  | 'Initiates
-  | 'Terminates
+define declaration
+   [option]
+ | [noninertial]
+ | [range]
+ | [sort]
+ | [completion]
+ | [xor]
+ | [mutex]
 end define
 
-define term
-     [id] | [number]
+define sort
+    [opt 'reified] [opt 'sort] [id] [id] [parameter_list] [opt return]
+  | [opt 'reified] 'sort [id] [opt return]
+  | [opt 'reified] [opt 'sort] [id] [list id+]  
+end define
+
+define range
+    'range [id] [number] [number]
+end define
+
+define option
+    'option [id] [number] [NL]
+  | 'option [id] [id] [NL]
+end define
+
+define completion
+    'completion [opt label_type] [id]
+end define
+
+define noninertial
+    'noninertial [list id+]
+end define
+
+define xor
+    'xor [list id]
+end define
+
+define mutex
+    'mutex [list id]
+end define
+
+define statement
+   [labelled_expression]
+end define
+
+define labelled_expression
+   [opt label_type] 
+   [expression]
+end define
+
+define label_type
+   [type] ':
+end define
+
+define type
+    'Theta
+  | 'Delta
+end define
+
+define return
+    ': [id]
+end define
+
+define parameter_list
+    '( [list expression] ')
 end define
 
 define expression
-    [term] 
-  | [expression] [op] [expression]
-  | '( [expression] ')
+    [repeat qualifier] [assignment]
 end define
 
-define op
-    '%
-  | '+ | '- | '* | '/
-  | '= | '< | '> | [SP] [SPOFF] '<= [SPON] | [SP] [SPOFF] '!= [SPON] | [SP] [SPOFF] '>= [SPON] 
+define qualifier
+   [exists] | [forall]
 end define
 
-define pred_op
-  [IMPLIES] | [EQUIV]
-  | '& | '| 
+define exists
+  [opt '!] '{ [list id] '}
+end define
+
+define forall
+  [opt '!] '[ [list id] ']
+end define
+
+define assignment
+   [or_expr]
+end define
+
+define or_expr
+   [and_expr] [repeat or_op_expr]
+end define
+
+define or_op_expr
+ '| [opt qualifier] [or_expr]
+end define
+
+define and_expr
+    [relational] [repeat and_op_expr]
+end define
+
+define and_op_expr
+  '& [opt qualifier] [and_expr]
+  | [IMPLY] [opt qualifier] [and_expr]
+  | [EQUIV] [opt qualifier] [and_expr]
+end define
+
+define relational
+    [addition]
+  | [addition] '+ [addition]
+  | [addition] '- [addition]
+  | [addition] '!= [addition]
+  | [addition] '== [addition]
+  | [addition] '>= [addition]
+  | [addition] '<= [addition]
+  | [addition] '= [addition]
+  | [addition] '> [addition]
+  | [addition] '< [addition]
+end define
+
+define addition
+    [multiplication]
+  | [multiplication] '* [addition]
+  | [multiplication] '/ [addition]
+end define
+
+define multiplication
+    [power]
+  | [power] '* [multiplication]
+  | [power] '/ [multiplication]
+end define
+
+define power
+    [unary_expr]
+  | [unary_expr] '^ [power]
+end define
+
+define unary_expr
+    [opt '!] [preprimary_expr]
+end define
+
+define preprimary_expr
+   [terminal_expr] | [abstract_ref] | '( [expression] ') 
+end define
+
+define abstract_ref
+   [id] [parameter_list]
+ | [id]
+end define
+
+define terminal_expr
+   [number] | [stringlit] | 'true | 'false
 end define
