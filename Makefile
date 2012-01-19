@@ -32,11 +32,13 @@ target+=$(bin)/norm-id-c
 target+=$(bin)/ProblemFrames/problemcc 
 target+=$(bin)/Java/mdsdcc 
 target+=$(bin)/Java/modelcc 
+target+=$(bin)/Argument/argumentc 
 target+=$(program) $(results)
 #package=${HOME}/Documents/demo/mct/mct-$(shell uname).tar.gz
 dateFolder=$(shell date +%Y-%m-%d)
-package=/home/share/sead/mct/$(dateFolder)/mct-$(shell uname).tar.gz
 package=${HOME}/Documents/demo/mct/$(dateFolder)/mct-$(shell uname).tar.gz
+package=/home/share/sead/mct/$(dateFolder)/mct-$(shell uname).tar.gz
+package=/home/share/sead/mct/$(dateFolder)/mct.tar.gz
 #==== R U L E S ====
 .PHONEY: all clean install
 all: $(target)
@@ -209,7 +211,7 @@ result/norm/Java/jid.Txl: $(bin)/norm-id-c source/norm/Java/jid.norm config.java
 	rm -f $TMPFILE
 
 install: $(package) 
-$(package): README.html $(program) $(norm) $(source) $(target) scripts # cvs
+$(package): README.html $(program) $(norm) $(source) $(target) scripts bin.Windows bin.Darwin_x86_64 mct.cmd mct
 	rm -rf $(dir $(package))
 	mkdir -p  $(dir $(package))
 	tar cfz $@ $^ $(results)
