@@ -2069,9 +2069,10 @@ def exists(fn):
 
 FILENUM=0
 
+import tempfile
 def tmpfile(s):
   global FILENUM
-  r='/tmp/'+s+'.'+str(os.getpid())+'.'+str(FILENUM)
+  r=tempfile.gettempdir() + s+'.'+str(os.getpid())+'.'+str(FILENUM)
   FILENUM=FILENUM+1
   return r
 
