@@ -13,6 +13,9 @@ goto :end
 :txl.problem
 set l=%p%result\norm\ProblemFrames\problem.Txl
 goto :end
+:txl.e
+set l=%p%result\norm\EventCalculus\event.Txl
+goto :end
 :txl.xml
 set l=%p%result\norm\XML\xml-mct.Txl
 goto :end

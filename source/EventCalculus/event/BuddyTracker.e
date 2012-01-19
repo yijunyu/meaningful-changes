@@ -31,10 +31,8 @@ sort network
 predicate IsPerformedBy(knowledgeOfActivity, user, time) 
 predicate IsLoggedIn(location, user, storage, time) 
 predicate IsAccurate(device, location) 
-
-device theDevice, faultyDevice
-
-{device} [location, time] HoldsAt(IsAccurate(device, location), time).
+[device, location] HoldsAt(IsAccurate(device, location), 0).
+[device, location, time] HoldsAt(IsAccurate(device, location), time).
 ; claim A1
 ; [time] IsPerformedBy(KnowledgeOfActivity, User, time) -> IsLoggedIn(Location, User, Storage, time+4).
 
